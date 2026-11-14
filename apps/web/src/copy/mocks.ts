@@ -34,11 +34,16 @@ export const mocks = {
   },
 
   decide: {
-    eyebrow: 'Decisions',
+    /** The ink sticker over the question; the screen is a preview (nothing is saved). */
+    eyebrow: 'Decisions · Preview',
     /** The demo profile's cars (the Figma frame); a user's own profile gets the generic title. */
     title: 'Keep the Camry or lease a RAV4?',
     titleOwn: 'Keep your car or lease a new one?',
     vs: 'VS',
+    /** Under each path: its 10-year net worth against the other path. */
+    effectLabel: 'Net worth vs the other path',
+    effectBy: (year: number) => `by ${year}`,
+    better: 'Better path',
     /** Labels of the engine purchases (never shown as results). */
     purchaseLabels: { lease: 'Lease payment', signing: 'Due at signing' },
     keep: {
@@ -101,7 +106,10 @@ export const mocks = {
   },
 
   checkin: {
+    /** The page title: "October check-in". */
     eyebrow: (month: string) => `${month} check-in`,
+    /** Small label over the title. */
+    kicker: 'Monthly check-in',
     titleOver: (amount: string) => `You’re ${amount} over your usual month.`,
     titleUnder: (amount: string) => `You’re ${amount} under your usual month.`,
     titleEven: 'Right on your usual month.',
@@ -121,6 +129,25 @@ export const mocks = {
     sourceLabel: 'Statement months',
     sources: { uploads: 'My statements', sample: 'Sample statement' },
     sampleNote: 'Sample statement, not yours. Add your own to see your month.',
+    /** The ink card with the month's totals (engine monthEnd). */
+    valueCheck: 'Value check',
+    valueCheckSoFar: 'Value check · so far',
+    valueNote: {
+      uploads: 'Computed by the engine from your statements.',
+      sample: 'Computed by the engine from the sample statement.',
+    },
+    /** The card with two bars: the 3-month average and this month. */
+    compareTitle: 'Usual vs this month',
+    compareUsual: 'Your usual month',
+    compareThis: 'This month',
+    compareThisSoFar: 'This month (projected)',
+    comparePill: {
+      over: (amount: string) => `${amount} over your usual`,
+      under: (amount: string) => `${amount} under your usual`,
+      even: 'Right on your usual',
+    },
+    /** Sticker on the house once a move is marked done. */
+    floorSticker: '+1 floor',
     driftTitle: 'What drifted',
     vsAverage: 'vs your average',
     onTrack: 'right on track',
@@ -137,6 +164,8 @@ export const mocks = {
     move: {
       sticker: 'Your move',
       ofTotal: (paid: string, total: string) => `${paid} of ${total}`,
+      /** Next to the big paid amount: "of $4,200". */
+      ofTotalRest: (total: string) => `of ${total}`,
       progressLabel: 'Card paid off this month',
       pace: (withMove: string, without: string) => `Card gone in ${withMove}, not ${without}.`,
       notWithin10y: 'more than 10 years',
