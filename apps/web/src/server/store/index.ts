@@ -1,3 +1,6 @@
+import { createAvatarStore,type AvatarStore } from './avatars';
+import { createMemoryAvatarRepository } from './avatars.memory';
+import { createPostgresAvatarRepository } from './avatars.postgres';
 // Server-only: the app's store (sessions, the T5 daily game, T8 funnel events).
 //
 //   getStore()            the process-wide Store for STORE_URL (Postgres), or in memory in dev and
@@ -40,6 +43,7 @@ export type { EventStore, FunnelWindow, StoredEvent } from './events';
 export interface Store {
   readonly backend: 'postgres' | 'memory';
   readonly sessions: SessionStore;
+  readonly avatars: AvatarStore;
   readonly game: GameStore;
   readonly duel: DuelStore;
   readonly events: EventStore;
@@ -52,9 +56,11 @@ export interface Store {
 
 export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
   const db = createDb(url, opts);
+  const sessions = createPostgresSessionStore(db);
   return {
     backend: 'postgres',
-    sessions: createPostgresSessionStore(db),
+    sessions,
+    avatars: createAvatarStore(createPostgresAvatarRepository(db),sessions),
     game: createPostgresGameStore(db),
     duel: createPostgresDuelStore(db),
     events: createPostgresEventStore(db),
@@ -65,9 +71,11 @@ export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
 }
 
 export function createMemoryStore(): Store {
+  const sessions = createMemorySessionStore();
   return {
     backend: 'memory',
-    sessions: createMemorySessionStore(),
+    sessions,
+    avatars: createAvatarStore(createMemoryAvatarRepository(),sessions),
     game: createMemoryGameStore(),
     duel: createMemoryDuelStore(),
     events: createMemoryEventStore(),

@@ -1,3 +1,4 @@
+import { AvatarFactsSchema } from './avatar';
 import { GoalSchema } from './goal';
 export { GoalSchema } from './goal';
 // Zod schemas for the contracts in ./index.ts. Use them to validate every API input and every
@@ -112,6 +113,7 @@ export const DebtSchema = z.object({
 export const SpendingSchema = z.record(CostCategorySchema, estimate(NonNegativeMoneySchema));
 
 export const ProfileSchema = z.object({
+  household: AvatarFactsSchema.optional(),
   age: estimate(z.number().int().min(16).max(110)),
   takeHomePay: estimate(NonNegativeMoneySchema),   // monthly
   spending: SpendingSchema,
@@ -417,6 +419,8 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   withProps('afford_checked', { verdict: z.enum(['fits', 'wait', 'no']) }),
   withProps('loan_compared', { offers: z.number().int().min(1).max(3) }),
   bare('paywall_viewed'),
+  bare('avatar_preview_viewed'),
+  bare('avatar_stats_viewed'),
   bare('sample_loaded'),
   withProps('forecast_horizon_changed', { years: HorizonYearsSchema }),
   withProps('goal_set', {years:z.number().int().min(1).max(30)}),
@@ -484,3 +488,5 @@ export const FunnelReportSchema = z.object({
 
 /** The reply of GET /api/events/funnel. */
 export const FunnelResponseSchema = FunnelReportSchema.extend({ ok: z.literal(true) });
+
+export { AvatarPublicSchema,AvatarPreviewSchema,AvatarStatusSchema,AvatarStampSchema,AgeBandSchema } from './avatar';

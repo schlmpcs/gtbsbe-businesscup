@@ -72,7 +72,7 @@ export const CLIENT_EVENT_NAMES = [
   'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared',
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
-  'paywall_viewed', 'sample_loaded',
+  'paywall_viewed', 'avatar_preview_viewed', 'avatar_stats_viewed', 'sample_loaded',
   'goal_set', 'goal_verdict_shown', 'goal_cleared', 'forecast_horizon_changed',
   'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked',
   'renewals_exported', 'overpaying_checked', 'payoff_planned',
@@ -80,7 +80,7 @@ export const CLIENT_EVENT_NAMES = [
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 /** Events only the server records (the Pro routes). */
 export const SERVER_EVENT_NAMES = [
-  'checkout_started', 'pro_purchased', 'pro_demo_purchased', 'pro_promo_redeemed',
+  'avatar_published', 'avatar_unpublished', 'checkout_started', 'pro_purchased', 'pro_demo_purchased', 'pro_promo_redeemed',
 ] as const satisfies readonly ServerFunnelEvent['name'][];
 export const FUNNEL_EVENT_NAMES = [...CLIENT_EVENT_NAMES, ...SERVER_EVENT_NAMES] as const satisfies readonly FunnelEventName[];
 /**
@@ -105,3 +105,7 @@ export const GOAL_MIN_YEARS=1;
 export const GOAL_MAX_YEARS=30;
 /** Independent tools; never inserted into the main funnel. */
 export const TOOL_IDS = ['subscriptions','overpaying','payoff'] as const;
+
+export { AVATAR_ROUND_BALANCE,AVATAR_ROUND_MONTHLY,AVATAR_RENT_SHARE_STEP,AVATAR_BOUNDS,AVATAR_TTL_DAYS,AVATAR_MIN_POOL,AVATAR_MIN_PICKS } from './avatar';
+
+/** Exact integer mask capacity shared by JavaScript arithmetic and Postgres bigint queries. */
