@@ -1,11 +1,20 @@
+<<<<<<< HEAD
 // S9 Statement upload (Figma S09): the dashed orange drop tile with the file picker (read and
 // categorized by the T6/T7 pipeline behind the view-model's readFile) and "Try with sample
 // statement" (the same pipeline on the sample file), "What we keep", the review of categorized
 // months before they enter the profile, and what the statements have added so far in the black
 // score bar. "Connect your bank app" is not built, so it is not shown (dead buttons are hidden).
 import { useId } from 'react';
+=======
+// S9 Statement upload (Design v3, Figma 194:1627): "Optional" over the headline; a white card with a
+// dashed orange border (drop a CSV on it, or pick one: read and categorized by the T6/T7 pipeline
+// behind the view-model's readFile), "What we keep" on the right, then the review of categorized
+// months before they enter the profile. Connecting a bank app is not built, so it is not offered
+// here (decision D-7: no dead buttons in the main flow).
+import { useId, useState } from 'react';
+>>>>>>> 0a3f5f2 (Design v3: onboarding ladder S5-S9 restyled)
 import { common, ladder } from '@/copy';
-import { Art, BarBreakdown, Button, Card, formatMoney, Row, Scoreboard, Stack } from '@/ui-kit';
+import { Art, BarBreakdown, Button, Card, cx, formatMoney, Row, Stack } from '@/ui-kit';
 import type {
   LadderProgressVM, StatementMonthVM, StatementReadVM, StatementUploadError, StatementUploadVM,
 } from '../model/types';
@@ -36,23 +45,42 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
   const noteId = useId();
   const titleId = useId();
   const { readFile } = vm;
+  const canRead = readFile !== null && vm.status !== 'reading';
+  const [dragging, setDragging] = useState(false);
 
   return (
     <LadderShell screen="S9" progress={progress} loading={vm.status === 'loading'}>
-      <div className="grid items-start gap-2xl lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid items-start gap-xl lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Stack gap="xl">
-          <Card
-            as="section"
+          <section
             aria-labelledby={titleId}
-            style={{ transform: 'rotate(-0.4deg)' }}
-            className="border-2 border-dashed border-primary"
+            onDragOver={(e) => {
+              if (!canRead) return;
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              setDragging(false);
+              if (!canRead) return;
+              e.preventDefault();
+              const file = e.dataTransfer.files?.[0];
+              if (file && readFile) readFile(file);
+            }}
+            className={cx(
+              'rounded-xl border-2 border-dashed border-primary p-xl shadow-md transition-colors',
+              dragging ? 'bg-primary-soft' : 'bg-surface',
+            )}
           >
-            <div className="flex flex-col items-center gap-lg text-center">
-              <Art name="upload" className="w-full max-w-(--container-3xs)" imgClassName="aspect-square" />
-              <h2 id={titleId} className="font-display text-3xl font-extrabold leading-tight">
-                {t.pickerTitle}
-              </h2>
-              <div className="flex w-full max-w-(--container-sm) flex-col gap-sm text-left">
+            <div className="flex flex-col items-center gap-xl sm:flex-row">
+              <Art name="upload" className="w-full max-w-(--container-3xs) shrink-0" imgClassName="aspect-square" />
+              <div className="flex w-full min-w-0 flex-col gap-md">
+                <h2 id={titleId} className="font-display text-3xl font-extrabold leading-tight">
+                  {t.pickerTitle}
+                </h2>
+                <p id={noteId} className="text-sm text-text-muted">
+                  {readFile === null ? t.pickerUnavailable : t.pickerHint}
+                </p>
                 <label htmlFor={inputId} className="sr-only">
                   {t.pickerLabel}
                 </label>
@@ -60,18 +88,15 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
                   id={inputId}
                   type="file"
                   accept=".csv,text/csv"
-                  disabled={readFile === null || vm.status === 'reading'}
+                  disabled={!canRead}
                   aria-describedby={noteId}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file && readFile) readFile(file);
                     e.target.value = '';
                   }}
-                  className="w-full text-sm text-text-muted file:mr-md file:cursor-pointer file:rounded-full file:border-0 file:bg-ink file:px-xl file:py-md file:text-base file:font-bold file:text-on-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full text-sm text-text-muted file:mr-md file:cursor-pointer file:rounded-lg file:border-0 file:bg-ink file:px-xl file:py-md file:text-base file:font-bold file:text-on-primary disabled:cursor-not-allowed disabled:opacity-60"
                 />
-                <p id={noteId} className="text-xs text-text-muted">
-                  {readFile === null ? t.pickerUnavailable : t.pickerHint}
-                </p>
               </div>
               {readFile !== null && (
                 <div className="flex flex-col items-center gap-xs">
@@ -82,10 +107,10 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
                 </div>
               )}
             </div>
-          </Card>
+          </section>
 
           {vm.status === 'reading' && (
-            <p role="status" className="rounded-xl bg-surface p-lg text-sm">
+            <p role="status" className="rounded-xl bg-surface p-lg text-sm shadow-md">
               {t.reading}
             </p>
           )}
@@ -110,7 +135,7 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
                   <PendingMonth key={m.month} month={m} />
                 ))}
                 <Row gap="sm">
-                  <Button size="lg" onClick={vm.apply}>
+                  <Button variant="dark" size="lg" onClick={vm.apply}>
                     {t.apply}
                   </Button>
                   <Button size="lg" variant="ghost" onClick={vm.discard}>
@@ -135,22 +160,14 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
           )}
         </Stack>
 
+<<<<<<< HEAD
         <Stack gap="xl">
           <WhatWeKeep keep={vm.whatWeKeep} sendsLabels={readFile !== null} />
         </Stack>
+=======
+        <WhatWeKeep keep={vm.whatWeKeep} sendsLabels={readFile !== null} />
+>>>>>>> 0a3f5f2 (Design v3: onboarding ladder S5-S9 restyled)
       </div>
-
-      <Scoreboard
-        label={t.scoreLabel}
-        items={[
-          { id: 'months', value: vm.history.length, label: t.monthsScore(vm.history.length), tone: 'positive' },
-          {
-            id: 'categories',
-            value: vm.whatWeKeep.categories.length,
-            label: t.categoriesScore(vm.whatWeKeep.categories.length),
-          },
-        ]}
-      />
     </LadderShell>
   );
 }

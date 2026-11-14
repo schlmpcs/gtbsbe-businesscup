@@ -1,8 +1,9 @@
-// S5 Guess yourself (Figma S05): a huge orange guess over one log-scale slider for your own monthly
-// cost and a big "lock in" button, today's game results in the black score bar, then your guess
-// next to the engine's estimate for the current profile.
+// S5 Guess yourself (Design v3, Figma 202:1873): headline and sub on the left, a giant orange guess
+// over one log-scale slider for your own monthly cost, today's game result as a tilted ink sticker,
+// and the empty plot on the right ("your house starts here"). The orange CTA locks the guess; once
+// it is saved, the guess sits next to the engine's estimate and the CTA leads to the next rung.
 import { ladder } from '@/copy';
-import { Button, Card, cx, EstimateTag, formatMoney, formatRate, Scoreboard, Slider } from '@/ui-kit';
+import { Art, Button, Card, cx, EstimateTag, formatMoney, formatRate, Slider, Sticker } from '@/ui-kit';
 import type { GuessYourselfVM, LadderProgressVM, SelfGuessComparisonVM } from '../model/types';
 import { LadderShell } from './LadderShell';
 
@@ -14,11 +15,45 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
   const { guess, savedGuess, bridge, comparison } = vm;
   const isSaved = savedGuess !== null && savedGuess === guess.value;
 
+  // Before the first save, locking the guess is the one orange CTA. After it, the CTA goes on to the
+  // next rung (the shell's default) and changing the guess is the text action on the left.
+  const lock = (
+    <Button size="lg" onClick={vm.submit}>
+      {t.submit}
+    </Button>
+  );
+  const update = (
+    <div className="flex flex-wrap items-center gap-md">
+      <Button variant="secondary" onClick={vm.submit} disabled={isSaved}>
+        {t.update}
+      </Button>
+      {isSaved && (
+        <span role="status" className="text-sm font-semibold text-positive">
+          {t.saved}
+        </span>
+      )}
+    </div>
+  );
+
   return (
-    <LadderShell screen="S5" progress={progress} loading={vm.status === 'loading'} centered>
-      <div className="mx-auto flex w-full max-w-(--container-2xl) flex-col items-stretch gap-xl">
-        <p aria-hidden="true" className="flex flex-wrap items-baseline justify-center gap-x-md text-center">
-          <span className="font-display text-display font-extrabold leading-display text-primary tabular-nums">
+    <LadderShell
+      screen="S5"
+      progress={progress}
+      loading={vm.status === 'loading'}
+      primary={savedGuess === null ? lock : undefined}
+      secondary={savedGuess === null ? null : update}
+      aside={
+        <div className="relative flex flex-col items-center">
+          <Art name="empty-plot" className="w-full max-w-(--container-md)" />
+          <Sticker tilt={-4} className="-mt-xl text-sm">
+            {t.plotSticker}
+          </Sticker>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-lg">
+        <p aria-hidden="true" className="flex flex-wrap items-baseline gap-x-md">
+          <span className="font-display text-[length:calc(var(--text-display)*1.6)] font-extrabold leading-display tracking-tight text-primary tabular-nums lg:text-[length:calc(var(--text-display)*2.6)]">
             {formatMoney(guess.value)}
           </span>
           <span className="text-2xl text-text-muted">{t.aMonth}</span>
@@ -33,25 +68,14 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
           formatValue={(v) => formatMoney(v)}
           onValueChange={vm.setGuess}
         />
-        <Button size="lg" fullWidth onClick={vm.submit} disabled={isSaved}>
-          {savedGuess === null ? t.submit : t.update}
-        </Button>
-        {isSaved && (
-          <span role="status" className="text-center text-sm font-medium text-positive">
-            {t.saved}
-          </span>
+        {bridge && bridge.played > 0 && (
+          <Sticker tone="ink" tilt={-2} className="text-sm">
+            {bridge.guessedHigh > bridge.guessedLow
+              ? t.bridgeHigh(bridge.guessedHigh, bridge.played)
+              : t.bridgeLow(bridge.guessedLow, bridge.played)}
+          </Sticker>
         )}
       </div>
-
-      {bridge && (
-        <Scoreboard
-          label={t.bridgeLabel}
-          items={[
-            { id: 'low', value: t.bridgeOf(bridge.guessedLow, bridge.played), label: t.bridgeLow(bridge.played), tone: 'primary' },
-            { id: 'high', value: t.bridgeOf(bridge.guessedHigh, bridge.played), label: t.bridgeHigh(bridge.played) },
-          ]}
-        />
-      )}
 
       {comparison && <Comparison comparison={comparison} />}
     </LadderShell>
@@ -63,7 +87,7 @@ function Comparison({ comparison: c }: { comparison: SelfGuessComparisonVM }) {
   const share = formatRate(Math.abs(c.differenceShare), 0);
   const verdict = c.direction === 'match' ? t.exact : c.direction === 'above' ? t.above(amount, share) : t.below(amount, share);
   return (
-    <Card title={t.compareTitle} style={{ transform: 'rotate(-0.5deg)' }}>
+    <Card title={t.compareTitle}>
       <div className="flex flex-col gap-lg">
         <div className="grid grid-cols-2 gap-xl">
           <div className="flex flex-col gap-xs">
@@ -88,7 +112,7 @@ function Comparison({ comparison: c }: { comparison: SelfGuessComparisonVM }) {
           data-testid="guess-verdict"
           style={{ transform: 'rotate(-1deg)' }}
           className={cx(
-            'w-fit rounded-lg px-lg py-sm text-base font-bold text-on-primary',
+            'w-fit rounded-full px-lg py-sm text-base font-bold text-on-primary shadow-md',
             c.direction === 'match' ? 'bg-positive' : 'bg-ink',
           )}
         >
