@@ -26,3 +26,9 @@ export const TICK_LIST_MAX = 40;
 
 /** Most services one person can tick: a bound for what is read back from local storage. */
 export const TICKS_MAX = 200;
+
+/**
+ * Two monthly prices are "the same plan" when they are within a cent: they are both rounded to the cent,
+ * so a ticked plan and the statement's charge for it differ by that much at most (a yearly price ÷ 12).
+ */
+export const MARK_PRICE_TOLERANCE = 0.01;

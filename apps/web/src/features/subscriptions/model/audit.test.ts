@@ -1,13 +1,14 @@
 import { statementItemsSample, subscriptionsExpected } from '@lifeguessr/data/fixtures/tools';
 import { assumptions, auditTotals, detectSubscriptions, subsMissEdges } from '@lifeguessr/engine';
-import { MISS_BUCKETS, SubscriptionFindingSchema, type SubscriptionFinding } from '@lifeguessr/types';
+import { MISS_BUCKETS, SubscriptionFindingSchema, type StatementItem, type SubscriptionFinding } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import { bigCatalogue, ruleClasses, testCatalogue } from '@/test/subscriptions';
 import {
-  auditFromTicks, CANCEL_MOVE_ID, cancelCandidate, carryMarks, displayNameOf, forgottenIds, isCounted, mergeFindings, missBucketOf,
-  missFactor, tickIdOf, tickServices,
+  auditFromTicks, CANCEL_MOVE_ID, cancelCandidate, combineFindings, displayNameOf, forgottenIds, isCounted, mergeFindings, missBucketOf,
+  markedFindings, markTarget, marksWithout, missFactor, pruneMarks, tickIdOf, tickServices,
 } from './audit';
+import { emptyToolState, type SubscriptionsToolState } from './state';
 
 describe('auditFromTicks', () => {
   it('three monthly ticks: $17.99 + $11.99 + $24.99 = $54.97 a month, $659.64 a year', () => {
@@ -253,21 +254,68 @@ describe('cancelCandidate', () => {
   });
 });
 
-describe('carryMarks', () => {
-  const classOf = (label: string) => ruleClasses(statementItemsSample).find((c) => c.label === label)?.class;
-  const { findings } = detectSubscriptions(statementItemsSample, { catalogue: testCatalogue, classOf });
-  const ticks = [{ serviceId: 'netflix', planId: 'standard' }, { serviceId: 'disney-plus', planId: 'basic' }];
+describe('marks: what a mark points at, and which stay', () => {
+  const line = (label: string, amount: number, month: string, day: number): StatementItem => ({ label, amount, month, day });
+  const months = ['2026-09', '2026-10', '2026-11'];
+  /** Two Netflix merchants, three months each: `NETFLIX COM` at $17.99 and `NETFLIX COM CA` at the second price. */
+  const stateWith = (second: number, over: Partial<SubscriptionsToolState> = {}): SubscriptionsToolState => ({
+    ...emptyToolState(),
+    ticks: [{ serviceId: 'netflix', planId: 'standard' }], // $17.99
+    cancelMarked: ['tick:netflix'],
+    audit: detectSubscriptions(
+      months.flatMap((m) => [line('NETFLIX.COM', 17.99, m, 7), line('NETFLIX COM CA', second, m, 9)]),
+      { catalogue: testCatalogue },
+    ),
+    ...over,
+  });
+  const idOf = (state: SubscriptionsToolState, mark: string) => markTarget(mark, combineFindings(state, testCatalogue))?.id;
 
-  it('keeps a mark on a finding that is still there, moves a tick mark to the finding of its service, keeps one the statement did not show', () => {
-    expect(carryMarks(['spotify-usa-ny', 'tick:netflix', 'tick:disney-plus'], ticks, findings))
-      .toEqual(['spotify-usa-ny', 'netflix-com-ca', 'tick:disney-plus']);
+  it('a ticked service’s mark points at the finding priced as the ticked plan: $17.99, not the costliest $24.99', () => {
+    const state = stateWith(24.99);
+    expect(state.audit!.findings.map((f) => [f.id, f.monthly])).toEqual([['netflix-com-ca', 24.99], ['netflix-com', 17.99]]);
+    expect(idOf(state, 'tick:netflix')).toBe('netflix-com');
+    expect(markedFindings(state, testCatalogue).map((f) => f.monthly)).toEqual([17.99]);
   });
 
-  it('drops a mark that points at nothing: a finding that is gone, a tick of a service no longer ticked', () => {
-    expect(carryMarks(['old-finding', 'tick:spotify', 'tick:gone'], ticks, findings)).toEqual([]);
+  it('within a cent counts as the same price: a $17.98 charge is the $17.99 plan', () => {
+    expect(idOf(stateWith(17.98), 'tick:netflix')).toBeUndefined(); // both lines are within a cent: a tie
+    const near = stateWith(24.99, { audit: detectSubscriptions(months.flatMap((m) => [line('NETFLIX.COM', 17.98, m, 7), line('NETFLIX COM CA', 24.99, m, 9)]), { catalogue: testCatalogue }) });
+    expect(idOf(near, 'tick:netflix')).toBe('netflix-com');
   });
 
-  it('lists an id once even when two marks end up on the same finding', () => {
-    expect(carryMarks(['netflix-com-ca', 'tick:netflix'], ticks, findings)).toEqual(['netflix-com-ca']);
+  it('a tie, or no price that fits among several, points at nothing', () => {
+    expect(idOf(stateWith(17.99), 'tick:netflix')).toBeUndefined();
+    const neither = stateWith(24.99, { audit: detectSubscriptions(months.flatMap((m) => [line('NETFLIX.COM', 15.49, m, 7), line('NETFLIX COM CA', 24.99, m, 9)]), { catalogue: testCatalogue }) });
+    expect(idOf(neither, 'tick:netflix')).toBeUndefined();
+  });
+
+  it('the only finding of the service takes the mark, whatever its price; with no finding the tick itself does', () => {
+    const single = stateWith(24.99, { audit: detectSubscriptions(months.map((m) => line('NETFLIX COM CA', 24.99, m, 9)), { catalogue: testCatalogue }) });
+    expect(idOf(single, 'tick:netflix')).toBe('netflix-com-ca');
+    expect(idOf({ ...single, audit: undefined }, 'tick:netflix')).toBe('tick:netflix');
+  });
+
+  it('a service that is not ticked, a finding that is not there, or one that does not count is nothing', () => {
+    const state = stateWith(24.99);
+    expect(idOf(state, 'tick:spotify')).toBeUndefined();
+    expect(idOf(state, 'no-such-finding')).toBeUndefined();
+    expect(idOf(state, 'netflix-com-ca')).toBe('netflix-com-ca');
+    const stopped = stateWith(24.99, { audit: detectSubscriptions(['2026-06', '2026-07', '2026-08'].map((m) => line('NETFLIX.COM', 17.99, m, 7)).concat(line('SOME SHOP', 3, '2026-11', 14)), { catalogue: testCatalogue }) });
+    expect(stopped.audit!.findings[0]).toMatchObject({ serviceId: 'netflix', status: 'stopped' });
+    expect(idOf(stopped, 'tick:netflix')).toBeUndefined();
+    expect(idOf(stopped, 'netflix-com')).toBeUndefined();
+  });
+
+  it('pruneMarks keeps what still points at one counted finding, once each, in order, and nothing else', () => {
+    const state = stateWith(24.99, { cancelMarked: ['tick:gone', 'tick:netflix', 'netflix-com', 'old-finding', 'netflix-com-ca'] });
+    // tick:netflix → netflix-com; netflix-com is the same finding (dropped as a duplicate); netflix-com-ca is its own.
+    expect(pruneMarks(state, testCatalogue)).toEqual(['tick:netflix', 'netflix-com-ca']);
+    expect(pruneMarks(stateWith(17.99), testCatalogue)).toEqual([]); // a tie: nothing to point at
+  });
+
+  it('marksWithout takes off the marks made on a finding and the ones made through its ticked service', () => {
+    const state = stateWith(24.99, { cancelMarked: ['tick:netflix', 'netflix-com-ca'] });
+    expect(marksWithout(state, testCatalogue, 'netflix-com')).toEqual(['netflix-com-ca']);
+    expect(marksWithout(state, testCatalogue, 'netflix-com-ca')).toEqual(['tick:netflix']);
   });
 });

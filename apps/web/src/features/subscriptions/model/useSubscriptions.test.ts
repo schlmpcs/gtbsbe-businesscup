@@ -542,16 +542,17 @@ describe('statement path', () => {
   });
 });
 
-describe('marks carry over when a statement is read', () => {
-  it('a mark on a ticked service moves to the statement finding of the same service', async () => {
+describe('marks when a statement is read', () => {
+  it('a mark on a ticked service points at the statement finding of the same service', async () => {
     const tool = renderTool();
     await ready(tool);
     act(() => tool.result.current.vm.ticks.toggle('netflix', 'premium')); // $24.99 ticked
     act(() => tool.result.current.vm.plan.markCancel('tick:netflix'));
     expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 24.99 });
     await uploaded(tool);
-    // The statement says $17.99, and the mark is on that finding now (no id left behind).
-    expect(tool.result.current.store.state!.cancelMarked).toEqual(['netflix-com-ca']);
+    // The statement says $17.99, and the mark points at that finding now. It stays the tick's mark, so a later
+    // statement without Netflix does not lose it.
+    expect(tool.result.current.store.state!.cancelMarked).toEqual(['tick:netflix']);
     expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 1, saving: { monthly: 17.99, yearly: 215.88 } });
     expect(tool.result.current.vm.plan.options.find((o) => o.id === 'netflix-com-ca')!.markedCancel).toBe(true);
   });
@@ -581,8 +582,164 @@ describe('marks carry over when a statement is read', () => {
     });
     await ready(tool);
     await uploaded(tool, csvFile(['2026-10-07,NETFLIX.COM # CA,-17.99', '2026-11-07,NETFLIX.COM # CA,-17.99']));
-    // Apple is not in the new audit; Netflix's tick mark moved to its finding; 'tick:gone' was never a service.
-    expect(tool.result.current.store.state!.cancelMarked).toEqual(['netflix-com-ca']);
+    // Apple is not in the new audit and 'tick:gone' was never a service: both are dropped. Netflix's mark stays, on its finding.
+    expect(tool.result.current.store.state!.cancelMarked).toEqual(['tick:netflix']);
+    expect(tool.result.current.vm.plan.options.filter((o) => o.markedCancel).map((o) => o.id)).toEqual(['netflix-com-ca']);
+  });
+});
+
+describe('a mark on a ticked service follows the service, and only while it counts', () => {
+  // Two Netflix lines (two merchants of one service), three months each: $17.99 and $24.99.
+  const twoNetflix = (second = 24.99) => csvFile([
+    '2026-09-07,NETFLIX.COM,-17.99', '2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99',
+    `2026-09-09,NETFLIX COM CA,-${second}`, `2026-10-09,NETFLIX COM CA,-${second}`, `2026-11-09,NETFLIX COM CA,-${second}`,
+  ]);
+  const tickAndMarkNetflix = async (tool: Tool, planId = 'standard') => {
+    act(() => tool.result.current.vm.ticks.toggle('netflix', planId));
+    act(() => tool.result.current.vm.plan.markCancel('tick:netflix'));
+  };
+  const markedIds = (tool: Tool) => tool.result.current.vm.plan.options.filter((o) => o.markedCancel).map((o) => o.id);
+
+  it('goes to the finding that matches the ticked plan, not the costliest one: Standard $17.99, not $24.99', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    await tickAndMarkNetflix(tool);
+    await uploaded(tool, twoNetflix());
+    expect(tool.result.current.vm.findings.active.map((f) => [f.id, f.monthly])).toEqual([['netflix-com-ca', 24.99], ['netflix-com', 17.99]]);
+    expect(markedIds(tool)).toEqual(['netflix-com']);
+    expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 17.99, yearly: 215.88 });
+  });
+
+  it('with the other plan ticked it is the other finding: Premium $24.99', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    await tickAndMarkNetflix(tool, 'premium');
+    await uploaded(tool, twoNetflix());
+    expect(markedIds(tool)).toEqual(['netflix-com-ca']);
+    expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 24.99 });
+  });
+
+  it('a tie is not guessed: two findings at the ticked price leave the mark on nothing, and it is dropped', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    await tickAndMarkNetflix(tool);
+    await uploaded(tool, twoNetflix(17.99));
+    expect(markedIds(tool)).toEqual([]);
+    expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+    expect(tool.result.current.store.state!.cancelMarked).toEqual([]);
+  });
+
+  it('no finding at the ticked price among several is not guessed either', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    await tickAndMarkNetflix(tool); // $17.99 ticked; the statement has $15.49 and $24.99
+    await uploaded(tool, csvFile([
+      '2026-09-07,NETFLIX.COM,-15.49', '2026-10-07,NETFLIX.COM,-15.49', '2026-11-07,NETFLIX.COM,-15.49',
+      '2026-09-09,NETFLIX COM CA,-24.99', '2026-10-09,NETFLIX COM CA,-24.99', '2026-11-09,NETFLIX COM CA,-24.99',
+    ]));
+    expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+  });
+
+  it('the only finding of the service takes the mark, whatever its price (the statement wins)', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    await tickAndMarkNetflix(tool, 'premium'); // $24.99 ticked
+    await uploaded(tool, csvFile(['2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99']));
+    expect(markedIds(tool)).toEqual(['netflix-com']);
+    expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 17.99 });
+  });
+
+  describe('replacing the statement never loses the mark of a service that is still ticked', () => {
+    const spotifyOnly = () => csvFile(['2026-10-05,SPOTIFY USA,-11.99', '2026-11-05,SPOTIFY USA,-11.99']);
+
+    it('statement A with Netflix, then statement B without it: marked on the tick again', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await tickAndMarkNetflix(tool);
+      await uploaded(tool);
+      expect(markedIds(tool)).toEqual(['netflix-com-ca']);
+      await uploaded(tool, spotifyOnly());
+      expect(markedIds(tool)).toEqual(['tick:netflix']);
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 1, saving: { monthly: 17.99, isEstimate: true } });
+    });
+
+    it('statement B without Netflix, then statement A with it: marked on the finding', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await tickAndMarkNetflix(tool);
+      await uploaded(tool, spotifyOnly());
+      expect(markedIds(tool)).toEqual(['tick:netflix']);
+      await uploaded(tool);
+      expect(markedIds(tool)).toEqual(['netflix-com-ca']);
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 1, saving: { monthly: 17.99, isEstimate: false } });
+    });
+
+    it('unticking the service drops its mark, whichever statement is read', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await tickAndMarkNetflix(tool);
+      await uploaded(tool);
+      act(() => tool.result.current.vm.ticks.toggle('netflix', 'standard')); // off
+      await uploaded(tool, spotifyOnly());
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+      expect(tool.result.current.store.state!.cancelMarked).toEqual([]);
+    });
+  });
+
+  describe('a mark exists only while what it points at counts: no hidden mark to come back', () => {
+    const stoppedNetflix = () => csvFile([
+      '2026-07-07,NETFLIX.COM,-17.99', '2026-08-07,NETFLIX.COM,-17.99', '2026-09-07,NETFLIX.COM,-17.99', '2026-11-14,SOME SHOP,-3.00',
+    ]);
+    const activeNetflix = () => csvFile(['2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99']);
+
+    it('a mark carried to a stopped finding is dropped with it, and a later statement where it is active again does not revive it', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await tickAndMarkNetflix(tool);
+      await uploaded(tool, stoppedNetflix());
+      expect(tool.result.current.vm.findings.stopped.map((f) => f.serviceId)).toEqual(['netflix']);
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+      expect(tool.result.current.store.state!.cancelMarked).toEqual([]);
+      await uploaded(tool, activeNetflix());
+      expect(tool.result.current.vm.findings.active.map((f) => f.serviceId)).toEqual(['netflix']);
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+      expect(markedIds(tool)).toEqual([]);
+    });
+
+    it('a mark on a statement finding is dropped when a new statement shows it stopped, and not revived either', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await uploaded(tool, activeNetflix());
+      act(() => tool.result.current.vm.plan.markCancel('netflix-com'));
+      await uploaded(tool, stoppedNetflix());
+      expect(tool.result.current.store.state!.cancelMarked).toEqual([]);
+      await uploaded(tool, activeNetflix());
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+    });
+
+    it('dismissing a finding takes the mark with it, a mark made through the tick included, and bringing it back does not revive it', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await tickAndMarkNetflix(tool);
+      await uploaded(tool);
+      expect(markedIds(tool)).toEqual(['netflix-com-ca']);
+      act(() => tool.result.current.vm.findings.dismiss('netflix-com-ca'));
+      expect(tool.result.current.store.state!.cancelMarked).toEqual([]);
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+      act(() => tool.result.current.vm.findings.restoreDismissed());
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+      expect(markedIds(tool)).toEqual([]);
+    });
+
+    it('a mark can be taken off from the finding it points at, even when it was made through the tick', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await tickAndMarkNetflix(tool);
+      await uploaded(tool);
+      act(() => tool.result.current.vm.plan.unmarkCancel('netflix-com-ca'));
+      expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
+      expect(tool.result.current.store.state!.cancelMarked).toEqual([]);
+    });
   });
 });
 

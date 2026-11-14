@@ -6,7 +6,7 @@ import {
   CADENCE_MONTHS, MAX_ID_LENGTH, MISS_BUCKETS,
   type KnownService, type MissBucket, type Money, type Profile, type ServicePlan, type SubscriptionFinding,
 } from '@lifeguessr/types';
-import { TICK_LIST_MAX } from './constants';
+import { MARK_PRICE_TOLERANCE, TICK_LIST_MAX } from './constants';
 import type { SubscriptionsToolState, Tick } from './state';
 
 /** Code-unit order, so the result does not depend on the locale (as the engine's audit order). */
@@ -152,39 +152,65 @@ export function combineFindings(state: SubscriptionsToolState, catalogue: readon
   return { confirmed, statement, ticked, merged };
 }
 
-/** The findings marked to cancel that still count (a marked finding that was dismissed or stopped counting is not). */
-export function markedFindings(state: SubscriptionsToolState, catalogue: readonly KnownService[]): SubscriptionFinding[] {
-  const { confirmed, merged } = combineFindings(state, catalogue);
-  const marked = new Set(state.cancelMarked);
-  return merged.filter((f) => marked.has(f.id) && isCounted(f, confirmed));
+// ----- cancel marks ------------------------------------------------------------------------------
+// A mark is kept as the person made it: on a statement finding by its id, on a ticked service by the
+// service (`tick:<service>`), which does not change when a statement is replaced. Rule, in one place:
+//
+//   A mark exists only while it points at exactly one finding that counts. It points, now, at the finding
+//   of that id; or, for a ticked service, at the statement finding of the service whose monthly price is the
+//   ticked plan's (within a cent), the only one if there is only one, the tick's own finding when the
+//   statement has none, and at nothing when several fit equally or none does (never a guess).
+//   Any write that leaves a mark pointing at nothing, or at a finding that does not count (stopped,
+//   waiting for a yes, dismissed), drops it in that write (`pruneMarks`), so no hidden mark can come back
+//   when a later statement shows the charge active again.
+
+/** The counted finding a mark points at now, or undefined (see the rule above). */
+export function markTarget(
+  mark: string,
+  c: Pick<ReturnType<typeof combineFindings>, 'confirmed' | 'statement' | 'ticked' | 'merged'>,
+): SubscriptionFinding | undefined {
+  let target: SubscriptionFinding | undefined;
+  if (mark.startsWith(TICK_ID_PREFIX)) {
+    const tick = c.ticked.findings.find((f) => f.id === mark); // not ticked (any more): nothing
+    if (!tick) return undefined;
+    const found = c.statement.filter((f) => f.serviceId === tick.serviceId);
+    if (found.length === 0) target = tick;
+    else if (found.length === 1) target = found[0];
+    else {
+      const fitting = found.filter((f) => Math.abs(f.monthly - tick.monthly) <= MARK_PRICE_TOLERANCE + 1e-9);
+      target = fitting.length === 1 ? fitting[0] : undefined;
+    }
+  } else {
+    target = c.merged.find((f) => f.id === mark);
+  }
+  return target && isCounted(target, c.confirmed) ? target : undefined;
 }
 
-/**
- * The cancel marks after a new statement is read. A mark on a finding that is still in the audit stays.
- * A mark on a ticked service moves to the statement finding of the same service (the statement now
- * speaks for it); with no such finding it stays on the tick, as long as the service is still ticked.
- * Anything else (a finding that is gone, a tick of a service that is no longer ticked) is dropped, so
- * no id is left that points at nothing.
- */
-export function carryMarks(
-  marked: readonly string[],
-  ticks: readonly Tick[],
-  findings: readonly SubscriptionFinding[],
-): string[] {
-  const ids = new Set(findings.map((f) => f.id));
-  const ticked = new Set(ticks.map((t) => t.serviceId));
-  const carried: string[] = [];
-  for (const id of marked) {
-    let to: string | undefined;
-    if (ids.has(id)) {
-      to = id;
-    } else if (id.startsWith(TICK_ID_PREFIX)) {
-      const serviceId = id.slice(TICK_ID_PREFIX.length);
-      if (ticked.has(serviceId)) to = findings.find((f) => f.serviceId === serviceId)?.id ?? id;
-    }
-    if (to !== undefined && !carried.includes(to)) carried.push(to);
+/** The marks that still point at exactly one counted finding each, in order; the rest are dropped. */
+export function pruneMarks(state: SubscriptionsToolState, catalogue: readonly KnownService[]): string[] {
+  const c = combineFindings(state, catalogue);
+  const pointed = new Set<string>();
+  const kept: string[] = [];
+  for (const mark of state.cancelMarked) {
+    const target = markTarget(mark, c);
+    if (target === undefined || pointed.has(target.id)) continue;
+    pointed.add(target.id);
+    kept.push(mark);
   }
-  return carried;
+  return kept;
+}
+
+/** The marks left when the ones pointing at finding `id` (made on it, or through its ticked service) are taken off. */
+export function marksWithout(state: SubscriptionsToolState, catalogue: readonly KnownService[], id: string): string[] {
+  const c = combineFindings(state, catalogue);
+  return state.cancelMarked.filter((mark) => mark !== id && markTarget(mark, c)?.id !== id);
+}
+
+/** The findings marked to cancel that still count (a mark that points at nothing, or at a finding that does not count, is not one). */
+export function markedFindings(state: SubscriptionsToolState, catalogue: readonly KnownService[]): SubscriptionFinding[] {
+  const c = combineFindings(state, catalogue);
+  const ids = new Set(state.cancelMarked.flatMap((mark) => markTarget(mark, c)?.id ?? []));
+  return c.merged.filter((f) => ids.has(f.id));
 }
 
 /**

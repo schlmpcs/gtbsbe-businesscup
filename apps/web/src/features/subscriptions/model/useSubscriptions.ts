@@ -26,8 +26,8 @@ import { toVMError } from '@/lib/model/errors';
 import { useAppReady, useAppStore } from '@/state';
 import { getAnonId } from '@/state/anonId';
 import {
-  CANCEL_MOVE_ID, cancelCandidate, carryMarks, combineFindings, displayNameOf, forgottenIds, isCounted, markedFindings,
-  missBucketOf, missFactor, monthlyOf, tickIdOf, tickServices,
+  CANCEL_MOVE_ID, cancelCandidate, combineFindings, displayNameOf, forgottenIds, isCounted, markedFindings, marksWithout,
+  missBucketOf, missFactor, monthlyOf, pruneMarks, tickServices,
 } from './audit';
 import { GUESS_PRESETS, SURVEY } from './constants';
 import { readStatementForAudit, toStatementError } from './readForAudit';
@@ -90,7 +90,9 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const update = useCallback(
     (change: (s: SubscriptionsToolState) => SubscriptionsToolState) => {
       const previous = latest.current;
-      const next = change(previous);
+      const changed = change(previous);
+      // Every write leaves only the marks that still point at one counted finding (see `markTarget` in ./audit).
+      const next = { ...changed, cancelMarked: pruneMarks(changed, catalogue) };
       latest.current = next;
       try {
         save(next);
@@ -99,7 +101,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
         throw err;
       }
     },
-    [save],
+    [save, catalogue],
   );
 
   // ----- events (enums and counts only) ----------------------------------------------------------
@@ -122,8 +124,10 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   // ----- what the state says ----------------------------------------------------------------------
   const combined = useMemo(() => combineFindings(state, catalogue), [state, catalogue]);
   const { confirmed, statement: statementFindings, ticked: tickAudit, merged } = combined;
-  const markedSet = useMemo(() => new Set(state.cancelMarked), [state.cancelMarked]);
   const counted = useMemo(() => merged.filter((f) => isCounted(f, confirmed)), [merged, confirmed]);
+  // The findings marked to cancel: each mark resolved against the current findings (see `markTarget` in ./audit).
+  const marked = useMemo(() => markedFindings(state, catalogue), [state, catalogue]);
+  const markedIds = useMemo(() => new Set(marked.map((f) => f.id)), [marked]);
   const statementTotals = useMemo(() => auditTotals(statementFindings, confirmed), [statementFindings, confirmed]);
   const mergedTotals = useMemo(() => auditTotals(merged, confirmed), [merged, confirmed]);
   const hasAudit = state.audit !== undefined;
@@ -190,7 +194,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
       update((s) => {
         const kept = s.ticks.filter((t) => t.serviceId === serviceId || known(t));
         if (off) {
-          return { ...s, ticks: kept.filter((t) => t.serviceId !== serviceId), cancelMarked: without(s.cancelMarked, tickIdOf(serviceId)) };
+          return { ...s, ticks: kept.filter((t) => t.serviceId !== serviceId) };
         }
         const tick = { serviceId, planId: (asked ?? entry.defaultPlan).id };
         const exists = kept.some((t) => t.serviceId === serviceId);
@@ -256,11 +260,10 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
             update((s) => ({
               ...s,
               audit,
-              // A choice about a finding that is not in the new audit has nothing to apply to. A mark on a
-              // ticked service moves to the statement's finding of that service.
+              // A choice about a finding that is not in the new audit has nothing to apply to. The marks are
+              // kept as made and resolved against the new audit; the write drops those that no longer count.
               confirmed: s.confirmed.filter((id) => ids.has(id)),
               dismissed: s.dismissed.filter((id) => ids.has(id)),
-              cancelMarked: carryMarks(s.cancelMarked, s.ticks, audit.findings),
             }));
             setUpload({ status: 'idle', error: null });
             setChosen('findings');
@@ -307,7 +310,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
         lastCharge: f.lastCharge, nextExpected: f.nextExpected, status: f.status, flags: [...f.flags],
         previousAmount: f.previousAmount ?? null, overlapCount: f.overlapsWith?.length ?? 0, confidence: f.confidence,
         origin: f.origin, isEstimate: f.isEstimate, counted: isCountedNow, forgotten: forgotten.has(f.id),
-        markedCancel: isCountedNow && markedSet.has(f.id),
+        markedCancel: markedIds.has(f.id),
       };
     };
     const stopped = statementFindings.filter((f) => f.status === 'stopped');
@@ -321,7 +324,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
       flagged: statementFindings.filter((f) => f.flags.length > 0).length,
       dismissedCount: state.dismissed.filter((id) => state.audit?.findings.some((f) => f.id === id)).length,
     };
-  }, [statementFindings, merged, confirmed, markedSet, forgotten, statementTotals, tickAudit, catalogue, state.dismissed, state.audit]);
+  }, [statementFindings, merged, confirmed, markedIds, forgotten, statementTotals, tickAudit, catalogue, state.dismissed, state.audit]);
 
   const confirm = useCallback(
     (id: string) => {
@@ -334,16 +337,17 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const dismiss = useCallback(
     (id: string) => {
       if (!latest.current.audit?.findings.some((x) => x.id === id)) return;
+      // The marks that point at the finding go with it (read before it is hidden: the ticked service it covered
+      // would otherwise take the mark over), and bringing the finding back does not bring them back.
       update((s) => ({
-        ...s, dismissed: withId(s.dismissed, id), confirmed: without(s.confirmed, id), cancelMarked: without(s.cancelMarked, id),
+        ...s, dismissed: withId(s.dismissed, id), confirmed: without(s.confirmed, id), cancelMarked: marksWithout(s, catalogue, id),
       }));
     },
-    [update],
+    [update, catalogue],
   );
   const restoreDismissed = useCallback(() => update((s) => ({ ...s, dismissed: [] })), [update]);
 
   // ----- plan: the saving and its 10-year effect ---------------------------------------------------
-  const marked = useMemo(() => markedFindings(state, catalogue), [state, catalogue]);
   const saving = useMemo(() => {
     if (marked.length === 0) return null;
     const { monthlyTotal, yearlyTotal } = auditTotals(marked, confirmed);
@@ -359,13 +363,18 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const markCancel = useCallback(
     (id: string) => {
       const now = combineFindings(latest.current, catalogue);
-      if (!now.merged.some((f) => f.id === id && isCounted(f, now.confirmed)) || latest.current.cancelMarked.includes(id)) return;
+      if (!now.merged.some((f) => f.id === id && isCounted(f, now.confirmed))) return;
+      if (markedFindings(latest.current, catalogue).some((f) => f.id === id)) return; // already marked, maybe through its ticked service
       update((s) => ({ ...s, cancelMarked: withId(s.cancelMarked, id) }));
       emit({ name: 'subs_cancel_marked', props: { count: Math.min(markedFindings(latest.current, catalogue).length, EVENT_COUNT_MAX) } });
     },
     [catalogue, update, emit],
   );
-  const unmarkCancel = useCallback((id: string) => update((s) => ({ ...s, cancelMarked: without(s.cancelMarked, id) })), [update]);
+  // Takes off every mark that points at the finding, the one made on it and the one made through its ticked service.
+  const unmarkCancel = useCallback(
+    (id: string) => update((s) => ({ ...s, cancelMarked: marksWithout(s, catalogue, id) })),
+    [update, catalogue],
+  );
 
   const profileSubscriptions = profile.spending.subscriptions;
   // The committed move is a snapshot: its patch is absolute and was sized for the marks and the subscriptions
