@@ -1,3 +1,4 @@
+import type { AvatarFacts } from './avatar';
 import type { Goal } from './goal';
 import type { TOOL_IDS } from './constants';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
@@ -103,6 +104,8 @@ export type Debt = { id: string; kind: 'card'|'auto'|'student'|'personal'|'bnpl'
   minPayment: Estimate<Money>;   // monthly; defaulted from assumptions when the user skips it
   extraPayment?: Money };        // monthly, set by moves
 export type Profile = {
+  /** Optional household facts, confirmed in the avatar preview; no effect on forecast math. */
+  household?: AvatarFacts;
   age: Estimate<number>;
   takeHomePay: Estimate<Money>;  // monthly, after tax and payroll retirement contributions
   spending: Record<CostCategory, Estimate<Money>>;      // monthly
@@ -218,6 +221,8 @@ export type SessionErrorCode =
 export type ToolId = (typeof TOOL_IDS)[number];
 export type MissBucket = 'under0.5'|'0.5to0.8'|'0.8to1.25'|'1.25to2'|'over2';
 export type ClientFunnelEvent =
+  | {name:'avatar_preview_viewed'}
+  | {name:'avatar_stats_viewed'}
   | {name:'goal_set';props:{years:number}}
   | {name:'goal_verdict_shown';props:{verdict:'onTrack'|'withinRange'|'behind'}}
   | {name:'goal_cleared'}
@@ -247,6 +252,8 @@ export type ClientFunnelEvent =
 
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =
+  | {name:'avatar_published';props:{stamp:'selfReported'|'statementVerified';republish:boolean}}
+  | {name:'avatar_unpublished'}
   | { name: 'checkout_started'; props: { plan: ProPlan } }
   | { name: 'pro_purchased'; props: { plan: ProPlan } }   // a test-mode Stripe Checkout, confirmed paid
   | { name: 'pro_demo_purchased'; props: { plan: ProPlan } } // the simulated checkout; kept apart from pro_purchased on purpose
@@ -285,3 +292,4 @@ export * from './tools';
 export * from './payoff';
 export * from './overpaying';
 export * from './subscriptions';
+export * from './avatar';

@@ -10,7 +10,7 @@
 //   window, as a bit mask (bit i = FUNNEL_EVENT_NAMES[i]); the stores return how many ids sent
 //   each set, and buildFunnelReport derives every number from those counts.
 import {
-  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, TOOL_IDS, type ToolId, type FunnelEvent, type FunnelEventName, type FunnelReport,
+  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, EVENT_MASK_BITS, TOOL_IDS, type ToolId, type FunnelEvent, type FunnelEventName, type FunnelReport,
 } from '@lifeguessr/types';
 
 /** One event to store: its id (a UUID; the browser's, or a fresh one for server events) and body. */
@@ -35,14 +35,13 @@ export interface EventStore {
 /** The bit of `name` in a mask; 0 for a name this build does not know (e.g. written by a newer one). */
 export function eventBit(name: string): number {
   const i = (FUNNEL_EVENT_NAMES as readonly string[]).indexOf(name);
-  return i < 0 ? 0 : 1 << i;
+  if (i >= EVENT_MASK_BITS) throw new RangeError('Event masks exceed safe integer precision');
+  return i < 0 ? 0 : 2 ** i;
 }
 
 /** The mask of a set of event names. */
 export function maskOf(names: Iterable<string>): number {
-  let mask = 0;
-  for (const name of names) mask |= eventBit(name);
-  return mask;
+  return [...new Set(names)].reduce((mask,name)=>mask+eventBit(name),0);
 }
 
 /** The first of each id, in order: a batch that repeats an event stores it once. */
@@ -61,7 +60,7 @@ export type ToolCount = { tool: ToolId; opened: number; completed: number; conve
 export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCount[], guesses: GuessStats, tools: readonly ToolCount[] = []): FunnelReport {
   const rows = masks.filter((m) => m.mask !== 0 && m.users > 0);
   /** Distinct ids that sent every event in `need`. */
-  const withAll = (need: number) => rows.reduce((sum, m) => ((m.mask & need) === need ? sum + m.users : sum), 0);
+  const withAll = (need: number) => rows.reduce((sum, m) => (containsAll(m.mask, need) ? sum + m.users : sum), 0);
   const bit = (name: FunnelEventName) => eventBit(name);
 
   const events = Object.fromEntries(FUNNEL_EVENT_NAMES.map((name) => [name, withAll(bit(name))])) as Record<FunnelEventName, number>;
@@ -69,7 +68,7 @@ export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCoun
   let need = 0;
   let previous: number | null = null;
   const steps = FUNNEL_STEPS.map((name) => {
-    need |= bit(name);
+    need += bit(name);
     const funnel = withAll(need);
     const step = { name, users: events[name], funnel, conversion: previous === null ? null : ratio(funnel, previous) };
     previous = funnel;
@@ -92,12 +91,12 @@ export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCoun
     game: {
       players,
       finished,
-      finishRate: ratio(withAll(bit('play_started') | bit('game_finished')), players),
+      finishRate: ratio(withAll(bit('play_started') + bit('game_finished')), players),
       guesses: guesses.guesses,
       cluesPerHome: ratio(guesses.cluesOpened, guesses.guesses),
       blindGuessRate: ratio(guesses.blind, guesses.guesses),
       shared: events.result_shared,
-      shareRate: ratio(withAll(bit('game_finished') | bit('result_shared')), finished),
+      shareRate: ratio(withAll(bit('game_finished') + bit('result_shared')), finished),
     },
   };
 }
@@ -109,3 +108,9 @@ export function lastDays(days: number, now: Date = new Date()): FunnelWindow {
 
 /** Completion markers for the independent tool funnels. */
 export const TOOL_COMPLETIONS = { subscriptions: 'subs_revealed', overpaying: 'overpaying_checked', payoff: 'payoff_planned' } as const;
+
+/** Arithmetic masks stay exact past 32 events; JavaScript bitwise operators truncate them. */
+function containsAll(mask:number,need:number):boolean {
+ for(let bit=1;bit<=need;bit*=2) if(Math.floor(need/bit)%2===1 && Math.floor(mask/bit)%2!==1) return false;
+ return true;
+}

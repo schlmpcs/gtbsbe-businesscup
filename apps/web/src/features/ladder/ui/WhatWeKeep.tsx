@@ -3,7 +3,7 @@
 // browser" line for statement labels appears only once the in-browser reader is wired
 // (`sendsLabels`). The forecast line is always there: S1 and S10 send the profile's numbers to the
 // model provider whether or not a statement was uploaded.
-import { common, ladder } from '@/copy';
+import { common, ladder, avatar } from '@/copy';
 import { Card, Stack } from '@/ui-kit';
 import type { StatementUploadVM } from '../model/types';
 
@@ -56,6 +56,7 @@ export function WhatWeKeep({ keep, sendsLabels }: WhatWeKeepProps) {
             )}
             <p className="rounded-md bg-bg p-md">{t.forecastSent}</p>
             <p className="rounded-md bg-bg p-md">{t.tools}</p>
+            {keep.avatarPublished && <p className="rounded-md bg-bg p-md">{avatar.keep} <a href="/future" className="text-primary underline">{avatar.manage}</a></p>}
           </Stack>
         </details>
       </Stack>

@@ -15,7 +15,7 @@ import {
   type ProStatus, type Profile, type ProfilePatch, type Purchase, type StatementItem,
   type SessionErrorCode, type SessionState,
   CLIENT_EVENT_NAMES, ClientEventEnvelopeSchema, EVENTS_BATCH_MAX, type EVENTS_ERROR_CODES, EventsRequestSchema,
-  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelReportSchema, type SERVER_EVENT_NAMES,
+  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, EVENT_MASK_BITS, type FunnelReportSchema, type SERVER_EVENT_NAMES,
   type ClientEventEnvelope, type ClientFunnelEvent, type EventsErrorCode, type EventsRequest, type FunnelReport,
   type ServerFunnelEvent,
   ForecastBundleSchema, ForecastPointSchema, ForecastSchema, YearAnchorSchema,
@@ -328,9 +328,9 @@ describe('Funnel event contracts', () => {
     for (const name of CLIENT_EVENT_NAMES) {
       expect(ClientEventEnvelopeSchema.options.some((o) => o.shape.name.value === name)).toBe(true);
     }
-    // The funnel is made of known events; the Postgres funnel query gives each name one bit of an int.
+    // The funnel is made of known events; the mask uses safe integer arithmetic and Postgres bigint.
     for (const step of FUNNEL_STEPS) expect(FUNNEL_EVENT_NAMES).toContain(step);
-    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(31);
+    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(EVENT_MASK_BITS);
   });
 
   it('accepts the events the app sends', () => {

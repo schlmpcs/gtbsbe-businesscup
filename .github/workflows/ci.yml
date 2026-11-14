@@ -99,6 +99,8 @@ jobs:
       - run: pnpm e2e
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          AVATARS_ENABLED: 'true'
+          NEXT_PUBLIC_AVATARS_ENABLED: 'true'
           NEXT_PUBLIC_SESSION_SOURCE: api
           NEXT_PUBLIC_EVENTS_SOURCE: api
           STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:5432/lifeguessr

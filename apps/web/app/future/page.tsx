@@ -3,6 +3,7 @@
 // S10 You in 10 years + Next Moves (`/future`): thin route. The view-model hook feeds the screen.
 // `?sample=1` ("Try with sample data" on S1) loads the sample life first.
 import Link from 'next/link';
+import { AvatarPanel } from '../_components/AvatarPanel';
 import { use } from 'react';
 import { useGoal } from '@/features/forecast/model/useGoal';
 import { GoalCard } from '@/features/forecast/ui/GoalCard';
@@ -16,5 +17,5 @@ export default function FuturePage({ searchParams }: { searchParams: Promise<{ s
   const { sample } = use(searchParams);
   const vm = useFuture({ sample: sample === '1' });
   const goal = useGoal();
-  return <><FutureScreen vm={vm} links={links} Link={Link} /><div className="mx-auto max-w-(--container-md) px-lg pb-xl"><GoalCard vm={goal}/></div></>;
+  return <><FutureScreen vm={vm} links={links} Link={Link} /><div className="mx-auto max-w-(--container-md) px-lg pb-xl"><GoalCard vm={goal}/><AvatarPanel forecastSeen={vm.status==='ready'}/></div></>;
 }

@@ -40,3 +40,4 @@ export {
 } from './loan/index';
 export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';
+export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';

@@ -10,7 +10,7 @@ const m = (version: number, name: string, sql: string): Migration => ({ version,
 describe('the migration list', () => {
   it('is valid: unique, ascending versions, snake_case names, SQL in each', () => {
     expect(() => checkMigrationList(MIGRATIONS)).not.toThrow();
-    expect(MIGRATIONS.map((x) => x.version)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(MIGRATIONS.map((x) => x.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
   it.each([
@@ -49,7 +49,7 @@ describePostgres('migrate (Postgres)', () => {
     await store.check();
     await store.check();
     expect(await tables(schema)).toEqual([
-      'funnel_events', 'game_clues', 'game_results', 'pro_checkout_sessions', 'pro_entitlements', 'schema_migrations', 'sessions',
+      'avatars', 'funnel_events', 'game_clues', 'game_results', 'pro_checkout_sessions', 'pro_entitlements', 'schema_migrations', 'sessions',
     ]);
     expect(await applied(schema)).toEqual(MIGRATIONS.map((x) => ({ version: x.version, name: x.name, checksum: checksumOf(x.sql) })));
 
