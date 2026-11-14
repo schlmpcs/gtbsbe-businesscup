@@ -4,7 +4,8 @@
 // validates the replies, and the game state restored from storage goes through them too.
 // They live here, not in packages/types, so the shared contracts don't change in this task.
 import {
-  AnonIdSchema, AreaTierSchema, CLUE_IDS, CostCategorySchema, DuelHintSchema, KidAgeSchema, LifeCardSchema, MoneySchema, SourceSchema,
+  AnonIdSchema, AreaTierSchema, CLUE_IDS, CostCategorySchema, DuelHintSchema, DuelLetterSchema, KidAgeSchema, LifeCardSchema, MoneySchema,
+  PickResultSchema, PublicDuelSchema, SourceSchema,
   type ClueReveal, type CostBreakdown, type GuessReveal, type Money, type PublicCard,
 } from '@lifeguessr/types';
 import { z } from 'zod';
@@ -129,6 +130,42 @@ export const DailyResponseSchema = z.union([
     progress: DailyProgressSchema.optional(),
   }).transform((d) => ({ date: d.date ?? null, cards: d.cards, progress: d.progress ?? null })),
 ]);
+
+// ----- GET /api/daily?game=duel (DU3, #112) ------------------------------------------------------
+
+/** Which game GET /api/daily answers. A missing `game` parameter means 'slider'. */
+export const DailyGameSchema = z.enum(['slider', 'duel']);
+export type DailyGame = z.infer<typeof DailyGameSchema>;
+
+/** A duel round as a JSON object key: JSON keys are strings (the browser's DuelProgress uses numbers). */
+export const DuelRoundKeySchema = z.enum(['1', '2', '3', '4', '5']);
+
+/**
+ * What the server recorded for this player on the duel day (GET /api/daily?game=duel with
+ * x-anon-id), keyed by round. Zod 4's `z.record(z.enum(...))` demands every key, so these are
+ * `partialRecord`s: a round that was not picked (or hinted) has no entry.
+ * - `resultId`: the day's result id (share and challenge links), null until the first pick.
+ * - `picks`: the choice and the result as scored at pick time; its `crowd` is live (null until
+ *   enough players picked), the rest is stored.
+ * - `hints`: the TEXT of the hint of each round the server recorded a hint for, nothing else: the
+ *   browser never gets a hint it did not ask for.
+ * Maps onto the client's DuelProgress by turning the round keys into numbers (#115).
+ */
+export const DuelProgressWireSchema = z.object({
+  resultId: z.string().regex(/^[0-9a-f]{32}$/).nullable(),
+  picks: z.partialRecord(DuelRoundKeySchema, z.object({ choice: DuelLetterSchema, result: PickResultSchema })),
+  hints: z.partialRecord(DuelRoundKeySchema, DuelHintSchema),
+});
+export type DuelProgressWire = z.infer<typeof DuelProgressWireSchema>;
+
+/** GET /api/daily?game=duel: the day's five duels, and with `x-anon-id` the player's progress. */
+export const DuelDailyResponseSchema = z.object({
+  ok: z.literal(true),
+  date: PlayDateSchema,
+  duels: z.array(PublicDuelSchema).length(5),
+  progress: DuelProgressWireSchema.optional(),
+});
+export type DuelDailyResponse = z.infer<typeof DuelDailyResponseSchema>;
 
 /** One player on the day's leaderboard. `handle` is made up from a hash: no id, no PII. */
 export const LeaderboardEntrySchema = z.object({
