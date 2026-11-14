@@ -224,4 +224,7 @@ test('a challenge link nobody holds shows the generic line, and the day plays', 
   await expect(page.getByText(t.challenge.generic)).toBeVisible();
   await expect(page.getByText(t.round(1, 5))).toBeVisible();
   await expect(pickA(page)).toBeEnabled();
+  // The browser itself logs the 404 of the lookup (once per request: `next dev` runs effects twice).
+  // That is the expected answer for this link; any other console error still fails the test.
+  pageErrors = pageErrors.filter((e) => !e.includes('Failed to load resource: the server responded with a status of 404'));
 });
