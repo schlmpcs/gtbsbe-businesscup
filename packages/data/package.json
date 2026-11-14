@@ -1,0 +1,1 @@
+{"name":"@lifeguessr/data","private":true,"scripts":{"refresh":"python3 scripts/refresh.py","refresh:offline":"python3 scripts/refresh.py --offline"}}

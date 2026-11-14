@@ -1,0 +1,308 @@
+[
+  {
+    "zip": "10002",
+    "metro": "New York",
+    "state": "NY",
+    "county": "New York",
+    "tier": "cheap",
+    "rentByBedrooms": {
+      "0": {
+        "value": 1730,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "1": {
+        "value": 2400,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "2": {
+        "value": 2930,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "3": {
+        "value": 3600,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "4": {
+        "value": 4320,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      }
+    },
+    "groceriesPerAdult": {
+      "value": 367.4,
+      "source": {
+        "name": "USDA September 2026 moderate food plan; adult sex-average, four-person-household basis (model estimate)",
+        "year": 2026,
+        "url": "https://www.fns.usda.gov/sites/default/files/resource-files/CostofFoodSep2026LowModLib.pdf"
+      },
+      "isEstimate": true
+    },
+    "gasPerGallon": {
+      "value": 4.454,
+      "source": {
+        "name": "BLS national gasoline average, October",
+        "year": 2026,
+        "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/APU000074714"
+      },
+      "isEstimate": false
+    },
+    "carInsuranceMonthly": {
+      "value": 165,
+      "source": {
+        "name": "Illustrative planning assumption; not a government measurement",
+        "year": 2026,
+        "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+      },
+      "isEstimate": true
+    },
+    "cpiYoY": {
+      "value": 0.03737684729064039,
+      "source": {
+        "name": "BLS CPI-U year-over-year, September",
+        "year": 2026,
+        "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/CUUR0000SA0"
+      },
+      "isEstimate": false
+    },
+    "childcareMonthly": {
+      "infant": 1499.2548391037342,
+      "toddler": 1384.311968105781,
+      "preschool": 1294.356677759557,
+      "schoolAge": 1124.4411293278006,
+      "source": {
+        "name": "DOL NDCP county center-based weekly medians, survey 2022; monthly conversion and CPI-U adjusted to October 2026 (ZIP county assignment estimated)",
+        "year": 2022,
+        "url": "https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx"
+      },
+      "isEstimate": true
+    }
+  },
+  {
+    "zip": "10001",
+    "metro": "New York",
+    "state": "NY",
+    "county": "New York",
+    "tier": "mid",
+    "rentByBedrooms": {
+      "0": {
+        "value": 2160,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "1": {
+        "value": 3000,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "2": {
+        "value": 3660,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "3": {
+        "value": 4500,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "4": {
+        "value": 5400,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      }
+    },
+    "groceriesPerAdult": {
+      "value": 367.4,
+      "source": {
+        "name": "USDA September 2026 moderate food plan; adult sex-average, four-person-household basis (model estimate)",
+        "year": 2026,
+        "url": "https://www.fns.usda.gov/sites/default/files/resource-files/CostofFoodSep2026LowModLib.pdf"
+      },
+      "isEstimate": true
+    },
+    "gasPerGallon": {
+      "value": 4.454,
+      "source": {
+        "name": "BLS national gasoline average, October",
+        "year": 2026,
+        "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/APU000074714"
+      },
+      "isEstimate": false
+    },
+    "carInsuranceMonthly": {
+      "value": 165,
+      "source": {
+        "name": "Illustrative planning assumption; not a government measurement",
+        "year": 2026,
+        "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+      },
+      "isEstimate": true
+    },
+    "cpiYoY": {
+      "value": 0.03737684729064039,
+      "source": {
+        "name": "BLS CPI-U year-over-year, September",
+        "year": 2026,
+        "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/CUUR0000SA0"
+      },
+      "isEstimate": false
+    },
+    "childcareMonthly": {
+      "infant": 1499.2548391037342,
+      "toddler": 1384.311968105781,
+      "preschool": 1294.356677759557,
+      "schoolAge": 1124.4411293278006,
+      "source": {
+        "name": "DOL NDCP county center-based weekly medians, survey 2022; monthly conversion and CPI-U adjusted to October 2026 (ZIP county assignment estimated)",
+        "year": 2022,
+        "url": "https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx"
+      },
+      "isEstimate": true
+    }
+  },
+  {
+    "zip": "10013",
+    "metro": "New York",
+    "state": "NY",
+    "county": "New York",
+    "tier": "expensive",
+    "rentByBedrooms": {
+      "0": {
+        "value": 2810,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "1": {
+        "value": 3900,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "2": {
+        "value": 4760,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "3": {
+        "value": 5850,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      },
+      "4": {
+        "value": 7020,
+        "source": {
+          "name": "Illustrative planning assumption; not a government measurement",
+          "year": 2026,
+          "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+        },
+        "isEstimate": true
+      }
+    },
+    "groceriesPerAdult": {
+      "value": 367.4,
+      "source": {
+        "name": "USDA September 2026 moderate food plan; adult sex-average, four-person-household basis (model estimate)",
+        "year": 2026,
+        "url": "https://www.fns.usda.gov/sites/default/files/resource-files/CostofFoodSep2026LowModLib.pdf"
+      },
+      "isEstimate": true
+    },
+    "gasPerGallon": {
+      "value": 4.454,
+      "source": {
+        "name": "BLS national gasoline average, October",
+        "year": 2026,
+        "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/APU000074714"
+      },
+      "isEstimate": false
+    },
+    "carInsuranceMonthly": {
+      "value": 165,
+      "source": {
+        "name": "Illustrative planning assumption; not a government measurement",
+        "year": 2026,
+        "url": "https://github.com/schlmpcs/gtbsbe-businesscup/blob/main/packages/data/README.md"
+      },
+      "isEstimate": true
+    },
+    "cpiYoY": {
+      "value": 0.03737684729064039,
+      "source": {
+        "name": "BLS CPI-U year-over-year, September",
+        "year": 2026,
+        "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/CUUR0000SA0"
+      },
+      "isEstimate": false
+    },
+    "childcareMonthly": {
+      "infant": 1499.2548391037342,
+      "toddler": 1384.311968105781,
+      "preschool": 1294.356677759557,
+      "schoolAge": 1124.4411293278006,
+      "source": {
+        "name": "DOL NDCP county center-based weekly medians, survey 2022; monthly conversion and CPI-U adjusted to October 2026 (ZIP county assignment estimated)",
+        "year": 2022,
+        "url": "https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx"
+      },
+      "isEstimate": true
+    }
+  }
+]

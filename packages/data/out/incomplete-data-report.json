@@ -1,0 +1,43 @@
+{
+  "generatedAt": "2026-11-14T11:25:18.573451+00:00",
+  "complete": false,
+  "failures": [
+    {
+      "source": "HUD SAFMR",
+      "reason": "No verified HUD rows cached; downloads returned an empty WAF challenge. Every rent value is illustrative."
+    },
+    {
+      "source": "DOL county childcare / HUD crosswalk",
+      "reason": "County records imported where available; ZIP-county crosswalk unverified, all values remain estimates"
+    },
+    {
+      "source": "State car insurance",
+      "reason": "No verified source; illustrative national assumption marked estimate"
+    },
+    {
+      "source": "Census rent ranges",
+      "reason": "Not normalized; engine uses explicitly estimated range fallback"
+    }
+  ],
+  "sources": [
+    {
+      "name": "gas",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/APU000074714"
+    },
+    {
+      "name": "cpi",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/CUUR0000SA0"
+    },
+    {
+      "name": "usda",
+      "url": "https://www.fns.usda.gov/sites/default/files/resource-files/CostofFoodSep2026LowModLib.pdf"
+    },
+    {
+      "name": "ndcp",
+      "url": "https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx"
+    }
+  ],
+  "sourcedChildcareZIPs": 56,
+  "verifiedRentZIPs": 0,
+  "estimatedRentZIPs": 60
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "amount": 28000,
+    "apr": 0.069,
+    "termMonths": 36
+  },
+  {
+    "amount": 28000,
+    "apr": 0.079,
+    "termMonths": 48
+  },
+  {
+    "amount": 28000,
+    "apr": 0.089,
+    "termMonths": 60,
+    "fees": 400
+  }
+]

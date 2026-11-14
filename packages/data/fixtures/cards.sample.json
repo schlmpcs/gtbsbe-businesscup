@@ -1,0 +1,51 @@
+[
+  {
+    "id": "life-001",
+    "zip": "10002",
+    "metro": "New York",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-002",
+    "zip": "10001",
+    "metro": "New York",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-003",
+    "zip": "10013",
+    "metro": "New York",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  }
+]
