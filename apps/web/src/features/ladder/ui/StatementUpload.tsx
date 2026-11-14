@@ -1,15 +1,32 @@
-// S9 Statement upload (Figma S09): the dashed orange drop tile with the file picker (unavailable until
-// the T6/T7 reader is wired into the view-model), "What we keep", the black "connect your bank app"
+// S9 Statement upload (Figma S09): the dashed orange drop tile with the file picker (read and
+// categorized by the T6/T7 pipeline behind the view-model's readFile), "What we keep", the black "connect your bank app"
 // card (not built yet, shown as coming soon), the review of categorized months before they enter the
 // profile, and what the statements have added so far in the black score bar.
 import { useId } from 'react';
 import { common, ladder } from '@/copy';
 import { Art, BarBreakdown, Button, Card, formatMoney, Row, Scoreboard, Stack } from '@/ui-kit';
-import type { LadderProgressVM, StatementMonthVM, StatementUploadVM } from '../model/types';
+import type {
+  LadderProgressVM, StatementMonthVM, StatementReadVM, StatementUploadError, StatementUploadVM,
+} from '../model/types';
 import { LadderShell } from './LadderShell';
 import { WhatWeKeep } from './WhatWeKeep';
 
 const t = ladder.upload;
+
+function errorText(error: StatementUploadError | null): string {
+  switch (error?.kind) {
+    case 'unreadable':
+      return t.errors.unreadable[error.reason];
+    case 'badInput':
+      return t.errors.badInput;
+    case 'rateLimited':
+      return t.errors.rateLimited;
+    case 'network':
+      return t.errors.network;
+    default:
+      return t.errors.unknown;
+  }
+}
 
 export type StatementUploadProps = { vm: StatementUploadVM; progress: LadderProgressVM };
 
@@ -45,7 +62,7 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
                   id={inputId}
                   type="file"
                   accept=".csv,text/csv"
-                  disabled={readFile === null}
+                  disabled={readFile === null || vm.status === 'reading'}
                   aria-describedby={noteId}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
@@ -61,9 +78,15 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
             </div>
           </Card>
 
+          {vm.status === 'reading' && (
+            <p role="status" className="rounded-xl bg-surface p-lg text-sm">
+              {t.reading}
+            </p>
+          )}
+
           {vm.status === 'error' && (
             <div role="alert" className="flex flex-col gap-sm rounded-xl border-2 border-negative bg-surface p-lg">
-              <p className="text-sm">{vm.error?.kind === 'badInput' ? t.errors.badInput : t.errors.unknown}</p>
+              <p className="text-sm">{errorText(vm.error)}</p>
               <Row>
                 <Button size="sm" variant="ghost" onClick={vm.discard}>
                   {t.dismiss}
@@ -76,6 +99,7 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
             <Card title={t.reviewTitle}>
               <Stack gap="lg">
                 <p className="text-sm text-text-muted">{t.reviewNote}</p>
+                {vm.lastRead && <ReadSummary read={vm.lastRead} />}
                 {vm.pending.map((m) => (
                   <PendingMonth key={m.month} month={m} />
                 ))}
@@ -138,6 +162,19 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
         ]}
       />
     </LadderShell>
+  );
+}
+
+function ReadSummary({ read }: { read: StatementReadVM }) {
+  return (
+    <div className="flex flex-col gap-xs text-xs text-text-muted" data-testid="statement-read">
+      <p>
+        {t.readSummary(read.transactions, read.from, read.to)}
+        {(read.skippedPending > 0 || read.skippedOther > 0) && ` ${t.skipped(read.skippedPending, read.skippedOther)}`}
+      </p>
+      <p>{t.categorizedBy[read.categorizedBy]}</p>
+      <p>{t.excludedNote}</p>
+    </div>
   );
 }
 

@@ -9,9 +9,9 @@
 // likely LLM/user mistake and it would silently break every forecast.
 import { z } from 'zod';
 import {
-  AREA_TIERS, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
-  FUNNEL_EVENT_NAMES, KID_AGES, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES, SESSION_ERROR_CODES,
-  SESSION_WISHLIST_MAX,
+  AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
+  FUNNEL_EVENT_NAMES, KID_AGES, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
+  SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
 } from './constants';
 
 // ----- primitives ----------------------------------------------------------------------------
@@ -167,6 +167,31 @@ export const CategoryTotalsSchema = z.object({
   totals: z.record(CostCategorySchema, MoneySchema),
   oneOffs: z.array(z.object({ label: z.string().min(1), amount: MoneySchema })),
   detectedPay: NonNegativeMoneySchema.optional(),  // monthly
+});
+
+export const StatementClassSchema = z.enum(STATEMENT_CLASSES);
+
+/** Days in a 'YYYY-MM' month (UTC calendar). */
+const daysInMonth = (month: string) => {
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+};
+
+export const StatementCategorizeRequestSchema = z.object({
+  items: z.array(StatementItemSchema).min(1).max(MAX_STATEMENT_ITEMS)
+    .superRefine((items, ctx) => {
+      items.forEach((item, i) => {
+        if (item.day > daysInMonth(item.month)) {
+          ctx.addIssue({ code: 'custom', path: [i, 'day'], message: `${item.month} has no day ${item.day}` });
+        }
+      });
+    }),
+});
+
+export const StatementCategorizeResponseSchema = z.object({
+  ok: z.literal(true),
+  months: z.array(CategoryTotalsSchema),
+  categorizedBy: z.enum(CATEGORIZED_BY),
 });
 
 // ----- Pro (S15): requests and responses of /api/pro/* ---------------------------------------
