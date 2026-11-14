@@ -7,21 +7,48 @@ export const common = {
   appName: 'LifeGuessr',
   tagline: 'Money apps forecast your accounts. We forecast your decisions, and rank which one to make next.',
   disclaimer: 'Educational simulation, not financial advice.',
-  /** The site header (Figma: logo, five links, Go Pro). */
-  siteNav: {
-    label: 'Main',
+  /**
+   * The app shell (MP14): a sidebar on desktop, bottom tabs and a "More" sheet on a phone.
+   * Routes live in features/shell/model; these are the labels.
+   */
+  shell: {
     home: 'LifeGuessr home',
-    links: [
-      { href: '/', label: 'Home' },
-      { href: '/play', label: 'Play' },
-      { href: '/future', label: 'My future' },
-      { href: '/tools', label: 'What if?', match: ['/afford', '/loan', '/decide', '/checkin'] },
-    ],
-    pro: 'Go Pro',
+    skipToContent: 'Skip to content',
+    /** Accessible names of the nav landmarks. */
+    sidebarLabel: 'Main',
+    tabsLabel: 'Main tabs',
+    moreLabel: 'More pages',
+    /** Group headings in the sidebar and the More sheet. */
+    groups: {
+      planner: 'Planner',
+      tools: 'Explore',
+    },
+    links: {
+      home: 'Home',
+      plan: 'Plan',
+      accounts: 'Accounts',
+      transactions: 'Transactions',
+      cashflow: 'Cash flow',
+      budget: 'Budget',
+      recurring: 'Recurring',
+      goals: 'Goals',
+      future: 'My future',
+      whatIf: 'What if?',
+      play: 'Play',
+      pro: 'Go Pro',
+    },
+    more: 'More',
+    moreTitle: 'More',
+    moreDescription: 'Every screen of your money planner.',
+    proLine: 'Plan to age 90, Compare, Chance of success',
   },
-  /** Shown on every screen while the sample life is on (Try with sample data). */
+  /**
+   * Shown while the numbers on screen are the sample household's, not yours (the demo profile):
+   * `text` after "See a sample plan", `textDefault` when nothing was entered yet.
+   */
   sampleBanner: {
     text: 'You’re looking at a sample life.',
+    textDefault: 'These are sample numbers, not yours yet.',
     cta: 'Use mine',
   },
   nav: {

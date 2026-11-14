@@ -24,7 +24,7 @@ const PROMO_ANCHOR = 'pro-promo-code';
  * The route keeps a narrow column; on wide screens the paywall widens to two columns, centered on
  * the page (left offset + translate, so it never adds sideways scroll).
  */
-const WIDE = 'lg:relative lg:left-1/2 lg:w-[min(calc(100vw-var(--spacing-3xl)*2),var(--container-6xl))] lg:-translate-x-1/2';
+const WIDE = 'lg:relative lg:left-1/2 lg:w-[min(calc(100vw-var(--shell-sidebar-w)-var(--spacing-3xl)*2),var(--container-6xl))] lg:-translate-x-1/2';
 
 /**
  * S15 Pro paywall (demo, Figma Design v3 node 193:1653): the headline and the blueprint house on

@@ -77,7 +77,7 @@ test('Home shows the house (10-year number with its range) and links to /play, /
   await expect(atHorizon.getByRole('heading', { name: t.today.future.title(10) })).toBeVisible();
   await expect(atHorizon.getByText(t.netWorthAt(10))).toBeVisible();
   await expect(atHorizon.getByText(/^\$[\d,]+$/)).toBeVisible();
-  await expect(atHorizon.getByText(/^Likely between \$[\d,]+ and \$[\d,]+$/)).toBeVisible();
+  await expect(atHorizon.getByText(/^Range \$[\d,]+ to \$[\d,]+$/)).toBeVisible();
 
   // No statements yet: the month-end card shows the projection only, and says why.
   await expect(page.getByTestId('month-end-no-history')).toContainText(t.today.monthEnd.needHistory(0));

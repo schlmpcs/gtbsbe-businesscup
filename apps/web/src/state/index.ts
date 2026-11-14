@@ -39,5 +39,5 @@ export function useAppReady(): boolean {
   useSessionSync(hydrated);
   return hydrated;
 }
-export { useSampleBanner } from './sample';
+export { PERSONAL_NUMBER_ROUTES, showsPersonalNumbers, useSampleBanner } from './sample';
 export type { SampleBannerVM } from './sample';

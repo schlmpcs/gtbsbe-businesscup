@@ -41,7 +41,7 @@ function A({ href, children, ...rest }: { href: string; children?: ReactNode; cl
 }
 
 const links: TodayLinks = {
-  play: '/play', sample: '/future?sample=1', future: '/future', tools: '/tools', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
+  play: '/play', sample: '/future?sample=1', future: '/future', plan: '/plan', tools: '/tools', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
   profile: '/me/guess', upload: '/me/upload',
 };
 
@@ -95,13 +95,14 @@ const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
 
 describe('TodayScreen (S1) first visit', () => {
-  it('shows the product first (one primary CTA, the game as the hook) and no numbers or screen list', async () => {
+  it('shows the product first (one primary CTA, one sample link, the game as the hook) and no numbers or screen list', async () => {
     render(<Today />);
     const f = t.today.firstVisit;
     expect(await screen.findByRole('heading', { level: 1, name: f.title })).toBeInTheDocument();
     expect(screen.getByText(f.body)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: new RegExp(`^${f.start}`) })).toHaveAttribute('href', '/me/guess');
-    expect(screen.getByRole('link', { name: f.upload })).toHaveAttribute('href', '/me/upload');
+    // Two calls to action in the hero (plus the game's Play): no third "Import a CSV" entry point.
+    expect(screen.queryByRole('link', { name: /CSV/ })).not.toBeInTheDocument();
     expect(within(screen.getByTestId('play')).getByRole('link', { name: new RegExp(`^${f.play}`) })).toHaveAttribute('href', '/play');
     expect(screen.getByRole('link', { name: f.sample })).toHaveAttribute('href', '/future?sample=1');
     expect(screen.getByText(f.note)).toBeInTheDocument();
@@ -131,9 +132,10 @@ describe('TodayScreen (S1)', () => {
     expect(screen.getByRole('heading', { level: 1, name: t.today.home.title })).toBeInTheDocument();
     const card = await screen.findByTestId('at-horizon');
     await waitFor(() => expect(within(card).getByText(t.netWorthAt(10))).toBeInTheDocument());
-    expect(within(card).getByText(/^Likely between \$[\d,]+ and \$[\d,]+$/)).toBeInTheDocument();
+    expect(within(card).getByText(/^Range \$[\d,]+ to \$[\d,]+$/)).toBeInTheDocument();
     expect(within(card).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
     expect(within(card).getByText(t.band.label)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t.today.home.openPlan })).toHaveAttribute('href', '/plan');
     expect(screen.getByRole('link', { name: t.today.home.openFuture })).toHaveAttribute('href', '/future');
     expect(screen.getByTestId('month-end')).toBeInTheDocument();
     expect(within(screen.getByTestId('month-end')).getByRole('link', { name: t.today.monthEnd.upload })).toHaveAttribute('href', '/me/upload');
@@ -147,8 +149,10 @@ describe('TodayScreen (S1)', () => {
       expect(within(whatIf).getByRole('link', { name: new RegExp(tools.hub.items[key].question.replace('?', '\\?')) })).toHaveAttribute('href', href);
     }
     expect(within(whatIf).getByRole('link', { name: t.today.home.whatIf.all })).toHaveAttribute('href', '/tools');
-    // Still the starting profile: one nudge, to build yours.
-    expect(within(screen.getByTestId('nudge')).getByRole('link', { name: t.today.home.nudge.buildProfile })).toHaveAttribute('href', '/me/guess');
+    // Still the starting profile: no nudge (the sample banner over Home, rendered by the route, says so).
+    expect(screen.queryByTestId('nudge')).not.toBeInTheDocument();
+    // The cushion sits lower, collapsed behind a disclosure.
+    expect(screen.getByTestId('today-cushion-disclosure')).not.toHaveAttribute('open');
     expect(screen.queryByText(t.today.firstVisit.sample)).not.toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: t.today.allScreens })).not.toBeInTheDocument();
   });
@@ -197,8 +201,10 @@ describe('TodayScreen (S1)', () => {
     expect(within(card).queryByText(/\$/)).not.toBeInTheDocument();
   });
 
-  it('shows at most one nudge: none with the sample life, “make it exact” for estimates, none when all is exact', () => {
+  it('shows at most one nudge: none on the sample/starting profile, “make it exact” for estimates, none when all is exact', () => {
     const { rerender } = render(<TodayScreen vm={todayVm({ isSample: true, isDemoProfile: true, hasEstimates: true })} links={links} Link={A} />);
+    expect(screen.queryByTestId('nudge')).not.toBeInTheDocument();
+    rerender(<TodayScreen vm={todayVm({ isDemoProfile: true, hasEstimates: true })} links={links} Link={A} />);
     expect(screen.queryByTestId('nudge')).not.toBeInTheDocument();
     rerender(<TodayScreen vm={todayVm({ hasEstimates: true })} links={links} Link={A} />);
     expect(screen.getByTestId('nudge')).toHaveTextContent(t.today.home.nudge.estimates);

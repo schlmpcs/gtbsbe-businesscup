@@ -3,17 +3,22 @@
 // drop a CSV on it, or pick one (read and categorized by the T6/T7 pipeline behind the view-model's
 // readFile), or "Try with sample statement" through the same path. "No statement?" sits under it and
 // leads to the sliders (S7), where the month can also be typed in words. "What we keep" is on the
-// right. The review lists a few follow-up questions (what the statement can't settle, each one
-// skippable) above the categorized months, which follow the answers before they enter the profile.
+// right (collapsed to one line and a "What we keep →" disclosure, so the CTA stays in view). The review
+// opens with what was read and the average month, with "Use these numbers" right there; the footer's
+// Next uses them too (a statement under review is never dropped by going on). A few optional follow-up
+// questions (what the statement can't settle) come next, and the per-month tables, which follow the
+// answers, sit under "Details". Once applied, the S5 guess is paid off against the real month.
 // Connecting a bank app is not built, so it is not offered here (decision D-7: no dead buttons).
 import { useId, useState } from 'react';
 import { common, ladder } from '@/copy';
 import {
-  Art, BarBreakdown, Button, Card, Choice, cx, Field, formatMoney, NumberInput, Row, Stack, Tag,
+  Art, BarBreakdown, Button, buttonClassName, Card, Choice, cx, Field, formatMoney, NumberInput, Row, Stack, Tag,
 } from '@/ui-kit';
 import type {
-  LadderProgressVM, StatementMonthVM, StatementQuestionVM, StatementReadVM, StatementUploadError, StatementUploadVM,
+  GuessPayoffVM, LadderProgressVM, StatementMonthVM, StatementQuestionVM, StatementReadVM, StatementUploadError,
+  StatementUploadVM,
 } from '../model/types';
+import { GuessPayoff } from './GuessPayoff';
 import { LadderShell } from './LadderShell';
 import { WhatWeKeep } from './WhatWeKeep';
 
@@ -36,9 +41,14 @@ function errorText(error: StatementUploadError | null): string {
   }
 }
 
-export type StatementUploadProps = { vm: StatementUploadVM; progress: LadderProgressVM };
+export type StatementUploadProps = {
+  vm: StatementUploadVM;
+  progress: LadderProgressVM;
+  /** The S5 guess against the month (its own hook); shown once the statement is applied. */
+  payoff?: GuessPayoffVM | null;
+};
 
-export function StatementUpload({ vm, progress }: StatementUploadProps) {
+export function StatementUpload({ vm, progress, payoff = null }: StatementUploadProps) {
   const inputId = useId();
   const noteId = useId();
   const titleId = useId();
@@ -47,10 +57,20 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
   const [dragging, setDragging] = useState(false);
 
   const busy = vm.status === 'reading' || vm.status === 'review';
+  const step = progress.rungs.findIndex((r) => r.screen === 'S9');
+  const nextHref = progress.rungs[step + 1]?.href ?? progress.futureHref;
+  // With a statement under review, going on uses its numbers (as "Use these numbers" does): nothing
+  // read is silently dropped. Otherwise the shell's default CTA.
+  const primary =
+    vm.status === 'review' ? (
+      <a href={nextHref} onClick={vm.apply} className={buttonClassName({ size: 'lg' })}>
+        {ladder.shell.cta.S9}
+      </a>
+    ) : undefined;
 
   return (
     // The "No statement?" card below is this step's way out by hand, so the footer has only the CTA.
-    <LadderShell screen="S9" progress={progress} loading={vm.status === 'loading'} secondary={null}>
+    <LadderShell screen="S9" progress={progress} loading={vm.status === 'loading'} primary={primary} secondary={null}>
       <div className="grid items-start gap-xl lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Stack gap="xl">
           <section
@@ -142,20 +162,36 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
           {vm.status === 'review' && (
             <Card title={t.reviewTitle}>
               <Stack gap="lg">
+                {/* What was read and the month it adds up to, with the confirm right under it. */}
+                <div className="flex flex-col gap-sm" data-testid="statement-summary">
+                  {vm.lastRead && <ReadSummary read={vm.lastRead} />}
+                  {vm.summary && (
+                    <p className="font-display text-2xl font-extrabold leading-tight tabular-nums">
+                      {t.averageMonth(formatMoney(vm.summary.averageMonth), vm.summary.fullMonths)}
+                    </p>
+                  )}
+                  <Row gap="sm">
+                    <Button variant="dark" size="lg" onClick={vm.apply}>
+                      {t.apply}
+                    </Button>
+                    <Button size="lg" variant="ghost" onClick={vm.discard}>
+                      {t.discard}
+                    </Button>
+                  </Row>
+                  <p className="text-xs text-text-muted">{t.applyNote}</p>
+                </div>
                 {vm.questions.length > 0 && <FollowUps vm={vm} />}
-                <p className="text-sm text-text-muted">{t.reviewNote}</p>
-                {vm.lastRead && <ReadSummary read={vm.lastRead} />}
-                {vm.pending.map((m) => (
-                  <PendingMonth key={m.month} month={m} />
-                ))}
-                <Row gap="sm">
-                  <Button variant="dark" size="lg" onClick={vm.apply}>
-                    {t.apply}
-                  </Button>
-                  <Button size="lg" variant="ghost" onClick={vm.discard}>
-                    {t.discard}
-                  </Button>
-                </Row>
+                <details className="rounded-md bg-bg px-md py-sm" data-testid="statement-months">
+                  <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-text-muted hover:text-text">
+                    {t.monthsToggle}
+                  </summary>
+                  <Stack gap="lg" className="mt-md">
+                    <p className="text-sm text-text-muted">{t.reviewNote}</p>
+                    {vm.pending.map((m) => (
+                      <PendingMonth key={m.month} month={m} />
+                    ))}
+                  </Stack>
+                </details>
               </Stack>
             </Card>
           )}
@@ -165,6 +201,8 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
               {t.applied}
             </p>
           )}
+
+          {!busy && vm.history.length > 0 && payoff && <GuessPayoff payoff={payoff} />}
 
           {vm.history.length > 0 && (
             <Stack gap="xs">

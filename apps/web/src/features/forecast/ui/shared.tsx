@@ -71,12 +71,27 @@ export function bandText(kind: BandKind, isZero: boolean): { label: string; text
   return { label: t.band.label, text: isZero ? t.band.zero : t.band.explain };
 }
 
-/** "Likely between $X and $Y", or nothing when there is no range. */
-export function RangeText({ point, isZero, className }: { point: ForecastPoint; isZero: boolean; className?: string }) {
+/**
+ * The range under a headline number ("If our estimates are off: $X to $Y"), or nothing when there is
+ * none. With `kind`, it says where the band comes from; never "likely": it is not a probability band.
+ */
+export function RangeText({
+  point,
+  isZero,
+  kind,
+  className,
+}: {
+  point: ForecastPoint;
+  isZero: boolean;
+  kind?: BandKind;
+  className?: string;
+}) {
   if (isZero) return null;
+  const low = formatMoney(point.low);
+  const high = formatMoney(point.high);
   return (
     <p className={cx('text-sm text-text-muted tabular-nums', className)}>
-      {t.range(formatMoney(point.low), formatMoney(point.high))}
+      {kind ? t.rangeByKind[kind](low, high) : t.range(low, high)}
     </p>
   );
 }

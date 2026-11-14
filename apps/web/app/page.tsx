@@ -2,7 +2,10 @@
 
 // S1 Today (`/`): thin route. The view-model hook feeds the presentational screen.
 // The screen list for judges is at /screens (JF15: not on the production landing).
+// The sample banner: Home shows numbers only past the first visit, so it renders its own banner then
+// (the root layout's banner goes by route and leaves `/` out).
 import Link from 'next/link';
+import { SampleBanner } from './_components/SampleBanner';
 import { useToday } from '@/features/forecast/model/useToday';
 import { TodayScreen, type TodayLinks } from '@/features/forecast/ui/TodayScreen';
 import { useQuickAdd } from '@/features/spend/model/useQuickAdd';
@@ -13,6 +16,7 @@ const links: TodayLinks = {
   play: SCREEN_ROUTES.S2,
   sample: `${SCREEN_ROUTES.S10}?sample=1`,
   future: SCREEN_ROUTES.S10,
+  plan: '/plan',
   tools: '/tools',
   afford: SCREEN_ROUTES.S11,
   loan: SCREEN_ROUTES.S12,
@@ -27,5 +31,10 @@ const links: TodayLinks = {
 export default function TodayPage() {
   const vm = useToday();
   const quickAdd = useQuickAdd({ ready: vm.status === 'ready' });
-  return <TodayScreen vm={vm} links={links} Link={Link} quickAdd={<QuickAdd vm={quickAdd} />} />;
+  return (
+    <>
+      <SampleBanner show={vm.status === 'ready' && !vm.firstVisit} />
+      <TodayScreen vm={vm} links={links} Link={Link} quickAdd={<QuickAdd vm={quickAdd} />} />
+    </>
+  );
 }

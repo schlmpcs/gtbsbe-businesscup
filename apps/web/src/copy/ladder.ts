@@ -42,7 +42,7 @@ export const ladder = {
     S5: 'What do you think your month costs?',
     S6: 'About you',
     S7: 'Your month',
-    S8: 'Pay, savings and debts',
+    S8: 'Savings and debts',
   },
 
   /** Shared frame of every rung: the step pills, the headline, the footer (text action + CTA). */
@@ -51,7 +51,7 @@ export const ladder = {
       S5: 'Rent, car, food, everything. Just guess.',
       S6: 'Your age, pay and home. We build your starting month from your area’s costs.',
       S7: 'No statement at hand? Drag to match a normal month. Tagged amounts are our estimates.',
-      S8: 'Six taps. Skip anything; we’ll use estimates and tag them.',
+      S8: 'What you have saved and what you owe. Skip anything; we’ll use typical values and tag them.',
       S9: 'Drop a bank statement (CSV) and we sort your month into categories. Nothing to type.',
     },
     back: '← Back',
@@ -60,7 +60,7 @@ export const ladder = {
       S5: 'Your guess',
       S6: 'About you',
       S7: 'Your month',
-      S8: 'Pay & savings',
+      S8: 'Savings & debts',
       S9: 'Your spending',
     },
     done: 'done',
@@ -75,9 +75,9 @@ export const ladder = {
     cta: {
       S5: 'Next: about you →',
       S6: 'Next: your spending →',
-      S7: 'Next: pay & savings →',
+      S7: 'Next: savings & debts →',
       S8: 'See me in 10 years →',
-      S9: 'Next: pay & savings →',
+      S9: 'Next: savings & debts →',
       last: 'See me in 10 years →',
     },
     /**
@@ -99,7 +99,8 @@ export const ladder = {
     /** The game-based line under the slider ("You guessed 4 of 5 homes too low today"). */
     bridgeLow: (n: number, played: number) => `You guessed ${n} of ${played} ${played === 1 ? 'home' : 'homes'} too low today`,
     bridgeHigh: (n: number, played: number) => `You guessed ${n} of ${played} ${played === 1 ? 'home' : 'homes'} too high today`,
-    plotSticker: 'Your house starts here',
+    plotSticker: 'We build your house from your real month',
+    /** Locks the guess and goes on to the next step in one tap. */
     submit: 'Lock my guess →',
     /** Guess vs reality: only once the spending is the user's own (a statement or typed categories). */
     revealTitle: 'Guess vs. reality',
@@ -107,6 +108,13 @@ export const ladder = {
     revealMore: (amount: string) => `${amount} a month more than you thought.`,
     revealLess: (amount: string) => `${amount} a month less than you thought.`,
     revealExact: 'Spot on!',
+    /**
+     * The same payoff on later steps (S9 after a statement, S8): against the measured month, or against
+     * the typical month for the person's household while the spending is still our estimate.
+     */
+    payoffTitle: 'Your guess vs. your month',
+    payoffEstimate: (guess: string, actual: string) => `You guessed ${guess}. A typical month for your household costs ${actual}.`,
+    payoffEstimateNote: 'Import a statement or set your month to compare with your real spending.',
   },
 
   closest: {
@@ -117,7 +125,10 @@ export const ladder = {
       pay: 'Take-home pay',
       paySuffix: '/mo',
       payHint: 'After tax, what reaches your account each month.',
-      estimateHint: 'Not typed yet: we use an estimate.',
+      /** One line for the age + pay block while either is still our typical value (empty box, grey "e.g."). */
+      estimateNote: 'Empty boxes use a typical value until you type yours.',
+      /** Placeholder of an empty age or pay box: our typical value, visibly not typed. */
+      estimatePlaceholder: (value: string) => `e.g. ${value}`,
       homeTitle: 'Your home',
       adults: 'Adults',
       kidsTitle: 'Kids by age',
@@ -127,13 +138,16 @@ export const ladder = {
       car: 'Car',
       carOptions: { yes: 'Yes', no: 'No' },
       zip: 'ZIP code',
-      zipPlaceholder: '75205',
+      zipPlaceholder: 'e.g. 75205',
       zipHint: 'Sets rent, groceries, gas and childcare for your area.',
       zipErrors: {
         invalid: 'Enter a 5-digit ZIP code.',
         none: 'We don’t have data for this area yet. Try a ZIP in a nearby city.',
       },
       zipNearby: (zip: string) => `No data for this exact ZIP yet: using nearby ${zip}.`,
+      /** Next to the disabled CTA: why it waits. */
+      zipNeeded: 'Enter your ZIP code to continue.',
+      zipNeededData: 'Enter a ZIP code we have data for to continue.',
     },
     yourLife: 'Your starting month',
     yours: 'Yours',
@@ -205,6 +219,8 @@ export const ladder = {
     shortfall: 'Short',
     slidersTitle: 'Monthly spending',
     slidersLabel: 'Spending by category',
+    /** One line over the sliders while every one of them is still our typical value. */
+    allEstimates: 'All typical values for now. Drag to match your month.',
     /** Shown when the values come from an imported statement: the sliders are there to confirm them. */
     fromStatement: (months: readonly string[]) =>
       `From your statement (${months.length === 1 ? monthName(months[0]!) : `${monthName(months[0]!)} to ${monthName(months.at(-1)!)}`}). Untagged amounts are measured; drag only what looks off.`,
@@ -264,6 +280,12 @@ export const ladder = {
       retirement: '401k, IRA',
     },
     estimatedHint: 'Typical amount. Type yours.',
+    /** One line per block while any of its values is still our typical value. */
+    estimatedNote: 'Grey amounts are typical values. Type yours.',
+    /** Age and pay are asked once, on About you: here they are only shown. */
+    fromAbout: (age: string, pay: string) => `Age ${age} · take-home ${pay}/mo`,
+    fromAboutLink: 'Change in About you',
+    fromAboutLabel: 'From About you',
     estimateSticker: 'Estimate',
     skip: 'Skip',
     skipLabel: (field: string) => `Use our estimate for ${field.toLowerCase()}`,
@@ -376,7 +398,16 @@ export const ladder = {
         pending > 0 ? `${plural(pending, 'pending line', 'pending lines')} (they count once they post)` : null,
         other > 0 ? `${plural(other, 'line that isn’t a transaction', 'lines that aren’t transactions')}` : null,
       ].filter(Boolean).join(' and ') + ' left out.',
-    readMore: 'Details',
+    readMore: 'How we read it',
+    /** The confirm line on top of the review: what was read and the month it adds up to. */
+    averageMonth: (amount: string, fullMonths: number) =>
+      fullMonths > 0
+        ? `Your average month: ${amount} (over ${plural(fullMonths, 'full month', 'full months')}).`
+        : `Your average month: ${amount}.`,
+    /** The per-month tables, collapsed under the summary. */
+    monthsToggle: 'Details: month by month',
+    /** Under the Use button: the footer CTA uses the numbers too. */
+    applyNote: 'Or just tap Next: it uses these numbers too. The questions below are optional.',
     categorizedBy: {
       ai: 'Sorted into categories by AI from the masked labels. Every total is added up in code.',
       rules: 'Sorted into categories by keyword rules. Every total is added up in code.',
@@ -394,6 +425,8 @@ export const ladder = {
     driftNotYet: 'Drift alerts on Today start at 3 months.',
     keep: {
       title: 'What we keep',
+      /** The disclosure that opens the full lists (S9 keeps the flow's CTA in view). */
+      toggle: 'What we keep →',
       tools: 'Subscription findings and tick choices, overpaying inputs and payoff settings are stored in this browser only.',
       none: 'Nothing from a statement yet.',
       gist: 'Only monthly category totals and take-home pay. Never the file.',

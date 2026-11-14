@@ -115,7 +115,7 @@ export const accounts = {
     chartLabel: 'Balance over time',
     summaryTitle: 'Summary',
     notSet: '—',
-    editBalance: 'Update balance',
+    manage: 'Manage',
     newBalance: 'New balance (this month)',
     saveBalance: 'Save balance',
     invalidBalance: 'Enter a balance of 0 or more.',

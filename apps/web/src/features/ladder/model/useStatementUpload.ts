@@ -74,6 +74,17 @@ function monthVM(m: CategoryTotals, averaged: boolean): StatementMonthVM {
   };
 }
 
+/**
+ * The review's confirm line: the mean month (Σ of every category) over the months the statement covers
+ * in full (all of them when none is full, so a short file still gets a number). null with no months.
+ */
+export function statementSummary(months: readonly StatementMonthVM[]): StatementUploadVM['summary'] {
+  if (months.length === 0) return null;
+  const full = months.filter((m) => m.averaged);
+  const used = full.length > 0 ? full : months;
+  return { averageMonth: used.reduce((t, m) => t + m.total, 0) / used.length, fullMonths: full.length };
+}
+
 export type StatementUploadOptions = {
   /** The T6/T7 pipeline (swappable in tests). */
   readStatementFile?: typeof defaultReadStatementFile;
@@ -233,6 +244,8 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
     return months.map((m) => monthVM(m, averaged.has(m.month)));
   }, [reviewed]);
 
+  const summary = useMemo(() => statementSummary(pendingVM), [pendingVM]);
+
   const status: StatementUploadVM['status'] = !ready
     ? 'loading'
     : reading
@@ -250,6 +263,7 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
     error,
     lastRead: reviewed ? lastRead : null,
     pending: pendingVM,
+    summary,
     questions: reviewed ? (sorted?.followUps ?? []).map((f) => questionVM(f, answers[f.id] ?? null)) : [],
     answerCategory,
     answerAmount,

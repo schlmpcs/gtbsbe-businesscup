@@ -24,7 +24,8 @@ export function rungFor(screen: LadderScreen): LadderScreen {
   return screen === 'S7' ? 'S9' : screen;
 }
 const SCALAR_INPUTS = ['age', 'takeHomePay', 'cash', 'retirement', 'retirementShare'] as const;
-const BALANCE_INPUTS = ['age', 'takeHomePay', 'cash', 'retirement'] as const;
+/** S8's own inputs: age and take-home pay are asked on S6 (About you), not here. */
+const BALANCE_INPUTS = ['cash', 'retirement'] as const;
 
 const measured = (e: Estimate<unknown>) => !e.isEstimate;
 

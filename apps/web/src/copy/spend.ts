@@ -6,6 +6,8 @@ export const spend = {
   title: 'What did you spend today?',
   intro: 'Type it or say it, one line for everything. Your log stays in this browser.',
   homeLink: 'Open your daily log',
+  /** Disclosure over the quick-add on Home (collapsed, so the dashboard stays short). */
+  homeQuickAdd: 'Log a purchase',
   backHome: 'Back to Home',
 
   input: {

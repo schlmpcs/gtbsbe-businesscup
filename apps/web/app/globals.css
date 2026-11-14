@@ -2,9 +2,24 @@
 /* Design tokens (generated from tokens.json by `pnpm tokens`): CSS variables + Tailwind theme. */
 @import "../src/ui-kit/tokens.css";
 
+/* App shell (MP14): the phone's bottom tab bar and the desktop sidebar. Pages are padded by these. */
+:root {
+  --shell-tabbar-h: calc(4rem + env(safe-area-inset-bottom));
+  --shell-sidebar-w: 0px;
+}
+
+@media (width >= 48rem) {
+  :root {
+    --shell-tabbar-h: 0px;
+    --shell-sidebar-w: 15rem;
+  }
+}
+
 @layer base {
   html {
     color-scheme: light;
+    /* Focus and in-page jumps never land under the bottom tab bar. */
+    scroll-padding-bottom: var(--shell-tabbar-h);
   }
 
   body {

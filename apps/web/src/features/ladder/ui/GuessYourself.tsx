@@ -1,10 +1,10 @@
 // S5 Guess yourself (Design v3, Figma 202:1873): headline and sub on the left, a giant orange guess
 // over one log-scale slider for your own monthly cost, today's game result as a tilted ink sticker,
-// and the empty plot on the right ("your house starts here"). Only the gut guess: the orange CTA
-// locks it, then the slider is the guess and the CTA leads on. Guess vs reality shows only once the
-// spending is the user's own.
+// and the empty plot on the right ("we build your house from your real month"). Only the gut guess: the
+// orange CTA locks it and goes on to the next step in one tap; coming back, the slider is the guess and
+// the CTA leads on. Guess vs reality shows only once the spending is the user's own.
 import { ladder } from '@/copy';
-import { Art, Button, Card, formatMoney, Slider, Sticker } from '@/ui-kit';
+import { Art, buttonClassName, Card, formatMoney, Slider, Sticker } from '@/ui-kit';
 import type { GuessYourselfVM, LadderProgressVM, SelfGuessRevealVM } from '../model/types';
 import { LadderShell } from './LadderShell';
 
@@ -15,12 +15,15 @@ export type GuessYourselfProps = { vm: GuessYourselfVM; progress: LadderProgress
 export function GuessYourself({ vm, progress }: GuessYourselfProps) {
   const { guess, savedGuess, bridge, reveal } = vm;
 
-  // Before the first save, locking the guess is the one orange CTA (skipping is the text action).
-  // After it, the CTA goes on to the next rung (the shell's default).
+  // Before the first save, locking the guess is the one orange CTA (skipping is the text action): it
+  // saves the guess and goes on to the next rung in one tap. After it, the CTA just leads on (the
+  // shell's default).
+  const step = progress.rungs.findIndex((r) => r.screen === 'S5');
+  const nextHref = progress.rungs[step + 1]?.href ?? progress.futureHref;
   const lock = (
-    <Button size="lg" onClick={vm.submit}>
+    <a href={nextHref} onClick={vm.submit} className={buttonClassName({ size: 'lg' })}>
       {t.submit}
-    </Button>
+    </a>
   );
 
   return (

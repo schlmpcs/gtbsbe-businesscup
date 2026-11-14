@@ -179,7 +179,7 @@ test('demo path: first visit → Play → 5 duels → own guess → statement �
   const chart = page.getByRole('figure', { name: forecast.future.chartTitle(10) });
   await expect(chart.locator('.recharts-line-curve').first()).toBeVisible();
   await expect(chart.locator('.recharts-area-area').first()).toBeVisible();
-  await expect(page.getByTestId('at-horizon').getByText(/^Likely between −?\$[\d,]+ and −?\$[\d,]+$/)).toBeVisible();
+  await expect(page.getByTestId('at-horizon').getByText(/^(If our estimates are off|AI model’s range): −?\$[\d,]+ to −?\$[\d,]+$/)).toBeVisible();
   await expect(page.getByTestId('moves').getByRole('article').first()).toBeVisible();
   await viewed;
 

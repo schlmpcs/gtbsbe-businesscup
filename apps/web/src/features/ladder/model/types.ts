@@ -68,6 +68,13 @@ export type SelfGuessRevealVM = {
   difference: Money;
 };
 
+/**
+ * The S5 guess paid off on a later step (S9 after a statement, S8): the guess against what the month
+ * costs (spending + minimum debt payments, from the profile). `isEstimate`: the spending is still the
+ * typical month built for the person's household (not yet theirs), so the comparison says so.
+ */
+export type GuessPayoffVM = SelfGuessRevealVM & { isEstimate: boolean };
+
 /** S5 Guess yourself: one log-scale slider for your own monthly cost. */
 export type GuessYourselfVM = {
   status: Status;
@@ -120,10 +127,19 @@ export type LifeCandidateVM = {
   available: boolean;
 };
 
-/** S6 "About you": what the person typed. Age and pay are saved as measured values as they type. */
+/**
+ * An age or pay box on S6. `value` is what the person gave (typed, or their statement's pay); null while
+ * the profile still holds our typical value, which is `estimate` (shown as a placeholder, never as typed).
+ */
+export type AboutYouNumberVM = { value: number | null; estimate: number; isEstimate: boolean; bounds: InputBounds };
+
+/**
+ * S6 "About you": age and take-home pay are asked here only (S8 just shows them). They are saved as
+ * measured values as they are typed.
+ */
 export type AboutYouVM = {
-  age: { value: number; isEstimate: boolean; bounds: InputBounds };
-  takeHomePay: { value: Money; isEstimate: boolean; bounds: InputBounds };
+  age: AboutYouNumberVM;
+  takeHomePay: AboutYouNumberVM;
   adults: 1 | 2;
   /** Children per age band. */
   kids: Record<KidAge, number>;
@@ -354,6 +370,11 @@ export type StatementUploadVM = {
   lastRead: StatementReadVM | null;
   /** Months waiting for the user to confirm, with the answers to the follow-ups applied. */
   pending: StatementMonthVM[];
+  /**
+   * The confirm line on top of the review: the average month of the pending statement (Σ of every
+   * category, over the months it covers in full; all months if none is full). null outside review.
+   */
+  summary: { averageMonth: Money; fullMonths: number } | null;
   /** A few questions about what the statement can't settle, during review. Each can be skipped. */
   questions: StatementQuestionVM[];
   /** merchant/cash: that money is mostly this category (its lines are re-sorted, the months summed again). */
