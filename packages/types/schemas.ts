@@ -14,7 +14,7 @@ import {
   MAX_ID_LENGTH, MAX_STATEMENT_ITEMS, MISS_BUCKETS, MOVE_KINDS, OVERPAYING_COVERAGES, OVERPAYING_SKIP_REASONS,
   PAYOFF_METHODS, PAYOFF_TIMELINE_MAX_MONTHS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES, SERVICE_CATEGORIES,
   SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_FLAGS,
-  SUBSCRIPTION_ORIGINS, SUBSCRIPTION_STATUSES, TOOL_IDS,
+  SUBSCRIPTION_FINDINGS_MAX, SUBSCRIPTION_ORIGINS, SUBSCRIPTION_STATUSES, TOOL_IDS,
 } from './constants';
 
 // ----- primitives ----------------------------------------------------------------------------
@@ -239,7 +239,8 @@ export const StatementCategorizeResponseSchema = z.object({
 
 // ----- Micro-tools (M1): subscription audit, overpaying check, debt payoff planner ------------
 // The schemas the tools and their tests share. Findings and audits are also read back from local
-// storage, so they check the whole shape, including the arithmetic a finding must satisfy.
+// storage, so they check the whole shape, including the arithmetic a finding must satisfy. An audit's
+// totals are only bounded (see SubscriptionAuditSchema), not recomputed.
 
 export const ToolIdSchema = z.enum(TOOL_IDS);
 export const MissBucketSchema = z.enum(MISS_BUCKETS);
@@ -256,6 +257,9 @@ const PositiveMoneySchema = z.number().positive();
 /** Money rounded to cents is compared to its exact value within this much. */
 const CENT = 0.01;
 const hasDuplicates = (values: readonly unknown[]) => new Set(values).size !== values.length;
+/** Is calendar day `a` later than `b`? ('YYYY-MM' strings sort in time order.) */
+const isAfter = (a: { month: string; day: number }, b: { month: string; day: number }) =>
+  a.month > b.month || (a.month === b.month && a.day > b.day);
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) => ctx.addIssue({ code: 'custom', path, message });
 
@@ -268,8 +272,13 @@ export const ServicePlanSchema = z.object({
   cadence: CadenceSchema,
 });
 
-/** What merchantKey() leaves of a label: letters and single spaces (no digits, no punctuation). */
-const matcherSchema = z.string().max(60).regex(/^[A-Za-z]+(?: [A-Za-z]+)*$/, 'expected letters and single spaces only (merchantKey style)');
+/**
+ * Exactly what merchantKey() (packages/engine/statement.ts) outputs: it upper-cases, turns everything
+ * outside A-Z into a space, trims and collapses spaces. So a matcher is upper-case words with single
+ * spaces; a lower-case or punctuated one could never equal a key. (apps/web's sampleItems.test.ts
+ * checks that the key of every line of the sample statement passes.)
+ */
+const matcherSchema = z.string().max(60).regex(/^[A-Z]+(?: [A-Z]+)*$/, 'expected upper-case words and single spaces only (merchantKey style)');
 
 export const KnownServiceSchema = z.object({
   id: shortId,
@@ -282,7 +291,9 @@ export const KnownServiceSchema = z.object({
   source: SourceSchema,
   isEstimate: z.boolean(),
 }).superRefine((service, ctx) => {
-  if (hasDuplicates(service.plans.map((p) => p.id))) issuer(ctx)(['plans'], 'plan ids must be unique');
+  const issue = issuer(ctx);
+  if (hasDuplicates(service.plans.map((p) => p.id))) issue(['plans'], 'plan ids must be unique');
+  if (hasDuplicates(service.matchers)) issue(['matchers'], 'matchers must be unique');
 });
 
 /** A day inside a statement: 'YYYY-MM' and a day that month has. */
@@ -327,21 +338,26 @@ export const SubscriptionFindingSchema = z.object({
     if (f.lastCharge === null) issue(['lastCharge'], 'a statement finding has a last charge');
   }
   if (f.status === 'stopped' && f.nextExpected !== null) issue(['nextExpected'], 'a stopped finding has no next date');
-  if (f.lastCharge && f.nextExpected) {
-    const { lastCharge: l, nextExpected: n } = f;
-    if (!(n.month > l.month || (n.month === l.month && n.day > l.day))) issue(['nextExpected'], 'next date is not after the last charge');
+  if (f.lastCharge && f.nextExpected && !isAfter(f.nextExpected, f.lastCharge)) {
+    issue(['nextExpected'], 'next date is not after the last charge');
   }
   if (hasDuplicates(f.flags)) issue(['flags'], 'flags must be unique');
   if (f.flags.includes('priceUp') && (f.previousAmount === undefined || f.previousAmount >= f.amount)) {
     issue(['previousAmount'], 'a price rise needs the lower amount it rose from');
   }
+  if (!f.flags.includes('priceUp') && f.previousAmount !== undefined) {
+    issue(['previousAmount'], 'a previous amount belongs to the priceUp flag');
+  }
   if (f.flags.includes('overlap') && (f.overlapsWith?.length ?? 0) === 0) issue(['overlapsWith'], 'an overlap names the findings it overlaps');
+  if (!f.flags.includes('overlap') && (f.overlapsWith?.length ?? 0) > 0) {
+    issue(['overlapsWith'], 'a list of overlapping findings belongs to the overlap flag');
+  }
   if (f.overlapsWith?.includes(f.id)) issue(['overlapsWith'], 'a finding cannot overlap itself');
   if (f.flags.includes('seenOnce') && f.chargesSeen !== 1) issue(['flags'], 'seenOnce means exactly one charge');
 });
 
 export const SubscriptionAuditSchema = z.object({
-  findings: z.array(SubscriptionFindingSchema).max(500),
+  findings: z.array(SubscriptionFindingSchema).max(SUBSCRIPTION_FINDINGS_MAX),
   monthlyTotal: NonNegativeMoneySchema,
   yearlyTotal: NonNegativeMoneySchema,
   monthsCovered: z.number().int().min(0).max(600),
@@ -356,6 +372,25 @@ export const SubscriptionAuditSchema = z.object({
     }
   });
   if (audit.findings.length > 0 && audit.asOf === null) issue(['asOf'], 'an audit with findings has an as-of date');
+  // "Today" for the audit is the latest day of the statement, so no charge is later than it.
+  if (audit.asOf) {
+    audit.findings.forEach((f, i) => {
+      if (f.lastCharge && isAfter(f.lastCharge, audit.asOf!)) issue(['findings', i, 'lastCharge'], 'a charge is later than the as-of date');
+    });
+  }
+  // Totals are only bounded here, because which findings M3 counts also depends on the confirmations
+  // the user has made (a low-confidence finding counts once confirmed). Every active finding that is
+  // not low confidence is counted, so the totals are at least their sum; nothing but a finding can be
+  // counted, so they are at most the sum of all findings. Each figure may be exact or rounded to the
+  // cent, so the bounds give each finding, and the total, half a cent of slack.
+  const slack = ((audit.findings.length + 1) * CENT) / 2 + 1e-9;
+  const counted = audit.findings.filter((f) => f.status === 'active' && f.confidence !== 'low');
+  for (const [total, figure] of [['monthlyTotal', 'monthly'], ['yearlyTotal', 'yearly']] as const) {
+    const least = counted.reduce((sum, f) => sum + f[figure], 0);
+    const most = audit.findings.reduce((sum, f) => sum + f[figure], 0);
+    if (audit[total] < least - slack) issue([total], `less than the active findings that are not low confidence (${figure} sum ${least})`);
+    if (audit[total] > most + slack) issue([total], `more than all the findings together (${figure} sum ${most})`);
+  }
 });
 
 // ----- overpaying
