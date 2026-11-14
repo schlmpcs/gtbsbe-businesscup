@@ -27,6 +27,14 @@ describe('fixtures', () => {
     }
   });
 
+  it('keep card captions free of clue facts (household, kids, car, food habits, neighborhood)', () => {
+    // The caption is visible before any clue is paid for (docs/PRODUCT.md → Game design), so it must
+    // not give away what a clue room shows. The layout (bedrooms) and metro are public anyway.
+    const clueWords =
+      /\b(kids?|child(ren)?|babies|baby|toddlers?|preschool(er)?s?|daycare|after-school|sons?|daughters?|family|parents?|couple|married|wife|husband|partner|roommates?|alone|single|cars?|sedan|suv|coupe|truck|bus|bikes?|transit|takeout|delivery|dinner out|eats? out|restaurants?|cooks?|taco|zip|neighborhood|suburb(an)?|downtown|highland park|greenville)\b/i;
+    for (const c of cardsSample) expect(c.caption, c.id).not.toMatch(clueWords);
+  });
+
   it('only use ZIPs that exist in the area fixtures, and have unique card ids', () => {
     for (const c of cardsSample) expect(() => areaByZip(c.zip)).not.toThrow();
     expect(new Set(cardsSample.map((c) => c.id)).size).toBe(cardsSample.length);
