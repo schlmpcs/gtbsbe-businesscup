@@ -27,7 +27,7 @@ import { BASE_FORECAST_ID, type ForecastRequest } from './schemas';
  * Version of the prompt and its payload. Bump it whenever `forecastPrompt` changes what the model
  * is told or sees, so cached answers from an older prompt are not served for the new one.
  */
-export const PROMPT_VERSION = 1;
+export const PROMPT_VERSION = 2;
 
 /** Timeout of the first model call. */
 export const FORECAST_CALL_TIMEOUT_MS = 12_000;

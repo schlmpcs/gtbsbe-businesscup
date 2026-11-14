@@ -573,7 +573,7 @@ describe('forecastPrompt', () => {
   });
 
   it('is versioned so cache keys can follow it', () => {
-    expect(PROMPT_VERSION).toBe(1);
+    expect(PROMPT_VERSION).toBe(2);
   });
 });
 
