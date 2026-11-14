@@ -1,14 +1,15 @@
 // The app's client state (Zustand), persisted to localStorage: the Profile, where it came from,
-// the user's own guess, statement history (category totals only), the wishlist and the committed
-// Next Move. The anonymous id lives separately (./anonId).
+// the user's own guess, statement history (category totals only), the wishlist, the committed
+// Next Move and the forecast horizon picked on S10. The anonymous id lives separately (./anonId).
 //
 // Persistence uses `skipHydration`: the server render and the first client render both see the
 // defaults, then `useHydrated()` (./hydration) loads the saved state, so React never sees a
 // hydration mismatch. Screen hooks report `status: 'loading'` until then.
 import { applyPatch } from '@lifeguessr/engine';
 import {
-  CategoryTotalsSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema, PurchaseSchema, CostCategorySchema,
-  type CategoryTotals, type CostCategory, type Money, type Move, type Profile, type ProfilePatch, type Purchase,
+  CategoryTotalsSchema, HorizonYearsSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema, PurchaseSchema, CostCategorySchema,
+  type CategoryTotals, type CostCategory, type HorizonYears, type Money, type Move, type Profile, type ProfilePatch,
+  type Purchase,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
@@ -45,6 +46,11 @@ export type AppData = {
   /** The Next Move the user committed to (its id is also `profile.committedMoveId`). */
   committedMove: Move | null;
   /**
+   * The year S1 and S10 show the forecast and the move gains at (picked on S10). Client state only: it
+   * is not part of the Profile and never reaches the forecast request.
+   */
+  horizonYears: HorizonYears;
+  /**
    * The user asked to look around with the sample life ("Try with sample data", /future?sample=1).
    * The profile is then the demo fixture (profile.demo.json). It counts as active only while the
    * profile is still the demo one (`isSampleActive`): any edit makes the life the user's own.
@@ -78,6 +84,7 @@ export type AppActions = {
   uncommitMove: () => void;
   /** The user did a move: its patch enters the profile and it joins doneMoveIds. */
   markMoveDone: (move: Move) => void;
+  setHorizonYears: (years: HorizonYears) => void;
   /**
    * Look around with the sample life: the demo fixture becomes the profile, flagged `isSample`. Only
    * when the user has no profile of their own (origin 'demo'); returns whether it was loaded.
@@ -105,6 +112,7 @@ export function initialAppData(): AppData {
     subscriptionsDetected: false,
     wishlist: [],
     committedMove: null,
+    horizonYears: 10,
     isSample: false,
   };
 }
@@ -143,6 +151,7 @@ const persistedFields = {
   subscriptionsDetected: z.boolean(),
   wishlist: z.array(WishlistItemSchema),
   committedMove: MoveSchema.nullable(),
+  horizonYears: HorizonYearsSchema,
   isSample: z.boolean(),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
@@ -220,6 +229,7 @@ export const useAppStore = create<AppState>()(
           delete profile.committedMoveId;
           return { profile, committedMove: null };
         }),
+      setHorizonYears: (years) => set({ horizonYears: HorizonYearsSchema.parse(years) }),
       loadSample: () => {
         if (get().profileOrigin !== 'demo') return false;
         set({ profile: cloneProfileDemo(), profileOrigin: 'demo', committedMove: null, isSample: true });
@@ -248,6 +258,7 @@ export const useAppStore = create<AppState>()(
         subscriptionsDetected: s.subscriptionsDetected,
         wishlist: s.wishlist,
         committedMove: s.committedMove,
+        horizonYears: s.horizonYears,
         isSample: s.isSample,
       }),
       merge: mergePersisted,

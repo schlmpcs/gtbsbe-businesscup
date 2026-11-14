@@ -5,7 +5,7 @@
 // with any other number, the wrong sentence count, or lender/securities/tax advice is rejected.
 // One retry, then the deterministic template from @/copy. The template is also the answer when
 // no API key is configured or the provider fails, so the app works without a key.
-import { ai as copy } from '@/copy/ai';
+import { ai as copy, yearsPhrase } from '@/copy/ai';
 import { COST_CATEGORIES, type ForecastSource } from '@lifeguessr/types';
 import { formatMoney, formatRate } from '@/lib/format';
 import { devLog, llmModel, responseText, type LlmClient } from './client';
@@ -16,24 +16,31 @@ export type ExplainOutcome = { text: string; source: 'ai' | 'template' };
 
 const MAX_ATTEMPTS = 2;
 const MAX_CHARS = 420;
-/** The forecast horizon ("in 10 years") is part of what effect10y means, so it may be named. */
-const HORIZON_YEARS = 10;
+/**
+ * The horizon a loan is always explained at, and a move's when the request names none: "in 10
+ * years" is part of what effect10y means, so it may be named.
+ */
+const DEFAULT_YEARS = 10;
 
 /** What the rules say about where the numbers come from; the one line that differs by source. */
 const SOURCE_RULE = {
   /** The move's 10-year number is the simulation's (a 'rules' move, or one with no source). */
   simulation: '- Explain what the move or loan means for the person; the numbers come from the simulation.',
-  /** The move's 10-year number is the model's own estimate: it must not be passed off as a simulation result. */
-  ai: `- Explain what the move or loan means for the person. The move's 10-year change in net worth is an AI estimate that we checked against our rules: call it an AI estimate and do not describe it as a simulated or calculated result. The other numbers describe the change the move makes.`,
+  /** The move's number is the model's own estimate: it must not be passed off as a simulation result. */
+  ai: (years: number) =>
+    `- Explain what the move or loan means for the person. The move's ${years}-year change in net worth is an AI estimate that we checked against our rules: call it an AI estimate and do not describe it as a simulated or calculated result. The other numbers describe the change the move makes.`,
 } as const;
 
-/** The system prompt. Without a source, or for 'rules', it is the one the explanation always had. */
-function explainSystem(source: ForecastSource | undefined): string {
+/**
+ * The system prompt. Without a source, or for 'rules', it is the one the explanation always had;
+ * `years` is the horizon of the move's change in net worth (10 unless the request names another).
+ */
+function explainSystem(source: ForecastSource | undefined, years: number): string {
   return `You explain one result of an educational budget simulator to a US adult in plain words.
 Rules:
 - Write exactly two short sentences, plain text, no lists or markdown.
 - Use only the numbers in the facts you are given, written as given. Do not compute, round differently, add, compare or invent any other number, date, rate or duration.
-${source === 'ai' ? SOURCE_RULE.ai : SOURCE_RULE.simulation}
+${source === 'ai' ? SOURCE_RULE.ai(years) : SOURCE_RULE.simulation}
 - Never name or recommend a lender, bank, card issuer, investment, fund, stock or other security, and give no tax advice.
 - This is an educational simulation, not financial advice; don't promise outcomes.`;
 }
@@ -44,13 +51,20 @@ type Facts = { lines: string[]; numbers: number[] };
 
 const signedMoney = (v: number) => formatMoney(v, { signed: true });
 
-function moveFacts(move: NonNullable<ExplainRequest['move']>, facts: Facts) {
+type Move = NonNullable<ExplainRequest['move']>;
+
+/** The move's change in net worth and the year it is measured at: the request's horizon, else its 10-year effect. */
+function moveAtHorizon(move: Move, horizon: ExplainRequest['horizon']): { years: number; effect: number } {
+  return horizon ?? { years: DEFAULT_YEARS, effect: move.effect10y };
+}
+
+function moveFacts(move: Move, horizon: ExplainRequest['horizon'], facts: Facts) {
+  const at = moveAtHorizon(move, horizon);
   facts.lines.push(`Move: ${copy.moveSummary(move.kind, move.category)}`);
-  const label = move.source === 'ai'
-    ? 'Change in net worth after 10 years (AI estimate, checked against our rules)'
-    : 'Change in net worth after 10 years';
-  facts.lines.push(`${label}: ${signedMoney(move.effect10y)}`);
-  facts.numbers.push(move.effect10y);
+  const change = `Change in net worth after ${yearsPhrase(at.years)}`;
+  const label = move.source === 'ai' ? `${change} (AI estimate, checked against our rules)` : change;
+  facts.lines.push(`${label}: ${signedMoney(at.effect)}`);
+  facts.numbers.push(at.effect, at.years);
   for (const category of COST_CATEGORIES) {
     const amount = move.patch.spending?.[category];
     if (amount === undefined) continue;
@@ -90,14 +104,14 @@ function loanFacts(loan: NonNullable<ExplainRequest['loanResult']>, facts: Facts
   const share = (load: number | null) => (load === null ? 'not measurable (no take-home pay)' : formatRate(load));
   facts.lines.push(`Debt payments as a share of take-home pay: ${share(before)} before, ${share(after)} after`);
   facts.lines.push(`Change in net worth after 10 years: ${signedMoney(loan.effect10y)}`);
-  facts.numbers.push(loan.monthly, loan.totalInterest, loan.totalCost, loan.effect10y);
+  facts.numbers.push(DEFAULT_YEARS, loan.monthly, loan.totalInterest, loan.totalCost, loan.effect10y);
   for (const load of [before, after]) if (load !== null) facts.numbers.push(load);
   if (loan.payoffMonth !== null) facts.numbers.push(loan.payoffMonth, loan.payoffMonth / 12); // months or years
 }
 
 function buildFacts(req: ExplainRequest): Facts {
-  const facts: Facts = { lines: [], numbers: [HORIZON_YEARS] };
-  if (req.move) moveFacts(req.move, facts);
+  const facts: Facts = { lines: [], numbers: [] };
+  if (req.move) moveFacts(req.move, req.horizon, facts); // a horizon without a move is ignored: loan facts stay at 10 years
   if (req.loanResult) loanFacts(req.loanResult, facts);
   return facts;
 }
@@ -126,10 +140,16 @@ function sentenceCount(text: string): number {
 const CREDITS_SIMULATION = /\b(our|the|this) simulation\b/i;
 
 /**
- * Problems with a model sentence. `source` is where the move's 10-year number came from: for an AI
+ * Problems with a model sentence. `source` is where the move's number came from: for an AI
  * estimate the sentence must not credit the simulation for it. Without `source` nothing changes.
+ * `years` is the horizon of that number, named in the message the model gets back.
  */
-export function explanationIssues(text: string, allowed: readonly number[], source?: ForecastSource): string[] {
+export function explanationIssues(
+  text: string,
+  allowed: readonly number[],
+  source?: ForecastSource,
+  years: number = DEFAULT_YEARS,
+): string[] {
   const issues: string[] = [];
   if (!text) return ['the answer is empty'];
   if (text.length > MAX_CHARS) issues.push(`the answer is longer than ${MAX_CHARS} characters`);
@@ -140,7 +160,7 @@ export function explanationIssues(text: string, allowed: readonly number[], sour
   if (extra.length > 0) issues.push(`these numbers are not in the facts: ${extra.join(', ')}`);
   for (const { re, why } of ADVICE_PATTERNS) if (re.test(text)) issues.push(`the answer ${why}`);
   if (source === 'ai' && CREDITS_SIMULATION.test(text)) {
-    issues.push('the 10-year figure is an AI estimate, so do not credit the simulation for it; say it is an AI estimate');
+    issues.push(`the ${years}-year figure is an AI estimate, so do not credit the simulation for it; say it is an AI estimate`);
   }
   return issues;
 }
@@ -151,13 +171,8 @@ export function templateExplanation(req: ExplainRequest): string {
   const { move, loanResult: loan } = req;
   if (move && loan) return copy.explain.moveAndLoan(move.kind, move.category, formatMoney(loan.monthly));
   if (move) {
-    return copy.explain.move(
-      move.kind,
-      move.category,
-      formatMoney(Math.abs(move.effect10y)),
-      move.effect10y >= 0,
-      move.source,
-    );
+    const at = moveAtHorizon(move, req.horizon);
+    return copy.explain.move(move.kind, move.category, formatMoney(Math.abs(at.effect)), at.effect >= 0, move.source, at.years);
   }
   if (loan) {
     return copy.explain.loan(
@@ -177,7 +192,8 @@ export async function explain(req: ExplainRequest, client: LlmClient | null): Pr
 
   const facts = buildFacts(req);
   const source = req.move?.source;
-  const system = explainSystem(source);
+  const years = req.move ? moveAtHorizon(req.move, req.horizon).years : DEFAULT_YEARS;
+  const system = explainSystem(source, years);
   const allowed = allowedForms(facts.numbers);
   const factsText = `Facts:\n${facts.lines.map((l) => `- ${l}`).join('\n')}`;
 
@@ -203,7 +219,7 @@ export async function explain(req: ExplainRequest, client: LlmClient | null): Pr
 
     const issues = response.stop_reason === 'max_tokens'
       ? ['the answer was cut off']
-      : explanationIssues(text, allowed, source);
+      : explanationIssues(text, allowed, source, years);
     if (issues.length === 0) return { text, source: 'ai' };
 
     content = `${factsText}

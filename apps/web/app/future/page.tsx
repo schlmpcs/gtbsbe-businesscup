@@ -1,6 +1,6 @@
 'use client';
 
-// S10 You in 10 years + Next Moves (`/future`): thin route. The view-model hook feeds the screen.
+// S10 You in N years + Next Moves (`/future`): thin route. The view-model hook feeds the screen.
 // `?sample=1` ("Try with sample data" on S1) loads the sample life first.
 import Link from 'next/link';
 import { use } from 'react';
