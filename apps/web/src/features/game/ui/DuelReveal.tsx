@@ -64,7 +64,10 @@ export function DuelRevealBand({ reveal, onNext }: { reveal: DuelRevealVM; onNex
   );
 }
 
-/** S3 below the cards: every source behind both breakdowns (the page footer carries the disclaimer). */
+/**
+ * S3 below the cards: every source behind both breakdowns, then how the crowd line is counted
+ * (the page footer carries the disclaimer).
+ */
 export function DuelReveal({ reveal }: { reveal: DuelRevealVM }) {
   return (
     <div className="flex flex-col items-center gap-sm text-center text-sm text-text-muted">
@@ -82,6 +85,10 @@ export function DuelReveal({ reveal }: { reveal: DuelRevealVM }) {
             </div>
           ))}
         </dl>
+        <div className="mt-sm rounded-xl bg-surface p-lg text-left text-text shadow-md">
+          <p className="font-medium">{t.reveal.crowdHowHeading}</p>
+          <p>{t.reveal.crowdHow}</p>
+        </div>
       </details>
     </div>
   );

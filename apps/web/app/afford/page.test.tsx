@@ -4,7 +4,7 @@ import type { Purchase } from '@lifeguessr/types';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { afford as t, forecast, pro } from '@/copy';
+import { afford as t, common, forecast, pro, workTime as workTimeCopy } from '@/copy';
 import type { AffordResultVM } from '@/features/afford/model/types';
 import { AffordResultPanel } from '@/features/afford/ui/AffordResultPanel';
 import type * as AiParse from '@/lib/api/aiParse';
@@ -142,6 +142,7 @@ describe('AffordResultPanel', () => {
     withPoints: points,
     withoutPoints: points,
     horizons: [],
+    workTime: null,
   };
   const rules = { cushionMonths: 1, debtLoadRed: 0.36 };
   const panel = (data: AffordResultVM) => (
@@ -176,5 +177,19 @@ describe('AffordResultPanel', () => {
     expect(screen.getByTestId('afford-verdict').textContent).toBe(t.result.verdicts.wait(3));
     expect(screen.getByText(t.result.waitBody(3))).toBeTruthy();
     expect(screen.getByText(t.result.failsOn.cushion(t.result.cushionMonths(1)))).toBeTruthy();
+  });
+
+  it('shows the price in work time next to the verdict, tagged when take-home pay is an estimate', () => {
+    const { unmount } = render(panel(base));
+    expect(screen.queryByTestId('afford-work-time')).toBeNull();
+    unmount();
+    const work = { unit: 'days', amount: 3, per: false, hoursPerWeek: 40, isEstimate: false } as const;
+    const { rerender } = render(panel({ ...base, workTime: work }));
+    const line = screen.getByTestId('afford-work-time');
+    expect(line).toHaveTextContent(workTimeCopy.ofYourWork('days', 3));
+    expect(within(line).queryByText(common.estimateTag)).toBeNull();
+    rerender(panel({ ...base, workTime: { ...work, unit: 'weeks', amount: 2.5, per: 'monthly', isEstimate: true } }));
+    expect(screen.getByTestId('afford-work-time')).toHaveTextContent('= 2.5 weeks of your work each month');
+    expect(within(screen.getByTestId('afford-work-time')).getByText(common.estimateTag)).toBeTruthy();
   });
 });

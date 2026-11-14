@@ -270,7 +270,10 @@ export type DuelRevealVM = {
   /** The deciding category: what the costlier life (or A, on a tie) spends on it vs the other. */
   decidedBy: { category: CostCategory; amount: Money; otherAmount: Money; otherLetter: DuelLetter };
   lesson: string;
-  /** Null = not enough picks yet. */
+  /**
+   * How other players picked: the letter most of them chose, its share (already rounded to the
+   * whole percent shown, see buildDuelCrowd) and how many picks that is. Null = not enough picks yet.
+   */
   crowd: { letter: DuelLetter; share: Rate; total: number } | null;
   /** Every source behind both breakdowns, by category. */
   sources: { category: CostCategory; sources: Source[] }[];

@@ -1,6 +1,7 @@
 // View-model types for the afford feature (S11). Tasks: Y7 (model) / Y11 (ui).
 // ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
 // Hook: useAfford() in ./useAfford.ts.
+import type { WorkTimeUnit } from '@lifeguessr/engine';
 import type { AffordResult, ForecastPoint, Money, Purchase, Rate } from '@lifeguessr/types';
 import type { Loadable, ParseConfirmVM } from '@/lib/model/types';
 import type { WishlistItem } from '@/state';
@@ -50,6 +51,18 @@ export type AffordResultVM = {
   withoutPoints: ForecastPoint[];
   /** This month, 12 months, 5 years, 10 years. */
   horizons: AffordHorizonVM[];
+  /** The price per occurrence in work time (engine workTime); null without take-home pay. */
+  workTime: AffordWorkTimeVM | null;
+};
+
+/** "= 3 days of your work": the engine's rounded unit and amount, how often, and the estimate flag. */
+export type AffordWorkTimeVM = {
+  unit: WorkTimeUnit;
+  amount: number;
+  per: Purchase['recurring'];
+  hoursPerWeek: number;
+  /** Take-home pay is an estimate. */
+  isEstimate: boolean;
 };
 
 /** Net worth in 10 years with vs without; `cost` = without − with (below 0 = the purchase adds net worth). */

@@ -43,6 +43,8 @@ export type IcsOptions = {
   calendarName?: string;
   /** How many days before the renewal the reminder fires (0 = on the day). Default 1. */
   alarmDaysBefore?: number;
+  /** Start of every event title, in place of "Renews: " (e.g. "Due: " for the bills calendar). */
+  summaryPrefix?: string;
 };
 
 export const PRODID = '-//LifeGuessr//Renewals//EN';
@@ -187,9 +189,9 @@ function fold(line: string): string {
 
 // ----- the file ---------------------------------------------------------------------------------
 
-function eventLines(item: RenewalItem, date: CalendarDate, rule: string, dtstamp: string, trigger: string): string[] {
+function eventLines(item: RenewalItem, date: CalendarDate, rule: string, dtstamp: string, trigger: string, prefix: string): string[] {
   const summary = escapeText(
-    `${wording.summaryPrefix}${item.label}${wording.summarySeparator}${formatMoney(item.amount, { cents: true })}`,
+    `${prefix}${item.label}${wording.summarySeparator}${formatMoney(item.amount, { cents: true })}`,
   );
   return [
     'BEGIN:VEVENT',
@@ -235,7 +237,7 @@ export function renewalsToIcs(items: readonly RenewalItem[], opts: IcsOptions): 
   const events = [...byId.values()].flatMap((item) => {
     const date = toCalendarDate(item.next);
     const rule = date && recurrenceRule(item, date);
-    return date && rule ? eventLines(item, date, rule, dtstamp, trigger) : [];
+    return date && rule ? eventLines(item, date, rule, dtstamp, trigger, opts.summaryPrefix ?? wording.summaryPrefix) : [];
   });
 
   const lines = [

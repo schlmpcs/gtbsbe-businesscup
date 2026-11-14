@@ -265,6 +265,26 @@ Why bill categories are not extrapolated: rent paid on the 1st would project as 
 
 Other rules: only months strictly before the current month count as history; a negative category total (refunds above spending) counts as 0; drifts are sorted by size. Malformed input (a bad `YYYY-MM`, a day outside the month, a non-finite total, the same month twice) throws a `RangeError`.
 
+### Daily log (`/spend`, Home quick-add)
+
+Entries (`DailyEntry`: id, local date, category, amount, label?) live in the browser's app store only (persisted v2). The month so far comes from the same engine as the statement month-end (`daily.ts`):
+
+```
+current      = dailyMonthToDate(entries, month, today)     → monthEnd(profile, history, current)
+               (spent so far per category, days 1..today; day = today, since the log is complete up to now)
+usual        = usualMonthSpend(profile, history, month)     (monthEnd's rule: mean of the last 3 full
+               statement months, else the profile; debtPayments left out)
+spent        = Σ month-to-date, debtPayments left out
+billsDue     = Σ over bill categories of max(0, usual − paid so far)   (rent etc. not paid yet is still owed)
+remaining    = usual.total − spent − billsDue                (negative = over the usual month)
+daysLeft     = days in month − today + 1                    (today counts)
+safe today   = max(0, remaining) / daysLeft
+```
+
+"Safe to spend today" is the spec's (planned − spent so far) ÷ days left, with the usual month as planned and the bills not yet paid this month held back, so an unpaid rent is never shown as spendable.
+
+Parsing a line ("coffee 5, taxi 18, groceries 64") is local first (`features/spend/model/parseLine.ts`: one amount per part, the category from a keyword table, English and Russian). Only when a part has no amount, two amounts or no known word does the line go to `/api/ai/parse` with `kind: 'spend'`; the server rejects (and retries once) any amount not written in the text, and the browser keeps every amount its own parser read. The user confirms the AI's reading before it is saved. With the AI off, parts with amounts are offered with a category to pick. Preset chips (coffee $5, lunch $15, …) are typical prices we picked, tagged as estimates.
+
 ### Statements (Aibek, T6/T7)
 
 The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/statement/*` (browser) → `POST /api/statement/categorize` → `statementTotals` (engine).

@@ -40,6 +40,19 @@ function costlierOf(date: string, round: DuelRound): DuelLetter {
 }
 const other = (letter: DuelLetter): DuelLetter => (letter === 'A' ? 'B' : 'A');
 
+/** The i-th made-up player of a crowd (a valid UUID, never ANON or OTHER_ANON). */
+const crowdAnon = (i: number) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+
+/** Players crowdAnon(from) … crowdAnon(from + choices.length - 1) pick `round`, one letter each, through the route. */
+async function crowdPicks(round: DuelRound, choices: readonly DuelLetter[], from = 0): Promise<PickReply[]> {
+  const replies: PickReply[] = [];
+  for (const [i, choice] of choices.entries()) {
+    const anonId = crowdAnon(from + i);
+    replies.push(await replyOf(await pick({ anonId, round, choice }, { anonId })));
+  }
+  return replies;
+}
+
 const storedPicks = async (anonId = ANON, date = TODAY) =>
   (await getStore().duel.playerDuelDay({ date, anonId })).picks;
 
@@ -105,6 +118,38 @@ describe('POST /api/daily/pick', () => {
     const { replayed: _b, ...restB } = b!;
     expect(restA).toEqual(restB);
     expect((await storedPicks()).filter((p) => p.round === 3)).toHaveLength(1);
+  });
+
+  it('answers the crowd from 20 stored picks of the round, the player’s own included; null before', async () => {
+    // ANON picks first: one pick is no crowd.
+    const own = await replyOf(await pick({ round: 1, choice: 'A' }));
+    expect(own.crowd).toBeNull();
+
+    // 18 more players (11 A, 7 B): the 19th pick still answers null.
+    const choices: DuelLetter[] = [...Array<DuelLetter>(11).fill('A'), ...Array<DuelLetter>(7).fill('B')];
+    const nineteen = await crowdPicks(1, choices);
+    expect(nineteen.every((r) => r.crowd === null && !r.replayed)).toBe(true);
+
+    // The 20th player's reply counts everyone, their own pick and ANON's included.
+    const [twentieth] = await crowdPicks(1, ['B'], 18);
+    expect(twentieth!.crowd).toEqual({ pickedA: 12, total: 20 });
+
+    // Another round of the same day is counted on its own.
+    expect((await replyOf(await pick({ round: 2, choice: 'A' }))).crowd).toBeNull();
+  });
+
+  it('a replayed pick carries the crowd of now, not the one it was first answered with, and adds no pick', async () => {
+    await crowdPicks(1, Array<DuelLetter>(19).fill('B'));
+    const first = await replyOf(await pick({ round: 1, choice: 'A' }));
+    expect(first.crowd).toEqual({ pickedA: 1, total: 20 });
+
+    await crowdPicks(1, ['A', 'A'], 19);
+    for (const choice of ['A', 'B'] as const) {
+      const replay = await replyOf(await pick({ round: 1, choice }));
+      expect(replay).toEqual({ ...first, replayed: true, crowd: { pickedA: 3, total: 22 } });
+    }
+    // The replays above were answered from the stored row: still 22 picks, not 24.
+    expect((await getStore().duel.crowds(TODAY, [1])).get(1)).toEqual({ A: 3, B: 19 });
   });
 
   it('takes the rounds in any order', async () => {
@@ -279,5 +324,19 @@ describePostgres('POST /api/daily/pick on Postgres', () => {
     expect(replies.every((r) => r.resultId === first.resultId)).toBe(true);
     const day = await store.duel.playerDuelDay({ date: TODAY, anonId });
     expect(day.picks.map((p) => p.round)).toEqual([1, 5]);
+  });
+
+  it('answers the crowd from the stored rows from 20 picks on, and a replay carries the current count', async () => {
+    // Round 3 only: the test above picked rounds 1 and 5 of this day on the same schema.
+    const replies = await crowdPicks(3, [...Array<DuelLetter>(13).fill('A'), ...Array<DuelLetter>(6).fill('B')], 100);
+    expect(replies.at(-1)!.crowd).toBeNull(); // 19 picks
+    const anonId = crowdAnon(200);
+    const twentieth = await replyOf(await pick({ anonId, round: 3, choice: 'B' }, { anonId }));
+    expect(twentieth.crowd).toEqual({ pickedA: 13, total: 20 });
+
+    await crowdPicks(3, ['A'], 300);
+    const replay = await replyOf(await pick({ anonId, round: 3, choice: 'A' }, { anonId }));
+    expect(replay).toEqual({ ...twentieth, replayed: true, crowd: { pickedA: 14, total: 21 } });
+    expect((await store.duel.crowds(TODAY, [3])).get(3)).toEqual({ A: 14, B: 7 });
   });
 });

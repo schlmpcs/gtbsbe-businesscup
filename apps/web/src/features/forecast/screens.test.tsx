@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { common, forecast as t, goal as goalCopy, lifeEvents as le, tools } from '@/copy';
+import { common, cushion as cushionCopy, forecast as t, goal as goalCopy, lifeEvents as le, tools } from '@/copy';
 import { getArea } from '@lifeguessr/data/areas';
 import { APP_STORE_KEY, useAppStore } from '@/state';
 import { currentMonth } from '@/state/profile';
@@ -69,6 +69,13 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
     forecastStatus: 'ready', forecastError: null, source: 'rules', isRefreshing: false, actionsDisabled: false, committedMove: null,
     markCommittedDone: () => {}, commit: () => {}, uncommit: () => {}, topMove: { status: 'ready', data: null },
     goal: null, hasEstimates: false,
+    cushion: {
+      status: 'ready',
+      data: {
+        monthsEssential: 2.37, monthsFull: 1.8, band: '1to3', bands: { thin: 1, okay: 3, solid: 6 },
+        next: { months: 3, extraCash: 2150 }, isEstimate: false,
+      },
+    },
     game: { kind: 'duel', date: null, played: 0, total: 5, finished: false, homes: [] },
     ...over,
   };
@@ -148,6 +155,36 @@ describe('TodayScreen (S1)', () => {
     const goal = screen.getByTestId('today-goal');
     expect(goal).toHaveTextContent(goalCopy.verdictLabel.withinRange);
     expect(goal).toHaveTextContent(t.today.home.goalLine('$250,000', 10));
+  });
+
+  it('shows the cushion card: months of essentials, a meter, the next step, and the estimate tag', () => {
+    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    const card = screen.getByTestId('cushion');
+    expect(within(card).getByRole('heading', { name: cushionCopy.title })).toBeInTheDocument();
+    expect(within(card).getByTestId('cushion-months')).toHaveTextContent(cushionCopy.months('2.3')); // 2.37 rounds down
+    const meter = within(card).getByRole('meter', { name: cushionCopy.meterLabel });
+    expect(meter).toHaveAttribute('aria-valuenow', '2.37');
+    expect(meter).toHaveAttribute('aria-valuetext', `${cushionCopy.months('2.3')}, ${cushionCopy.bands['1to3']}`);
+    expect(within(card).getByTestId('cushion-next')).toHaveTextContent(cushionCopy.next('$2,150', 3));
+    expect(within(card).getByText(cushionCopy.full('1.8'))).toBeInTheDocument();
+    expect(within(card).queryByText(common.estimateTag)).not.toBeInTheDocument();
+
+    const estimated = todayVm({
+      cushion: {
+        status: 'ready',
+        data: { monthsEssential: 7, monthsFull: 5, band: '6plus', bands: { thin: 1, okay: 3, solid: 6 }, next: null, isEstimate: true },
+      },
+    });
+    rerender(<TodayScreen vm={estimated} links={links} screens={[]} Link={A} />);
+    expect(within(screen.getByTestId('cushion')).getByTestId('cushion-next')).toHaveTextContent(cushionCopy.top);
+    expect(within(screen.getByTestId('cushion')).getByText(common.estimateTag)).toBeInTheDocument();
+  });
+
+  it('cushion on the demo profile comes from the engine (cash 3,800 over 3,385.92 of essentials)', async () => {
+    render(<Today />);
+    const card = await screen.findByTestId('cushion');
+    await waitFor(() => expect(within(card).getByTestId('cushion-months')).toHaveTextContent(cushionCopy.months('1.1')));
+    expect(within(card).getByTestId('cushion-next')).toHaveTextContent(cushionCopy.next('$6,358', 3));
   });
 
   it('shows a skeleton, never a number, while the forecast loads', () => {

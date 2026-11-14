@@ -1,7 +1,8 @@
 // S1 Today. First visit: what the app is (Play, Try with sample data). After that, the Home
 // dashboard: your house (the 10-year number), this month, your next move, today's game and What if?.
 // Presentational: everything comes from TodayVM; links come from the route page.
-import { common, forecast as t, goal as g, screenTitles, tools, type ScreenId } from '@/copy';
+import type { ReactNode } from 'react';
+import { bills, common, forecast as t, goal as g, screenTitles, spend, tools, type ScreenId } from '@/copy';
 import {
   Art,
   Button,
@@ -15,7 +16,8 @@ import {
   Sticker,
   type ArtName,
 } from '@/ui-kit';
-import type { MonthEndVM, MoveVM, TodayVM } from '../model/types';
+import type { MonthEndVM, MoveVM, SpendSummaryVM, TodayVM } from '../model/types';
+import { CushionCard } from './CushionCard';
 import {
   bandText,
   ErrorNote,
@@ -43,6 +45,10 @@ export type TodayLinks = {
   /** Start of "build your profile" (S5 Guess yourself). */
   profile: string;
   upload: string;
+  /** The daily spending log (/spend). */
+  spend?: string;
+  /** The bills calendar (the "Next bill" line links there when given). */
+  bills?: string;
 };
 
 export type TodayScreenProps = {
@@ -54,6 +60,8 @@ export type TodayScreenProps = {
    */
   screens: { id: ScreenId; href: string; title?: string }[];
   Link: LinkComponent;
+  /** The daily log's quick-add (features/spend), rendered in the "This month so far" card. */
+  quickAdd?: ReactNode;
 };
 
 const CARD = 'rounded-xl bg-surface p-xl shadow-md';
@@ -61,7 +69,7 @@ const TEXT_LINK = 'inline-flex min-h-11 items-center gap-xs text-sm font-semibol
 const CARD_TITLE = 'text-xs font-bold uppercase tracking-wide';
 const VERDICT_TONE = { onTrack: 'positive', withinRange: 'primary', behind: 'ink' } as const;
 
-export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
+export function TodayScreen({ vm, links, screens, Link, quickAdd }: TodayScreenProps) {
   if (vm.firstVisit) return <FirstVisit links={links} screens={screens} Link={Link} />;
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl sm:py-3xl">
@@ -70,11 +78,16 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
 
         <Nudge vm={vm} links={links} Link={Link} />
 
+        <NextBillLine vm={vm} href={links.bills} Link={Link} />
+
         <div className="grid items-stretch gap-xl md:grid-cols-2 lg:grid-cols-3">
           <MonthCard vm={vm} uploadHref={links.upload} Link={Link} />
           <MoveCard vm={vm} futureHref={links.future} Link={Link} />
           <GameCard vm={vm} playHref={links.play} Link={Link} />
+          <CushionCard vm={vm} />
         </div>
+
+        {(vm.daily || quickAdd) && <DailyCard vm={vm} quickAdd={quickAdd} spendHref={links.spend} Link={Link} />}
 
         <WhatIfRow links={links} Link={Link} />
 
@@ -177,6 +190,24 @@ function Nudge({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: Link
         <span aria-hidden="true">→</span>
       </Link>
     </div>
+  );
+}
+
+/** One line about the next bill due ("Next bill: Netflix $15.49 in 3 days"), linking to the bills calendar. */
+function NextBillLine({ vm, href, Link }: { vm: TodayVM; href?: string; Link: LinkComponent }) {
+  const next = vm.status === 'ready' ? vm.nextBill : null;
+  if (!next) return null;
+  const text = bills.today.nextBill(next.label, formatMoney(next.amount, { cents: true }), next.inDays);
+  return (
+    <p data-testid="next-bill" className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs rounded-xl bg-surface px-xl py-sm text-sm font-semibold shadow-sm">
+      <span>{text}</span>
+      {href && (
+        <Link href={href} className={TEXT_LINK}>
+          {bills.today.open}
+          <span aria-hidden="true">→</span>
+        </Link>
+      )}
+    </p>
   );
 }
 
@@ -362,6 +393,80 @@ function GameCard({ vm, playHref, Link }: { vm: TodayVM; playHref: string; Link:
         </div>
       )}
     </section>
+  );
+}
+
+/** The daily log on Home: spent since the 1st of usual, projected month end, safe to spend today, quick-add. */
+function DailyCard({
+  vm,
+  quickAdd,
+  spendHref,
+  Link,
+}: {
+  vm: TodayVM;
+  quickAdd?: ReactNode;
+  spendHref?: string;
+  Link: LinkComponent;
+}) {
+  const daily = vm.daily;
+  return (
+    <section aria-labelledby="today-daily-heading" data-testid="today-daily" className={cx(CARD, 'flex flex-col gap-lg')}>
+      <div className="flex flex-wrap items-baseline justify-between gap-md">
+        <h2 id="today-daily-heading" className={cx(CARD_TITLE, 'text-text-muted')}>
+          {spend.summary.title}
+        </h2>
+        {spendHref && (
+          <Link href={spendHref} className={TEXT_LINK}>
+            {spend.homeLink}
+            <span aria-hidden="true">→</span>
+          </Link>
+        )}
+      </div>
+      <div className="grid gap-xl lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div>
+          {vm.status !== 'ready' || !daily || daily.status === 'loading' ? (
+            <Skeleton lines={3} />
+          ) : daily.status === 'error' ? (
+            <ErrorNote error={daily.error} />
+          ) : (
+            <DailyNumbers data={daily.data} />
+          )}
+        </div>
+        {quickAdd}
+      </div>
+    </section>
+  );
+}
+
+function DailyNumbers({ data }: { data: SpendSummaryVM }) {
+  const s = spend.summary;
+  return (
+    <Stack gap="md">
+      <div>
+        <p className={EYEBROW}>{s.spentSince(formatMonth(data.month, 1))}</p>
+        <p className="font-display text-4xl font-extrabold leading-display tabular-nums" data-testid="today-daily-spent">
+          <Money value={data.spent} />
+        </p>
+        <p className="text-sm text-text-muted tabular-nums">{s.ofUsual(formatMoney(data.usual))}</p>
+      </div>
+      <div className="flex flex-wrap gap-x-xl gap-y-md">
+        <div>
+          <p className={EYEBROW}>{s.projected}</p>
+          <p className="font-display text-2xl font-extrabold tabular-nums" data-testid="today-daily-projected">
+            <Money value={data.projected} />
+          </p>
+        </div>
+        <div>
+          <p className={EYEBROW}>{s.safeToday}</p>
+          <p className="font-display text-2xl font-extrabold tabular-nums text-positive" data-testid="today-daily-safe">
+            <Money value={data.safeToday} />
+          </p>
+        </div>
+      </div>
+      <p className="text-xs text-text-muted">
+        {data.remaining < 0 ? s.over(formatMoney(-data.remaining)) : s.safeHint(data.daysLeft)}
+      </p>
+    </Stack>
   );
 }
 
