@@ -42,3 +42,5 @@ export {
 export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';
 export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';
+export { workTime, roundWorkAmount, type WorkTime, type WorkTimeUnit, type WorkTimeOptions } from './workTime';
+export { emergencyCushion, cushionBand, CUSHION_ESSENTIAL_CATEGORIES, type Cushion, type CushionBand } from './cushion';
