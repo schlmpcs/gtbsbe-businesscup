@@ -32,7 +32,7 @@ import { BASE_FORECAST_ID, type ForecastRequest } from './schemas';
  * `PROMPT_FINGERPRINT` is a safety net under it for the system prompt and the output schema (it
  * does not cover the request text built in `forecastPrompt` or `retryContent`: bump for those).
  */
-export const PROMPT_VERSION = 3;
+export const PROMPT_VERSION = 4;
 
 /**
  * Timeout of the first model call. Measured 2026-11-14 with the demo profile: Claude Opus 5.5 at
@@ -118,6 +118,13 @@ export function promptFingerprint(system: string, outputFormat: unknown): string
  */
 export const PROMPT_FINGERPRINT: string = promptFingerprint(SYSTEM, forecastOutputFormat());
 
+/**
+ * The one line that tells the model how to read `events` (life events, in `forecastFacts`); sent
+ * only when the profile has some. Part of the request text: change it → bump `PROMPT_VERSION`.
+ */
+export const EVENTS_FACT_LINE =
+  '"events" are changes the person expects, in today\'s dollars (they grow with inflation, or with take-home pay growth for pay, from today like every amount): "startsInMonths" counts months from now; a "pay" or "spending" value replaces the current take-home pay or that spending category from that month on (a scenario\'s patch changes today\'s values, so an event on the same field replaces the patched amount from its month); a "oneOff" happens once in that month, a cost paid from cash or income added to cash.';
+
 /** A rate as the decimal the data uses, with the percent next to it for the reader: `0.0345 (3.45%)`. */
 const rateText = (rate: Rate): string => `${rate} (${+(rate * 100).toFixed(2)}%)`;
 
@@ -126,19 +133,21 @@ const todayNetWorth = (req: ForecastRequest): Money => simulate(req.profile, 0).
 
 /**
  * The system prompt and the request text for the model: the profile's numbers with their estimate
- * flags (`forecastFacts`: no ZIP, no move ids), today's net worth, the simulator's assumptions, and
- * the scenarios to forecast. Change either text → bump `PROMPT_VERSION`.
+ * flags (`forecastFacts`: no ZIP, no move ids; life events as `startsInMonths`, with one line on how
+ * to read them), today's net worth, the simulator's assumptions, and the scenarios to forecast.
+ * Change either text → bump `PROMPT_VERSION`.
  */
 export function forecastPrompt(req: ForecastRequest): { system: string; content: string } {
   const rates = resolveRates(req.rates);
+  const facts = forecastFacts(req.profile);
   const ids = [BASE_FORECAST_ID, ...req.scenarios.map((s) => s.id)];
   const scenarios = req.scenarios.length === 0
     ? 'There are no scenarios: return only "base".'
     : `Scenarios. Each is the situation above with its patch applied from today on. A patch sets spending categories to the given monthly amounts, adds extraPayment dollars a month to the debt with that id, replaces that debt's apr, or sets retirementShare, the share of each month's surplus saved for retirement:
 ${req.scenarios.map((s) => `- "${s.id}": ${JSON.stringify(s.patch)}`).join('\n')}`;
 
-  const content = `Situation today. Money is in US dollars: amounts are per month, balances are as of today. Rates are decimals per year (0.2436 = 24.36%). "isEstimate": true marks a guess, false an exact value. spending.debtPayments is informational only: debt payments come from "debts" (minPayment plus any extraPayment), so do not count them twice.
-${JSON.stringify(forecastFacts(req.profile))}
+  const content = `Situation today. Money is in US dollars: amounts are per month, balances are as of today. Rates are decimals per year (0.2436 = 24.36%). "isEstimate": true marks a guess, false an exact value. spending.debtPayments is informational only: debt payments come from "debts" (minPayment plus any extraPayment), so do not count them twice.${facts.events ? `\n${EVENTS_FACT_LINE}` : ''}
+${JSON.stringify(facts)}
 
 Net worth today (cash + retirement − debts): ${formatMoney(todayNetWorth(req))}.
 

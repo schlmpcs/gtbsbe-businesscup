@@ -1,6 +1,6 @@
 // Y2 (Amir): net-worth forecast and profile patches. Spec: docs/ENGINEERING.md → Forecast.
 // The month-by-month rules live in ./simulate.ts; this file runs the scenarios and builds the band.
-import type { CostCategory, Forecast, ForecastPoint, Profile, ProfilePatch } from '@lifeguessr/types';
+import type { CostCategory, Forecast, ForecastPoint, LifeEvent, Profile, ProfilePatch } from '@lifeguessr/types';
 import { COST_CATEGORIES } from '@lifeguessr/types';
 import {
   type ForecastRates,
@@ -70,13 +70,23 @@ export function cloneProfile(p: Profile): Profile {
     retirementShare: { ...p.retirementShare },
     debts: p.debts.map((d) => ({ ...d, minPayment: { ...d.minPayment } })),
     doneMoveIds: [...p.doneMoveIds],
+    ...(p.events && { events: p.events.map(cloneEvent) }),
   };
+}
+
+function cloneEvent(e: LifeEvent): LifeEvent {
+  if (e.kind === 'pay') return { ...e, takeHomePay: { ...e.takeHomePay } };
+  if (e.kind === 'spending') return { ...e, monthly: { ...e.monthly } };
+  return { ...e };
 }
 
 /**
  * A new Profile with the patch applied (the input is not mutated). Spending categories and
  * retirementShare take the patched value and keep their `isEstimate` flag (a move changes the
  * amount, not how well we know it). Debt fields are merged by id; ids not in the profile are ignored.
+ * A patch changes today's values only: life events are kept, so a later spending event on a patched
+ * category replaces the patched amount from its month (a "spend less on rent" move stops counting
+ * once a move event sets new rent).
  */
 export function applyPatch(p: Profile, patch: ProfilePatch): Profile {
   const next = cloneProfile(p);

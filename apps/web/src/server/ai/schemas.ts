@@ -177,6 +177,14 @@ export const ForecastRequestSchema = z
     req.profile.debts.forEach((d, i) => {
       if (!FORECAST_ID_PATTERN.test(d.id)) ctx.addIssue({ code: 'custom', path: ['profile', 'debts', i, 'id'], message: FORECAST_ID_MESSAGE });
     });
+    // Life events: the engine dates them from `asOf`, which the client stamps; ids follow the same pattern as debt ids.
+    const events = req.profile.events ?? [];
+    if (events.length > 0 && req.profile.asOf === undefined) {
+      ctx.addIssue({ code: 'custom', path: ['profile', 'asOf'], message: 'is required when the profile has events' });
+    }
+    events.forEach((e, i) => {
+      if (!FORECAST_ID_PATTERN.test(e.id)) ctx.addIssue({ code: 'custom', path: ['profile', 'events', i, 'id'], message: FORECAST_ID_MESSAGE });
+    });
     // A patch on a debt the profile does not have changes nothing (applyPatch skips it): a scenario that is the base in disguise.
     const debtIds = new Set(req.profile.debts.map((d) => d.id));
     req.scenarios.forEach((s, i) => {

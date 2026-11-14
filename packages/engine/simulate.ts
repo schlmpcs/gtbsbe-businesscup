@@ -19,6 +19,12 @@
 //      `payOffFromSurplus` purchase caused goes on that purchase's own card balance instead).
 // - income = takeHomePay × (1 + incomeGrowth)^(t/12); spending = Σ categories except debtPayments
 //   × (1 + inflation)^(t/12). `spending.debtPayments` is informational: payments come from `debts`.
+// - Life events (`p.events`, dated from `p.asOf`; ./events.ts), in today's dollars like every amount:
+//   from its start month a pay event replaces the take-home in the income formula above and a
+//   spending event replaces its category in the spending sum (so both grow from month 0, not from
+//   the event); a one-off cost is paid from cash in its month like a cash purchase (in
+//   `purchasesCash`), a one-off income is added to cash; both × (1 + inflation)^(t/12). The latest
+//   start wins on a field, a tie goes to the later event in the list.
 // - Purchases are consumption, not assets: nothing is added to net worth for the thing bought.
 import type { AreaData, Debt, LoanInput, Money, Profile, Purchase, Rate } from '@lifeguessr/types';
 import {
@@ -30,6 +36,7 @@ import {
   minForecastMonths,
   returnAnnualNominal,
 } from './assumptions';
+import { scheduleEvents } from './events';
 import { MAX_SIMULATION_MONTHS, PAID_OFF_EPSILON, amortizedPayment } from './loan/amortize';
 
 /** Id of the card debt the simulation opens when it needs a card and the profile has none. */
@@ -166,7 +173,9 @@ export function hasEstimates(p: Profile): boolean {
     p.retirement.isEstimate ||
     p.retirementShare.isEstimate ||
     Object.entries(p.spending).some(([c, e]) => c !== 'debtPayments' && e.isEstimate) ||
-    p.debts.some((d) => d.minPayment.isEstimate)
+    p.debts.some((d) => d.minPayment.isEstimate) ||
+    (p.events ?? []).some((e) =>
+      (e.kind === 'pay' && e.takeHomePay.isEstimate) || (e.kind === 'spending' && e.monthly.isEstimate))
   );
 }
 
@@ -219,7 +228,8 @@ function occursAt(x: ScheduledPurchase, t: number): boolean {
  * rules). Pure: the profile and purchases are not mutated. `scenario` shifts every `isEstimate`
  * input by ±estimateSpread (income, cash, retirement up = favorable; spending down = favorable;
  * retirementShare up when retirement returns beat cash; an estimated debt payment up when the
- * debt's APR beats the cash yield).
+ * debt's APR beats the cash yield), event values included. RangeError when the profile has events
+ * but no `asOf`.
  */
 export function simulate(p: Profile, months: number, opts: SimulateOptions = {}): Simulation {
   if (!Number.isInteger(months) || months < 0 || months > MAX_SIMULATION_MONTHS) {
@@ -235,11 +245,18 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     if (!Number.isInteger(start) || start < 0) throw new RangeError(`Invalid purchase startMonth: ${start}`);
   }
 
-  const takeHome = shift(p.takeHomePay.value, p.takeHomePay.isEstimate, scenario, true);
+  const events = scheduleEvents(p);
+  let nextEvent = 0;
+
+  // Base amounts in today's dollars; events replace them from their start month.
+  let takeHome = shift(p.takeHomePay.value, p.takeHomePay.isEstimate, scenario, true);
+  const categorySpending = new Map<string, Money>(); // insertion order = the order summed
   let monthlySpending = 0;
   for (const [category, e] of Object.entries(p.spending)) {
     if (category === 'debtPayments') continue;
-    monthlySpending += shift(e.value, e.isEstimate, scenario, false);
+    const value = shift(e.value, e.isEstimate, scenario, false);
+    categorySpending.set(category, value);
+    monthlySpending += value;
   }
   const retirementBeatsCash = rates.returnAnnualNominal > rates.cashYieldAnnual;
   const retirementShare = Math.min(
@@ -338,6 +355,29 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
 
   for (let t = 0; t < months; t++) {
     const month = t + 1;
+
+    // 0. Life events starting this month (earliest first, so the latest start wins).
+    let oneOffCost = 0;
+    let oneOffIncome = 0;
+    let spendingChanged = false;
+    for (; nextEvent < events.length && events[nextEvent]!.start <= t; nextEvent++) {
+      const e = events[nextEvent]!.event;
+      if (e.kind === 'pay') {
+        takeHome = shift(e.takeHomePay.value, e.takeHomePay.isEstimate, scenario, true);
+      } else if (e.kind === 'spending') {
+        categorySpending.set(e.category, shift(e.monthly.value, e.monthly.isEstimate, scenario, false));
+        spendingChanged = true;
+      } else if (e.direction === 'cost') {
+        oneOffCost += e.amount;
+      } else {
+        oneOffIncome += e.amount;
+      }
+    }
+    if (spendingChanged) {
+      monthlySpending = 0;
+      for (const value of categorySpending.values()) monthlySpending += value;
+    }
+
     const priceFactor = (1 + rates.inflationAnnual) ** (t / 12);
     const income = takeHome * (1 + rates.incomeGrowthAnnual) ** (t / 12);
     const spending = monthlySpending * priceFactor;
@@ -364,8 +404,9 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
       }
     }
 
-    // 3. Purchases due this month. Recurring prices rise with inflation from their first occurrence.
-    let purchasesCash = 0;
+    // 3. Purchases due this month. Recurring prices rise with inflation from their first occurrence;
+    //    a one-off cost event is paid from cash like one, at today's price inflated from month 0.
+    let purchasesCash = oneOffCost * priceFactor;
     let cardCharges = 0;
     let toCard = 0;                                // card charges without payOffFromSurplus
     let payoffCardCharges = 0;
@@ -432,6 +473,7 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     } else {
       cash += surplus;
     }
+    cash += oneOffIncome * priceFactor;
     let shortfallToCard = 0;
     if (cash < 0) {
       shortfallToCard = -cash;

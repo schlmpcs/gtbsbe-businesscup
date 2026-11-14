@@ -6,7 +6,7 @@ import { cloneProfileDemo } from '@/fixtures';
 import { forecastModel, type LlmClient } from './client';
 import {
   FORECAST_CALL_TIMEOUT_MS, FORECAST_DEADLINE_MS, FORECAST_MIN_RETRY_MS, PROMPT_FINGERPRINT, PROMPT_VERSION,
-  forecastOutputFormat, forecastPrompt, forecastWithModel, promptFingerprint,
+  EVENTS_FACT_LINE, forecastOutputFormat, forecastPrompt, forecastWithModel, promptFingerprint,
 } from './forecast';
 import { type ForecastRequest } from './schemas';
 import { DEMO_SCENARIOS, goodAnswer, goodReply, forecastReply, reply, toWire, type WireForecast } from './testUtils';
@@ -660,7 +660,48 @@ describe('forecastPrompt', () => {
   });
 
   it('is versioned so cache keys can follow it', () => {
-    expect(PROMPT_VERSION).toBe(3); // 3: compact [low, mid, high] answer shape
+    expect(PROMPT_VERSION).toBe(4); // 4: life events
+  });
+
+  describe('life events', () => {
+    const withEvents = (): ForecastRequest => {
+      const profile: Profile = {
+        ...cloneProfileDemo(),
+        asOf: '2026-11',
+        events: [
+          { id: 'ev-raise-1', kind: 'pay', month: '2027-02', preset: 'raise', takeHomePay: { value: 6_100, isEstimate: false } },
+          { id: 'ev-kid-1', kind: 'spending', month: '2028-03', preset: 'kid', category: 'childcare', monthly: { value: 1_150, isEstimate: true } },
+          { id: 'ev-car-1', kind: 'oneOff', month: '2027-06', preset: 'bigPurchase', amount: 9_000, direction: 'cost' },
+        ],
+      };
+      return request({ profile });
+    };
+
+    it('explains the events in one line and shows them with startsInMonths, not ids, presets or dates', () => {
+      const { content } = forecastPrompt(withEvents());
+      expect(content).toContain(EVENTS_FACT_LINE);
+      expect(content).toContain('{"kind":"pay","startsInMonths":3,"takeHomePay":{"value":6100,"isEstimate":false}}');
+      expect(content).toContain('"category":"childcare","monthly":{"value":1150,"isEstimate":true}');
+      expect(content).toContain('{"kind":"oneOff","startsInMonths":7,"amount":9000,"direction":"cost"}');
+      for (const hidden of ['ev-raise-1', 'ev-kid-1', 'raise', 'bigPurchase', '2026-11', '2027-02', 'asOf', '"preset"']) {
+        expect(content).not.toContain(hidden);
+      }
+    });
+
+    it('leaves the line out when there are no events', () => {
+      expect(forecastPrompt(request()).content).not.toContain(EVENTS_FACT_LINE);
+      expect(forecastPrompt(request()).content).not.toContain('startsInMonths');
+    });
+
+    it('checks the answer against a rules forecast that includes the events', async () => {
+      const req = withEvents();
+      create.mockResolvedValueOnce(goodReply(req));
+      const bundle = await forecastWithModel(req, client);
+      expect(bundle.source).toBe('ai');
+      expect(bundle.base.points[0]!.mid).toBe(simulate(req.profile, 0).path[0]!.netWorth);
+      const withoutEvents = rulesBundle(request().profile, req.scenarios);
+      expect(rulesBundle(req.profile, req.scenarios).base.in10y.mid).not.toBe(withoutEvents.base.in10y.mid);
+    });
   });
 });
 

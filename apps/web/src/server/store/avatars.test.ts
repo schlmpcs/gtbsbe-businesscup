@@ -57,6 +57,33 @@ describe.each(implementations)('%s avatar publishing', (name, make) => {
         .avatarId,
     ).not.toBe(published.published!.avatarId);
   });
+  it('shows today: the preview ignores life events (the server never applies them)', async () => {
+    const store = open(),
+      plain = await store.avatars.preview(await seed(store));
+    const withEvents = async (asOf?: string) => {
+      const id = randomUUID();
+      await store.sessions.save(
+        id,
+        {
+          profile: {
+            ...cloneProfileDemo(),
+            ...(asOf && { asOf }),
+            events: [
+              { id: 'ev-1', kind: 'pay', month: '2026-12', takeHomePay: { value: 0, isEstimate: false } },
+              { id: 'ev-2', kind: 'spending', month: '2026-12', category: 'rentUtilities', monthly: { value: 9_000, isEstimate: false } },
+            ],
+          },
+        },
+        { mayAddToWishlist: false },
+      );
+      return store.avatars.preview(id);
+    };
+    for (const asOf of ['2026-11', undefined]) {
+      const preview = await withEvents(asOf);
+      expect(preview.preview).toEqual(plain.preview);
+      expect(preview.token).toBe(plain.token);
+    }
+  });
   it('rejects missing sessions, unknown metros, out-of-bounds values and stale previews', async () => {
     const store = open();
     await expect(store.avatars.preview(randomUUID())).rejects.toMatchObject({

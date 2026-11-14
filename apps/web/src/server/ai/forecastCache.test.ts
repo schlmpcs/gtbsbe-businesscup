@@ -128,6 +128,32 @@ describe('forecastKey', () => {
     expect(forecastKey(request(), MODEL)).toBe(before);
   });
 
+  describe('life events', () => {
+    const raise = { id: 'ev-1', kind: 'pay', month: '2027-02', preset: 'raise', takeHomePay: { value: 6_000, isEstimate: false } } as const;
+    const withEvents = (asOf: string, events: NonNullable<ForecastRequest['profile']['events']> = [raise]) =>
+      request({ profile: { ...cloneProfileDemo(), asOf, events } });
+
+    it('changes with the events', () => {
+      const none = forecastKey(request(), MODEL);
+      expect(forecastKey(withEvents('2026-11'), MODEL)).not.toBe(none);
+      expect(forecastKey(withEvents('2026-11', [{ ...raise, takeHomePay: { value: 6_001, isEstimate: false } }]), MODEL))
+        .not.toBe(forecastKey(withEvents('2026-11'), MODEL));
+    });
+
+    it('changes with asOf (the same events are a month closer), not with ids or presets', () => {
+      const nov = forecastKey(withEvents('2026-11'), MODEL);
+      expect(forecastKey(withEvents('2026-12'), MODEL)).not.toBe(nov);
+      const { preset: _preset, ...plain } = raise;
+      expect(forecastKey(withEvents('2026-11', [{ ...plain, id: 'other-id' }]), MODEL)).toBe(nov);
+    });
+
+    it('is the same with no events, an empty list, or a lone asOf', () => {
+      const none = forecastKey(request(), MODEL);
+      expect(forecastKey(withEvents('2026-11', []), MODEL)).toBe(none);
+      expect(forecastKey(request({ profile: { ...cloneProfileDemo(), asOf: '2026-11' } }), MODEL)).toBe(none);
+    });
+  });
+
   it.each([
     ['committedMoveId', (p: ForecastRequest['profile']) => { p.committedMoveId = 'payCardFirst:card-1'; }],
     ['doneMoveIds', (p: ForecastRequest['profile']) => { p.doneMoveIds = ['cancelSubscriptions', 'cutCategory:eatingOut']; }],
