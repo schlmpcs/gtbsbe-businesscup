@@ -41,7 +41,7 @@ describe('simulate plan options: defaults', () => {
     const plain = simulate(p, 24);
     const withDefaults = simulate(p, 24, { shortfallMode: 'card', withdrawalOrder: [], expenses: { mode: 'budget' } });
     for (const [m, month] of withDefaults.path.entries()) {
-      const { groups: _g, shortfall, shortfallAdded: _a, oneOffIncome: _o, ...rest } = month;
+      const { groups: _g, shortfall, shortfallAdded: _a, oneOffIncome: _o, debtFlows: _d, ...rest } = month;
       expect(rest).toEqual(plain.path[m]);
       expect(shortfall).toBe(0);
     }
@@ -244,6 +244,39 @@ describe('simulate plan options: dated debts and assets (expandEvent output)', (
     expect(sim.path[3]!.groups!.realEstate.growth).toBe(0);
     expect(sim.path[15]!.groups!.realEstate.balance).toBeCloseTo(112_000, 6);
     expect(sim.path[15]!.netWorth).toBeCloseTo(112_000, 6);
+  });
+});
+
+describe('simulate granularity: year', () => {
+  it('one entry per plan year: the monthly balances at year ends, flows summed in month order', () => {
+    // asOf 2026-11, 26 months: plan years 2026 (Nov–Dec, months 1–2), 2027 (3–14), 2028 (15–26).
+    const p: Profile = {
+      ...profile({ pay: 3000, other: 2600, cash: 500, asOf: '2026-11' }),
+      debts: [{ id: 'd1', kind: 'personal', balance: 2000, apr: 0.12, minPayment: { value: 300, isEstimate: false } }],
+    };
+    const opts = { shortfallMode: 'separate' as const, balances: { investments: 1000 }, withdrawalOrder: ['investments' as const] };
+    const monthly = simulate(p, 26, opts).path;
+    const yearly = simulate(p, 26, { ...opts, granularity: 'year' }).path;
+    expect(yearly.map((m) => m.month)).toEqual([0, 2, 14, 26]);
+    const sum = (from: number, to: number, f: (m: (typeof monthly)[number]) => number) => {
+      let s = 0;
+      for (let m = from + 1; m <= to; m++) s += f(monthly[m]!);
+      return s;
+    };
+    for (const [i, [from, to]] of [[0, 2], [2, 14], [14, 26]].entries()) {
+      const y = yearly[i + 1]!;
+      expect(y.netWorth).toBe(monthly[to]!.netWorth);
+      expect(y.shortfall).toBe(monthly[to]!.shortfall);
+      expect(y.debts).toEqual(monthly[to]!.debts);
+      expect(y.groups!.investments.balance).toBe(monthly[to]!.groups!.investments.balance);
+      expect(y.income).toBe(sum(from!, to!, (m) => m.income));
+      expect(y.debtPayments).toBe(sum(from!, to!, (m) => m.debtPayments));
+      expect(y.groups!.investments.withdrawals).toBe(sum(from!, to!, (m) => m.groups!.investments.withdrawals));
+      expect(y.shortfallAdded).toBe(sum(from!, to!, (m) => m.shortfallAdded!));
+      expect(y.debtFlows!.d1!.interest).toBe(sum(from!, to!, (m) => m.debtFlows!.d1!.interest));
+    }
+    // Interest of month 1 on the opening 2000 at 12% / 12 = 20.
+    expect(monthly[1]!.debtFlows!.d1).toEqual({ interest: 20, borrowed: 0 });
   });
 });
 
