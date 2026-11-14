@@ -201,6 +201,7 @@ describe('usePayoffPlanner: the method and the order', () => {
         minimum: { ...asPlan(debts, 0, 'avalanche'), method: 'minimum' as const },
       }),
       extraToFinishBy: () => ({ extra: 0, reachable: true }),
+      suggestedPayoffExtra: options.engine.suggestedPayoffExtra, // the fake's $0: this parity is at extra $0
     };
     const { result } = await ready({ ...options, engine: real });
     const steps = result.current.lab.payoffPlan!.steps;
@@ -325,6 +326,151 @@ describe('usePayoffPlanner: the extra payment', () => {
     const { result } = await ready(options);
     act(() => result.current.planner!.setExtra(300));
     expect(result.current.lab.extra!.value).toBe(0);
+  });
+});
+
+describe('usePayoffPlanner: the suggested starting extra (issue #144)', () => {
+  const suggest = { extra: 25, surplus: 75.8, share: 0.5 };
+
+  it('starts at the engine\'s suggestion, asked about the profile and the same debts, in the slider\'s $25 steps', async () => {
+    const { options, comparePayoff, suggestedPayoffExtra } = plannerOptions({ engineOptions: { suggest } });
+    const { result } = await ready(options);
+    const monthly = result.current.lab.offers[0]!.result!.monthly;
+    const demo = cloneProfileDemo();
+    expect(suggestedPayoffExtra).toHaveBeenLastCalledWith(
+      expect.objectContaining({ takeHomePay: demo.takeHomePay, spending: demo.spending }),
+      demoDebtsWithOffer1(monthly),
+      { step: 25 },
+    );
+    const p = result.current.planner!;
+    expect(p.suggestion).toEqual(suggest);
+    expect(p.extraIsSuggested).toBe(true);
+    expect(p.extra.value).toBe(25);
+    expect(comparePayoff).toHaveBeenLastCalledWith(demoDebtsWithOffer1(monthly), 25);
+  });
+
+  it('lets a saved extra win over it, a saved $0 included', async () => {
+    for (const extra of [200, 0]) {
+      resetClientState();
+      const { options, comparePayoff } = plannerOptions({ stored: { method: 'avalanche', extra }, engineOptions: { suggest } });
+      const { result } = await ready(options);
+      expect(result.current.planner!.extra.value, `saved ${extra}`).toBe(extra);
+      expect(result.current.planner!.extraIsSuggested).toBe(false);
+      expect(comparePayoff.mock.lastCall![1]).toBe(extra);
+    }
+  });
+
+  it('starts at the suggestion when only the method was saved', async () => {
+    const { options } = plannerOptions({ stored: { method: 'snowball' }, engineOptions: { suggest } });
+    const { result } = await ready(options);
+    expect(result.current.planner!.method).toBe('snowball');
+    expect(result.current.planner!.extra.value).toBe(25);
+    expect(result.current.planner!.extraIsSuggested).toBe(true);
+  });
+
+  it('gives way to the person\'s own change, $0 included, and never comes back over it', async () => {
+    const { options } = plannerOptions({ engineOptions: { suggest } });
+    const { result } = await ready(options);
+    act(() => result.current.planner!.setExtra(0));
+    expect(result.current.planner!.extra.value).toBe(0);
+    expect(result.current.planner!.extraIsSuggested).toBe(false);
+    act(() => result.current.lab.selectOffer(result.current.lab.offers[1]!.id)); // a new suggestion is worked out ...
+    expect(result.current.planner!.extra.value).toBe(0); // ... and not used
+  });
+
+  it('follows the selected offer while it is still the suggestion: the new loan\'s payment changes what is left', async () => {
+    const { options, suggestedPayoffExtra } = plannerOptions({ engineOptions: { suggest } });
+    const { result } = await ready(options);
+    act(() => result.current.lab.selectOffer(result.current.lab.offers[1]!.id));
+    const debts = suggestedPayoffExtra.mock.lastCall![1];
+    expect(debts.at(-1)).toMatchObject({ id: 'new-loan', balance: 25_495 });
+  });
+
+  it('does not save the suggestion as if it were picked, and saves the extra once the person sets one', async () => {
+    const onStore = vi.fn<(state: PayoffStoredState) => void>();
+    const { options } = plannerOptions({ onStore, engineOptions: { suggest } });
+    const { result } = await ready(options);
+    expect(onStore).not.toHaveBeenCalled();
+    act(() => result.current.planner!.setMethod('snowball'));
+    expect(onStore).toHaveBeenLastCalledWith({ method: 'snowball' });
+    act(() => result.current.planner!.setExtra(25)); // the same amount, but now the person's own
+    expect(onStore).toHaveBeenLastCalledWith({ method: 'snowball', extra: 25 });
+  });
+
+  it('measures "how much more" for a target against the suggested extra on screen', async () => {
+    const { options } = plannerOptions({ engineOptions: { suggest, solve: { extra: 212.2, reachable: true } } });
+    const { result } = await ready(options);
+    act(() => result.current.planner!.setTargetDate('2029-12'));
+    expect(result.current.planner!.target).toMatchObject({ status: 'needs', extraNeeded: 213, moreThanNow: 188 });
+  });
+
+  it('is $0 with the reason kept when the month has nothing left (the suggestion says so, the extra is $0)', async () => {
+    const none = { extra: 0, surplus: -310.5, share: 0.5 };
+    const { options } = plannerOptions({ engineOptions: { suggest: none } });
+    const { result } = await ready(options);
+    expect(result.current.planner!.extra.value).toBe(0);
+    expect(result.current.planner!.suggestion).toEqual(none);
+    expect(result.current.planner!.extraIsSuggested).toBe(true);
+  });
+
+  it('has no suggestion, and starts at $0 with the screen intact, when the engine fails or answers a non-number', async () => {
+    for (const engineOptions of [
+      { suggestThrows: new RangeError('bad profile') },
+      { suggest: { extra: Number.NaN, surplus: 10, share: 0.5 } },
+      { suggest: { extra: 25, surplus: Number.POSITIVE_INFINITY, share: 0.5 } },
+      { suggest: { extra: -25, surplus: 10, share: 0.5 } },
+    ]) {
+      resetClientState();
+      const { options } = plannerOptions({ engineOptions });
+      const { result } = await ready(options);
+      const p = result.current.planner!;
+      expect(p.suggestion).toBeNull();
+      expect(p.extra.value).toBe(0);
+      expect(p.comparison?.status).toBe('ready');
+      expect(hasNonFinite(p)).toBe(false);
+    }
+  });
+
+  it('is not worked out without debts, or in streamer mode', async () => {
+    useAppStore.setState({ profile: { ...cloneProfileDemo(), debts: [] } });
+    const none = plannerOptions({ engineOptions: { suggest } });
+    const { result } = await ready(none.options, { initialOffers: [] });
+    expect(result.current.planner!.suggestion).toBeNull();
+    expect(none.suggestedPayoffExtra).not.toHaveBeenCalled();
+
+    resetClientState();
+    const streamer = plannerOptions({ streamer: true, engineOptions: { suggest } });
+    const hidden = await ready(streamer.options);
+    expect(hidden.result.current.planner!.suggestion).toBeNull();
+    expect(streamer.suggestedPayoffExtra).not.toHaveBeenCalled();
+  });
+});
+
+describe('usePayoffPlanner: saying why methods tie', () => {
+  it('passes on the reason from the plans on screen (here: the canned plans differ, so none)', async () => {
+    const { options } = plannerOptions();
+    const { result } = await ready(options);
+    expect(result.current.planner!.tie).toBeNull();
+  });
+
+  it('says "no extra" when all three plans match at $0', async () => {
+    const same = { monthsToDebtFree: 46, totalInterest: 6_200, interestSavedVsMinimum: 0, monthsSavedVsMinimum: 0 };
+    const { options } = plannerOptions({ engineOptions: { avalanche: same, snowball: same } });
+    const { result } = await ready(options);
+    expect(result.current.planner!.tie).toBe('noExtra');
+  });
+
+  it('says the orders match when avalanche and snowball are the same plan in the same order', async () => {
+    const { options } = plannerOptions({ engineOptions: { snowball: { monthsToDebtFree: 40, totalInterest: 5_000 } } });
+    const { result } = await ready(options);
+    expect(result.current.planner!.tie).toBe('sameOrder');
+  });
+
+  it('has no reason in streamer mode', async () => {
+    const same = { monthsToDebtFree: 46, totalInterest: 6_200 };
+    const { options } = plannerOptions({ streamer: true, engineOptions: { avalanche: same, snowball: same } });
+    const { result } = await ready(options);
+    expect(result.current.planner!.tie).toBeNull();
   });
 });
 
@@ -761,10 +907,11 @@ describe('usePayoffPlanner: saved inputs', () => {
     });
   });
 
-  it('reads a stored value it cannot use as "not set" (a negative extra)', async () => {
-    const { options } = plannerOptions({ stored: { method: 'avalanche', extra: -40 } });
+  it('reads a stored value it cannot use as "not set" (a negative extra): it starts at the suggestion instead', async () => {
+    const { options } = plannerOptions({ stored: { method: 'avalanche', extra: -40 }, engineOptions: { suggest: { extra: 75, surplus: 160, share: 0.5 } } });
     const { result } = await ready(options);
-    expect(result.current.planner!.extra.value).toBe(0);
+    expect(result.current.planner!.extra.value).toBe(75);
+    expect(result.current.planner!.extraIsSuggested).toBe(true);
     expect(result.current.planner!.target).toEqual({ status: 'none' });
   });
 
@@ -780,7 +927,8 @@ describe('usePayoffPlanner: saved inputs', () => {
     const { options } = plannerOptions({ onStore, engineOptions: { solve: { extra: 100, reachable: true } } });
     const { result } = await ready(options);
     act(() => result.current.planner!.setMethod('snowball'));
-    expect(onStore).toHaveBeenLastCalledWith({ method: 'snowball', extra: 0 });
+    // No extra yet: the person has not picked one, so none is saved (the suggestion is not a pick).
+    expect(onStore).toHaveBeenLastCalledWith({ method: 'snowball' });
     act(() => result.current.planner!.setExtra(125));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'snowball', extra: 125 });
     act(() => result.current.planner!.setTargetDate('2029-12'));

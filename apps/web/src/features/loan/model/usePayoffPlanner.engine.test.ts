@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
-// The debt payoff planner on the REAL payoff engine (comparePayoff, extraToFinishBy; M12), with Loan Lab's own hook beside it.
+// The debt payoff planner on the REAL payoff engine (comparePayoff, extraToFinishBy, suggestedPayoffExtra; M12, #144), with
+// Loan Lab's own hook beside it. The planner opens at the engine's suggested extra, as it ships; the tests about plans
+// "at $0" set the extra to $0 first, which is a pick like any other.
 // usePayoffPlanner.test.ts checks what the view-model does with an answer on a fake engine; this file checks that the
 // answers the real engine gives come through right: equal to the engine's own numbers and to the payoff order card
 // Loan Lab has always shown. Today is November 2026 (injected).
-import { comparePayoff, extraToFinishBy } from '@lifeguessr/engine';
+import { comparePayoff, extraToFinishBy, suggestedPayoffExtra } from '@lifeguessr/engine';
 import type { Debt } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,7 +19,7 @@ import { usePayoffPlanner, type PayoffPlannerOptions } from './usePayoffPlanner'
 beforeEach(resetClientState);
 
 const options = (): PayoffPlannerOptions => ({
-  engine: { comparePayoff, extraToFinishBy },
+  engine: { comparePayoff, extraToFinishBy, suggestedPayoffExtra },
   track: vi.fn(),
   today: () => ({ month: '2026-11' }),
 });
@@ -32,6 +34,13 @@ async function ready(labOptions: Parameters<typeof useLoanLab>[0] = {}) {
   return hook;
 }
 
+/** `ready`, then the extra set to $0: the minimum payments alone, with every freed payment rolled into the next debt. */
+async function readyAtZero(labOptions: Parameters<typeof useLoanLab>[0] = {}) {
+  const hook = await ready(labOptions);
+  act(() => hook.result.current.planner!.setExtra(0));
+  return hook;
+}
+
 /** The demo profile's two debts and sample offer 1 ($28,000 at 6.9%, no down payment or fees) as a third, with its monthly payment. */
 const demoDebtsWithOffer1 = (monthly: number): Debt[] => [
   { id: 'card-1', kind: 'card', balance: 6_400, apr: 0.2436, minPayment: { value: 193.92, isEstimate: true } },
@@ -40,16 +49,34 @@ const demoDebtsWithOffer1 = (monthly: number): Debt[] => [
 ];
 
 describe('the planner on the real engine: demo debts plus offer 1', () => {
-  it('is the real comparePayoff on those debts', async () => {
+  it('opens at the real suggestion, $25 (half of the $75.80 left once the new loan is paid, in $25 steps), and the real comparePayoff at it', async () => {
     const { result } = await ready();
     const monthly = result.current.lab.offers[0]!.result!.monthly;
     expect(monthly).toBeCloseTo(863.28, 2); // ENGINEERING.md known value
     const debts = demoDebtsWithOffer1(monthly);
-    expect(result.current.planner!.comparison).toEqual({ status: 'ready', data: comparePayoff(debts, 0) });
+    const p = result.current.planner!;
+    expect(p.suggestion).toEqual(suggestedPayoffExtra(cloneProfileDemo(), debts, { step: 25 }));
+    expect(p.suggestion!.surplus).toBeCloseTo(939.08 - 863.28, 2);
+    expect(p.extra.value).toBe(25);
+    expect(p.extraIsSuggested).toBe(true);
+    expect(p.comparison).toEqual({ status: 'ready', data: comparePayoff(debts, 25) });
+  });
+
+  it('opens with methods that visibly differ from minimums only, and says why avalanche and snowball match on these debts', async () => {
+    const { result } = await ready();
+    const p = result.current.planner!;
+    // 42 months and about $9,170 against minimums only's 43 months and $9,684 (packages/engine/loan/payoff.test.ts).
+    expect(p.columns.map((c) => c.monthsToDebtFree)).toEqual([42, 42, 43]);
+    expect(p.columns[0]!.totalInterest!).toBeLessThan(p.columns[2]!.totalInterest! - 500);
+    expect(p.savings!.interest.kind).toBe('saves');
+    expect(p.savings!.months).toEqual({ kind: 'saves', amount: 1 });
+    // Card (24.36%, $6,400), car loan (7.4%, $17,800), new loan (6.9%, $28,000): by rate and by balance alike.
+    expect(p.selected!.order).toEqual(['card-1', 'auto-1', 'new-loan']);
+    expect(p.tie).toBe('sameOrder');
   });
 
   it("avalanche at extra $0 is what Loan Lab's own payoff order card shows: 43 months, $9,684.10 of interest, the same order", async () => {
-    const { result } = await ready();
+    const { result } = await readyAtZero();
     const own = result.current.lab.payoffPlan!; // the card the planner replaces (engine payoffOrder, avalanche, extra 0)
     const p = result.current.planner!;
     expect(p.order.map((r) => ({ id: r.id, kind: r.kind, isNew: r.isNew, apr: r.apr, balance: r.balance }))).toEqual(
@@ -63,13 +90,16 @@ describe('the planner on the real engine: demo debts plus offer 1', () => {
   });
 
   it('has all three methods equal at extra $0: the minimums already roll each freed payment into the next debt', async () => {
-    const { result } = await ready();
+    const { result } = await readyAtZero();
     const [a, s, m] = result.current.planner!.columns;
     expect([a!.method, s!.method, m!.method]).toEqual(['avalanche', 'snowball', 'minimum']);
     expect(new Set([a!.monthsToDebtFree, s!.monthsToDebtFree, m!.monthsToDebtFree]).size).toBe(1);
     expect(new Set([a!.totalInterest, s!.totalInterest, m!.totalInterest]).size).toBe(1);
     expect([a!.interestSaved, s!.interestSaved]).toEqual([0, 0]);
     expect(result.current.planner!.savings).toEqual({ interest: { kind: 'same', amount: 0 }, months: { kind: 'same', amount: 0 } });
+    // and the screen says why, instead of leaving three identical columns unexplained
+    expect(result.current.planner!.tie).toBe('noExtra');
+    expect(result.current.planner!.extraIsSuggested).toBe(false);
   });
 
   it('follows the extra and the method: $150 extra, snowball, is the real snowball plan for $150', async () => {
@@ -86,8 +116,10 @@ describe('the planner on the real engine: demo debts plus offer 1', () => {
     expect(hasNonFinite(p)).toBe(false);
   });
 
-  it('has no NaN or Infinity anywhere in its answer, at $0 and at a very large extra', async () => {
+  it('has no NaN or Infinity anywhere in its answer, at the suggestion, at $0 and at a very large extra', async () => {
     const { result } = await ready();
+    expect(hasNonFinite(result.current.planner)).toBe(false);
+    act(() => result.current.planner!.setExtra(0));
     expect(hasNonFinite(result.current.planner)).toBe(false);
     act(() => result.current.planner!.setExtra(1e12)); // clamped to the box's limit
     expect(hasNonFinite(result.current.planner)).toBe(false);
@@ -97,7 +129,7 @@ describe('the planner on the real engine: demo debts plus offer 1', () => {
 
 describe('the target date on the real engine', () => {
   it('2029-12 is 37 months away; the extra it shows, fed back to the engine, finishes by then', async () => {
-    const { result } = await ready();
+    const { result } = await readyAtZero();
     const monthly = result.current.lab.offers[0]!.result!.monthly;
     act(() => result.current.planner!.setTargetDate('2029-12'));
     const t = result.current.planner!.target;
@@ -154,7 +186,7 @@ describe('"your minimum payments finish by" is about the Minimums-only plan, on 
 
   async function plannerOnAutoThenCard() {
     useAppStore.setState({ profile: { ...cloneProfileDemo(), debts: [auto, card] } });
-    return ready({ initialOffers: [] });
+    return readyAtZero({ initialOffers: [] });
   }
 
   it('starts from a real case: avalanche at $0 beats the Minimums-only plan by a month', () => {
@@ -184,7 +216,7 @@ describe('a plan that never pays off, on the real engine', () => {
 
   it('says it never pays off, shows no total and no Infinity, and the extra it names does clear it within 10 years', async () => {
     useAppStore.setState({ profile: { ...cloneProfileDemo(), debts: [card] } });
-    const { result } = await ready({ initialOffers: [] });
+    const { result } = await readyAtZero({ initialOffers: [] }); // at the minimum alone
     const p = result.current.planner!;
     expect(p.columns.map((c) => c.monthsToDebtFree)).toEqual([null, null, null]);
     expect(p.columns.map((c) => c.totalInterest)).toEqual([null, null, null]);
@@ -198,7 +230,7 @@ describe('a plan that never pays off, on the real engine', () => {
 
   it('gives a target month an amount that works, with no NaN', async () => {
     useAppStore.setState({ profile: { ...cloneProfileDemo(), debts: [card] } });
-    const { result } = await ready({ initialOffers: [] });
+    const { result } = await readyAtZero({ initialOffers: [] });
     act(() => result.current.planner!.setTargetDate('2027-11')); // 12 months
     const t = result.current.planner!.target;
     if (t.status !== 'needs') throw new Error(`expected needs, got ${t.status}`);
@@ -219,7 +251,7 @@ describe('snowball slower than minimums, on the real engine', () => {
     const real = comparePayoff(debts, 0).snowball;
     expect(real.monthsSavedVsMinimum!).toBeLessThan(0); // the case this test is about; the engine's own sign
     useAppStore.setState({ profile: { ...cloneProfileDemo(), debts } });
-    const { result } = await ready({ initialOffers: [] });
+    const { result } = await readyAtZero({ initialOffers: [] });
     act(() => result.current.planner!.setMethod('snowball'));
     const p = result.current.planner!;
     expect(p.monthsSaved).toBe(real.monthsSavedVsMinimum);

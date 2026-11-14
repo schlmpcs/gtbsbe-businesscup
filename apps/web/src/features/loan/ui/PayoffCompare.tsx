@@ -28,10 +28,16 @@ function monthsText(d: PayoffDelta): string {
   return (d.kind === 'saves' ? t.planner.savings.monthsSaves : t.planner.savings.monthsCosts)(d.amount);
 }
 
-/** Avalanche, snowball and minimums only side by side, and what the picked one does against minimums. */
+/**
+ * Avalanche, snowball and minimums only side by side, what the picked one does against minimums, and, when methods
+ * come out the same, one line saying why (identical columns with no reason look like a broken comparison).
+ */
 export function PayoffCompare({ vm }: { vm: PayoffPlannerVM }) {
   const minimum = vm.columns.find((c) => c.method === 'minimum');
   const picked = vm.columns.find((c) => c.isSelected);
+  // When all three plans are the same, "about the same interest · the same debt-free month" says nothing the reason
+  // does not, so the reason takes its place; when only avalanche and snowball match, both lines are shown.
+  const allSame = vm.tie === 'noExtra' || vm.tie === 'tooSmall';
   return (
     <div className="flex flex-col gap-md">
       <div className="flex flex-wrap items-center gap-sm">
@@ -75,7 +81,7 @@ export function PayoffCompare({ vm }: { vm: PayoffPlannerVM }) {
           </tbody>
         </table>
       </div>
-      {vm.savings ? (
+      {allSame ? null : vm.savings ? (
         <p data-testid="payoff-savings" className="text-lg font-semibold">
           <span className="text-text-muted">{t.planner.savings.title(t.planner.method.names[vm.method])}</span>{' '}
           <span className={vm.savings.interest.kind === 'saves' ? 'text-positive' : undefined}>{interestText(vm.savings.interest)}</span>
@@ -88,6 +94,11 @@ export function PayoffCompare({ vm }: { vm: PayoffPlannerVM }) {
         </p>
       ) : (
         picked?.monthsToDebtFree !== null && minimum?.monthsToDebtFree === null && <p className="text-sm text-text-muted">{t.planner.savings.minimumNever}</p>
+      )}
+      {vm.tie && (
+        <p data-testid="payoff-tie" className={allSame ? 'text-base font-semibold' : 'text-sm text-text-muted'}>
+          {t.planner.tie[vm.tie]}
+        </p>
       )}
     </div>
   );

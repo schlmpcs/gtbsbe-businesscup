@@ -37,8 +37,8 @@ export {
   type DecorRoom, type SpriteId,
 } from './scene';
 export {
-  loan, compareLoans, payoffOrder, payoffPlan, comparePayoff, extraToFinishBy, amortize, amortizedPayment, MAX_SIMULATION_MONTHS,
-  type Amortization, type LoanOptions,
+  loan, compareLoans, payoffOrder, payoffPlan, comparePayoff, extraToFinishBy, suggestedPayoffExtra, amortize, amortizedPayment,
+  MAX_SIMULATION_MONTHS, type Amortization, type LoanOptions, type PayoffExtraSuggestion,
 } from './loan/index';
 export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';

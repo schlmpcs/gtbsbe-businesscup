@@ -178,6 +178,17 @@ export const loan = {
       inputLabel: 'Or type an amount',
       perMonth: '/mo',
       hint: 'On top of your minimum payments. This is separate from the extra payment on the selected offer above.',
+      /**
+       * Under the box while the extra is still the starting suggestion (engine suggestedPayoffExtra): where the amount
+       * came from. `share` is a percent and `left` this month's surplus with these debts, both already formatted.
+       */
+      suggested: {
+        share: (share: string, left: string) =>
+          `We started you at ${share} of the ${left} a month left after your spending and the minimums on these debts. Change it to any amount.`,
+        nothingLeft: 'We started you at $0: after your spending and the minimums on these debts, nothing is left over each month.',
+        littleLeft: (left: string) =>
+          `We started you at $0: after your spending and the minimums on these debts, only ${left} a month is left over.`,
+      },
     },
 
     method: {
@@ -209,6 +220,15 @@ export const loan = {
       monthsCosts: (n: number) => `${months(n)} later`,
       monthsSame: 'the same debt-free month',
       minimumNever: 'Minimums only never pay these off, so there is nothing to compare this plan with.',
+    },
+
+    /** One line under the comparison when methods come out the same, saying why (model/payoffTie.ts). */
+    tie: {
+      noExtra: 'With no extra, all three pay the same total each month, so they end the same way. Add an extra amount to compare them.',
+      tooSmall: 'At this extra, all three come out about the same. A larger amount shows the difference.',
+      oneDebt: 'With one debt there is nothing to put in order, so avalanche and snowball are the same plan.',
+      sameOrder: 'Avalanche and snowball match here: sorting your debts by rate and by balance gives the same order.',
+      sameResult: 'Avalanche and snowball pay your debts in a different order, but at this extra they come out the same.',
     },
 
     never: {

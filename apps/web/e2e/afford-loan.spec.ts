@@ -60,7 +60,8 @@ test.describe('S12 Loan Lab', () => {
     await expect(payoff).toHaveText(loan.extra.payoffMonths(36));
     await page.getByRole('slider', { name: loan.extra.slider(loan.offerName(1)) }).fill('200');
     await expect(payoff).not.toHaveText(loan.extra.payoffMonths(36));
-    await expect(page.getByText(/ sooner$/)).toBeVisible();
+    // In the offer's own result: the payoff planner further down has its own "sooner" (it opens at a suggested extra).
+    await expect(page.getByTestId('extra-result').getByText(/ sooner$/)).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 });

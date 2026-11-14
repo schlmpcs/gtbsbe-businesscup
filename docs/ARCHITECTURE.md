@@ -242,6 +242,7 @@ export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: 
 | `loan` | Aibek | `(p: Profile, l: LoanInput, opts?: { rates?: Partial<ForecastRates> }) => LoanResult` (`effect10y` in today's dollars, like moves) |
 | `compareLoans` | Aibek | `(p: Profile, ls: LoanInput[], opts?: { rates?: Partial<ForecastRates> }) => LoanResult[]` (same order as `ls`) |
 | `payoffOrder` | Aibek | `(debts: Debt[], extra: Money, method: 'avalanche' \| 'snowball') => { order: string[] /* debt ids */; payoffMonth: number \| null; totalInterest: Money }` |
+| `suggestedPayoffExtra` | Aibek | `(p: Profile, debts: Debt[], opts?: { step?: Money; rates?: Partial<ForecastRates> }) => { extra: Money; surplus: Money; share: Rate }`: where the payoff planner's extra starts before the person picks one (`share` × this month's surplus with `debts` in place of the profile's, rounded down to `step`; 0 when nothing is left). See ENGINEERING.md → Loan amortization. |
 
 All assumptions (inflation, returns, thresholds) live in `packages/engine/assumptions.ts` with a `Source` or an `assumption: true` flag. The UI shows them in a "How we calculate" panel.
 

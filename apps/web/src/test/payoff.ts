@@ -6,9 +6,9 @@
 // real engine: for the demo debts plus sample offer 1 the real engine gives 43 months and $9,684 at extra $0.
 // The tests check what the view-model does with an answer (which debts it sends, how it reads the answer),
 // never an engine number. Binding the real engine is a few lines in features/loan/model/wiring.ts.
-import type { Debt, Money, PayoffComparison, PayoffPlan } from '@lifeguessr/types';
+import type { Debt, Money, PayoffComparison, PayoffPlan, Profile } from '@lifeguessr/types';
 import { vi } from 'vitest';
-import type { PayoffChoice } from '@/features/loan/model/types';
+import type { PayoffChoice, PayoffSuggestionVM } from '@/features/loan/model/types';
 import type { PayoffEngine, PayoffPlannerOptions } from '@/features/loan/model/usePayoffPlanner';
 
 /**
@@ -103,6 +103,13 @@ export type FakeEngineOptions = {
   minimum?: PlanOver;
   /** What extraToFinishBy answers. */
   solve?: { extra: Money; reachable: boolean };
+  /**
+   * What suggestedPayoffExtra answers. By default a suggestion of $0 (a month with nothing left), so the tests that
+   * are about something else start at $0 as they always did; the tests of the suggestion set it.
+   */
+  suggest?: PayoffSuggestionVM;
+  /** Make suggestedPayoffExtra throw this. */
+  suggestThrows?: unknown;
   /** Make comparePayoff throw this. */
   throws?: unknown;
 };
@@ -119,8 +126,12 @@ export function fakeEngine(opts: FakeEngineOptions = {}) {
     };
   });
   const extraToFinishBy = vi.fn((_debts: Debt[], _months: number, _method: PayoffChoice) => opts.solve ?? { extra: 0, reachable: true });
-  const engine: PayoffEngine = { comparePayoff, extraToFinishBy };
-  return { engine, comparePayoff, extraToFinishBy };
+  const suggestedPayoffExtra = vi.fn((_p: Profile, _debts: Debt[], _opts: { step: Money }): PayoffSuggestionVM => {
+    if (opts.suggestThrows !== undefined) throw opts.suggestThrows;
+    return opts.suggest ?? { extra: 0, surplus: 0, share: 0.5 };
+  });
+  const engine: PayoffEngine = { comparePayoff, extraToFinishBy, suggestedPayoffExtra };
+  return { engine, comparePayoff, extraToFinishBy, suggestedPayoffExtra };
 }
 
 /** Planner options on fakes: a recording event sender, today = November 2026, no stored inputs. */
