@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { duel as t } from '@/copy';
-import { Button, Card, Sticker, formatRate } from '@/ui-kit';
-import type { DuelHintVM, DuelVM } from '../model/types';
+import { Button, Card, cx, formatRate } from '@/ui-kit';
+import type { DuelCardVM, DuelHintVM, DuelVM } from '../model/types';
 import { DuelCard } from './DuelCard';
-import { DuelReveal, DuelRevealHeader } from './DuelReveal';
+import { DuelReveal, DuelRevealBand, DuelRevealHeader } from './DuelReveal';
 import { DuelSummary } from './DuelSummary';
 import { errorText } from './errorText';
 import { RoundDots } from './RoundDots';
@@ -17,66 +17,93 @@ export type DuelScreenProps = {
 
 function LoadingState() {
   return (
-    <div role="status" aria-busy="true" className="grid grid-cols-2 gap-md sm:gap-xl">
+    <div role="status" aria-busy="true" className="grid grid-cols-1 gap-xl md:grid-cols-2 md:gap-2xl">
       <span className="sr-only">{t.loading}</span>
       {[0, 1].map((i) => (
-        <div key={i} aria-hidden="true" className="h-[calc(var(--spacing-3xl)*8)] animate-pulse rounded-xl bg-surface-strong" />
+        <div key={i} aria-hidden="true" className="h-[calc(var(--spacing-3xl)*10)] animate-pulse rounded-xl bg-surface-strong" />
       ))}
     </div>
   );
 }
 
-function HintPill({ hint, onOpen }: { hint: DuelHintVM; onOpen: () => void }) {
-  const fmt = (n: number) => n.toLocaleString('en-US');
+/** The larger pill of Design v3 (round, hint used): the ui-kit Sticker's look at a bigger size. */
+const BIG_STICKER = 'rounded-full px-lg py-sm text-sm font-bold uppercase tracking-wide shadow-md sm:text-base';
+
+const fmt = (n: number) => n.toLocaleString('en-US');
+
+/** Below the cards: the white hint pill and what a right pick scores now; once used, an orange sticker. */
+function HintRow({ hint, onOpen }: { hint: DuelHintVM; onOpen: () => void }) {
   if (hint.used) {
     return (
-      <p role="status" className="rounded-full bg-primary-soft px-lg py-sm text-sm font-bold text-primary">
-        {t.hint.used(fmt(hint.pointsNow))}
+      <p role="status">
+        <span className={cx(BIG_STICKER, 'inline-block -rotate-3 bg-primary text-on-primary')}>{t.hint.used(fmt(hint.pointsNow))}</span>
       </p>
     );
   }
   return (
-    <Button
-      variant="secondary"
-      onClick={onOpen}
-      disabled={hint.status === 'opening'}
-      className="rounded-full border-border text-sm"
-    >
-      {hint.status === 'opening' ? t.hint.opening : hint.status === 'error' ? t.hint.error : t.hint.offer(formatRate(hint.cost, 0))}
-    </Button>
+    <div className="flex flex-col items-center gap-md sm:flex-row">
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={hint.status === 'opening'}
+        className="inline-flex items-center justify-center rounded-lg bg-surface px-2xl py-lg text-lg font-bold text-text shadow-md transition-colors hover:bg-primary-soft disabled:cursor-wait disabled:opacity-60"
+      >
+        {hint.status === 'opening' ? t.hint.opening : hint.status === 'error' ? t.hint.error : t.hint.offer(formatRate(hint.cost, 0))}
+      </button>
+      <p className="text-sm font-medium text-text-muted">{t.hint.worth(fmt(hint.pointsNow))}</p>
+    </div>
   );
 }
 
-/** The duel: S2 Duel round, S3 Reveal and S3 Day result ("Which life costs more?"). */
+/** The duel: S2 Duel round, S3 Reveal and S3 Day result ("Which life costs more?"), Figma Design v3. */
 export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
-  // When the view changes (reveal, next round, day result), move focus to the new content.
+  // When the view changes (reveal, next round, day result), move focus to the new content and bring
+  // the top of the screen into view (the result sticker and the next-round button sit there).
+  const mainRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const viewKey = vm.status === 'ready' ? `${vm.phase}:${vm.round ?? ''}` : null;
   const lastViewKey = useRef<string | null>(null);
   useEffect(() => {
     if (viewKey === null) return;
-    if (lastViewKey.current !== null && lastViewKey.current !== viewKey) contentRef.current?.focus();
+    if (lastViewKey.current !== null && lastViewKey.current !== viewKey) {
+      contentRef.current?.focus({ preventScroll: true });
+      mainRef.current?.scrollIntoView?.({ block: 'start' });
+    }
     lastViewKey.current = viewKey;
   }, [viewKey]);
 
+  const ready = vm.status === 'ready';
   const picking = vm.cards?.some((c) => c.state === 'picked') ?? false;
-  const inRound = vm.status === 'ready' && vm.phase !== 'summary' && vm.round !== null;
+  const inRound = ready && vm.phase !== 'summary' && vm.round !== null;
+  const roundPhase = ready && vm.phase === 'round';
+  const reveal = ready && vm.phase === 'reveal' ? vm.reveal : null;
+  // The question is the page title; on the reveal and the day result it stays for screen readers only.
+  const titleVisible = !ready || vm.phase === 'round';
+  const renderCard = (card: DuelCardVM) => (
+    <DuelCard key={card.letter} card={card} onPick={roundPhase ? () => vm.pick(card.letter) : undefined} disabled={picking} />
+  );
 
   return (
-    <main className="w-full">
-      <div className="mx-auto flex w-full max-w-(--container-5xl) flex-col gap-xl px-lg py-xl">
-        <header className="flex flex-col items-center gap-md text-center">
-          <h1 className="font-display text-4xl font-extrabold leading-display sm:text-display">{t.title}</h1>
-          {inRound && (
-            <div className="flex flex-col items-center gap-sm">
-              <Sticker tone="ink" className="text-sm">
-                {t.round(vm.round!, vm.totalRounds)}
-              </Sticker>
-              <RoundDots dots={vm.dots} />
-            </div>
+    <main ref={mainRef} className="w-full">
+      <div className="mx-auto flex w-full max-w-(--container-6xl) flex-col gap-xl px-lg py-xl sm:gap-2xl sm:py-2xl">
+        <header className="flex flex-col items-center gap-lg text-center">
+          {inRound && <RoundDots dots={vm.dots} />}
+          {roundPhase && vm.round !== null && (
+            <span className={cx(BIG_STICKER, 'bg-ink text-on-primary')}>
+              {vm.hint ? t.roundSticker(vm.round, vm.totalRounds, fmt(vm.hint.pointsNow)) : t.round(vm.round, vm.totalRounds)}
+            </span>
           )}
-          {vm.status === 'ready' && vm.phase === 'round' && <p className="text-base text-text-muted">{t.subtitle}</p>}
-          {vm.challenged && vm.status === 'ready' && vm.phase !== 'summary' && (
+          <h1
+            className={cx(
+              titleVisible
+                ? 'font-display text-4xl font-extrabold leading-display tracking-tight text-balance sm:text-display lg:text-[length:calc(var(--text-display)*1.35)]'
+                : 'sr-only',
+            )}
+          >
+            {t.title}
+          </h1>
+          {roundPhase && <p className="text-base text-text-muted sm:text-lg">{t.subtitle}</p>}
+          {vm.challenged && ready && vm.phase !== 'summary' && (
             <p className="rounded-full bg-primary-soft px-lg py-xs text-sm font-semibold text-primary">{t.challenged}</p>
           )}
         </header>
@@ -91,44 +118,31 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
             </Card>
           )}
 
-          {vm.status === 'ready' && vm.phase === 'reveal' && vm.reveal && <DuelRevealHeader reveal={vm.reveal} />}
+          {reveal && <DuelRevealHeader reveal={reveal} totalRounds={vm.totalRounds} />}
+          {reveal && <DuelRevealBand reveal={reveal} onNext={vm.next} />}
 
-          {vm.status === 'ready' && vm.phase === 'reveal' && vm.reveal && (
-            <div className="flex justify-center">
-              <Button size="lg" onClick={vm.next} className="w-full sm:w-auto sm:min-w-[calc(var(--spacing-3xl)*6)]">
-                {vm.reveal.isLastRound ? t.reveal.finish : t.reveal.next}
-              </Button>
+          {ready && vm.phase !== 'summary' && vm.cards && (
+            <div className="relative mx-auto grid w-full max-w-(--container-6xl) grid-cols-1 items-stretch md:grid-cols-2 md:gap-2xl lg:gap-[calc(var(--spacing-3xl)*1.25)]">
+              {renderCard(vm.cards[0])}
+              <VSBadge className="pointer-events-none relative z-20 -my-lg justify-self-center md:absolute md:left-1/2 md:top-1/2 md:my-0 md:-translate-x-1/2 md:-translate-y-1/2" />
+              {renderCard(vm.cards[1])}
             </div>
           )}
 
-          {vm.status === 'ready' && vm.phase !== 'summary' && vm.cards && (
-            <div className="relative grid grid-cols-2 items-stretch gap-md sm:gap-2xl">
-              {vm.cards.map((card) => (
-                <DuelCard
-                  key={card.letter}
-                  card={card}
-                  onPick={vm.phase === 'round' ? () => vm.pick(card.letter) : undefined}
-                  disabled={picking}
-                />
-              ))}
-              <VSBadge className="pointer-events-none absolute left-1/2 top-[calc(var(--spacing-3xl)*2)] z-20 -translate-x-1/2" />
-            </div>
-          )}
-
-          {vm.status === 'ready' && vm.phase === 'round' && (
+          {roundPhase && (
             <div className="flex flex-col items-center gap-sm">
               {vm.pickError && (
                 <p role="alert" className="text-sm font-semibold text-text">
                   {t.pickError} {errorText(vm.pickError)}
                 </p>
               )}
-              {vm.hint && <HintPill hint={vm.hint} onOpen={vm.openHint} />}
+              {vm.hint && <HintRow hint={vm.hint} onOpen={vm.openHint} />}
             </div>
           )}
 
-          {vm.status === 'ready' && vm.phase === 'reveal' && vm.reveal && <DuelReveal reveal={vm.reveal} />}
+          {reveal && <DuelReveal reveal={reveal} />}
 
-          {vm.status === 'ready' && vm.phase === 'summary' && vm.summary && (
+          {ready && vm.phase === 'summary' && vm.summary && (
             <DuelSummary
               summary={vm.summary}
               copyStatus={vm.copyStatus}

@@ -12,9 +12,11 @@ export type DuelCopyStatus = 'idle' | 'copied' | 'failed';
 
 export const duel = {
   title: 'Which life costs more?',
-  subtitle: 'Tap the life you think costs more each month.',
+  subtitle: 'Tap one. Everything in: rent, car, kids, food.',
   loading: 'Loading today’s duels…',
   round: (n: number, total: number) => `Round ${n} of ${total}`,
+  /** The ink sticker over the question: the round and what a right pick scores now. */
+  roundSticker: (n: number, total: number, points: string) => `Round ${n} of ${total} · ${points} pts`,
   roundDots: {
     label: 'Rounds',
     dot: (n: number, state: string) => `Round ${n}: ${state}`,
@@ -45,8 +47,8 @@ export const duel = {
   vs: 'VS',
 
   hint: {
-    offer: (cost: string) => `Hint: 1 more fact each, −${cost} points`,
-    used: (points: string) => `Hint used · now worth ${points} points`,
+    offer: (cost: string) => `Hint: one more fact each · −${cost}`,
+    used: (points: string) => `Hint used · now worth ${points}`,
     opening: 'Opening the hint…',
     error: 'The hint didn’t open. Tap to try again.',
     worth: (points: string) => `Worth ${points} points`,
@@ -62,10 +64,12 @@ export const duel = {
     totalLabel: (letter: DuelLetter) => `Life ${letter} a month`,
     breakdownLabel: (letter: DuelLetter) => `Life ${letter}: monthly costs by category`,
     decidedHeading: 'What decided it',
-    decidedLine: (category: string, amount: string) => `${category}: ${amount} a month`,
-    decidedVs: (letter: DuelLetter, amount: string) => `vs ${amount} for ${letter}`,
+    /** The ink band's headline: the deciding category, the costlier life's amount vs the other's. */
+    decidedLine: (category: string, amount: string, other: string) =>
+      `What decided it: ${category.toLowerCase()}, ${amount} vs ${other}`,
     crowd: (share: string, letter: DuelLetter, total: string) => `${share} picked ${letter}, from ${total} picks`,
     crowdNone: 'Not enough picks yet',
+    perMonth: '/ month',
     sources: 'Sources →',
     sourceShort: (name: string, year: number) => `${name}, ${year}`,
     next: 'Next round →',
@@ -74,7 +78,7 @@ export const duel = {
   },
 
   summary: {
-    heading: 'Your day',
+    heading: 'Today’s five',
     score: (right: number, total: number) => `${right} of ${total}`,
     scoreLabel: 'Right picks',
     points: (points: string) => `${points} points`,
@@ -82,6 +86,7 @@ export const duel = {
     gridLabel: 'Your five rounds',
     tile: { green: 'right', yellow: 'right with a hint', ink: 'missed' } satisfies Record<DuelTileColor, string>,
     tileLabel: (round: number, result: string) => `Round ${round}: ${result}`,
+    legend: 'Green right · Yellow right with a hint · Black missed',
     blindSpotHeading: 'Your blind spot',
     noBlindSpot: 'No blind spot today: every round right.',
     copyChallenge: (right: number, total: number) => `Copy challenge link · Beat my ${right}/${total}`,
@@ -100,7 +105,8 @@ export const duel = {
       failed: 'Couldn’t share. Copy the challenge link instead.',
     } satisfies Record<DuelShareStatus, string>,
     cta: 'Price my own month →',
-    ctaLead: 'You can read strangers’ lives. How about yours?',
+    ctaEyebrow: 'Now you’re up',
+    ctaLead: 'What does your month cost?',
     nextIn: (hours: number, minutes: number) => `Next five in ${hours}h ${minutes}m`,
   },
 
