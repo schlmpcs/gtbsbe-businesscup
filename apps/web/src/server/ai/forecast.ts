@@ -6,7 +6,7 @@
 // of the plumbing: month 0 is today's balance sheet, exact, and the 121 monthly points are
 // interpolated in code (`anchorsToForecast`). Every answer is checked in code before it is used:
 // the anchors' structure, the ids, a sanity envelope around the rules forecast of the same
-// inputs, and each scenario's own 10-year effect (@lifeguessr/engine `anchors.ts`). A failed
+// inputs, and each scenario's own effect at 1, 3, 5 and 10 years (@lifeguessr/engine `anchors.ts`). A failed
 // answer goes back to the model once with the issues listed; after that, or with no key, a
 // provider error, a refusal or a timeout, the answer is the rules bundle, labeled `source: 'rules'`.
 //
@@ -19,7 +19,7 @@ import {
   anchorIssues, anchorsToForecast, estimateSpread, forecastFacts, forecastSanityIssues, resolveRates,
   rulesBundle, scenarioEffectIssues, simulate,
 } from '@lifeguessr/engine';
-import type { Forecast, ForecastBundle, Money, Rate, YearAnchor } from '@lifeguessr/types';
+import { FORECAST_HORIZONS, type Forecast, type ForecastBundle, type Money, type Rate, type YearAnchor } from '@lifeguessr/types';
 import { z } from 'zod';
 import { canonicalJson } from '@/lib/canonicalJson';
 import { formatMoney } from '@/lib/format';
@@ -225,16 +225,21 @@ function checkAnswer(req: ForecastRequest, text: string, rules: ForecastBundle, 
     issues.push(...about(id, forecastSanityIssues(candidate, referenceOf(rules, id), takeHomePay)));
   }
 
-  // Each scenario's own effect: the yearly envelope is too loose to see a move that does nothing.
+  // Each scenario's own effect at every horizon the picker offers (the server is never told which
+  // one is shown): the yearly envelope is too loose to see a move that does nothing.
   const base = candidates.get(BASE_FORECAST_ID);
   if (base) {
     for (const { id } of req.scenarios) {
       const scenario = candidates.get(id);
       if (!scenario) continue;
-      issues.push(...about(id, scenarioEffectIssues(
-        { base, scenario },
-        { base: rules.base, scenario: referenceOf(rules, id) },
-      )));
+      for (const years of FORECAST_HORIZONS) {
+        issues.push(...about(id, scenarioEffectIssues(
+          { base, scenario },
+          { base: rules.base, scenario: referenceOf(rules, id) },
+          undefined,
+          years,
+        )));
+      }
     }
   }
   if (issues.length > 0) return { issues };
