@@ -148,11 +148,16 @@ docker compose -f compose.yaml.new config --quiet
 mv compose.yaml.new compose.yaml
 
 # NEXT_PUBLIC_* flags are baked into the client bundle, so they are read from .env at build time.
+# One that is missing or blank there keeps the Dockerfile's default, which is production's (the
+# duel at /play, both games against the server); put one in .env only to override it, e.g.
+# NEXT_PUBLIC_GAME_MODE=slider for the rollback. /api/health reports the result as `build`.
 BUILD_ARGS=()
+FLAGS_SET=''
 for v in NEXT_PUBLIC_GAME_SOURCE NEXT_PUBLIC_SESSION_SOURCE NEXT_PUBLIC_EVENTS_SOURCE NEXT_PUBLIC_AVATARS_ENABLED NEXT_PUBLIC_GAME_MODE NEXT_PUBLIC_DUEL_SOURCE; do
   val=$(sed -n "s/^$v=//p" .env | tail -1)
-  [ -z "$val" ] || BUILD_ARGS+=(--build-arg "$v=$val")
+  [ -z "$val" ] || { BUILD_ARGS+=(--build-arg "$v=$val"); FLAGS_SET="$FLAGS_SET $v=$val"; }
 done
+echo "deploy: build flags from .env:${FLAGS_SET:- none, so the Dockerfile defaults}"
 
 echo "deploy: building ${SHA:0:12}"
 docker buildx build --progress=plain --load -f deploy/Dockerfile \

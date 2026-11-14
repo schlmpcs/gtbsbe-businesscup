@@ -62,7 +62,7 @@ Share loop:   S3 Day result ─► challenge link /play?c=… ─► friend play
 | ID | Screen | Route | Status today | Build order |
 |---|---|---|---|---|
 | S1 | Today | `/` | `EXISTS`, needs first-visit state | 1 |
-| S2–S3 | Duel + reveal + day result | `/play` | `CHANGE` (slider game → duel) | 1 |
+| S2–S3 | Duel + reveal + day result | `/play` | `EXISTS` (the duel is `/play`, played against the server since #120; the slider game is the rollback) | 1 |
 | S5–S9 | Onboarding | `/me/guess`, `/me/closest`, `/me/sliders`, `/me/balance`, `/me/upload` | `EXISTS` | 2 (small changes) |
 | S10 | You in 10 years + goal + moves | `/future` | `EXISTS`, goal is `NEW` (#69) | 2 |
 | S21 | Little things (subscriptions + habits) | `/tools/subscriptions` | `NEW` (#79, #80, #81) | 3 |
@@ -73,6 +73,8 @@ Share loop:   S3 Day result ─► challenge link /play?c=… ─► friend play
 | S11 / S12 / S13 | Afford / Loan Lab / Decide | `/afford`, `/loan`, `/decide` | `EXISTS`, small changes | 6 |
 | S16 | Leaderboard | `/leaderboard` | page `NEW`, API `EXISTS` | after the cut line |
 | X4, S28, S29 | Habit duel, Calendar, Shared decision | `/play`, `/calendar`, `/d/[id]` | `NEW` | after the cut line |
+
+**Slider-only screens (not in this journey).** S4 Streamer mode (`/play?stream=1`) belongs to the slider game, the rollback (`NEXT_PUBLIC_GAME_MODE=slider`): the duel has no streamer view, so nothing links to it in the duel build (S1's All screens list leaves it out, the streamer notices of the tools link back to the plain `/play`) and `/play?stream=1` opens the plain duel. S16 Leaderboard reads slider results only and is after the cut line: no link in the app. "This Life vs Yours" (F11, `docs/PRODUCT.md`) is not built, so the duel reveal cannot reach it.
 
 **Figma frame names on page "Duel flow (Nov 14)" use older numbers:** "S16 · Guess/Reveal/Keep or cut" = S21 Little things, "S17 Manage Pro" = S27, "S18 Decision calendar" = S28, "S19 Shared decision" = S29. The IDs in this doc follow issues #77–#91.
 
@@ -111,11 +113,11 @@ Share loop:   S3 Day result ─► challenge link /play?c=… ─► friend play
 | Price my own month → | `/me/guess` | — | `own_guess_started` `NEW` |
 | Time for your check-in | `/checkin` | — | — |
 
-### S2 · Duel round · `/play` (`CHANGE`, decision D-1)
+### S2 · Duel round · `/play` (`EXISTS`, decision D-1)
 
 **Goal:** a 10-second pick. Two lives, one question: "Which life costs more?"
 
-**Data:** `GET /api/daily` `CHANGE` → today's 5 duels, the same for everyone, seeded by the New York date. Today it returns `PublicCard`s for the slider game; it must return duels instead (keep the old shape behind a flag until the duel ships).
+**Data:** `GET /api/daily?game=duel` `EXISTS` (#112) → today's 5 duels, the same for everyone, seeded by the New York date. `GET /api/daily` keeps the slider shape for the rollback. Production plays the duel from these routes (`NEXT_PUBLIC_DUEL_SOURCE=api`, the deploy image's default; #120).
 
 ```ts
 // packages/types — NEW
@@ -138,8 +140,8 @@ type PublicDuelCard = {
 
 | Action | Result | Backend | Event |
 |---|---|---|---|
-| Tap card A or B | Instant pick, no confirm → S3 | `POST /api/daily/pick { anonId, date, round, choice }` → `PickResult` `NEW`. Server holds the answers and scores. One pick per round per `anonId`; a second pick returns the stored result. | `duel_picked { round, correct }` `NEW` |
-| Hint ("1 more fact each, −10% points") | Shows `hintFact` (neighborhood/ZIP tier) on **both** cards; "now worth 900 points" | `POST /api/daily/hint { anonId, date, round }` → `{ A: string, B: string }` `NEW` (can reuse the clue log behind `/api/daily/clue` `EXISTS`). Multiplier −10% per hint, floor 50% (`clueCost`, `clueFloor` `EXISTS` in engine). | `hint_opened { round }` `NEW` |
+| Tap card A or B | Instant pick, no confirm → S3 | `POST /api/daily/pick { anonId, date, round, choice }` → `PickResult` `EXISTS`. Server holds the answers and scores. One pick per round per `anonId`; a second pick returns the stored result. | `duel_picked { round, correct }` `EXISTS` |
+| Hint ("1 more fact each, −10% points") | Shows `hintFact` (neighborhood/ZIP tier) on **both** cards; "now worth 900 points" | `POST /api/daily/hint { anonId, date, round }` → `{ A: string, B: string }` `EXISTS` (can reuse the clue log behind `/api/daily/clue` `EXISTS`). Multiplier −10% per hint, floor 50% (`clueCost`, `clueFloor` `EXISTS` in engine). | `hint_opened { round }` `EXISTS` |
 | Round dots | 5 dots, current highlighted | — | — |
 
 States: default · hint used · already picked this round (show S3) · already played today (Day result) · loading · error with retry.
@@ -301,16 +303,16 @@ Pro lists only what works (D-5): goal + monthly check-in, saved life, saved tool
 ## 4. Backend checklist (`NEW` and `CHANGE` only)
 
 **Contracts (`packages/types`, one PR, rule 3)**
-- [ ] `PublicDuel`, `PublicDuelCard`, `PickResult`, hint request/response, zod schemas
+- [x] `PublicDuel`, `PublicDuelCard`, `PickResult`, hint request/response, zod schemas
 - [ ] New `ClientFunnelEvent` names (section 0)
 - [ ] Session: `isSample`, `goal`, `committedMoveId`, saved check-ins
 
 **Game**
-- [ ] `GET /api/daily` returns 5 duels by New York date (keep slider shape behind a flag)
+- [x] `GET /api/daily?game=duel` returns 5 duels by New York date (the slider shape stays the default, for the rollback)
 - [x] `POST /api/daily/pick` (one pick per round per anonId, server-scored, stores `resultId`)
-- [ ] `POST /api/daily/hint` (hint log, −10% per hint, floor 50%)
-- [ ] Duel pairing: card pairs per day, gap ladder from easy to close
-- [ ] `decidedBy` + lesson templates + blind-spot template (code, not LLM)
+- [x] `POST /api/daily/hint` (hint log, −10% per hint, floor 50%)
+- [x] Duel pairing: card pairs per day, gap ladder from easy to close
+- [x] `decidedBy` + lesson templates + blind-spot template (code, not LLM)
 - [x] Crowd counts per duel (shown at ≥ 20 picks)
 - [ ] `/play?c={resultId}` challenge view
 

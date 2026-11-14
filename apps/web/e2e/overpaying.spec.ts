@@ -120,6 +120,9 @@ test.describe('S23 Overpaying check', () => {
     await page.goto('/tools/overpaying?stream=1');
     await expect(page.getByTestId('streamer-notice')).toBeVisible();
     await expect(page.getByRole('textbox')).toHaveCount(0);
-    await expect(page.getByRole('link', { name: t.streamer.back })).toHaveAttribute('href', '/play?stream=1');
+    // The duel has no streamer view, so the way back is the plain /play; only the slider game
+    // (NEXT_PUBLIC_GAME_MODE=slider, the rollback) has `?stream=1`.
+    const href = process.env.NEXT_PUBLIC_GAME_MODE === 'slider' ? '/play?stream=1' : '/play';
+    await expect(page.getByRole('link', { name: t.streamer.back })).toHaveAttribute('href', href);
   });
 });

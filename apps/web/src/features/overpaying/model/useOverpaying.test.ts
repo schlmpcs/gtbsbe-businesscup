@@ -35,7 +35,7 @@ describe('useOverpaying: the cold path', () => {
     expect(vm().needs).toBe('zip');
     expect(vm().result).toBeNull();
     expect(vm().hidden).toBe(false);
-    expect(vm().playHref).toBe('/play?stream=1');
+    expect(vm().playHref).toBe('/play'); // the duel has no streamer view, so the link names none
     expect(vm().profileHref).toBe('/me/balance');
   });
 

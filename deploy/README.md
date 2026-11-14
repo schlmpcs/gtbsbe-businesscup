@@ -41,15 +41,11 @@ comes from the new image (a bad migration), so the deploy checks it once and rol
 1. Create the app folder and its `.env` in the home of the user that runs the runner (names only
    here; values never go in the repo): `~/lifeguessr/.env` (mode 600) with `ANTHROPIC_API_KEY`,
    `ANTHROPIC_MODEL`, `STORE_PASSWORD` (required, see "The store" below),
-   `NEXT_PUBLIC_GAME_SOURCE`, `NEXT_PUBLIC_SESSION_SOURCE` (`api` saves sessions to the store),
-   `NEXT_PUBLIC_EVENTS_SOURCE` (`api` records funnel events in the store), optionally
-   `NEXT_PUBLIC_GAME_MODE` (unset or `duel`: `/play` is the duel "Which life costs more?";
-   `slider` brings back the slider game and its streamer mode as a rollback) and
-   `NEXT_PUBLIC_DUEL_SOURCE` (unset or `fixtures`: the duel is computed in the browser with the
-   real engine, even when `NEXT_PUBLIC_GAME_SOURCE=api`; `api` plays it against the server routes,
-   which are not built yet (#115), so leave it unset until the switch-over in #120), and
-   optionally `PUBLIC_URL` (the public https URL; `deploy.sh` asks its `/api/health` after a deploy).
-   `NEXT_PUBLIC_*` values are read at build time, so changing them needs a new deploy.
+   `NEXT_PUBLIC_SESSION_SOURCE` (`api` saves sessions to the store), `NEXT_PUBLIC_EVENTS_SOURCE`
+   (`api` records funnel events in the store) and optionally `PUBLIC_URL` (the public https URL;
+   `deploy.sh` asks its `/api/health` after a deploy). The game needs no line: the image's defaults
+   are production's, see "The game flags" below. `NEXT_PUBLIC_*` values are read at build time, so
+   changing them needs a new deploy.
    For the Pro paywall demo: `STRIPE_SECRET_KEY` (a **test-mode** key, `sk_test_…`; without it
    checkout is off and only the promo code works), `APP_URL` (the same public https URL, plus the
    sub-path if there is one; Stripe sends the payer back to it) and optionally `PRO_DEMO_CODE`.
@@ -84,6 +80,78 @@ Setting it up, as that dedicated user (the team server uses `lgrunner`):
 5. The server's clock must be right. The runner's login token is time-limited, and a clock that is
    hours off makes GitHub refuse it with a misleading "registration has been deleted" error.
    Check `timedatectl` (System clock synchronized) and `date -u`.
+
+## The game flags
+
+Three build-time flags choose which game the image serves. The Dockerfile's defaults are
+production's, so the server's `.env` needs no line for them; a line there overrides the default
+(`remote.sh` passes it as a build argument and prints the ones it found).
+
+| Flag | Default | What it does |
+| --- | --- | --- |
+| `NEXT_PUBLIC_GAME_MODE` | `duel` | `/play` is the duel "Which life costs more?" (S2/S3). `slider` brings back the slider game and its streamer mode (`/play?stream=1`): the rollback. |
+| `NEXT_PUBLIC_DUEL_SOURCE` | `api` | The duel plays against `GET /api/daily?game=duel` and `POST /api/daily/pick`, `/hint` (the store holds the answers and each player's day). `fixtures` computes it in the browser, which ships the sample cards and their costs in the bundle: only for a machine with no store. |
+| `NEXT_PUBLIC_GAME_SOURCE` | `api` | The same choice for the slider game. |
+
+`GET /api/health` reports what the running image was built with:
+`"build": { "gameMode": "duel", "gameSource": "api", "duelSource": "api" }`. CI builds with these
+three (the `check` and `e2e-production` jobs), builds the rollback flags too (`e2e-rollback`: the
+slider game, S4 streamer mode and the streamer notice's link back), and its deploy dry run asserts
+that the image built by `deploy.sh` reports the production three, so the flags cannot stop reaching
+the build unnoticed.
+
+### Rollback
+
+Nothing the duel added is removed by going back: the migrations are additive and the duel tables
+stay (an older image ignores them). The slider routes and tables were never touched.
+
+- **Fastest, no rebuild:** `deploy/deploy.sh --rollback` puts `lifeguessr-app:previous` (whatever ran
+  before the last deploy) back and checks health and the store.
+- **Back to the slider game on the current code:** put `NEXT_PUBLIC_GAME_MODE=slider` in the server's
+  `.env` and deploy again. `/play` is the slider game and S4 streamer mode is linked again. (Do not
+  unset the flag to get the slider: unset is the duel.)
+- **The duel back in the browser:** `NEXT_PUBLIC_DUEL_SOURCE=fixtures` in `.env` and deploy again.
+  Only if the duel routes fail while the rest of the app is fine; the answers then ship in the bundle.
+
+Remove the line and deploy again to return to the defaults.
+
+### Smoke check after a deploy
+
+Replace `$BASE_URL` with the public URL (no trailing slash). These reads change nothing:
+
+```bash
+# 1. Alive, store ok, built as production (gameMode duel, gameSource api, duelSource api)
+curl -fsS "$BASE_URL/api/health" | jq '{ok, store: .store.status, build}'
+
+# 2. Today's five duels, and nothing that gives an answer away before a pick
+DAILY=$(curl -fsS "$BASE_URL/api/daily?game=duel")
+echo "$DAILY" | jq '{ok, date, duels: (.duels | length), leaks: [.. | objects | keys[] | select(. == "total" or . == "totals" or . == "zip" or . == "tier")]}'
+
+# 3. The share route is up: an id nobody played answers 404 not_found, not 5xx
+curl -sS -o /dev/null -w '%{http_code}\n' "$BASE_URL/api/share?resultId=00000000000000000000000000000000"
+```
+
+Expect `ok: true`, `store: "ok"` and `build` as above; `duels: 5` and `leaks: []`; `404`.
+
+These write one throwaway row each, so they need a person's go-ahead. The anonymous id is made up
+for the check, never a real player's:
+
+```bash
+DATE=$(echo "$DAILY" | jq -r .date)
+ANON=$(uuidgen | tr 'A-Z' 'a-z')
+# 4. One hint, then the pick for round 1 of that day (the pick adds one to that round's crowd)
+curl -fsS -X POST "$BASE_URL/api/daily/hint" -H 'content-type: application/json' -H "x-anon-id: $ANON" \
+  -d "{\"anonId\":\"$ANON\",\"date\":\"$DATE\",\"round\":1}" | jq '{recorded, A: (.A | type), B: (.B | type)}'
+PICK=$(curl -fsS -X POST "$BASE_URL/api/daily/pick" -H 'content-type: application/json' -H "x-anon-id: $ANON" \
+  -d "{\"anonId\":\"$ANON\",\"date\":\"$DATE\",\"round\":1,\"choice\":\"A\"}")
+echo "$PICK" | jq '{replayed, points, resultId, totals: (.totals | keys)}'
+
+# 5. The share card of that one-pick day renders (read-only once the pick exists)
+curl -fsS -o /dev/null -w '%{http_code} %{content_type}\n' "$BASE_URL/api/share?resultId=$(echo "$PICK" | jq -r .resultId)"
+```
+
+Expect `recorded: true`; `replayed: false`, `points` 0 or 900 (the hint costs 10%), a 32-hex
+`resultId` and `totals: ["A","B"]`; `200 image/png`.
 
 ## The store
 

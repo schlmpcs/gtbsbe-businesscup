@@ -3,6 +3,12 @@ name: Deploy
 # Deploys main to the team server after CI is green. It runs on a self-hosted runner that lives on
 # that server and builds the image there (deploy/deploy.sh, setup in deploy/README.md).
 #
+# The game flags (NEXT_PUBLIC_GAME_MODE, NEXT_PUBLIC_GAME_SOURCE, NEXT_PUBLIC_DUEL_SOURCE) are build
+# arguments, so they are not set here: deploy/remote.sh reads them from the server's .env, and what
+# that file leaves out keeps the Dockerfile's default, which is production's (the duel at /play,
+# against the server). `GET /api/health` reports the result as `build`; deploy/README.md has the
+# rollback and the post-deploy smoke check.
+#
 # Safety: the runner can start containers on a shared server, so only this workflow may use it.
 #   - `workflow_run` always loads this file from the default branch, so a pull request cannot
 #     change what runs here.
