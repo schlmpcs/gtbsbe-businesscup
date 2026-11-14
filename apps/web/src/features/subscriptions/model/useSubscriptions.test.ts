@@ -543,6 +543,78 @@ describe('statement path', () => {
   });
 });
 
+describe('a pattern the categorizer calls "other" is low confidence: asked about, never counted before a yes', () => {
+  // A regular $30.00 on the 5th for three months, from a merchant that is not in the catalogue.
+  const gym = () => csvFile(['2026-09-05,LOCAL GYM CLUB,-30.00', '2026-10-05,LOCAL GYM CLUB,-30.00', '2026-11-05,LOCAL GYM CLUB,-30.00']);
+  const asClass = (cls: 'other' | 'subscriptions') => fakeCategorize((items) => [...new Set(items.map((i) => i.label))].map((label) => ({ label, class: cls })));
+
+  it('is "to confirm" and in no total, not markable, not in the plan, not a reason to open the plan', async () => {
+    const tool = renderTool({ categorize: asClass('other') });
+    await ready(tool);
+    await uploaded(tool, gym());
+    const { vm } = tool.result.current;
+    expect(vm.findings.toConfirm.map((f) => [f.id, f.confidence, f.counted, f.chargesSeen])).toEqual([['local-gym-club', 'low', false, 3]]);
+    expect(vm.findings).toMatchObject({ active: [], found: 0, monthly: 0, yearly: 0 });
+    expect(vm.reveal).toMatchObject({ against: 'statement', actual: 0, actualYearly: 0 });
+    expect(vm.apply).toMatchObject({ canApply: false, to: { value: 0 } });
+    expect(vm.renewals).toMatchObject({ count: 0, canExport: false });
+    expect(vm.plan.options).toEqual([]);
+    expect(vm.steps.find((s) => s.id === 'plan')).toEqual({ id: 'plan', available: false });
+    act(() => tool.result.current.vm.plan.markCancel('local-gym-club'));
+    expect(tool.result.current.store.state!.cancelMarked).toEqual([]);
+    expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null, candidate: null });
+  });
+
+  it('counts, can be marked, and reaches the totals, the plan and the calendar once confirmed', async () => {
+    const tool = renderTool({ categorize: asClass('other') });
+    await ready(tool);
+    await uploaded(tool, gym());
+    act(() => tool.result.current.vm.findings.confirm('local-gym-club'));
+    const { vm } = tool.result.current;
+    expect(vm.findings).toMatchObject({ found: 1, monthly: 30, yearly: 360, toConfirm: [] });
+    expect(vm.apply).toMatchObject({ canApply: true, to: { value: 30 } });
+    expect(vm.renewals.count).toBe(1);
+    expect(vm.plan.options.map((o) => o.id)).toEqual(['local-gym-club']);
+    act(() => tool.result.current.vm.plan.markCancel('local-gym-club'));
+    expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 1, saving: { monthly: 30, yearly: 360 } });
+    expect(tool.result.current.vm.plan.candidate).toMatchObject({ patch: { spending: { subscriptions: 55 } } }); // 85 − 30
+  });
+
+  it('"no" hides it for good: never counted, never markable', async () => {
+    const tool = renderTool({ categorize: asClass('other') });
+    await ready(tool);
+    await uploaded(tool, gym());
+    act(() => tool.result.current.vm.findings.dismiss('local-gym-club'));
+    expect(tool.result.current.vm.findings).toMatchObject({ toConfirm: [], active: [], dismissedCount: 1, found: 0 });
+    act(() => tool.result.current.vm.plan.markCancel('local-gym-club'));
+    expect(tool.result.current.vm.plan.markedCount).toBe(0);
+  });
+
+  it('the same pattern called a subscription by the categorizer, three charges, is high and counts at once', async () => {
+    const tool = renderTool({ categorize: asClass('subscriptions') });
+    await ready(tool);
+    await uploaded(tool, gym());
+    expect(tool.result.current.vm.findings.active.map((f) => [f.id, f.confidence, f.counted])).toEqual([['local-gym-club', 'high', true]]);
+    expect(tool.result.current.vm.findings).toMatchObject({ found: 1, monthly: 30, toConfirm: [] });
+  });
+
+  it('two charges are low even for a subscription class', async () => {
+    const tool = renderTool({ categorize: asClass('subscriptions') });
+    await ready(tool);
+    await uploaded(tool, csvFile(['2026-10-05,LOCAL GYM CLUB,-30.00', '2026-11-05,LOCAL GYM CLUB,-30.00']));
+    expect(tool.result.current.vm.findings.toConfirm.map((f) => f.confidence)).toEqual(['low']);
+    expect(tool.result.current.vm.findings.monthly).toBe(0);
+  });
+
+  it('a known service is not affected: it counts whatever the class', async () => {
+    const tool = renderTool({ categorize: asClass('other') });
+    await ready(tool);
+    await uploaded(tool, csvFile(['2026-09-07,NETFLIX.COM,-17.99', '2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99']));
+    expect(tool.result.current.vm.findings.active.map((f) => [f.serviceId, f.confidence])).toEqual([['netflix', 'high']]);
+    expect(tool.result.current.vm.findings.monthly).toBe(17.99);
+  });
+});
+
 describe('marks when a statement is read', () => {
   it('a mark on a ticked service points at the statement finding of the same service', async () => {
     const tool = renderTool();

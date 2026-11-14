@@ -303,6 +303,28 @@ describe('SubscriptionsScreen: the statement, the findings and the plan', () => 
     expect(within(findings).queryByText(t.findings.planWaits)).not.toBeInTheDocument();
   });
 
+  it('a regular charge from an unknown merchant that the categorizer calls "other" is asked about: totals stay at $0 and there is no plan until a yes', async () => {
+    const user = userEvent.setup();
+    const categorize = fakeCategorize((items) => [...new Set(items.map((i) => i.label))].map((label) => ({ label, class: 'other' as const })));
+    render(<Tool categorize={categorize} />);
+    await user.click(await screen.findByRole('button', { name: new RegExp(t.stepper.steps.statement) }));
+    await user.upload(
+      screen.getByLabelText(t.statement.pickerLabel),
+      csvFile(['2026-09-05,LOCAL GYM CLUB,-30.00', '2026-10-05,LOCAL GYM CLUB,-30.00', '2026-11-05,LOCAL GYM CLUB,-30.00']),
+    );
+    const findings = (await screen.findByRole('heading', { name: t.findings.title })).closest('section')!;
+    expect(within(findings).getByText(t.findings.headline(0, 0))).toBeInTheDocument();
+    expect(within(findings).getByText(t.findings.toConfirmQuestion)).toBeInTheDocument();
+    expect(within(findings).getByText(t.findings.notCounted)).toBeInTheDocument();
+    expect(within(findings).getByRole('button', { name: t.findings.next })).toBeDisabled();
+    expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) })).toBeDisabled();
+    await user.click(within(findings).getByRole('button', { name: `${t.findings.yes}: LOCAL GYM CLUB` }));
+    expect(within(findings).getByText(t.findings.headline(1, 0))).toBeInTheDocument();
+    await user.click(within(findings).getByRole('button', { name: t.findings.next }));
+    const plan = screen.getByRole('heading', { name: t.plan.title }).closest('section')!;
+    expect(within(plan).getByRole('checkbox', { name: t.plan.mark('LOCAL GYM CLUB') })).toBeInTheDocument();
+  });
+
   it('a short statement says why most findings are only possible subscriptions', async () => {
     const user = userEvent.setup();
     render(<Tool />);
