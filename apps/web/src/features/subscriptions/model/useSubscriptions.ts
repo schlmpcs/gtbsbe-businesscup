@@ -27,8 +27,8 @@ import { runEngine, toVMError } from '@/lib/model/errors';
 import { useAppReady, useAppStore } from '@/state';
 import { getAnonId } from '@/state/anonId';
 import {
-  CANCEL_MOVE_ID, cancelCandidate, combineFindings, displayNameOf, forgottenIds, isCounted, markedFindings,
-  missBucketOf, missFactor, monthlyOf, TICK_ID_PREFIX, tickIdOf, tickServices,
+  CANCEL_MOVE_ID, cancelCandidate, carryMarks, combineFindings, displayNameOf, forgottenIds, isCounted, markedFindings,
+  missBucketOf, missFactor, monthlyOf, tickIdOf, tickServices,
 } from './audit';
 import { GUESS_PRESETS, SHORT_STATEMENT_MONTHS, SURVEY } from './constants';
 import { readStatementForAudit, toStatementError } from './readForAudit';
@@ -256,10 +256,11 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
             update((s) => ({
               ...s,
               audit,
-              // A choice about a finding that is not in the new audit has nothing to apply to. Ticks keep their marks.
+              // A choice about a finding that is not in the new audit has nothing to apply to. A mark on a
+              // ticked service moves to the statement's finding of that service.
               confirmed: s.confirmed.filter((id) => ids.has(id)),
               dismissed: s.dismissed.filter((id) => ids.has(id)),
-              cancelMarked: s.cancelMarked.filter((id) => ids.has(id) || id.startsWith(TICK_ID_PREFIX)),
+              cancelMarked: carryMarks(s.cancelMarked, s.ticks, audit.findings),
             }));
             setUpload({ status: 'idle', error: null });
             setChosen('findings');

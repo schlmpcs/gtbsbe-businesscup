@@ -160,6 +160,34 @@ export function markedFindings(state: SubscriptionsToolState, catalogue: readonl
 }
 
 /**
+ * The cancel marks after a new statement is read. A mark on a finding that is still in the audit stays.
+ * A mark on a ticked service moves to the statement finding of the same service (the statement now
+ * speaks for it); with no such finding it stays on the tick, as long as the service is still ticked.
+ * Anything else (a finding that is gone, a tick of a service that is no longer ticked) is dropped, so
+ * no id is left that points at nothing.
+ */
+export function carryMarks(
+  marked: readonly string[],
+  ticks: readonly Tick[],
+  findings: readonly SubscriptionFinding[],
+): string[] {
+  const ids = new Set(findings.map((f) => f.id));
+  const ticked = new Set(ticks.map((t) => t.serviceId));
+  const carried: string[] = [];
+  for (const id of marked) {
+    let to: string | undefined;
+    if (ids.has(id)) {
+      to = id;
+    } else if (id.startsWith(TICK_ID_PREFIX)) {
+      const serviceId = id.slice(TICK_ID_PREFIX.length);
+      if (ticked.has(serviceId)) to = findings.find((f) => f.serviceId === serviceId)?.id ?? id;
+    }
+    if (to !== undefined && !carried.includes(to)) carried.push(to);
+  }
+  return carried;
+}
+
+/**
  * The statement findings the person did not tick: counted charges whose service is not in `ticks`
  * (a finding with no service id, such as an Apple charge, cannot be matched, so it counts as not
  * ticked). Nothing is "forgotten" when nothing was ticked. Ids, in the findings' order.

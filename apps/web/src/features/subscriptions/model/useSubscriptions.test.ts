@@ -425,6 +425,50 @@ describe('statement path', () => {
   });
 });
 
+describe('marks carry over when a statement is read', () => {
+  it('a mark on a ticked service moves to the statement finding of the same service', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    act(() => tool.result.current.vm.ticks.toggle('netflix', 'premium')); // $24.99 ticked
+    act(() => tool.result.current.vm.plan.markCancel('tick:netflix'));
+    expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 24.99 });
+    await uploaded(tool);
+    // The statement says $17.99, and the mark is on that finding now (no id left behind).
+    expect(tool.result.current.store.state!.cancelMarked).toEqual(['netflix-com-ca']);
+    expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 1, saving: { monthly: 17.99, yearly: 215.88 } });
+    expect(tool.result.current.vm.plan.options.find((o) => o.id === 'netflix-com-ca')!.markedCancel).toBe(true);
+  });
+
+  it('a mark on a ticked service the statement did not show stays', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    act(() => tool.result.current.vm.ticks.toggle('disney-plus')); // $7.99
+    act(() => tool.result.current.vm.plan.markCancel('tick:disney-plus'));
+    await uploaded(tool);
+    expect(tool.result.current.store.state!.cancelMarked).toEqual(['tick:disney-plus']);
+    expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 1, saving: { monthly: 7.99 } });
+  });
+
+  it('keeps the marks of statement findings that are still there, and never leaves an orphan id', async () => {
+    const first = renderTool();
+    await ready(first);
+    await uploaded(first);
+    const audited = first.result.current.store.state!;
+    const tool = renderTool({
+      initial: {
+        ...audited,
+        ticks: [{ serviceId: 'netflix', planId: 'standard' }],
+        // A mark for a tick that is gone (never ticked), one for a finding of the old audit, one for Netflix's tick.
+        cancelMarked: ['tick:gone', 'apple-com-bill-ca', 'tick:netflix'],
+      },
+    });
+    await ready(tool);
+    await uploaded(tool, csvFile(['2026-10-07,NETFLIX.COM # CA,-17.99', '2026-11-07,NETFLIX.COM # CA,-17.99']));
+    // Apple is not in the new audit; Netflix's tick mark moved to its finding; 'tick:gone' was never a service.
+    expect(tool.result.current.store.state!.cancelMarked).toEqual(['netflix-com-ca']);
+  });
+});
+
 describe('apply to the profile ("Use this in my plan")', () => {
   it('a statement total is measured: $69.54 on the subscriptions line, and the detected flag is on', async () => {
     const tool = renderTool();

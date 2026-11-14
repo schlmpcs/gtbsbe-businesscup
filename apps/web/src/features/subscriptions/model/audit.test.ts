@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import { bigCatalogue, ruleClasses, testCatalogue } from '@/test/subscriptions';
 import {
-  auditFromTicks, CANCEL_MOVE_ID, cancelCandidate, displayNameOf, forgottenIds, isCounted, mergeFindings, missBucketOf,
+  auditFromTicks, CANCEL_MOVE_ID, cancelCandidate, carryMarks, displayNameOf, forgottenIds, isCounted, mergeFindings, missBucketOf,
   missFactor, tickIdOf, tickServices,
 } from './audit';
 
@@ -241,5 +241,24 @@ describe('cancelCandidate', () => {
     expect(CANCEL_MOVE_ID).toMatch(/^[A-Za-z0-9:_.-]{1,96}$/);
     expect(CANCEL_MOVE_ID.split(':')[0]).toBe('cancelSubscriptions');
     expect(CANCEL_MOVE_ID).not.toBe('cancelSubscriptions'); // the engine's own candidate keeps its id
+  });
+});
+
+describe('carryMarks', () => {
+  const classOf = (label: string) => ruleClasses(statementItemsSample).find((c) => c.label === label)?.class;
+  const { findings } = detectSubscriptions(statementItemsSample, { catalogue: testCatalogue, classOf });
+  const ticks = [{ serviceId: 'netflix', planId: 'standard' }, { serviceId: 'disney-plus', planId: 'basic' }];
+
+  it('keeps a mark on a finding that is still there, moves a tick mark to the finding of its service, keeps one the statement did not show', () => {
+    expect(carryMarks(['spotify-usa-ny', 'tick:netflix', 'tick:disney-plus'], ticks, findings))
+      .toEqual(['spotify-usa-ny', 'netflix-com-ca', 'tick:disney-plus']);
+  });
+
+  it('drops a mark that points at nothing: a finding that is gone, a tick of a service no longer ticked', () => {
+    expect(carryMarks(['old-finding', 'tick:spotify', 'tick:gone'], ticks, findings)).toEqual([]);
+  });
+
+  it('lists an id once even when two marks end up on the same finding', () => {
+    expect(carryMarks(['netflix-com-ca', 'tick:netflix'], ticks, findings)).toEqual(['netflix-com-ca']);
   });
 });
