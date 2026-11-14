@@ -99,15 +99,18 @@ describe('withoutEvents', () => {
 
 describe('simulate: no events is today, bit for bit', () => {
   // sha256 of the demo profile's low/mid/high paths (360 months, area inflation, one cash purchase),
-  // taken from simulate() before events existed.
-  const BEFORE_EVENTS = 'ebac3cb9490181a21da5ac80400cb20c61fb50fac13fe6c61db1d7f895952bcb';
+  // taken from simulate() before events existed. Numbers are hashed rounded to cents: V8's float
+  // math differs in the last bit between Node versions (Node 22 vs 26: up to $1e-10 on these
+  // paths), which would change a hash of the raw values without any change in behaviour.
+  const BEFORE_EVENTS = '773e855ca92fb0a4a409cdfc81e6a072c0547aec6db9e6fe612d5fb095738532';
   const runs = (p: Profile) => {
     const rates = { inflationAnnual: inflationAnnualOf(areaByZip(profileDemo.zip!)) };
     return (['low', 'mid', 'high'] as const).map((scenario) => simulate(p, 360, {
       rates, scenario, extra: [{ label: 'car', amount: 9_000, recurring: false, payWith: 'cash', startMonth: 14 }],
     }));
   };
-  const hash = (p: Profile) => createHash('sha256').update(JSON.stringify(runs(p))).digest('hex');
+  const toCents = (_key: string, v: unknown) => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
+  const hash = (p: Profile) => createHash('sha256').update(JSON.stringify(runs(p), toCents)).digest('hex');
 
   it('the demo profile (no events) simulates exactly as before', () => {
     expect(hash(profileDemo)).toBe(BEFORE_EVENTS);
