@@ -229,6 +229,7 @@ export const StatementCategorizeResponseSchema = z.object({
   ok: z.literal(true),
   months: z.array(CategoryTotalsSchema),
   categorizedBy: z.enum(CATEGORIZED_BY),
+  classes: z.array(z.object({ label: z.string().min(1).max(200), class: z.enum(STATEMENT_CLASSES) })).optional(),
 });
 
 // ----- Pro (S15): requests and responses of /api/pro/* ---------------------------------------
