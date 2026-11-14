@@ -22,7 +22,28 @@ export const duel = {
     dot: (n: number, state: string) => `Round ${n}: ${state}`,
     state: { current: 'now', upcoming: 'to play', green: 'right', yellow: 'right with a hint', ink: 'missed' },
   },
-  challenged: 'A friend challenged you. Beat their score on today’s five.',
+  /**
+   * Opening a challenge link (/duel?c=…). Numbers arrive formatted. The friend's score shows before
+   * and during play ("the target"); the comparison with yours shows on the day result.
+   */
+  challenge: {
+    /** The link names no day we can read (unknown id, unfinished day, the server didn't answer). */
+    generic: 'A friend challenged you. Beat their score on today’s five.',
+    friendScore: (right: number, total: number, points: string) => `Your friend got ${right}/${total} · ${points} points`,
+    /** The link is from another day: its five duels are gone, so there is nothing to compare. */
+    earlier: (date: string) => `This challenge was for ${date}. Here are today’s five.`,
+    heading: 'You vs your friend',
+    /** The day result's headline: both scores in one line. */
+    headline: (you: number, friend: number, total: number) => `You ${you}/${total} · Friend ${friend}/${total}`,
+    outcome: {
+      ahead: 'You beat your friend.',
+      tied: 'You and your friend tied.',
+      behind: 'Your friend is ahead.',
+    },
+    you: 'You',
+    friend: 'Friend',
+    friendGridLabel: 'Your friend’s five rounds',
+  },
   /** The day on screen ended mid-play (after midnight in New York); these are the new day's duels. */
   newDay: 'A new day started at midnight in New York. Here are today’s five.',
   /** S1's "All screens" list when /play is the duel (S2/S3 are its states). */

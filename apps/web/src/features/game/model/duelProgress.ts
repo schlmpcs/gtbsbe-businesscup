@@ -19,17 +19,23 @@ export type DuelLog = {
   hints: DuelProgress['hints'];
 };
 
-/** Parses a stored log; null when it is missing, corrupt or for another day. */
-export function parseDuelLog(raw: string | null, date: string): DuelLog | null {
+/** Parses a stored log of any day; null when it is missing or corrupt. */
+export function parseStoredDuelLog(raw: string | null): DuelLog | null {
   try {
     const saved = JSON.parse(raw ?? 'null') as Partial<DuelLog> | null;
-    if (saved && saved.date === date && typeof saved.resultId === 'string') {
-      return { date, resultId: saved.resultId, picks: saved.picks ?? {}, hints: saved.hints ?? {} };
+    if (saved && typeof saved.date === 'string' && typeof saved.resultId === 'string') {
+      return { date: saved.date, resultId: saved.resultId, picks: saved.picks ?? {}, hints: saved.hints ?? {} };
     }
   } catch {
     // a corrupt log: the day starts fresh
   }
   return null;
+}
+
+/** Parses a stored log; null when it is missing, corrupt or for another day. */
+export function parseDuelLog(raw: string | null, date: string): DuelLog | null {
+  const log = parseStoredDuelLog(raw);
+  return log?.date === date ? log : null;
 }
 
 /** How far the player got in a day's duels. */

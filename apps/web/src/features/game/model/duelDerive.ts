@@ -7,10 +7,11 @@ import {
 } from '@lifeguessr/types';
 import { duel as t } from '@/copy/duel';
 import type { GameSource } from '@/lib/config';
+import { duelTileColor } from '@/lib/duel/duelDay';
 import { shareImageUrls } from './derive';
-import type { DuelProgress } from './duelClient';
+import type { DuelChallenge, DuelProgress } from './duelClient';
 import type {
-  DuelCardVM, DuelCategoryVM, DuelDotVM, DuelHintVM, DuelRevealVM, DuelSummaryVM, DuelTileColor,
+  ChallengeVM, DuelCardVM, DuelCategoryVM, DuelDotVM, DuelHintVM, DuelOutcome, DuelRevealVM, DuelScoreVM, DuelSummaryVM,
 } from './types';
 
 const other = (letter: DuelLetter): DuelLetter => (letter === 'A' ? 'B' : 'A');
@@ -28,15 +29,9 @@ export function choiceOf(result: PickResult): DuelLetter | null {
   return result.correct ? costlier : other(costlier);
 }
 
-/**
- * Green = right, yellow = right with a hint (fewer than full points), ink = missed. It reads only
- * `correct` and `points`, so the server's share card (server/game/shareCard.tsx) can color a
- * stored pick with the same rule the day result uses, and the two grids never disagree.
- */
-export function duelTileColor(result: Pick<PickResult, 'correct' | 'points'>): DuelTileColor {
-  if (!result.correct) return 'ink';
-  return result.points < duelRoundPoints(0) ? 'yellow' : 'green';
-}
+// The tile colour rule lives in lib/duel/duelDay (shared with the server's share card and challenge
+// reply, so every grid is coloured the same way); re-exported here for the callers that had it.
+export { duelTileColor };
 
 /** The two cards of a round: public facts, the hint once open, totals and bars once picked. */
 export function buildDuelCards(
@@ -207,4 +202,68 @@ export function buildDuelSummary(
     shareImage: shareImageUrls(source, resultId),
     nextIn: nextNewYorkMidnight(now),
   };
+}
+
+// ----- challenge links (/duel?c=…) -------------------------------------------------------------------
+
+/** What you scored on the day result, as the comparison lays it next to a friend's. */
+const scoreOfSummary = (summary: DuelSummaryVM): DuelScoreVM => ({
+  right: summary.right,
+  rounds: summary.rounds,
+  points: summary.totalPoints,
+  tiles: summary.tiles,
+});
+
+/** What a friend's challenge says, one tile per round (it only counts once all the rounds are in). */
+const scoreOfChallenge = (challenge: DuelChallenge): DuelScoreVM => ({
+  right: challenge.right,
+  rounds: challenge.rounds,
+  points: challenge.points,
+  tiles: challenge.tiles.map((color, i) => ({ round: (i + 1) as DuelRound, color })),
+});
+
+/**
+ * Who is ahead: more right picks win; on the same number the one with more points (a hint costs 10%
+ * of a round, so with equal right picks the player who used fewer hints is ahead); the same on both
+ * is a tie. Both scores are the stored ones; nothing is re-scored.
+ */
+export function duelOutcome(you: DuelScoreVM, friend: DuelScoreVM): DuelOutcome {
+  if (you.right !== friend.right) return you.right > friend.right ? 'ahead' : 'behind';
+  if (you.points !== friend.points) return you.points > friend.points ? 'ahead' : 'behind';
+  return 'tied';
+}
+
+const dayLabel = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+/** A play date ('YYYY-MM-DD') as "Nov 14". The date is a calendar day, not an instant: read in UTC. */
+export function challengeDateLabel(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return dayLabel.format(new Date(Date.UTC(y!, m! - 1, d!)));
+}
+
+/**
+ * What a challenge link says on this screen. `friend` is what the source answered for the link's id
+ * (null: no such day); `date` is the day on screen and `picks` what this player did on it.
+ *
+ * - Your own link (one of today's stored results carries this id) is your result, never a comparison.
+ *   It is checked first: the day is yours whatever the source says about it.
+ * - A day the source does not hold, or one still being played, is no score to beat: null, and the
+ *   screen falls back to the generic line.
+ * - A challenge from another day than the one on screen is `earlier`. Both must agree: the source's
+ *   `today` (its clock) and the date of the five on screen, so a comparison only ever sets two
+ *   scores on the same five duels.
+ * - Otherwise the friend's score; with your own once all five are picked (`summary`).
+ */
+export function buildDuelChallenge(
+  friend: DuelChallenge | null,
+  ctx: { challengeId: string; date: string; picks: DuelProgress['picks']; summary: DuelSummaryVM | null },
+): ChallengeVM | null {
+  if (DUEL_ROUNDS.some((round) => ctx.picks[round]?.result.resultId === ctx.challengeId)) return { kind: 'own' };
+  if (!friend) return null;
+  if (!friend.today || friend.date !== ctx.date) return { kind: 'earlier', dateLabel: challengeDateLabel(friend.date) };
+  if (friend.played < friend.rounds) return null;
+  const theirs = scoreOfChallenge(friend);
+  if (!ctx.summary) return { kind: 'friend', friend: theirs, comparison: null };
+  const yours = scoreOfSummary(ctx.summary);
+  return { kind: 'friend', friend: theirs, comparison: { you: yours, outcome: duelOutcome(yours, theirs) } };
 }

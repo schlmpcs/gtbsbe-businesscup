@@ -8,19 +8,22 @@
 // It holds the answers (the cards), so only ./duelClient loads it, with a dynamic import() that a
 // duel API build drops (NEXT_PUBLIC_DUEL_SOURCE=api). Don't import it statically from browser code; the
 // ESLint rule in eslint.config.mjs holds that.
-import { costOfLife, dailyDuelPairs, scoreDuelPick } from '@lifeguessr/engine';
-import type {
-  AreaData, CostBreakdown, DuelHint, DuelLetter, DuelRound, LifeCard, PickResult, PublicDuel,
+import { costOfLife, DUEL_ROUND_COUNT, dailyDuelPairs, scoreDuelPick } from '@lifeguessr/engine';
+import {
+  DUEL_ROUNDS,
+  type AreaData, type CostBreakdown, type DuelHint, type DuelLetter, type DuelRound, type LifeCard, type PickResult,
+  type PublicDuel,
 } from '@lifeguessr/types';
 import { duel as t } from '@/copy/duel';
 import { duelCardsSample } from '@/fixtures/duelCards';
 import { ApiError } from '@/lib/api/http';
 import { areaForZip } from '@/lib/areas';
+import { scoreDuelDay } from '@/lib/duel/duelDay';
 import { hintOf, publicDuelCard } from '@/lib/duel/publicDuelCard';
 import { readStorage, writeStorage } from '@/lib/safeStorage';
 import { newUuid } from '@/state/anonId';
-import type { DuelClient } from './duelClient';
-import { FIXTURE_DUEL_LOG_KEY, parseDuelLog, type DuelLog } from './duelProgress';
+import type { DuelChallenge, DuelClient } from './duelClient';
+import { FIXTURE_DUEL_LOG_KEY, parseDuelLog, parseStoredDuelLog, type DuelLog } from './duelProgress';
 
 export { FIXTURE_DUEL_LOG_KEY };
 
@@ -103,6 +106,15 @@ export function createFixtureDuelClient(
       log!.picks[round] = { choice, result };
       save();
       return result;
+    },
+
+    async challenge(resultId, today) {
+      // Only the day this browser played itself: it has no other player's picks. A link from
+      // anywhere else is "not found", which the screen shows as the generic challenge line.
+      const own = [log, persist ? parseStoredDuelLog(readStorage(FIXTURE_DUEL_LOG_KEY)) : null].find((l) => l?.resultId === resultId);
+      if (!own) return null;
+      const picks = DUEL_ROUNDS.flatMap((round) => (own.picks[round] ? [{ round, scored: own.picks[round]!.result }] : []));
+      return { date: own.date, rounds: DUEL_ROUND_COUNT, ...scoreDuelDay(picks), today: own.date === today } satisfies DuelChallenge;
     },
   };
 }

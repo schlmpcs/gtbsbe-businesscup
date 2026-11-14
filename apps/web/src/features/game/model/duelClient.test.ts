@@ -7,9 +7,9 @@ import type { DuelDailyResponse } from '@/lib/api/gameSchemas';
 import { ApiError } from '@/lib/api/http';
 import { toVMError } from '@/lib/model/errors';
 import { duelScorer, duelSet, publicDuels } from '@/server/game/duel';
-import { ANON, setupGameTestEnv, TODAY } from '@/server/game/testUtils';
+import { ANON, OTHER_ANON, setupGameTestEnv, TODAY } from '@/server/game/testUtils';
 import { createRouteFetch } from '@/test/gameRoutes';
-import { createDuelClient, createHttpDuelClient, duelProgressFromWire } from './duelClient';
+import { createDuelClient, createHttpDuelClient, duelProgressFromWire, lazyDuelClient } from './duelClient';
 import { createFixtureDuelClient } from './duelFixtureClient';
 
 const DATE = '2026-11-14';
@@ -270,5 +270,162 @@ describe('http duel client against the real duel routes (API mode end to end)', 
     vi.stubGlobal('fetch', createRouteFetch().fetch);
     const err = await createHttpDuelClient({ anonId: () => ANON }).pick(1, 'A', '2026-11-10').catch((e: unknown) => e);
     expect(err).toMatchObject({ status: 409, code: 'day_over' });
+  });
+});
+
+// ----- challenge: the score behind a challenge link --------------------------------------------------
+
+/** A finished day as GET /api/daily/challenge answers it. */
+const challengeBody = (over: Record<string, unknown> = {}) => ({
+  ok: true, date: DATE, rounds: 5, played: 5, right: 4, points: 3_900,
+  tiles: ['yellow', 'green', 'green', 'green', 'ink'], today: true, ...over,
+});
+
+describe('http duel client: challenge', () => {
+  it('GET /api/daily/challenge?c=<id>, with no anonymous id, answers the score without `ok`', async () => {
+    const fetchMock = vi.fn(async () => json(challengeBody()));
+    vi.stubGlobal('fetch', fetchMock);
+    const challenge = await createHttpDuelClient({ anonId: () => ID }).challenge(RESULT_ID, DATE);
+    expect(challenge).toEqual({
+      date: DATE, rounds: 5, played: 5, right: 4, points: 3_900, tiles: ['yellow', 'green', 'green', 'green', 'ink'], today: true,
+    });
+    expect(challenge).not.toHaveProperty('ok');
+    const [url, init] = callsOf(fetchMock)[0]!;
+    expect(url).toBe(`/api/daily/challenge?c=${RESULT_ID}`);
+    expect(init.method).toBe('GET');
+    // Whoever asks, the route needs no id: the player's key never goes with a challenge read.
+    expect(new Headers(init.headers).get('x-anon-id')).toBeNull();
+  });
+
+  it('is null for a 404 (an id nobody holds), and asks nothing for an id that cannot be a stored result', async () => {
+    const fetchMock = vi.fn(async () => json({ ok: false, error: { code: 'not_found' } }, 404));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = createHttpDuelClient({ anonId: () => ID });
+    expect(await client.challenge(RESULT_ID, DATE)).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    for (const id of ['fixture-duel-2026-11-14-0a1b2c3d', 'abc', RESULT_ID.toUpperCase(), `${RESULT_ID}0`, '']) {
+      expect(await client.challenge(id, DATE)).toBeNull();
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1); // none of those went to the server
+  });
+
+  it('rejects when the server cannot answer, so the screen can tell "unknown" from "failed"', async () => {
+    const client = createHttpDuelClient({ anonId: () => ID });
+    vi.stubGlobal('fetch', vi.fn(async () => json({ ok: false, error: { code: 'unavailable' } }, 503)));
+    const down = await client.challenge(RESULT_ID, DATE).catch((e: unknown) => e);
+    expect(down).toMatchObject({ status: 503, code: 'unavailable' });
+    expect(toVMError(down)).toEqual({ kind: 'unavailable' });
+
+    vi.stubGlobal('fetch', vi.fn(async () => json({ ok: false, error: { code: 'rate_limited' } }, 429)));
+    expect(toVMError(await client.challenge(RESULT_ID, DATE).catch((e: unknown) => e))).toEqual({ kind: 'rateLimited' });
+
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    expect(toVMError(await client.challenge(RESULT_ID, DATE).catch((e: unknown) => e))).toEqual({ kind: 'network', status: undefined });
+  });
+
+  it('rejects a reply that breaks the contract instead of trusting it', async () => {
+    const client = createHttpDuelClient({ anonId: () => ID });
+    const bad = [
+      { ...challengeBody(), ok: undefined },
+      challengeBody({ rounds: 4 }),
+      challengeBody({ right: 6 }),
+      challengeBody({ points: -1 }),
+      challengeBody({ played: 3 }), // five tiles for three rounds
+      challengeBody({ tiles: ['green', 'green', 'green', 'green', 'red'] }),
+      challengeBody({ right: 5, played: 4, tiles: ['green', 'green', 'green', 'green'] }),
+      challengeBody({ today: 'yes' }),
+      challengeBody({ date: 'yesterday' }),
+    ];
+    for (const body of bad) {
+      vi.stubGlobal('fetch', vi.fn(async () => json(body)));
+      const err = await client.challenge(RESULT_ID, DATE).catch((e: unknown) => e);
+      expect(err, JSON.stringify(body)).toMatchObject({ invalid: true });
+    }
+  });
+
+  it('drops anything the contract does not name, an anonymous key included', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json({ ...challengeBody(), anonId: ID, picks: [{ choice: 'A' }], totals: { A: 1, B: 2 } })));
+    const challenge = await createHttpDuelClient({ anonId: () => ID }).challenge(RESULT_ID, DATE);
+    expect(JSON.stringify(challenge)).not.toMatch(new RegExp(`${ID}|choice|totals|picks`));
+  });
+
+  it('the lazy client hands the question to the client it loads', async () => {
+    const inner = createFixtureDuelClient({ persist: false });
+    await inner.daily(DATE);
+    const lazy = lazyDuelClient('fixtures', async () => inner);
+    expect(await lazy.challenge('fixture-duel-nobody', DATE)).toBeNull();
+  });
+});
+
+describe('fixture duel client: challenge', () => {
+  /** Plays `picks` (letters by round) on a client, a hint first on `hinted` rounds. */
+  async function playOn(client: ReturnType<typeof createFixtureDuelClient>, letters: ('A' | 'B')[], hinted: number[] = []) {
+    const { progress } = await client.daily(DATE);
+    expect(progress.picks).toEqual({});
+    const results: PickResult[] = [];
+    for (const [i, letter] of letters.entries()) {
+      const round = (i + 1) as 1 | 2 | 3 | 4 | 5;
+      if (hinted.includes(round)) await client.hint(round, DATE);
+      results.push(await client.pick(round, letter, DATE));
+    }
+    return results;
+  }
+
+  it('answers its own stored day with the score the day result shows, and today only for that day', async () => {
+    const client = createFixtureDuelClient({ persist: false });
+    const results = await playOn(client, ['A', 'A', 'A', 'A', 'A'], [1]);
+    const resultId = results[0]!.resultId;
+    expect(new Set(results.map((r) => r.resultId)).size).toBe(1);
+
+    const challenge = (await client.challenge(resultId, DATE))!;
+    expect(challenge).toMatchObject({
+      date: DATE,
+      rounds: 5,
+      played: 5,
+      right: results.filter((r) => r.correct).length,
+      points: results.reduce((sum, r) => sum + r.points, 0),
+      today: true,
+    });
+    expect(challenge.tiles).toEqual(results.map((r) => (!r.correct ? 'ink' : r.points < 1000 ? 'yellow' : 'green')));
+    // The client's New York date moved on: same day, but not today any more.
+    expect(await client.challenge(resultId, '2026-11-15')).toMatchObject({ date: DATE, today: false, right: challenge.right });
+  });
+
+  it('knows no other day: an id it did not issue is not found', async () => {
+    const client = createFixtureDuelClient({ persist: false });
+    const [first] = await playOn(client, ['A', 'B']);
+    expect(await client.challenge('fixture-duel-2026-11-14-ffffffff', DATE)).toBeNull();
+    expect(await client.challenge('0123456789abcdef0123456789abcdef', DATE)).toBeNull();
+    expect(await client.challenge('', DATE)).toBeNull();
+    // A day still being played answers what is played so far.
+    expect(await client.challenge(first!.resultId, DATE)).toMatchObject({ played: 2, tiles: expect.any(Array) });
+  });
+});
+
+describe('http duel client against the real challenge route', () => {
+  setupGameTestEnv();
+
+  it('a friend’s day, read by a stranger with their own id: the same score and tiles, and the stranger’s day is untouched', async () => {
+    const routes = createRouteFetch();
+    vi.stubGlobal('fetch', routes.fetch);
+    const friend = createHttpDuelClient({ anonId: () => ANON });
+    const stranger = createHttpDuelClient({ anonId: () => OTHER_ANON });
+    await friend.daily(DATE);
+    const costlier = duelSet(TODAY).map((pair) => (duelScorer(pair, 'A')(0).correct ? 'A' : 'B') as 'A' | 'B');
+    const results: PickResult[] = [];
+    for (const [i, round] of DUEL_ROUNDS.entries()) {
+      if (i === 0) await friend.hint(round, TODAY);
+      results.push(await friend.pick(round, i < 4 ? costlier[i]! : costlier[i] === 'A' ? 'B' : 'A', TODAY));
+    }
+
+    const challenge = await stranger.challenge(results[0]!.resultId, TODAY);
+    expect(challenge).toEqual({
+      date: TODAY, rounds: 5, played: 5, right: 4, points: 900 + 3_000, tiles: ['yellow', 'green', 'green', 'green', 'ink'], today: true,
+    });
+    expect(await stranger.challenge('0'.repeat(32), TODAY)).toBeNull();
+    expect((await stranger.daily(TODAY)).progress).toEqual({ picks: {}, hints: {} });
+    // Neither challenge read carried an anonymous id.
+    expect(routes.calls.filter((c) => c.path === '/api/daily/challenge').map((c) => c.anonId)).toEqual([null, null]);
   });
 });

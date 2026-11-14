@@ -1,7 +1,8 @@
-// Test helper: a `fetch` that answers the game routes (T5, and the duel's DU3–DU5) with their real
+// Test helper: a `fetch` that answers the game routes (T5, and the duel's DU3–DU5 and DU8) with their real
 // handlers in-process, so the browser's API game and duel clients can be tested end to end against
 // the server code without a running Next.js. Every other URL is a 404, like a route that does not exist.
 import { GET as getDaily } from '../../app/api/daily/route';
+import { GET as getChallenge } from '../../app/api/daily/challenge/route';
 import { POST as postClue } from '../../app/api/daily/clue/route';
 import { POST as postGuess } from '../../app/api/daily/guess/route';
 import { POST as postHint } from '../../app/api/daily/hint/route';
@@ -13,6 +14,7 @@ type Handler = (req: Request) => Promise<Response>;
 
 const ROUTES: Record<string, { GET?: Handler; POST?: Handler }> = {
   '/api/daily': { GET: getDaily },
+  '/api/daily/challenge': { GET: getChallenge },
   '/api/daily/clue': { POST: postClue },
   '/api/daily/guess': { POST: postGuess },
   '/api/daily/hint': { POST: postHint },

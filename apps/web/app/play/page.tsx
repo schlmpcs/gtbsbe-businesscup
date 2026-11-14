@@ -22,5 +22,5 @@ export default function PlayPage({ searchParams }: { searchParams: Promise<PlayS
   const { stream, c } = use(searchParams);
   // Read inline: Next inlines NEXT_PUBLIC_* at build time (same rule as gameMode() in lib/config).
   if (process.env.NEXT_PUBLIC_GAME_MODE === 'slider') return <SliderPlay streamer={stream === '1'} />;
-  return <DuelView challenged={typeof c === 'string' && c.length > 0} />;
+  return <DuelView challengeId={typeof c === 'string' ? c : undefined} />;
 }

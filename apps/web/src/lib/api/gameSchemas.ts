@@ -9,6 +9,7 @@ import {
   type ClueReveal, type CostBreakdown, type GuessReveal, type Money, type PublicCard,
 } from '@lifeguessr/types';
 import { z } from 'zod';
+import type { DuelTileColor } from '@/copy/duel';
 
 export const ClueIdSchema = z.enum(CLUE_IDS);
 
@@ -137,6 +138,9 @@ export const DailyResponseSchema = z.union([
 export const DailyGameSchema = z.enum(['slider', 'duel']);
 export type DailyGame = z.infer<typeof DailyGameSchema>;
 
+/** A stored result's id: 16 random bytes as 32 lower-case hex characters (share and challenge links). */
+export const ResultIdSchema = z.string().regex(/^[0-9a-f]{32}$/);
+
 /** A duel round as a JSON object key: JSON keys are strings (the browser's DuelProgress uses numbers). */
 export const DuelRoundKeySchema = z.enum(['1', '2', '3', '4', '5']);
 
@@ -153,7 +157,7 @@ export const DuelRoundKeySchema = z.enum(['1', '2', '3', '4', '5']);
  * (duelProgressFromWire in features/game/model/duelClient.ts).
  */
 export const DuelProgressWireSchema = z.object({
-  resultId: z.string().regex(/^[0-9a-f]{32}$/).nullable(),
+  resultId: ResultIdSchema.nullable(),
   picks: z.partialRecord(DuelRoundKeySchema, z.object({ choice: DuelLetterSchema, result: PickResultSchema })),
   hints: z.partialRecord(DuelRoundKeySchema, DuelHintSchema),
 });
@@ -167,6 +171,34 @@ export const DuelDailyResponseSchema = z.object({
   progress: DuelProgressWireSchema.optional(),
 });
 export type DuelDailyResponse = z.infer<typeof DuelDailyResponseSchema>;
+
+// ----- GET /api/daily/challenge (DU8, #117) ------------------------------------------------------
+
+/** The colour of one round of a duel day's grid (see lib/duel/duelDay → duelTileColor). */
+export const DuelTileColorSchema = z.enum(['green', 'yellow', 'ink']) satisfies z.ZodType<DuelTileColor>;
+
+/**
+ * GET /api/daily/challenge?c=<resultId>: the score a friend chose to share with their challenge
+ * link, and nothing else. It is what the share card already shows: how many rounds were right out of
+ * the rounds played, the points, one colour per played round (right, right with a hint, missed) and
+ * the day. No anonymous key, no choices, no totals and no card ids, so a link reveals nothing about
+ * the player or about the five duels.
+ * - `rounds`: the duels in a day (always 5); `played` can be lower for a day still being played, and
+ *   `tiles` has one colour per played round, in round order.
+ * - `today`: whether `date` is the day the server serves now. A link from an earlier day is no
+ *   comparison: the five duels it was played on are gone.
+ */
+export const DuelChallengeResponseSchema = z.object({
+  ok: z.literal(true),
+  date: PlayDateSchema,
+  rounds: z.literal(5),
+  played: z.number().int().min(0).max(5),
+  right: z.number().int().min(0).max(5),
+  points: z.number().int().min(0),
+  tiles: z.array(DuelTileColorSchema).max(5),
+  today: z.boolean(),
+}).refine((c) => c.tiles.length === c.played && c.right <= c.played, { message: 'right and tiles must fit played' });
+export type DuelChallengeResponse = z.infer<typeof DuelChallengeResponseSchema>;
 
 /** One player on the day's leaderboard. `handle` is made up from a hash: no id, no PII. */
 export const LeaderboardEntrySchema = z.object({

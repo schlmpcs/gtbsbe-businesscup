@@ -7,9 +7,9 @@ import type {
 import type { DuelLetter, DuelRound } from '@lifeguessr/types';
 import type { DuelCopyStatus, DuelShareStatus, DuelTileColor } from '@/copy/duel';
 import type { GameSource } from '@/lib/config';
-import type { SliderVM, VMError } from '@/lib/model/types';
+import type { Loadable, SliderVM, VMError } from '@/lib/model/types';
 
-export type { SliderVM, VMError } from '@/lib/model/types';
+export type { Loadable, SliderVM, VMError } from '@/lib/model/types';
 export type { GameSource } from '@/lib/config';
 /** Contract types the presentational ui/ files need to type their props (they may import only this file). */
 export type { ClueId, CostCategory, KidAge, Money, Rate, SceneLayout, SceneProp, Source } from '@lifeguessr/types';
@@ -304,6 +304,31 @@ export type DuelSummaryVM = {
 
 export type DuelPhase = 'round' | 'reveal' | 'summary';
 
+/** A score on a day's five duels: right picks out of the rounds, the points and one tile per round. */
+export type DuelScoreVM = {
+  right: number;
+  rounds: number;
+  points: number;
+  tiles: { round: DuelRound; color: DuelTileColor }[];
+};
+
+/** How you stand against a friend: more right picks win, then more points (a hint costs points). */
+export type DuelOutcome = 'ahead' | 'tied' | 'behind';
+
+/**
+ * What a challenge link (/duel?c=…) says, once it is read:
+ * - `friend`: your friend's score on today's five, the target before and during play. Once you have
+ *   played all five, `comparison` holds yours next to it (null until then).
+ * - `earlier`: the link is from another day, so its five duels are gone: no comparison. `dateLabel`
+ *   is that day, formatted for the sentence ("Nov 14").
+ * - `own`: your own link (this browser or this anonymous id): your result, not a comparison.
+ * A link that names no stored day, or one whose day is unfinished, has no ChallengeVM (null).
+ */
+export type ChallengeVM =
+  | { kind: 'friend'; friend: DuelScoreVM; comparison: { you: DuelScoreVM; outcome: DuelOutcome } | null }
+  | { kind: 'earlier'; dateLabel: string }
+  | { kind: 'own' };
+
 /** useDuel(): everything the duel screen renders. */
 export type DuelVM = {
   status: 'loading' | 'ready' | 'error';
@@ -321,8 +346,15 @@ export type DuelVM = {
   pickError: VMError | null;
   reveal: DuelRevealVM | null;
   summary: DuelSummaryVM | null;
-  /** Opened from a friend's challenge link (/duel?c=…). */
+  /** Opened from a challenge link (/duel?c=…), whatever it turned out to say. */
   challenged: boolean;
+  /**
+   * What the link says (see ChallengeVM). `ready` with null data: no link, or a link with nothing
+   * to show for it (an id nobody holds, an unfinished day): with `challenged` the screen shows the
+   * generic "a friend challenged you" line. `loading` until the link and the day are both read;
+   * `error` when the server could not be asked (same generic line).
+   */
+  challenge: Loadable<ChallengeVM | null>;
   /**
    * The day on screen ended while it was played (the server answered 409 `day_over`), so these are
    * the new day's five: say so. Cleared by the next pick or hint.
