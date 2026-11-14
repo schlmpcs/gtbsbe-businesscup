@@ -1,7 +1,7 @@
 // S1 Today. First visit: what the app is (Play, Try with sample data). After that, the Home
 // dashboard: your house (the 10-year number), this month, your next move, today's game and What if?.
 // Presentational: everything comes from TodayVM; links come from the route page.
-import { common, forecast as t, goal as g, screenTitles, tools, type ScreenId } from '@/copy';
+import { bills, common, forecast as t, goal as g, screenTitles, tools, type ScreenId } from '@/copy';
 import {
   Art,
   Button,
@@ -43,6 +43,8 @@ export type TodayLinks = {
   /** Start of "build your profile" (S5 Guess yourself). */
   profile: string;
   upload: string;
+  /** The bills calendar (the "Next bill" line links there when given). */
+  bills?: string;
 };
 
 export type TodayScreenProps = {
@@ -69,6 +71,8 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
         <HouseHero vm={vm} futureHref={links.future} Link={Link} />
 
         <Nudge vm={vm} links={links} Link={Link} />
+
+        <NextBillLine vm={vm} href={links.bills} Link={Link} />
 
         <div className="grid items-stretch gap-xl md:grid-cols-2 lg:grid-cols-3">
           <MonthCard vm={vm} uploadHref={links.upload} Link={Link} />
@@ -177,6 +181,24 @@ function Nudge({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: Link
         <span aria-hidden="true">→</span>
       </Link>
     </div>
+  );
+}
+
+/** One line about the next bill due ("Next bill: Netflix $15.49 in 3 days"), linking to the bills calendar. */
+function NextBillLine({ vm, href, Link }: { vm: TodayVM; href?: string; Link: LinkComponent }) {
+  const next = vm.status === 'ready' ? vm.nextBill : null;
+  if (!next) return null;
+  const text = bills.today.nextBill(next.label, formatMoney(next.amount, { cents: true }), next.inDays);
+  return (
+    <p data-testid="next-bill" className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs rounded-xl bg-surface px-xl py-sm text-sm font-semibold shadow-sm">
+      <span>{text}</span>
+      {href && (
+        <Link href={href} className={TEXT_LINK}>
+          {bills.today.open}
+          <span aria-hidden="true">→</span>
+        </Link>
+      )}
+    </p>
   );
 }
 

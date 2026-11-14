@@ -40,3 +40,4 @@ export type ScreenId = keyof typeof screenTitles;
 export { goal } from './goal';
 export { avatar } from './avatar';
 export { yearsPhrase } from './ai';
+export { bills } from './bills';

@@ -7,6 +7,7 @@ import type {
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 import type { ProfileOrigin } from '@/state';
+import type { NextBillVM } from '@/features/bills/model/types';
 
 export type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 export type { ProfileOrigin } from '@/state';
@@ -197,6 +198,8 @@ export type TodayVM = {
      */
     homes: TodayHomeVM[];
   };
+  /** The next bill due (bills calendar), or null when no bill is known. Optional: absent means none. */
+  nextBill?: NextBillVM;
 };
 
 /** S10 You in N years (the picked horizon) + Next Moves. */
