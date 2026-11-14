@@ -1,22 +1,20 @@
 // S10 You in 10 years + Next Moves: the range-band forecast (AI, else rules; see useForecastBundle),
 // which inputs are estimates, the top 3 moves and commit / done. Every number on screen is read from
-// the one answered bundle, so the headline, the chart, the comparison and the moves agree.
-import { hasEstimates } from '@lifeguessr/engine';
-import type { Forecast, ForecastPoint } from '@lifeguessr/types';
+// the one answered bundle, so the headline, the chart, the comparison, the band and the moves agree.
+import type { ForecastPoint } from '@lifeguessr/types';
 import { useMemo, useState } from 'react';
 import { runEngine } from '@/lib/model/errors';
 import { estimatedFields } from '@/lib/model/profile';
-import type { Loadable } from '@/lib/model/types';
 import { useAppStore } from '@/state';
+import { answerDollars, committedScenario, shownForecast } from './forecastAnswer';
 import { howWeCalculate } from './howWeCalculate';
-import type { BandKind, FutureVM, MoveVM } from './types';
-import { answerDollars, committedScenario } from './useForecastBundle';
+import type { FutureVM, MoveVM } from './types';
 import { useMoveExplain, type ExplainFn } from './useMoveExplain';
 import { useNextMoves } from './useNextMoves';
 
 const NO_MOVES: MoveVM[] = [];
 const NO_POINTS: ForecastPoint[] = [];
-const EMPTY: ForecastPoint = { month: 0, low: 0, mid: 0, high: 0 };
+const TODAY_EMPTY: ForecastPoint = { month: 0, low: 0, mid: 0, high: 0 };
 
 export function useFuture(opts: { explain?: ExplainFn } = {}): FutureVM {
   const profile = useAppStore((s) => s.profile);
@@ -29,11 +27,7 @@ export function useFuture(opts: { explain?: ExplainFn } = {}): FutureVM {
   const { explanations, explain } = useMoveExplain(rankedMoves, opts.explain);
 
   // The base forecast in the dollars on screen. Switching dollars is arithmetic on the answer: no request.
-  const base: Loadable<Forecast> | null = useMemo(() => {
-    if (forecast.status !== 'ready') return null;
-    const { answer } = forecast;
-    return runEngine(() => answerDollars(answer, todaysDollars)(answer.bundle.base));
-  }, [forecast, todaysDollars]);
+  const shown = useMemo(() => shownForecast(forecast, todaysDollars), [forecast, todaysDollars]);
 
   const committedPreview = useMemo(() => {
     if (forecast.status !== 'ready' || !committedMove || profile.committedMoveId !== committedMove.id) return null;
@@ -59,32 +53,27 @@ export function useFuture(opts: { explain?: ExplainFn } = {}): FutureVM {
   }, [compareOn, compareMove, forecast, todaysDollars]);
 
   const assumptionsVM = useMemo(() => howWeCalculate(profile), [profile]);
-  const estimated = useMemo(() => estimatedFields(profile), [profile]);
 
-  const points = base?.status === 'ready' ? base.data.points : NO_POINTS;
+  // Which inputs were estimates in the profile the numbers were made for, not in the live one: during a
+  // refresh the user may have just made one exact, and the band on screen still has it in it.
+  const bandProfile = forecast.status === 'ready' ? forecast.answer.profile : profile;
+  const estimated = useMemo(() => estimatedFields(bandProfile), [bandProfile]);
+  const band = useMemo(() => ({ ...shown.band, estimatedFields: estimated }), [shown.band, estimated]);
+
+  const points = shown.base?.points ?? NO_POINTS;
   const yearly = useMemo(() => points.filter((p) => p.month % 12 === 0), [points]);
-  const in10y = base?.status === 'ready' ? base.data.in10y : EMPTY;
-
-  // The AI band is the model's own: zero only when it gave a single number. The rules band comes from
-  // the estimated inputs: zero when nothing is estimated.
-  const source = forecast.status === 'ready' ? forecast.source : null;
-  const kind: BandKind = source === 'ai' ? 'model' : 'inputs';
-  const isZero = source === 'ai' ? in10y.high - in10y.low < 1 : !hasEstimates(profile);
-  const band = useMemo(() => ({ isZero, kind, estimatedFields: estimated }), [isZero, kind, estimated]);
-
-  const failure = forecast.status === 'error' ? forecast.error : base?.status === 'error' ? base.error : null;
 
   return {
     ...nextMoves,
-    status: failure ? 'error' : base?.status === 'ready' ? 'ready' : 'loading',
-    error: failure,
+    status: shown.status,
+    error: shown.error,
     todaysDollars,
     setTodaysDollars,
     points,
     yearly,
-    today: points[0] ?? EMPTY,
-    in10y,
-    source,
+    today: points[0] ?? TODAY_EMPTY,
+    in10y: shown.in10y,
+    source: shown.source,
     isRefreshing: forecast.status === 'ready' && forecast.isRefreshing,
     band,
     committedPreview,

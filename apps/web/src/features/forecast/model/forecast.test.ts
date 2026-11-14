@@ -161,6 +161,62 @@ describe('useFuture (S10)', () => {
     await waitForSettled(result);
   });
 
+  it('does not commit or mark done while the numbers on screen are the previous profile’s, and does again once they are current', async () => {
+    const { result } = renderHook(() => useFuture());
+    await waitForReady(result);
+    expect(result.current.actionsDisabled).toBe(false);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    const [first, second] = result.current.moves.data;
+
+    act(() => useAppStore.getState().setSpending('eatingOut', 100));
+    expect(result.current.isRefreshing).toBe(true);
+    expect(result.current.actionsDisabled).toBe(true);
+    const before = useAppStore.getState();
+    act(() => result.current.commit(first!.id));
+    act(() => result.current.markDone(second!.id));
+    expect(useAppStore.getState().profile).toBe(before.profile); // nothing happened
+    expect(useAppStore.getState().committedMove).toBeNull();
+
+    await waitForSettled(result);
+    expect(result.current.actionsDisabled).toBe(false);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    const id = result.current.moves.data[0]!.id;
+    act(() => result.current.commit(id));
+    expect(useAppStore.getState().profile.committedMoveId).toBe(id);
+  });
+
+  it('keeps the moves disabled until the first answer arrives', async () => {
+    let release!: (b: ForecastBundle) => void;
+    route = mockForecastRoute(() => new Promise<ForecastBundle>((resolve) => (release = resolve)));
+    const { result } = renderHook(() => useFuture());
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    expect(result.current.actionsDisabled).toBe(true);
+    act(() => release(aiAnswer(route.calls[0])));
+    await waitFor(() => expect(result.current.actionsDisabled).toBe(false));
+  });
+
+  it('keeps the band as the shown numbers have it while a refresh is under way, then follows the new answer', async () => {
+    // One estimated input: the rules band is the width of that one estimate.
+    const oneEstimate: Profile = { ...measured(cloneProfileDemo()), cash: { ...cloneProfileDemo().cash, isEstimate: true } };
+    useAppStore.setState({ profile: oneEstimate });
+    const { result } = renderHook(() => useFuture());
+    await waitForReady(result);
+    expect(result.current.band).toEqual({ isZero: false, kind: 'inputs', estimatedFields: [{ field: 'cash' }] });
+    const shownBand = result.current.in10y.high - result.current.in10y.low;
+    expect(shownBand).toBeGreaterThan(1);
+
+    act(() => useAppStore.getState().setField('cash', oneEstimate.cash.value)); // typed in: now exact
+    expect(hasEstimates(useAppStore.getState().profile)).toBe(false);
+    expect(result.current.isRefreshing).toBe(true);
+    // The numbers on screen still have their band, so the flags still describe it.
+    expect(result.current.in10y.high - result.current.in10y.low).toBe(shownBand);
+    expect(result.current.band).toEqual({ isZero: false, kind: 'inputs', estimatedFields: [{ field: 'cash' }] });
+
+    await waitForSettled(result);
+    expect(result.current.band).toEqual({ isZero: true, kind: 'inputs', estimatedFields: [] });
+    expect(result.current.in10y.high - result.current.in10y.low).toBeLessThan(1);
+  });
+
   it('ranks by the order of the AI answer, labeled as the AI estimate', async () => {
     const order = rankMoves(cloneProfileDemo(), { rates }).map((m) => m.id);
     const effects = Object.fromEntries(order.map((id, i) => [id, 1_000 * (i + 1)])); // the rules' last is the AI's first
@@ -347,6 +403,24 @@ describe('useToday (S1)', () => {
     expect(result.current.monthEnd.status).toBe('ready');
     expect(result.current.source).toBeNull();
     expect(result.current.topMove).toEqual({ status: 'error', error: { kind: 'unknown', message: 'engine broke' } });
+  });
+
+  it('does not mark the committed move done while the forecast is refreshing', async () => {
+    const { result } = renderHook(() => useToday());
+    await waitFor(() => expect(result.current.forecastStatus).toBe('ready'));
+    if (result.current.topMove.status !== 'ready' || !result.current.topMove.data) throw new Error('no move');
+    const move = result.current.topMove.data;
+    act(() => useAppStore.getState().commitMove({ id: move.id, kind: move.kind, level: move.level, category: move.category, effect10y: move.effect10y, patch: move.patch }));
+    expect(result.current.actionsDisabled).toBe(false);
+
+    act(() => useAppStore.getState().setSpending('rentUtilities', 1500));
+    expect(result.current.actionsDisabled).toBe(true);
+    act(() => result.current.markCommittedDone());
+    expect(useAppStore.getState().profile.doneMoveIds).toEqual([]);
+
+    await waitFor(() => expect(result.current.actionsDisabled).toBe(false), AFTER_CHANGE);
+    act(() => result.current.markCommittedDone());
+    expect(useAppStore.getState().profile.doneMoveIds).toHaveLength(1);
   });
 
   it('uses past statement months as history and this month as the month in progress', async () => {

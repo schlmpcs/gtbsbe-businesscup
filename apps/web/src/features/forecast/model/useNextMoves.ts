@@ -8,7 +8,8 @@ import { areaRates } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
 import { useAppStore } from '@/state';
 import type { ForecastAnswer, MoveTarget, MoveVM, NextMovesVM } from './types';
-import { answerDollars, useForecastBundle } from './useForecastBundle';
+import { answerDollars, forecastIsBusy } from './forecastAnswer';
+import { useForecastBundle } from './useForecastBundle';
 
 const LEVEL_2_KINDS = (Object.keys(MOVE_LEVELS) as MoveKind[]).filter((k) => MOVE_LEVELS[k] === 2);
 const NO_CANDIDATES: MoveCandidate[] = [];
@@ -70,6 +71,10 @@ export function useNextMoves(profile: Profile): NextMovesVM {
     return runEngine(() => rankAnswer(forecast.answer, { committedMoveId, doneMoveIds }));
   }, [candidatesError, forecast, committedMoveId, doneMoveIds]);
 
+  // Until the answer for the current profile is here, the list on screen is the previous answer's: a click
+  // would act on its patches (a move's patch is absolute, sized for the profile it was measured on).
+  const actionsDisabled = forecastIsBusy(forecast);
+
   const find = useCallback(
     (id: string): Move | undefined =>
       (ranked.status === 'ready' ? ranked.data.find((m) => m.id === id) : undefined) ??
@@ -79,17 +84,19 @@ export function useNextMoves(profile: Profile): NextMovesVM {
 
   const commit = useCallback(
     (id: string) => {
+      if (actionsDisabled) return;
       const move = find(id);
       if (move) commitMove(move);
     },
-    [find, commitMove],
+    [actionsDisabled, find, commitMove],
   );
   const markDone = useCallback(
     (id: string) => {
+      if (actionsDisabled) return;
       const move = find(id);
       if (move) markMoveDone(move);
     },
-    [find, markMoveDone],
+    [actionsDisabled, find, markMoveDone],
   );
 
   // Memoized so the list (and anything derived from it, like S10's comparison) keeps its identity
@@ -104,7 +111,7 @@ export function useNextMoves(profile: Profile): NextMovesVM {
   );
 
   return {
-    moves, forecast, level: movesLevel(profile), level2Kinds: LEVEL_2_KINDS, doneCount: doneMoveIds.length,
-    commit, uncommit, markDone,
+    moves, forecast, actionsDisabled, level: movesLevel(profile), level2Kinds: LEVEL_2_KINDS,
+    doneCount: doneMoveIds.length, commit, uncommit, markDone,
   };
 }

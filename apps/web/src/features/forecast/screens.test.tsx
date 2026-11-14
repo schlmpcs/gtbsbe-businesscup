@@ -54,7 +54,7 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
     status: 'ready', profileOrigin: 'user', isDemoProfile: false,
     monthEnd: { status: 'ready', data: { projectedSpend: 3900, vsAverage: null, drifts: [], historyMonths: 0, fromStatement: false, takeHome: { value: 5200, isEstimate: false } } },
     in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, in10yBandKind: 'inputs',
-    forecastStatus: 'ready', forecastError: null, source: 'rules', committedMove: null,
+    forecastStatus: 'ready', forecastError: null, source: 'rules', actionsDisabled: false, committedMove: null,
     markCommittedDone: () => {}, topMove: { status: 'ready', data: null },
     game: { date: null, played: 0, total: 0, finished: false },
     ...over,
@@ -125,6 +125,18 @@ describe('TodayScreen (S1)', () => {
     expect(screen.getByTestId('month-end')).toBeInTheDocument();
   });
 
+  it('disables “I did it” while the forecast is refreshing', () => {
+    const committed = {
+      id: 'cutCategory:other', kind: 'cutCategory' as const, level: 1 as const, effect10y: 1234,
+      patch: { spending: { other: 100 } }, isCommitted: true,
+      target: { kind: 'spendingTo' as const, category: 'other' as const, monthly: 100 }, source: 'rules' as const,
+    };
+    const { rerender } = render(<TodayScreen vm={todayVm({ committedMove: committed })} links={links} screens={[]} Link={A} />);
+    expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeEnabled();
+    rerender(<TodayScreen vm={todayVm({ committedMove: committed, actionsDisabled: true })} links={links} screens={[]} Link={A} />);
+    expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeDisabled();
+  });
+
   it('shows drift flags when the view-model has an average', async () => {
     // monthEnd is T9's engine piece; feed the screen a VM that has the 3-month average.
     const vm = todayVm({
@@ -147,7 +159,8 @@ describe('TodayScreen (S1)', () => {
     const user = userEvent.setup();
     render(<Today />);
     const moveCard = await screen.findByTestId('today-move');
-    await waitFor(() => expect(within(moveCard).getByText(t.today.move.topTitle)).toBeInTheDocument());
+    await waitFor(() => expect(within(moveCard).getByTestId('forecast-source')).toBeInTheDocument()); // the answer is in
+    expect(within(moveCard).getByText(t.today.move.topTitle)).toBeInTheDocument();
     expect(within(moveCard).queryByRole('button')).not.toBeInTheDocument();
 
     const ranked = rankMoves(useAppStore.getState().profile, { rates: { inflationAnnual: inflationAnnualOf(areaByZip('75206')) } });
@@ -263,6 +276,26 @@ describe('FutureScreen (S10)', () => {
       timeout: FORECAST_DEBOUNCE_MS + 1_000,
     });
     expect(route.calls).toHaveLength(2);
+  });
+
+  it('disables the move buttons while the forecast is refreshing, and enables them again with the new answer', async () => {
+    render(<Future />);
+    const first = (await screen.findAllByRole('article'))[0]!;
+    await waitFor(() => expect(within(first).getByRole('button', { name: t.moves.commit })).toBeEnabled());
+
+    act(() => useAppStore.getState().setSpending('eatingOut', 100));
+    await waitFor(() => expect(screen.getByText(t.future.refreshing)).toBeInTheDocument());
+    for (const article of screen.getAllByRole('article')) {
+      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeDisabled();
+      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeDisabled();
+    }
+    await waitFor(() => expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument(), {
+      timeout: FORECAST_DEBOUNCE_MS + 1_000,
+    });
+    for (const article of screen.getAllByRole('article')) {
+      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeEnabled();
+      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeEnabled();
+    }
   });
 
   it('shows the effect in signed dollars', async () => {

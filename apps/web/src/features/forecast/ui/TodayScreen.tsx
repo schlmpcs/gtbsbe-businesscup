@@ -180,7 +180,7 @@ function MoveCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; L
   const title = committed ? t.today.move.committedTitle : t.today.move.topTitle;
   let body;
   if (vm.status !== 'ready') body = <Skeleton lines={2} />;
-  else if (committed) body = <MoveSummary move={committed} onDone={vm.markCommittedDone} />;
+  else if (committed) body = <MoveSummary move={committed} onDone={vm.markCommittedDone} disabled={vm.actionsDisabled} />;
   else if (vm.topMove.status === 'loading') body = <Skeleton lines={2} />;
   else if (vm.topMove.status === 'error') body = <ErrorNote error={vm.topMove.error} />;
   else if (vm.topMove.data === null) body = <p className="text-sm text-text-muted">{t.today.move.none}</p>;
@@ -196,7 +196,7 @@ function MoveCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; L
   );
 }
 
-function MoveSummary({ move, onDone }: { move: MoveVM; onDone?: () => void }) {
+function MoveSummary({ move, onDone, disabled = false }: { move: MoveVM; onDone?: () => void; disabled?: boolean }) {
   const detail = moveDetail(move);
   return (
     <Stack gap="sm">
@@ -207,7 +207,7 @@ function MoveSummary({ move, onDone }: { move: MoveVM; onDone?: () => void }) {
       </p>
       <SourceTag source={move.source} />
       {onDone && (
-        <Button variant="secondary" size="sm" className="self-start" onClick={onDone}>
+        <Button variant="secondary" size="sm" className="self-start" onClick={onDone} disabled={disabled}>
           {t.today.move.markDone}
         </Button>
       )}

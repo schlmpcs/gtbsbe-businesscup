@@ -27,6 +27,7 @@ export function NextMoves({ vm, explanations, onExplain, loading = false }: Next
             rank={i + 1}
             move={move}
             explanation={explanations[move.id]}
+            actionsDisabled={vm.actionsDisabled}
             onCommit={() => vm.commit(move.id)}
             onUncommit={vm.uncommit}
             onDone={() => vm.markDone(move.id)}
@@ -56,6 +57,7 @@ function MoveItem({
   rank,
   move,
   explanation,
+  actionsDisabled,
   onCommit,
   onUncommit,
   onDone,
@@ -64,6 +66,7 @@ function MoveItem({
   rank: number;
   move: MoveVM;
   explanation: Loadable<ExplanationVM> | undefined;
+  actionsDisabled: boolean;
   onCommit: () => void;
   onUncommit: () => void;
   onDone: () => void;
@@ -116,11 +119,11 @@ function MoveItem({
                 {m.uncommit}
               </Button>
             ) : (
-              <Button size="sm" onClick={onCommit}>
+              <Button size="sm" onClick={onCommit} disabled={actionsDisabled}>
                 {m.commit}
               </Button>
             )}
-            <Button size="sm" variant="secondary" onClick={onDone}>
+            <Button size="sm" variant="secondary" onClick={onDone} disabled={actionsDisabled}>
               {m.markDone}
             </Button>
             {explanation?.status !== 'ready' && explanation?.status !== 'error' && (

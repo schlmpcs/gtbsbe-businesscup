@@ -1,18 +1,15 @@
 // S1 Today: month-end card (engine monthEnd), You in 10 years (AI forecast, else rules), the
 // committed / top move and the daily game call to action.
-import { hasEstimates, monthEnd, type CurrentMonth } from '@lifeguessr/engine';
-import type { Forecast, ForecastPoint } from '@lifeguessr/types';
+import { monthEnd, type CurrentMonth } from '@lifeguessr/engine';
 import { useMemo } from 'react';
 import { localMonthDay } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
 import { useAppReady, useAppStore, useGameStore } from '@/state';
-import type { BandKind, Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
-import { answerDollars } from './useForecastBundle';
+import { shownForecast } from './forecastAnswer';
+import type { Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
 import { toMoveVM, useNextMoves } from './useNextMoves';
 
 const NO_MOVES: MoveVM[] = [];
-/** Shown until the first forecast arrives: the card shows a skeleton, not this. */
-const NO_IN10Y: ForecastPoint = { month: 120, low: 0, mid: 0, high: 0 };
 
 export function useToday(opts: { now?: Date } = {}): TodayVM {
   const ready = useAppReady();
@@ -49,16 +46,7 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
   }, [profile, statementMonths, now]);
 
   // The 10-year number in today's dollars, from the answer (S10 can also show nominal; S1 never does).
-  const base: Loadable<Forecast> | null = useMemo(() => {
-    if (forecast.status !== 'ready') return null;
-    const { answer } = forecast;
-    return runEngine(() => answerDollars(answer, true)(answer.bundle.base));
-  }, [forecast]);
-  const in10y = base?.status === 'ready' ? base.data.in10y : NO_IN10Y;
-
-  const source = forecast.status === 'ready' ? forecast.source : null;
-  const in10yBandKind: BandKind = source === 'ai' ? 'model' : 'inputs';
-  const failure = forecast.status === 'error' ? forecast.error : base?.status === 'error' ? base.error : null;
+  const shown = useMemo(() => shownForecast(forecast, true), [forecast]);
 
   const rankedMoves = nextMoves.moves.status === 'ready' ? nextMoves.moves.data : NO_MOVES;
   // The committed move as ranked now (current number and label) when it is on the list, else as stored.
@@ -77,16 +65,17 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     profileOrigin,
     isDemoProfile: profileOrigin === 'demo',
     monthEnd: monthEndVM,
-    forecastStatus: failure ? 'error' : base?.status === 'ready' ? 'ready' : 'loading',
-    forecastError: failure,
-    source,
-    in10y,
-    in10yBandIsZero: source === 'ai' ? in10y.high - in10y.low < 1 : !hasEstimates(profile),
-    in10yBandKind,
+    forecastStatus: shown.status,
+    forecastError: shown.error,
+    source: shown.source,
+    in10y: shown.in10y,
+    in10yBandIsZero: shown.band.isZero,
+    in10yBandKind: shown.band.kind,
     committedMove: committed,
     markCommittedDone: () => {
-      if (committedMove) markMoveDone(committedMove);
+      if (committedMove && !nextMoves.actionsDisabled) markMoveDone(committedMove);
     },
+    actionsDisabled: nextMoves.actionsDisabled,
     topMove,
     game: { date: gameDate, played, total: cards.length, finished: cards.length > 0 && played === cards.length },
   };

@@ -8,7 +8,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import { areaRates } from '@/lib/model/profile';
-import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
+import { aiAnswer, mockForecastRoute, rulesAnswer } from '@/test/forecastApi';
 import { resetClientState } from '@/test/clientState';
 import {
   FORECAST_CLIENT_TIMEOUT_MS, FORECAST_DEBOUNCE_MS, resetForecastMemory, useForecastBundle,
@@ -285,8 +285,8 @@ describe('useForecastBundle: when it asks', () => {
     expect(after.answer.bundle.base.in10y.mid).not.toBeCloseTo(late.base.in10y.mid, 0);
   });
 
-  it('does not ask again for the same profile, re-rendered or remounted', async () => {
-    const route = mockForecastRoute();
+  it('does not ask again for the same profile, re-rendered or remounted, once the model has answered', async () => {
+    const route = mockForecastRoute((body) => aiAnswer(body));
     const { result, rerender, unmount } = renderBundle(inputs(cloneProfileDemo()));
     await waitFor(() => expect(result.current.status).toBe('ready'));
     rerender(inputs(cloneProfileDemo())); // new objects and arrays, same numbers
@@ -295,15 +295,14 @@ describe('useForecastBundle: when it asks', () => {
 
     unmount();
     const again = renderBundle(inputs(cloneProfileDemo()));
-    expect(again.result.current).toMatchObject({ status: 'ready', isRefreshing: false }); // from session memory, at once
+    expect(again.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false }); // from session memory, at once
     expect(route.calls).toHaveLength(1);
   });
 
-  it('answers a profile it has seen from memory, without the debounce', async () => {
+  it('answers an AI answer it has seen from memory at once, without the debounce or a request', async () => {
     const settle = useFakeClock();
-    const route = mockForecastRoute();
-    const a = inputs(cloneProfileDemo());
-    const { result, rerender } = renderBundle(a);
+    const route = mockForecastRoute((body) => aiAnswer(body));
+    const { result, rerender } = renderBundle(inputs(cloneProfileDemo()));
     await settle();
     const answerA = ready(result).answer;
     rerender(inputs(withEatingOut(cloneProfileDemo(), 100)));
@@ -318,7 +317,7 @@ describe('useForecastBundle: when it asks', () => {
   });
 
   it('forgets everything on resetForecastMemory', async () => {
-    const route = mockForecastRoute();
+    const route = mockForecastRoute((body) => aiAnswer(body));
     const first = renderBundle();
     await waitFor(() => expect(first.result.current.status).toBe('ready'));
     first.unmount();
@@ -329,28 +328,9 @@ describe('useForecastBundle: when it asks', () => {
     await waitFor(() => expect(again.result.current.status).toBe('ready'));
   });
 
-  it('does not remember a failure: the next screen asks again', async () => {
-    let fail = true;
-    const route = mockForecastRoute((body) => {
-      if (fail) throw new Error('offline');
-      return aiAnswer(body);
-    });
-    const first = renderBundle();
-    await waitFor(() => expect(first.result.current.status).toBe('ready'));
-    expect(ready(first.result).source).toBe('rules');
-    first.unmount();
-
-    fail = false;
-    const again = renderBundle();
-    expect(again.result.current).toEqual({ status: 'loading' });
-    await waitFor(() => expect(again.result.current.status).toBe('ready'));
-    expect(ready(again.result).source).toBe('ai');
-    expect(route.calls).toHaveLength(2);
-  });
-
   it('keeps at most 20 answers, dropping the oldest first', async () => {
     const settle = useFakeClock();
-    const route = mockForecastRoute();
+    const route = mockForecastRoute((body) => aiAnswer(body));
     const profileAt = (i: number) => withEatingOut(cloneProfileDemo(), 100 + i);
     const { rerender } = renderBundle(inputs(profileAt(0)));
     await settle();
@@ -405,6 +385,142 @@ describe('useForecastBundle: when it asks', () => {
     await settle(FORECAST_DEBOUNCE_MS);
     expect(route.calls).toHaveLength(2);
     expect((route.calls[1] as { rates: unknown }).rates).toEqual({ inflationAnnual: 0.045 });
+  });
+});
+
+describe('useForecastBundle: remembered answers that are not the model’s (stale while revalidate)', () => {
+  const rulesOf = (p: Inputs) => rulesBundle(p.profile, scenariosOf(p.candidates), areaRates(p.profile));
+
+  it('shows a remembered local fallback at once, and sends one request that replaces it', async () => {
+    let fail = true;
+    const route = mockForecastRoute((body) => {
+      if (fail) throw new Error('offline');
+      return aiAnswer(body);
+    });
+    const start = inputs(cloneProfileDemo());
+    const first = renderBundle(start);
+    await waitFor(() => expect(first.result.current.status).toBe('ready'));
+    expect(ready(first.result)).toMatchObject({ source: 'rules', isRefreshing: false });
+    first.unmount();
+    expect(route.calls).toHaveLength(1);
+
+    fail = false;
+    const again = renderBundle(inputs(cloneProfileDemo()));
+    expect(again.result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true }); // no skeleton
+    expect(ready(again.result).answer.bundle).toEqual(rulesOf(start));
+    expect(route.calls).toHaveLength(2); // in the background, at once
+    await waitFor(() => expect(ready(again.result)).toMatchObject({ source: 'ai', isRefreshing: false }));
+    expect(route.calls).toHaveLength(2);
+  });
+
+  it('shows a remembered server rules answer at once and replaces it with a later AI answer', async () => {
+    let model = false;
+    const route = mockForecastRoute((body) => (model ? aiAnswer(body) : rulesAnswer(body))); // the route's own fallback
+    const first = renderBundle();
+    await waitFor(() => expect(first.result.current.status).toBe('ready'));
+    expect(ready(first.result).source).toBe('rules');
+    const rulesAnswerShown = ready(first.result).answer;
+    first.unmount();
+
+    model = true; // the outage is over
+    const again = renderBundle();
+    expect(again.result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true });
+    expect(ready(again.result).answer).toBe(rulesAnswerShown);
+    expect(route.calls).toHaveLength(2);
+    await waitFor(() => expect(ready(again.result)).toMatchObject({ source: 'ai', isRefreshing: false }));
+
+    // From now on it is the model's answer: a third screen sends nothing.
+    again.unmount();
+    const third = renderBundle();
+    expect(third.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false });
+    expect(route.calls).toHaveLength(2);
+  });
+
+  it('sends no request for a remembered AI answer', async () => {
+    const route = mockForecastRoute((body) => aiAnswer(body));
+    const first = renderBundle();
+    await waitFor(() => expect(first.result.current.status).toBe('ready'));
+    first.unmount();
+    const again = renderBundle();
+    expect(again.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(route.calls).toHaveLength(1);
+  });
+
+  it('keeps the shown answer when the revalidation fails, and asks again at the next visit', async () => {
+    let fail = false;
+    const route = mockForecastRoute((body) => {
+      if (fail) return new Response('{}', { status: 503 });
+      return rulesAnswer(body);
+    });
+    const first = renderBundle();
+    await waitFor(() => expect(first.result.current.status).toBe('ready'));
+    const kept = ready(first.result).answer;
+    first.unmount();
+
+    fail = true;
+    const again = renderBundle();
+    expect(ready(again.result)).toMatchObject({ source: 'rules', isRefreshing: true });
+    await waitFor(() => expect(ready(again.result).isRefreshing).toBe(false));
+    expect(ready(again.result).answer).toBe(kept); // not replaced, not an error
+    again.unmount();
+
+    const third = renderBundle();
+    expect(ready(third.result)).toMatchObject({ source: 'rules', isRefreshing: true });
+    expect(route.calls).toHaveLength(3);
+    await waitFor(() => expect(ready(third.result).isRefreshing).toBe(false));
+  });
+
+  it('keeps the shown answer when the revalidation times out', async () => {
+    const settle = useFakeClock();
+    let hang = false;
+    const route = mockForecastRoute((body) => (hang ? new Promise<never>(() => {}) : rulesAnswer(body)));
+    const first = renderBundle();
+    await settle();
+    const kept = ready(first.result).answer;
+    first.unmount();
+
+    hang = true;
+    const again = renderBundle();
+    expect(ready(again.result)).toMatchObject({ isRefreshing: true });
+    await settle(FORECAST_CLIENT_TIMEOUT_MS - 1);
+    expect(ready(again.result).isRefreshing).toBe(true);
+    await settle(1);
+    expect(ready(again.result)).toMatchObject({ source: 'rules', isRefreshing: false });
+    expect(ready(again.result).answer).toBe(kept);
+    expect(route.signals[1]!.aborted).toBe(true);
+  });
+
+  it('revalidates a key it comes back to without the debounce, while showing its remembered answer', async () => {
+    const settle = useFakeClock();
+    const route = mockForecastRoute(); // the route's rules answer
+    const a = inputs(cloneProfileDemo());
+    const { result, rerender } = renderBundle(a);
+    await settle();
+    const answerA = ready(result).answer;
+    rerender(inputs(withEatingOut(cloneProfileDemo(), 100)));
+    await settle(FORECAST_DEBOUNCE_MS);
+    expect(route.calls).toHaveLength(2);
+
+    rerender(inputs(cloneProfileDemo()));
+    expect(ready(result)).toMatchObject({ isRefreshing: true });
+    expect(ready(result).answer).toBe(answerA);
+    expect(route.calls).toHaveLength(3); // no timer advanced
+    await settle();
+    expect(ready(result).isRefreshing).toBe(false);
+  });
+
+  it('does not flash the old key’s answer when the new key has none and the old one was an error', async () => {
+    control.rulesFails = true;
+    mockForecastRoute(() => new Response('{}', { status: 503 }));
+    const { result, rerender } = renderBundle(inputs(cloneProfileDemo()));
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    control.rulesFails = false;
+    rerender(inputs(withEatingOut(cloneProfileDemo(), 100)));
+    expect(result.current).toEqual({ status: 'loading' }); // nothing to show: the error was not an answer
+    await waitFor(() => expect(result.current.status).toBe('ready'));
   });
 });
 

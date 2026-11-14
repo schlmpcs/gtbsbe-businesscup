@@ -54,6 +54,11 @@ export type NextMovesVM = {
   moves: Loadable<MoveVM[]>;
   /** The forecast the ranking and the screen's numbers come from. */
   forecast: ForecastState;
+  /**
+   * True until the forecast for the current profile has arrived (first load, or a refresh): the moves on
+   * screen are then the previous answer's, so `commit` and `markDone` do nothing and their buttons are disabled.
+   */
+  actionsDisabled: boolean;
   /** Highest unlocked level (engine movesLevel): 2 once a level 1 move is done or committed. */
   level: 1 | 2;
   /** Move kinds of level 2 (engine MOVE_LEVELS), for the locked / coming-soon preview. */
@@ -99,8 +104,10 @@ export type TodayVM = {
   in10yBandKind: BandKind;
   /** The move the user committed to, if any. */
   committedMove: MoveVM | null;
-  /** Mark the committed move done. */
+  /** Mark the committed move done. Does nothing while `actionsDisabled`. */
   markCommittedDone: () => void;
+  /** The forecast is loading or refreshing: the move buttons are disabled (see NextMovesVM.actionsDisabled). */
+  actionsDisabled: boolean;
   /** Best move right now (first of rankMoves), or why there is none. */
   topMove: Loadable<MoveVM | null>;
   /** Daily game call to action. */
