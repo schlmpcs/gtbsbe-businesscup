@@ -1,0 +1,1835 @@
+{
+  "components": {
+    "schemas": {
+      "AffordResult": {
+        "properties": {
+          "baselineFails": {
+            "type": "boolean"
+          },
+          "cheapestWay": {
+            "type": "string"
+          },
+          "failsOn": {
+            "type": "string"
+          },
+          "verdict": {
+            "type": "string"
+          },
+          "waitMonths": {
+            "type": "integer"
+          },
+          "with": {
+            "$ref": "#/components/schemas/ForecastResult"
+          },
+          "without": {
+            "$ref": "#/components/schemas/ForecastResult"
+          }
+        },
+        "required": [
+          "verdict",
+          "baselineFails",
+          "with",
+          "without",
+          "cheapestWay"
+        ],
+        "type": "object"
+      },
+      "Car": {
+        "properties": {
+          "apr": {
+            "type": "number"
+          },
+          "downPayment": {
+            "type": "number"
+          },
+          "price": {
+            "type": "number"
+          },
+          "termMonths": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "price",
+          "downPayment",
+          "apr",
+          "termMonths"
+        ],
+        "type": "object"
+      },
+      "CategoryTotals": {
+        "properties": {
+          "detectedPay": {
+            "type": "number"
+          },
+          "month": {
+            "type": "string"
+          },
+          "oneOffs": {
+            "items": {
+              "$ref": "#/components/schemas/OneOff"
+            },
+            "type": "array"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "month",
+          "totals",
+          "oneOffs"
+        ],
+        "type": "object"
+      },
+      "ClueReveal": {
+        "properties": {
+          "cardId": {
+            "type": "string"
+          },
+          "clue": {
+            "type": "string"
+          },
+          "facts": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "props": {
+            "items": {
+              "$ref": "#/components/schemas/SceneProp"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "cardId",
+          "clue",
+          "props",
+          "facts"
+        ],
+        "type": "object"
+      },
+      "CostBreakdown": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CostItem"
+            },
+            "type": "array"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Range"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "type": "object"
+      },
+      "CostItem": {
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "category": {
+            "type": "string"
+          },
+          "isEstimate": {
+            "type": "boolean"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          }
+        },
+        "required": [
+          "category",
+          "amount",
+          "source",
+          "isEstimate"
+        ],
+        "type": "object"
+      },
+      "CurrentMonth": {
+        "properties": {
+          "day": {
+            "type": "integer"
+          },
+          "month": {
+            "type": "string"
+          },
+          "oneOffs": {
+            "items": {
+              "$ref": "#/components/schemas/OneOff"
+            },
+            "type": "array"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "month",
+          "day",
+          "totals"
+        ],
+        "type": "object"
+      },
+      "Debt": {
+        "properties": {
+          "apr": {
+            "type": "number"
+          },
+          "balance": {
+            "type": "number"
+          },
+          "extraPayment": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "minPayment": {
+            "$ref": "#/components/schemas/Estimate"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "balance",
+          "apr",
+          "minPayment"
+        ],
+        "type": "object"
+      },
+      "DebtPatch": {
+        "properties": {
+          "apr": {
+            "allOf": [
+              {
+                "type": "number"
+              }
+            ],
+            "nullable": true
+          },
+          "extraPayment": {
+            "allOf": [
+              {
+                "type": "number"
+              }
+            ],
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "Drift": {
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "delta": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "category",
+          "delta"
+        ],
+        "type": "object"
+      },
+      "Estimate": {
+        "properties": {
+          "isEstimate": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "value",
+          "isEstimate"
+        ],
+        "type": "object"
+      },
+      "ForecastPoint": {
+        "properties": {
+          "high": {
+            "type": "number"
+          },
+          "low": {
+            "type": "number"
+          },
+          "mid": {
+            "type": "number"
+          },
+          "month": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "month",
+          "mid",
+          "low",
+          "high"
+        ],
+        "type": "object"
+      },
+      "ForecastResult": {
+        "properties": {
+          "in10y": {
+            "$ref": "#/components/schemas/ForecastPoint"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastPoint"
+            },
+            "type": "array"
+          },
+          "todaysDollars": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "points",
+          "in10y",
+          "todaysDollars"
+        ],
+        "type": "object"
+      },
+      "GuessResult": {
+        "properties": {
+          "basePoints": {
+            "type": "integer"
+          },
+          "inRange": {
+            "type": "boolean"
+          },
+          "logError": {
+            "type": "number"
+          },
+          "multiplier": {
+            "type": "number"
+          },
+          "points": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "points",
+          "basePoints",
+          "multiplier",
+          "inRange",
+          "logError"
+        ],
+        "type": "object"
+      },
+      "LifeCard": {
+        "properties": {
+          "adults": {
+            "type": "integer"
+          },
+          "bedrooms": {
+            "type": "integer"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "car": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Car"
+              }
+            ],
+            "nullable": true
+          },
+          "eatingOutPerWeek": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "metro": {
+            "type": "string"
+          },
+          "pack": {
+            "type": "string"
+          },
+          "zip": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "zip",
+          "metro",
+          "adults",
+          "kids",
+          "bedrooms",
+          "eatingOutPerWeek",
+          "caption"
+        ],
+        "type": "object"
+      },
+      "LoanInput": {
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "apr": {
+            "type": "number"
+          },
+          "downPayment": {
+            "type": "number"
+          },
+          "extraPayment": {
+            "type": "number"
+          },
+          "fees": {
+            "type": "number"
+          },
+          "paymentOverride": {
+            "allOf": [
+              {
+                "type": "number"
+              }
+            ],
+            "nullable": true
+          },
+          "termMonths": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount",
+          "apr",
+          "termMonths"
+        ],
+        "type": "object"
+      },
+      "LoanResult": {
+        "properties": {
+          "debtLoadAfter": {
+            "type": "number"
+          },
+          "debtLoadBefore": {
+            "type": "number"
+          },
+          "effect10y": {
+            "type": "number"
+          },
+          "monthly": {
+            "type": "number"
+          },
+          "payoffMonth": {
+            "allOf": [
+              {
+                "type": "integer"
+              }
+            ],
+            "nullable": true
+          },
+          "schedule": {
+            "items": {
+              "$ref": "#/components/schemas/Payment"
+            },
+            "type": "array"
+          },
+          "totalCost": {
+            "type": "number"
+          },
+          "totalInterest": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "monthly",
+          "totalInterest",
+          "totalCost",
+          "payoffMonth",
+          "debtLoadBefore",
+          "debtLoadAfter",
+          "effect10y",
+          "schedule"
+        ],
+        "type": "object"
+      },
+      "MonthEndResult": {
+        "properties": {
+          "drifts": {
+            "items": {
+              "$ref": "#/components/schemas/Drift"
+            },
+            "type": "array"
+          },
+          "projectedSpend": {
+            "type": "number"
+          },
+          "vsAverage": {
+            "allOf": [
+              {
+                "type": "number"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "projectedSpend",
+          "vsAverage",
+          "drifts"
+        ],
+        "type": "object"
+      },
+      "Move": {
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "effect10y": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "patch": {
+            "$ref": "#/components/schemas/ProfilePatch"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "level",
+          "effect10y",
+          "patch"
+        ],
+        "type": "object"
+      },
+      "OneOff": {
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "category": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "type": "object"
+      },
+      "Payment": {
+        "properties": {
+          "balance": {
+            "type": "number"
+          },
+          "interest": {
+            "type": "number"
+          },
+          "month": {
+            "type": "integer"
+          },
+          "principal": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "month",
+          "interest",
+          "principal",
+          "balance"
+        ],
+        "type": "object"
+      },
+      "Profile": {
+        "properties": {
+          "age": {
+            "$ref": "#/components/schemas/Estimate"
+          },
+          "cash": {
+            "$ref": "#/components/schemas/Estimate"
+          },
+          "checkedInMoveIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "committedMoveId": {
+            "type": "string"
+          },
+          "debts": {
+            "items": {
+              "$ref": "#/components/schemas/Debt"
+            },
+            "type": "array"
+          },
+          "doneMoveIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "retirement": {
+            "$ref": "#/components/schemas/Estimate"
+          },
+          "retirementShare": {
+            "$ref": "#/components/schemas/Estimate"
+          },
+          "spending": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Estimate"
+            },
+            "type": "object"
+          },
+          "statementUploaded": {
+            "type": "boolean"
+          },
+          "takeHomePay": {
+            "$ref": "#/components/schemas/Estimate"
+          },
+          "zip": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "age",
+          "takeHomePay",
+          "spending",
+          "cash",
+          "retirement",
+          "retirementShare",
+          "debts",
+          "doneMoveIds"
+        ],
+        "type": "object"
+      },
+      "ProfilePatch": {
+        "properties": {
+          "debts": {
+            "items": {
+              "$ref": "#/components/schemas/DebtPatch"
+            },
+            "type": "array"
+          },
+          "retirementShare": {
+            "allOf": [
+              {
+                "type": "number"
+              }
+            ],
+            "nullable": true
+          },
+          "spending": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "PublicCard": {
+        "properties": {
+          "caption": {
+            "type": "string"
+          },
+          "decor": {
+            "items": {
+              "$ref": "#/components/schemas/SceneProp"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "layout": {
+            "type": "string"
+          },
+          "metro": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "metro",
+          "layout",
+          "caption",
+          "decor"
+        ],
+        "type": "object"
+      },
+      "Purchase": {
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          },
+          "payWith": {
+            "oneOf": [
+              {
+                "enum": [
+                  "cash",
+                  "card"
+                ],
+                "type": "string"
+              },
+              {
+                "properties": {
+                  "loan": {
+                    "$ref": "#/components/schemas/LoanInput"
+                  }
+                },
+                "required": [
+                  "loan"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "recurring": {
+            "oneOf": [
+              {
+                "enum": [
+                  false
+                ],
+                "type": "boolean"
+              },
+              {
+                "enum": [
+                  "monthly",
+                  "yearly"
+                ],
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "label",
+          "amount",
+          "recurring",
+          "payWith"
+        ],
+        "type": "object"
+      },
+      "Range": {
+        "properties": {
+          "high": {
+            "type": "number"
+          },
+          "low": {
+            "type": "number"
+          },
+          "mid": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "low",
+          "mid",
+          "high"
+        ],
+        "type": "object"
+      },
+      "SceneProp": {
+        "properties": {
+          "clue": {
+            "type": "string"
+          },
+          "room": {
+            "type": "string"
+          },
+          "sprite": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sprite",
+          "room"
+        ],
+        "type": "object"
+      },
+      "Source": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "year"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "LifeGuessr API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/ai/explain": {
+      "post": {
+        "operationId": "api_ai_explain_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "required": [],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/ai/parse": {
+      "post": {
+        "operationId": "api_ai_parse_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "required": [],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/assumptions": {
+      "get": {
+        "operationId": "api_assumptions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "oneOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/calculate/afford": {
+      "post": {
+        "operationId": "api_calculate_afford_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  },
+                  "purchase": {
+                    "$ref": "#/components/schemas/Purchase"
+                  }
+                },
+                "required": [
+                  "profile",
+                  "purchase"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AffordResult"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/calculate/apply-move": {
+      "post": {
+        "operationId": "api_calculate_apply-move_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "moveId": {
+                    "type": "string"
+                  },
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  }
+                },
+                "required": [
+                  "moveId",
+                  "profile"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/calculate/forecast": {
+      "post": {
+        "operationId": "api_calculate_forecast_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  },
+                  "todaysDollars": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "profile"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResult"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/calculate/loans": {
+      "post": {
+        "operationId": "api_calculate_loans_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "loans": {
+                    "items": {
+                      "$ref": "#/components/schemas/LoanInput"
+                    },
+                    "type": "array"
+                  },
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  }
+                },
+                "required": [
+                  "loans",
+                  "profile"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LoanResult"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/calculate/month": {
+      "post": {
+        "operationId": "api_calculate_month_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/CurrentMonth"
+                  },
+                  "history": {
+                    "items": {
+                      "$ref": "#/components/schemas/CategoryTotals"
+                    },
+                    "type": "array"
+                  },
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  }
+                },
+                "required": [
+                  "profile"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthEndResult"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/calculate/moves": {
+      "post": {
+        "operationId": "api_calculate_moves_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  }
+                },
+                "required": [
+                  "profile"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Move"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/calculate/refine": {
+      "post": {
+        "operationId": "api_calculate_refine_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "history": {
+                    "items": {
+                      "$ref": "#/components/schemas/CategoryTotals"
+                    },
+                    "type": "array"
+                  },
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  }
+                },
+                "required": [
+                  "profile"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/closest": {
+      "post": {
+        "operationId": "api_closest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cardId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "cardId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/daily": {
+      "get": {
+        "operationId": "api_daily_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "cards": {
+                      "items": {
+                        "$ref": "#/components/schemas/PublicCard"
+                      },
+                      "type": "array"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "progress": {
+                      "additionalProperties": {
+                        "properties": {
+                          "clues": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "reveal": {
+                            "properties": {
+                              "card": {
+                                "$ref": "#/components/schemas/LifeCard"
+                              },
+                              "cluesOpened": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "cost": {
+                                "$ref": "#/components/schemas/CostBreakdown"
+                              },
+                              "result": {
+                                "$ref": "#/components/schemas/GuessResult"
+                              },
+                              "resultId": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "card",
+                              "cluesOpened",
+                              "cost",
+                              "result",
+                              "resultId"
+                            ],
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "clues",
+                          "reveal"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "cards",
+                    "date",
+                    "progress"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/daily/clue": {
+      "post": {
+        "operationId": "api_daily_clue_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cardId": {
+                    "type": "string"
+                  },
+                  "clue": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "cardId",
+                  "clue"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClueReveal"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/daily/guess": {
+      "post": {
+        "operationId": "api_daily_guess_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cardId": {
+                    "type": "string"
+                  },
+                  "guess": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "cardId",
+                  "guess"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "card": {
+                      "$ref": "#/components/schemas/LifeCard"
+                    },
+                    "cluesOpened": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "cost": {
+                      "$ref": "#/components/schemas/CostBreakdown"
+                    },
+                    "result": {
+                      "$ref": "#/components/schemas/GuessResult"
+                    },
+                    "resultId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "card",
+                    "cluesOpened",
+                    "cost",
+                    "result",
+                    "resultId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/demo": {
+      "get": {
+        "operationId": "api_demo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "loans": {
+                      "items": {
+                        "$ref": "#/components/schemas/LoanInput"
+                      },
+                      "type": "array"
+                    },
+                    "profile": {
+                      "$ref": "#/components/schemas/Profile"
+                    }
+                  },
+                  "required": [
+                    "loans",
+                    "profile"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "post": {
+        "operationId": "api_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "props": {
+                    "additionalProperties": true,
+                    "required": [],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "required": [],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/leaderboard": {
+      "get": {
+        "operationId": "api_leaderboard_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "required": [],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/session": {
+      "get": {
+        "operationId": "api_session_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "history": {
+                      "items": {
+                        "$ref": "#/components/schemas/CategoryTotals"
+                      },
+                      "type": "array"
+                    },
+                    "profile": {
+                      "$ref": "#/components/schemas/Profile"
+                    },
+                    "wishlist": {
+                      "items": {
+                        "$ref": "#/components/schemas/Purchase"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "history",
+                    "profile",
+                    "wishlist"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      },
+      "post": {
+        "operationId": "api_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "history": {
+                    "items": {
+                      "$ref": "#/components/schemas/CategoryTotals"
+                    },
+                    "type": "array"
+                  },
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  },
+                  "wishlist": {
+                    "items": {
+                      "$ref": "#/components/schemas/Purchase"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/share": {
+      "get": {
+        "operationId": "api_share_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "resultId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "enum": [
+                "square",
+                "story"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Share image"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/statement/categorize": {
+      "post": {
+        "operationId": "api_statement_categorize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "items": {
+                    "items": {
+                      "properties": {
+                        "amount": {
+                          "type": "number"
+                        },
+                        "category": {
+                          "type": "string"
+                        },
+                        "day": {
+                          "type": "integer"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "month": {
+                          "type": "string"
+                        },
+                        "oneOff": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "amount",
+                        "category",
+                        "day",
+                        "label",
+                        "month",
+                        "oneOff"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "items"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryTotals"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    }
+  }
+}
