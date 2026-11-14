@@ -1,0 +1,848 @@
+[
+  {
+    "id": "life-001",
+    "zip": "10002",
+    "metro": "New York",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-002",
+    "zip": "91301",
+    "metro": "Los Angeles",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-003",
+    "zip": "77019",
+    "metro": "Houston",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-004",
+    "zip": "19104",
+    "metro": "Philadelphia",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-005",
+    "zip": "78744",
+    "metro": "Austin",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-006",
+    "zip": "30350",
+    "metro": "Atlanta",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-007",
+    "zip": "98101",
+    "metro": "Seattle",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-008",
+    "zip": "02125",
+    "metro": "Boston",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-009",
+    "zip": "55411",
+    "metro": "Minneapolis",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-010",
+    "zip": "10467",
+    "metro": "New York",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "coastal-lives"
+  },
+  {
+    "id": "life-011",
+    "zip": "60611",
+    "metro": "Chicago",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-012",
+    "zip": "85016",
+    "metro": "Phoenix",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-013",
+    "zip": "75216",
+    "metro": "Dallas",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 3,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-014",
+    "zip": "78660",
+    "metro": "Austin",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 3,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-015",
+    "zip": "33131",
+    "metro": "Miami",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 3,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-016",
+    "zip": "80203",
+    "metro": "Denver",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 3,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-017",
+    "zip": "37208",
+    "metro": "Nashville",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 4,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-018",
+    "zip": "55420",
+    "metro": "Minneapolis",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 4,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-019",
+    "zip": "90024",
+    "metro": "Los Angeles",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 4,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-020",
+    "zip": "77008",
+    "metro": "Houston",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 4,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    },
+    "pack": "family-lives"
+  },
+  {
+    "id": "life-021",
+    "zip": "19132",
+    "metro": "Philadelphia",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week."
+  },
+  {
+    "id": "life-022",
+    "zip": "75040",
+    "metro": "Dallas",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-023",
+    "zip": "30327",
+    "metro": "Atlanta",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-024",
+    "zip": "98103",
+    "metro": "Seattle",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-025",
+    "zip": "02124",
+    "metro": "Boston",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-026",
+    "zip": "37013",
+    "metro": "Nashville",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar."
+  },
+  {
+    "id": "life-027",
+    "zip": "10013",
+    "metro": "New York",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-028",
+    "zip": "60618",
+    "metro": "Chicago",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-029",
+    "zip": "85009",
+    "metro": "Phoenix",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-030",
+    "zip": "19020",
+    "metro": "Philadelphia",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-031",
+    "zip": "78703",
+    "metro": "Austin",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in."
+  },
+  {
+    "id": "life-032",
+    "zip": "33125",
+    "metro": "Miami",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-033",
+    "zip": "80219",
+    "metro": "Denver",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 3,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-034",
+    "zip": "02184",
+    "metro": "Boston",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 3,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-035",
+    "zip": "55403",
+    "metro": "Minneapolis",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 3,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-036",
+    "zip": "90012",
+    "metro": "Los Angeles",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 3,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter."
+  },
+  {
+    "id": "life-037",
+    "zip": "77033",
+    "metro": "Houston",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 4,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-038",
+    "zip": "85225",
+    "metro": "Phoenix",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 4,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-039",
+    "zip": "75205",
+    "metro": "Dallas",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 4,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-040",
+    "zip": "30308",
+    "metro": "Atlanta",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 4,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-041",
+    "zip": "98118",
+    "metro": "Seattle",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week."
+  },
+  {
+    "id": "life-042",
+    "zip": "80013",
+    "metro": "Denver",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-043",
+    "zip": "37215",
+    "metro": "Nashville",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-044",
+    "zip": "10001",
+    "metro": "New York",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-045",
+    "zip": "60621",
+    "metro": "Chicago",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-046",
+    "zip": "77449",
+    "metro": "Houston",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar."
+  },
+  {
+    "id": "life-047",
+    "zip": "19103",
+    "metro": "Philadelphia",
+    "adults": 1,
+    "kids": [
+      "preschool"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 4,
+    "caption": "Someone has just moved in.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-048",
+    "zip": "78704",
+    "metro": "Austin",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "toddler"
+    ],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 7,
+    "caption": "Room for another chapter.",
+    "car": {
+      "price": 52000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-049",
+    "zip": "33142",
+    "metro": "Miami",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 0,
+    "caption": "A quiet start to the week.",
+    "car": {
+      "price": 18000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  },
+  {
+    "id": "life-050",
+    "zip": "98052",
+    "metro": "Seattle",
+    "adults": 2,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 2,
+    "caption": "A home with a busy calendar.",
+    "car": {
+      "price": 32000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 60
+    }
+  }
+]

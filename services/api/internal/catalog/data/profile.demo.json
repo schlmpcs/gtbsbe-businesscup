@@ -1,0 +1,70 @@
+{
+  "age": {
+    "value": 32,
+    "isEstimate": false
+  },
+  "takeHomePay": {
+    "value": 5500,
+    "isEstimate": false
+  },
+  "spending": {
+    "rentUtilities": {
+      "value": 1800,
+      "isEstimate": true
+    },
+    "car": {
+      "value": 240,
+      "isEstimate": true
+    },
+    "childcare": {
+      "value": 0,
+      "isEstimate": true
+    },
+    "groceries": {
+      "value": 420,
+      "isEstimate": true
+    },
+    "eatingOut": {
+      "value": 260,
+      "isEstimate": true
+    },
+    "subscriptions": {
+      "value": 85,
+      "isEstimate": true
+    },
+    "debtPayments": {
+      "value": 200,
+      "isEstimate": true
+    },
+    "other": {
+      "value": 300,
+      "isEstimate": true
+    }
+  },
+  "cash": {
+    "value": 8000,
+    "isEstimate": false
+  },
+  "retirement": {
+    "value": 20000,
+    "isEstimate": false
+  },
+  "retirementShare": {
+    "value": 0.15,
+    "isEstimate": true
+  },
+  "debts": [
+    {
+      "id": "card-1",
+      "kind": "card",
+      "balance": 4500,
+      "apr": 0.228,
+      "minPayment": {
+        "value": 200,
+        "isEstimate": false
+      }
+    }
+  ],
+  "zip": "60618",
+  "doneMoveIds": []
+}
