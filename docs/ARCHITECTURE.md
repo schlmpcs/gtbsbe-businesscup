@@ -208,6 +208,8 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 | `forecast` | Amir | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` (the rules provider: fallback and yardstick; the headline forecast comes from `/api/ai/forecast`) |
 | `applyPatch` | Amir | `(p: Profile, patch: ProfilePatch) => Profile` |
 | `rankMoves` | Amir | `(p: Profile, opts?: { rates?: Partial<ForecastRates>; subscriptionsDetected?: boolean }) => Move[]` (level 1, top 3; `effect10y` in today's dollars; the committed move is the one with `id === p.committedMoveId`) |
+| `moveCandidates` / `rankCandidates` | Amir | `(p: Profile, opts?: RankMovesOptions) => MoveCandidate[]` / `(p: Profile, candidates: MoveCandidate[], effectOf: (c: MoveCandidate) => Money) => Move[]`. `rankMoves` is both with the rules forecast as `effectOf`; the AI path supplies `effectOf` from the bundle. `MoveCandidate = Omit<Move, 'effect10y'>`. |
+| `anchorIssues` / `anchorsToForecast` / `deflateForecast` / `forecastSanityIssues` / `scenarioEffectIssues` / `rulesBundle` / `forecastFacts` | Amir | Pure helpers for the AI forecast: check the model's `YearAnchor[]`, expand it to a nominal `Forecast` (month 0 = today's balance sheet), convert a `Forecast` to today's dollars, compare a forecast and a move's effect with the rules forecast, wrap the rules forecast as a `ForecastBundle` (the fallback), and strip a `Profile` to what the model sees. See ENGINEERING.md → AI forecast. |
 | `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
 | `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
 | `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
@@ -219,8 +221,6 @@ All assumptions (inflation, returns, thresholds) live in `packages/engine/assump
 
 ## Server routes
 
-| `moveCandidates` / `rankCandidates` | Amir | `(p: Profile, opts?: RankMovesOptions) => MoveCandidate[]` / `(p: Profile, candidates: MoveCandidate[], effectOf: (c: MoveCandidate) => Money) => Move[]`. `rankMoves` is both with the rules forecast as `effectOf`; the AI path supplies `effectOf` from the bundle. `MoveCandidate = Omit<Move, 'effect10y'>`. |
-| `anchorIssues` / `anchorsToForecast` / `deflateForecast` / `forecastSanityIssues` / `scenarioEffectIssues` / `rulesBundle` / `forecastFacts` | Amir | Pure helpers for the AI forecast: check the model's `YearAnchor[]`, expand it to a nominal `Forecast` (month 0 = today's balance sheet), convert a `Forecast` to today's dollars, compare a forecast and a move's effect with the rules forecast, wrap the rules forecast as a `ForecastBundle` (the fallback), and strip a `Profile` to what the model sees. See ENGINEERING.md → AI forecast. |
 Every route validates its input with zod. All POST routes and `/api/share` are rate-limited per anonymous ID and IP, with the strictest limits on `/api/ai/*` and `/api/statement/categorize` (they cost LLM calls).
 
 | Route | Owner | In → out |
