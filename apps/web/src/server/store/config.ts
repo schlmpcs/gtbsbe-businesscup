@@ -1,4 +1,4 @@
-// Server-only: which store backs sessions (and, later, the game and events), from the environment.
+// Server-only: which store backs sessions and funnel events (and, later, the game), from the environment.
 // Read on every call rather than at import, so a test's vi.stubEnv applies without a restart.
 //
 //   STORE_URL=postgres://user:password@host:5432/db   → Postgres (production: the compose service)

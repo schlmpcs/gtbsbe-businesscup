@@ -67,7 +67,7 @@ describe('ladder view-models', () => {
 
 describe('screens that count a view', () => {
   it('forecast, Loan Lab and Can I Afford It? each count once, Loan Lab with its offers', async () => {
-    const future = renderHook(() => useFuture({ explain: async () => null }));
+    const future = renderHook(() => useFuture());
     await waitForReady(future.result);
     future.rerender();
     const lab = renderHook(() => useLoanLab());
@@ -84,7 +84,7 @@ describe('screens that count a view', () => {
   });
 
   it('a committed move is tracked with its kind', async () => {
-    const future = renderHook(() => useFuture({ explain: async () => null }));
+    const future = renderHook(() => useFuture());
     await waitForReady(future.result);
     const moves = future.result.current.moves;
     expect(moves.status).toBe('ready');

@@ -2,7 +2,7 @@
 //
 // Adding a table (e.g. T5 game guesses, T8 events):
 //   1. Create `NNN_<name>.ts` here exporting a Migration with the next free version, and add it
-//      to MIGRATIONS below. Reserved: 3 = T5 game (#18), 4 = T8 events (#21); take 5+ otherwise.
+//      to MIGRATIONS below. Reserved: 3 = T5 game (#18); 4 is T8 events; take 5+ otherwise.
 //   2. Rules, because production keeps every migration it ever ran:
 //      - Never edit or renumber a migration once it is on main. The runner compares checksums and
 //        refuses to start on an edited one. Fix forward with a new migration.

@@ -1,4 +1,4 @@
-import { FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelEvent } from '@lifeguessr/types';
+import { FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelEvent, type FunnelReport } from '@lifeguessr/types';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildFunnelReport, eventBit, lastDays, maskOf, uniqueById, type StoredEvent } from './events';
 import { createMemoryEventStore } from './events.memory';
@@ -15,7 +15,7 @@ const ev = (event: FunnelEvent): StoredEvent => ({ ...event, id: `00000000-0000-
 const guessed = (home: number, cluesOpened: number) => ev({ name: 'home_guessed', props: { home, cluesOpened } });
 
 const window = () => lastDays(1, new Date(Date.now() + 60_000));
-const step = (report: { steps: { name: string }[] }, name: string) => report.steps.find((s) => s.name === name);
+const step = (report: FunnelReport, name: string) => report.steps.find((s) => s.name === name);
 
 describe('masks', () => {
   it('give each known event one bit and ignore names this build does not know', () => {
