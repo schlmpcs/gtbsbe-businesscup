@@ -114,6 +114,40 @@ export type PlanKpis = { netWorthEndOfYear: Money; netWorthAtRetirement: Money; 
   netWorthAtEnd: Money; shortfallAge: number | null };
 export type PlanResult = { years: PlanYear[]; kpis: PlanKpis; display: 'today' | 'future'; source: 'rules' };
 
+// ----- Scenarios, Compare, moves on the plan (MP6) -------------------------------------------
+// Every money value is in the plans' display unit. Differences are B − A. No text: the UI words them.
+
+/** Net worth of plans A and B in one calendar year; diff = b − a. */
+export type CompareYear = { year: number; a: Money; b: Money; diff: Money };
+/** One KPI of both plans; diff = b − a, null when either value is null (shortfallAge null = money lasts). */
+export type CompareKpi = { key: keyof PlanKpis; a: number | null; b: number | null; diff: number | null };
+/**
+ * The data behind the Compare sentence ("Plan B leaves you $34K richer by 2036"), read in the year A
+ * retires: `leader` is the plan with more net worth that year (null when they differ by less than
+ * COMPARE_TIE), `amount` the gap (≥ 0), `since` the first year from which the leader stays ahead
+ * through `year` (null without a leader).
+ */
+export type CompareSentenceData = { leader: 'a' | 'b' | null; amount: Money; year: number; age: number; since: number | null };
+/** compareScenarios(a, b) (MP6). */
+export type ScenarioComparison = {
+  years: CompareYear[]; kpis: CompareKpi[];
+  firstYearBAhead: number | null;    // first year B's net worth beats A's by COMPARE_TIE or more
+  sentence: CompareSentenceData;
+};
+/** planMoveEffects (MP6): a Next Move measured on one scenario's plan (with the move − without). */
+export type PlanMoveEffect = {
+  moveId: string;
+  effectAtRetirement: Money;         // change in PlanKpis.netWorthAtRetirement
+  effectAtEnd: Money;                // change in PlanKpis.netWorthAtEnd
+  successRateDelta?: Rate;           // change in Monte Carlo successRate, same seed (MP5); absent until then
+};
+/** previewEvent (MP6): the plan with the event on vs without it, for the event panel. */
+export type EventPreview = {
+  withEvent: PlanKpis;
+  without: PlanKpis;
+  leftOverMonthly: Money;            // monthly: average take-home − spending − debt payments in the event's first plan year, with it
+};
+
 // ----- Monte Carlo (P10, MP5) ----------------------------------------------------------------
 
 export type MonteCarloSettings = {

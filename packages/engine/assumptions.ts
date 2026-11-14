@@ -990,3 +990,33 @@ export const monteCarloRateFloor = {
   note: 'A technical floor, reached only by extreme draws. Not yet listed in `assumptions` (the "How we calculate" map).',
 } satisfies Assumption<Rate>;
 // ----- end MP5 --------------------------------------------------------------------------------
+
+// MP6: the Baseline scenario's default assumptions (scenarios.ts: baselineScenario, #166) -----------
+
+/**
+ * Default retirement age of a new plan (`PlanAssumptions.retireAge`): the full retirement age for
+ * anyone born in 1960 or later, the same age the default Social Security event starts at.
+ */
+export const planRetireAgeDefault = {
+  value: 67,
+  source: socialSecurityClaimAge.source,
+  note: 'Editable per scenario. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<number>;
+
+/** Default end of the plan (`PlanAssumptions.endAge`): the age the yearly plan runs to. */
+export const planEndAgeDefault = {
+  value: 90,
+  assumption: true,
+  note:
+    'A planning horizon past the average US life expectancy at 65, so the money is planned to last. ' +
+    'Editable per scenario. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<number>;
+
+/** Default withdrawal order (`PlanAssumptions.withdrawalOrder`): what a shortfall draws from first. */
+export const planWithdrawalOrderDefault = {
+  value: ['cash', 'investments', 'retirement'] as const,
+  assumption: true,
+  note:
+    'Cash first, then taxable investments, retirement accounts last (they are the costliest to draw early). ' +
+    'A common rule of thumb, not tax advice. Editable per scenario.',
+} satisfies Assumption<readonly ['cash', 'investments', 'retirement']>;
