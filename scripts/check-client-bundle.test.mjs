@@ -22,6 +22,10 @@ function staticDir(files) {
 
 const HTTP_CLIENT = 'postJson(`${base}/api/daily/guess`,{anonId:e})';
 const HTTP_DUEL_CLIENT = 'postJson(`${n}/api/daily/pick`,{anonId:r,date:t,round:e,choice:a})';
+/** The fixture duel client's chunk: what a build with the default NEXT_PUBLIC_DUEL_SOURCE=fixtures has. */
+const FIXTURE_DUEL_CLIENT = 'const D="lifeguessr.fixtureDuel";const r=`fixture-duel-${t}-${u}`;';
+/** What a default build (duel in the browser, GAME_MODE unset so the slider ships too) must contain to be trusted. */
+const DEFAULT_BUILD = `${HTTP_CLIENT};${FIXTURE_DUEL_CLIENT}`;
 
 describe('check-client-bundle', () => {
   const rules = bundleRules({ duelSource: 'fixtures' }); // the default build
@@ -39,12 +43,29 @@ describe('check-client-bundle', () => {
     expect(api.forbidden.map((r) => r.label)).toContain('duel sample card sample-duel-01');
     expect(labels).not.toContain('duel sample card sample-duel-01');
     expect(api.required.map((r) => r.label)).toEqual(['HTTP game client (/api/daily/guess)', 'HTTP duel client (/api/daily/pick)']);
-    expect(rules.required.map((r) => r.label)).toEqual(['HTTP game client (/api/daily/guess)']);
+    expect(rules.required.map((r) => r.label)).toEqual(['HTTP game client (/api/daily/guess)', 'fixture duel client (its result id prefix)']);
+  });
+
+  it('production (NEXT_PUBLIC_GAME_MODE=duel, duel against the server): the slider game has no chunk, so only the HTTP duel client is required', () => {
+    const production = bundleRules({ duelSource: 'api', gameMode: 'duel' });
+    expect(production.required.map((r) => r.label)).toEqual(['HTTP duel client (/api/daily/pick)']);
+    expect(scanChunks(staticDir({ 'chunks/app/duel.js': HTTP_DUEL_CLIENT }), production)).toEqual([]);
+    // A build that lost the duel client (or the wrong folder) is not trusted.
+    expect(scanChunks(staticDir({ 'chunks/app/other.js': 'console.log(1)' }), production)).toEqual([
+      'HTTP duel client (/api/daily/pick) is in no chunk: is this the right build?',
+    ]);
+    // The slider's HTTP client is required again with GAME_MODE=slider (the rollback build), and when the mode is unset.
+    for (const gameMode of ['slider', undefined]) {
+      expect(bundleRules({ duelSource: 'api', gameMode }).required.map((r) => r.label)).toContain('HTTP game client (/api/daily/guess)');
+    }
+    // The answers rules do not depend on the mode.
+    expect(production.forbidden.map((r) => r.label)).toContain('catalog card lc-001');
+    expect(production.forbidden.map((r) => r.label)).toContain('fixture duel client (its result id prefix)');
   });
 
   it('passes an API build: HTTP client present, sample lives allowed, no catalog card, no fixture client', () => {
     const dir = staticDir({
-      'chunks/app/play.js': HTTP_CLIENT,
+      'chunks/app/play.js': DEFAULT_BUILD,
       'chunks/app/me/closest.js': 'JSON.parse(\'[{"id":"sample-01-single-nocar-cheap","zip":"75216"}]\')',
     });
     expect(scanChunks(dir, rules)).toEqual([]);
@@ -52,7 +73,7 @@ describe('check-client-bundle', () => {
 
   it('finds a catalog card, as JSON or inside a string, and names the chunk', () => {
     const dir = staticDir({
-      'chunks/a.js': HTTP_CLIENT,
+      'chunks/a.js': DEFAULT_BUILD,
       'chunks/b.js': 'JSON.parse(\'[{"id":"lc-017","slot":2}]\')',
       'chunks/c.js': 'var x={id:"nyc25-3"}',
     });
@@ -65,7 +86,7 @@ describe('check-client-bundle', () => {
 
   it('finds the fixture game client', () => {
     const dir = staticDir({
-      'chunks/a.js': HTTP_CLIENT,
+      'chunks/a.js': DEFAULT_BUILD,
       'chunks/fixture.js': 'const K="lifeguessr.fixtureGame";throw new o(`No fixture data for card ${t}`,404)',
     });
     expect(scanChunks(dir, rules)).toEqual([
@@ -97,14 +118,19 @@ describe('check-client-bundle', () => {
     });
     expect(scanChunks(leaky, api)).toEqual(['duel sample card sample-duel-07 is in chunks/ladder.js']);
     // The default build plays the duel in the browser on those cards, on purpose.
-    expect(scanChunks(leaky, bundleRules({ duelSource: 'fixtures' }))).toEqual([]);
+    const fixtureBuild = staticDir({
+      'chunks/a.js': DEFAULT_BUILD,
+      'chunks/ladder.js': 'JSON.parse(\'[{"id":"sample-duel-07","zip":"60629"}]\')',
+    });
+    expect(scanChunks(fixtureBuild, bundleRules({ duelSource: 'fixtures' }))).toEqual([]);
   });
 
-  it("fails a scan it can't trust: no build, no chunks, no HTTP game client", () => {
+  it("fails a scan it can't trust: no build, no chunks, none of the game's clients", () => {
     expect(scanChunks(join(tmpdir(), 'no-such-next-static'), rules)[0]).toMatch(/does not exist/);
     expect(scanChunks(staticDir({ 'chunks/a.css': 'body{}' }), rules)).toEqual([expect.stringMatching(/no \.js chunks/)]);
     expect(scanChunks(staticDir({ 'chunks/a.js': 'console.log(1)' }), rules)).toEqual([
       expect.stringMatching(/^HTTP game client .* is in no chunk/),
+      expect.stringMatching(/^fixture duel client .* is in no chunk/),
     ]);
   });
 

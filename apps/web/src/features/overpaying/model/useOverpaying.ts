@@ -5,7 +5,7 @@
 // profile: the inputs live here and, when `onStore` is given, in the store's `tools.overpaying`.
 import type { Profile } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SCREEN_ROUTES } from '@/lib/screens';
+import { SCREEN_ROUTES, streamerGameHref } from '@/lib/screens';
 import { useAppReady } from '@/state';
 import { computeOverpaying } from './compute';
 import { defaultOverpayingDeps } from './deps';
@@ -174,7 +174,7 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
     invalidFields: computed?.invalidFields ?? [],
     needs: computed?.needs ?? null,
     result: computed?.result ?? null,
-    playHref: SCREEN_ROUTES.S4,
+    playHref: streamerGameHref(),
     profileHref: SCREEN_ROUTES.S8,
   };
 }

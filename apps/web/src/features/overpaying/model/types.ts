@@ -175,7 +175,7 @@ export type OverpayingVM = {
   needs: OverpayingNeed | null;
   /** null until there is something to compare. */
   result: Loadable<OverpayingResultVM> | null;
-  /** Where the streamer notice sends people back to. */
+  /** Where the streamer notice sends people back to: the game (streamerGameHref in lib/screens). */
   playHref: string;
   /** Where to build a profile (balance sheet), for the 10-year effect. */
   profileHref: string;

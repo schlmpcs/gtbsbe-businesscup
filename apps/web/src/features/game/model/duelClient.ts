@@ -9,7 +9,7 @@
 //   It holds the answers, so this module never imports it statically: see loadFixtureDuelClient.
 // The duel has its own flag, NEXT_PUBLIC_DUEL_SOURCE (default fixtures), separate from
 // NEXT_PUBLIC_GAME_SOURCE (the slider game, sessions plumbing and the leaderboard follow that one).
-// NEXT_PUBLIC_DUEL_SOURCE=api plays against the server; #120 switches production to it.
+// NEXT_PUBLIC_DUEL_SOURCE=api plays against the server: production's setting (#120).
 import {
   DUEL_ROUNDS, type DuelHint, type DuelLetter, type DuelRound, type PickResult, type PublicDuel,
 } from '@lifeguessr/types';
@@ -18,7 +18,9 @@ import {
 } from '@/lib/api/gameSchemas';
 import { getJson, postJson } from '@/lib/api/http';
 import { duelSource, type GameSource } from '@/lib/config';
+import { readStorage } from '@/lib/safeStorage';
 import { getAnonId } from '@/state/anonId';
+import { parseServerDuelMirror, rememberServerDuelRounds, SERVER_DUEL_MIRROR_KEY } from './duelProgress';
 
 /** What the source already recorded for this player today: picks (with their results) and hints. */
 export type DuelProgress = {
@@ -121,8 +123,32 @@ export function lazyDuelClient(source: GameSource, load: () => Promise<DuelClien
   };
 }
 
+/**
+ * The same client, plus a copy of the server's progress for S1 Today (./duelProgress): the rounds
+ * the server counts when the day loads, and each round it scores. S1 reads that copy at once
+ * instead of asking the server, so "Keep playing (2 of 5)" needs no request and cannot flash. The
+ * server stays the truth: the next load of /play rewrites the copy from it. A failed call writes
+ * nothing, and a hint counts nothing.
+ */
+export function mirrorServerDuelProgress(client: DuelClient): DuelClient {
+  return {
+    ...client,
+    async daily(today) {
+      const day = await client.daily(today);
+      rememberServerDuelRounds(day.date, Object.keys(day.progress.picks).map(Number));
+      return day;
+    },
+    async pick(round, choice, date) {
+      const result = await client.pick(round, choice, date);
+      const known = parseServerDuelMirror(readStorage(SERVER_DUEL_MIRROR_KEY), date) ?? [];
+      rememberServerDuelRounds(date, [...known, round]);
+      return result;
+    },
+  };
+}
+
 export function createDuelClient(source: GameSource = duelSource()): DuelClient {
-  if (source === 'api') return createHttpDuelClient();
+  if (source === 'api') return mirrorServerDuelProgress(createHttpDuelClient());
   const load = loadFixtureDuelClient;
   if (!load) throw new Error('This build plays the server duel (NEXT_PUBLIC_DUEL_SOURCE=api); it has no fixture duel.');
   return lazyDuelClient('fixtures', async () => (await load()).createFixtureDuelClient());

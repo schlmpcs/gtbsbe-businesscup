@@ -54,7 +54,7 @@ export function gameMode(): GameMode {
  * slider game, sessions plumbing and the leaderboard follow). Default `fixtures`: the duel is
  * computed in the browser with the real engine, even in an API build. `NEXT_PUBLIC_DUEL_SOURCE=api`
  * plays against the server routes (GET /api/daily?game=duel, POST /api/daily/pick and /hint; needs
- * the store, STORE_URL). Production switches over in #120.
+ * the store, STORE_URL). Production's setting (#120): the deploy image defaults to it.
  */
 export function duelSource(): GameSource {
   return process.env.NEXT_PUBLIC_DUEL_SOURCE === 'api' ? 'api' : 'fixtures';

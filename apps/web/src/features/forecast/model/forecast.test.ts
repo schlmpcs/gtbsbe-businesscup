@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api/http';
 import { getArea } from '@lifeguessr/data/areas';
 import { cloneProfileDemo } from '@/fixtures';
-import { FIXTURE_DUEL_LOG_KEY } from '@/features/game/model/duelProgress';
+import { FIXTURE_DUEL_LOG_KEY, rememberServerDuelRounds } from '@/features/game/model/duelProgress';
 import { useAppStore, useGameStore } from '@/state';
 import { currentMonth } from '@/state/profile';
 import { resetClientState, waitForReady } from '@/test/clientState';
@@ -489,14 +489,22 @@ describe('useToday (S1)', () => {
     expect(result.current.game).toMatchObject({ played: 5, total: 5, finished: true });
   });
 
-  it('with the duel on the server (NEXT_PUBLIC_DUEL_SOURCE=api), reads no browser log', async () => {
+  it('with the duel on the server (NEXT_PUBLIC_DUEL_SOURCE=api), counts the rounds the server last reported, not the browser log', async () => {
     vi.stubEnv('NEXT_PUBLIC_DUEL_SOURCE', 'api');
     try {
       const pick = { choice: 'A', result: {} };
       localStorage.setItem(FIXTURE_DUEL_LOG_KEY, JSON.stringify({ date: '2026-11-14', resultId: 'r', picks: { 1: pick }, hints: {} }));
+      // Nothing from the server yet: the plain "play", never a count nobody gave.
+      const first = renderHook(() => useToday({ now: new Date(2026, 10, 14, 12) }));
+      await waitForReady(first.result);
+      expect(first.result.current.game).toMatchObject({ kind: 'duel', played: 0, finished: false });
+      first.unmount();
+
+      rememberServerDuelRounds('2026-11-14', [1, 2, 3]);
       const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14, 12) }));
       await waitForReady(result);
-      expect(result.current.game).toMatchObject({ kind: 'duel', played: 0 });
+      expect(result.current.game).toEqual({ kind: 'duel', date: '2026-11-14', played: 3, total: 5, finished: false, homes: [] });
+      expect(result.current.firstVisit).toBe(false);
     } finally {
       vi.unstubAllEnvs();
     }

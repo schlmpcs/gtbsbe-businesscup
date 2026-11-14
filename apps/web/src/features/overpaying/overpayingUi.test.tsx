@@ -4,7 +4,7 @@
 import type { Profile } from '@lifeguessr/types';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { overpaying as t } from '@/copy';
 import { cloneProfileDemo } from '@/fixtures';
 import { resetClientState } from '@/test/clientState';
@@ -14,6 +14,7 @@ import { useOverpaying } from './model/useOverpaying';
 import { OverpayingScreen } from './ui/OverpayingScreen';
 
 beforeEach(resetClientState);
+afterEach(() => vi.unstubAllEnvs());
 
 function Harness({ profile, deps, streamer }: { profile: Profile | null; deps: OverpayingDeps; streamer?: boolean }) {
   return <OverpayingScreen vm={useOverpaying(profile, { deps, streamer })} />;
@@ -247,7 +248,14 @@ describe('streamer mode', () => {
   it('hides the tool and points back to the game', async () => {
     await open({ streamer: true });
     const notice = screen.getByTestId('streamer-notice');
-    expect(within(notice).getByRole('link', { name: t.streamer.back })).toHaveAttribute('href', '/play?stream=1');
+    expect(within(notice).getByRole('link', { name: t.streamer.back })).toHaveAttribute('href', '/play');
     expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('points back to the slider game\'s streamer mode while /play is the slider game (the rollback)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_GAME_MODE', 'slider');
+    await open({ streamer: true });
+    const notice = screen.getByTestId('streamer-notice');
+    expect(within(notice).getByRole('link', { name: t.streamer.back })).toHaveAttribute('href', '/play?stream=1');
   });
 });

@@ -1,9 +1,13 @@
 // T8: the 2-minute demo path (docs/PRODUCT.md → Two-minute demo script) in one spec, phone and
-// desktop: play today's five duels at /play (a hint in the first) → the day result's "Price my own
-// month" → guess your own month → closest life → sliders → You in 10 years → upload the sample
-// statement → Loan Lab compare. Selectors come from the copy files and roles, so a Figma restyle or
-// the duel moving to server routes (NEXT_PUBLIC_DUEL_SOURCE) does not break it. The slider game
-// (NEXT_PUBLIC_GAME_MODE=slider, the rollback) has its own spec, play.spec.ts.
+// desktop: a first visit to Today → Play → today's five duels (a hint in the first) → the day
+// result's "Price my own month" → guess your own month → closest life → sliders → You in 10 years →
+// upload the sample statement → Loan Lab compare. Selectors come from the copy files and roles, so a
+// Figma restyle does not break it.
+//
+// It runs in both ways the duel can be built, with the same steps: against the server
+// (NEXT_PUBLIC_DUEL_SOURCE=api, production's build: CI's e2e-production job, with the store) and in
+// the browser (the default build, CI's e2e job). The slider game (NEXT_PUBLIC_GAME_MODE=slider, the
+// rollback) has its own spec, play.spec.ts.
 //
 // When the build sends funnel events (NEXT_PUBLIC_EVENTS_SOURCE=api with a store, as CI's e2e job
 // runs it), it also checks that each step of the path was recorded, that what was sent carries no
@@ -76,11 +80,17 @@ function stored(page: Page, name: ClientFunnelEvent['name']): Promise<unknown> {
   );
 }
 
-test('demo path: 5 duels → own guess → statement → by hand → forecast → Loan Lab', async ({ page }) => {
+test('demo path: first visit → Play → 5 duels → own guess → statement → by hand → forecast → Loan Lab', async ({ page }) => {
   test.setTimeout(120_000);
 
+  // ----- 0. A first visit to Today (S1) and its Play -----
+  await page.goto('/');
+  const first = forecast.today.firstVisit;
+  await expect(h1(page)).toHaveText(first.title);
+  await page.getByTestId('play').getByRole('link', { name: first.play, exact: true }).click();
+  await expect(page).toHaveURL(/\/play$/);
+
   // ----- 1. Play today's five duels at /play (S2 → S3 → day result) -----
-  await page.goto('/play');
   await expect(h1(page)).toHaveText(duel.title);
   // One hint in the first round: one more fact on each card, for −10% of the round's points.
   await page.getByRole('button', { name: duel.hint.offer('10%') }).click();

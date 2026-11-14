@@ -7,12 +7,14 @@
 // (memory store) with E2E_BASE_URL. The fixture duel has its own spec, duel.spec.ts.
 import { expect, test, type Page, type Response } from '@playwright/test';
 import { duel as t } from '../src/copy/duel';
+import { forecast } from '../src/copy/forecast';
 
 test.skip(process.env.NEXT_PUBLIC_DUEL_SOURCE !== 'api', 'the build plays the duel in the browser (NEXT_PUBLIC_DUEL_SOURCE=api plays it against the server)');
 
 const ANON_ID_KEY = 'lifeguessr.anonId';
 const DUEL_VIEW_KEY = 'lifeguessr.duelView';
 const FIXTURE_DUEL_LOG_KEY = 'lifeguessr.fixtureDuel';
+const SERVER_DUEL_MIRROR_KEY = 'lifeguessr.duelServerDay';
 
 let pageErrors: string[] = [];
 
@@ -117,4 +119,45 @@ test('a full duel day against the server: hint, five picks, a reload mid-day res
   expect(replay.status()).toBe(200);
   expect(await replay.json()).toMatchObject({ replayed: true, points: r1.points });
   await other.close();
+});
+
+test('/play is the duel against the server, and S1 Today counts the rounds the server scored', async ({ page }) => {
+  const [daily] = await Promise.all([
+    page.waitForResponse((res) => new URL(res.url()).pathname === '/api/daily' && new URL(res.url()).searchParams.get('game') === 'duel'),
+    page.goto('/play'),
+  ]);
+  expect(daily.status()).toBe(200);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.title);
+  await expect(page.getByTestId('duel-footer')).toHaveText(t.footer.composite);
+  // The streamer view belongs to the slider game: this build links nowhere with ?stream=1.
+  await expect(page.locator('a[href*="stream=1"]')).toHaveCount(0);
+
+  // One scored pick: Today (S1) shows rounds, not homes, and sends the player back to /play.
+  await pickAOnServer(page, 1);
+  await page.goto('/');
+  const p = forecast.today.playDuel;
+  const game = page.getByTestId('play');
+  await expect(game).toContainText(forecast.today.duel.title);
+  await expect(game.getByRole('link', { name: p.continue(1, 5) })).toHaveAttribute('href', '/play');
+  await expect(page.getByText(/today’s homes/i)).toHaveCount(0);
+  await expect(page.locator('a[href*="stream=1"]')).toHaveCount(0);
+  // The count comes from what the server replied, kept for S1; nothing of the answers is kept.
+  const mirror = await page.evaluate((key) => localStorage.getItem(key), SERVER_DUEL_MIRROR_KEY);
+  expect(JSON.parse(mirror ?? 'null')).toMatchObject({ rounds: [1] });
+  expect(mirror).not.toMatch(/total|breakdown|lesson/);
+
+  // Back to the game: the server resumes at round 2; finish the day, and Today says it is done.
+  await game.getByRole('link', { name: p.continue(1, 5) }).click();
+  // Round 1's reveal is back on screen (this tab's view) or round 2 is already open; either way go on.
+  const next = page.getByRole('button', { name: t.reveal.next });
+  await expect(next.or(page.getByText(t.round(2, 5))).first()).toBeVisible();
+  if (await next.isVisible()) await next.click();
+  for (let round = 2; round <= 5; round++) {
+    await pickAOnServer(page, round);
+    await page.getByRole('button', { name: round === 5 ? t.reveal.finish : t.reveal.next }).click();
+  }
+  await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByTestId('play').getByText(p.doneScore(5, 5))).toBeVisible();
+  await expect(page.getByTestId('play').getByRole('link', { name: p.doneCta })).toHaveAttribute('href', '/play');
 });

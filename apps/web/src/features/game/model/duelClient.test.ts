@@ -37,7 +37,7 @@ describe('createDuelClient source selection', () => {
     expect((await client.daily(DATE)).duels).toHaveLength(5);
   });
 
-  it('still plays the duel in the browser in an API game build (NEXT_PUBLIC_GAME_SOURCE=api, production until #120)', async () => {
+  it('still plays the duel in the browser in an API game build (the duel has its own flag, NEXT_PUBLIC_DUEL_SOURCE)', async () => {
     const { createDuelClient } = await build({ NEXT_PUBLIC_GAME_SOURCE: 'api' });
     const client = createDuelClient();
     expect(client.source).toBe('fixtures');

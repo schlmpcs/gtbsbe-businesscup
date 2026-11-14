@@ -28,16 +28,24 @@ COPY apps apps
 COPY packages packages
 
 # NEXT_PUBLIC_* values are written into the client bundle at build time, not read at run time, so
-# they are build arguments. deploy.sh passes the values from the server's .env. Defaults match
-# .env.example. None of them is a secret.
-# NEXT_PUBLIC_GAME_MODE: /play is the duel unless `slider` (the rollback). NEXT_PUBLIC_DUEL_SOURCE:
-# the duel plays in the browser (`fixtures`) until its server routes land (#115, #120).
-ARG NEXT_PUBLIC_GAME_SOURCE=fixtures
+# they are build arguments. deploy.sh passes the values from the server's .env (a name that is
+# missing or blank there keeps the default below). None of them is a secret.
+# This image is only ever built for the compose stack, which always has the store, so the game
+# defaults are production's:
+#   NEXT_PUBLIC_GAME_MODE=duel     /play is the duel "Which life costs more?"; `slider` is the
+#                                  rollback to the slider game (and its streamer mode)
+#   NEXT_PUBLIC_GAME_SOURCE=api    the slider game plays against the server routes
+#   NEXT_PUBLIC_DUEL_SOURCE=api    the duel plays against the server routes (#120)
+# Both sources are `api` because the answers must stay on the server: with `fixtures` the cards
+# and their costs ship in every browser's bundle (scripts/check-client-bundle.mjs holds that in CI).
+# The session and funnel-event flags are opt-ins that the server's .env turns on.
+# GET /api/health reports what the image was built with (`build`), so a deploy can be checked.
+ARG NEXT_PUBLIC_GAME_SOURCE=api
 ARG NEXT_PUBLIC_SESSION_SOURCE=local
 ARG NEXT_PUBLIC_EVENTS_SOURCE=off
 ARG NEXT_PUBLIC_AVATARS_ENABLED=false
 ARG NEXT_PUBLIC_GAME_MODE=duel
-ARG NEXT_PUBLIC_DUEL_SOURCE=fixtures
+ARG NEXT_PUBLIC_DUEL_SOURCE=api
 ENV NEXT_PUBLIC_GAME_SOURCE=$NEXT_PUBLIC_GAME_SOURCE \
     NEXT_PUBLIC_SESSION_SOURCE=$NEXT_PUBLIC_SESSION_SOURCE \
     NEXT_PUBLIC_EVENTS_SOURCE=$NEXT_PUBLIC_EVENTS_SOURCE \

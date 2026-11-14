@@ -1,5 +1,8 @@
 // Route of every screen (docs/ARCHITECTURE.md → Screens). S2 and S3 are states of /play (the duel
 // by default, the slider game with NEXT_PUBLIC_GAME_MODE=slider); S4 is the slider's streamer mode.
+// The duel has no streamer view, so no link may name `/play?stream=1` while /play is the duel (it
+// would open the plain duel and silently drop the mode): linkedScreenIds and streamerGameHref are
+// the two places that decide it.
 import type { ScreenId } from '@/copy';
 import { gameMode } from './config';
 
@@ -34,4 +37,13 @@ export const SCREEN_IDS = (Object.keys(SCREEN_ROUTES) as ScreenId[]).sort(
  */
 export function linkedScreenIds(mode = gameMode()): ScreenId[] {
   return SCREEN_IDS.filter((id) => id !== 'S4' || mode === 'slider');
+}
+
+/**
+ * Where "back to the game" goes from a page opened in streamer mode (`?stream=1`, which hides the
+ * tools that show a person's own money). The slider game has a streamer view (S4); the duel does
+ * not, so with the duel the link is the plain /play instead of a `?stream=1` it would ignore.
+ */
+export function streamerGameHref(mode = gameMode()): string {
+  return mode === 'slider' ? SCREEN_ROUTES.S4 : SCREEN_ROUTES.S2;
 }

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Checks a built web app's browser chunks (apps/web/.next/static) for game answers. Run it on a
 // build made with NEXT_PUBLIC_GAME_SOURCE=api (production's setting); CI does, right after the
-// build. It fails when a browser chunk contains:
+// build, with the build's NEXT_PUBLIC_DUEL_SOURCE and NEXT_PUBLIC_GAME_MODE set for the check too.
+// It fails when a browser chunk contains:
 // - a life-card catalog id (packages/data/cards/cards.json): the API game's answers live only on
 //   the server;
 // - the fixture game client (apps/web/src/features/game/model/fixtureClient.ts), which plays the
@@ -11,15 +12,21 @@
 //   client (duelFixtureClient.ts, loaded by duelClient.ts the same way) and the duel sample cards
 //   it plays (packages/data/fixtures/cards.duel.sample.json, ids sample-duel-*). In a build with
 //   the default NEXT_PUBLIC_DUEL_SOURCE=fixtures the duel plays in the browser on those made-up
-//   cards (no catalog card), so they ship on purpose there (production until #120).
-// It also fails when the scan can't be trusted: no chunks, no chunk with the HTTP game client, or
-// in a duel API build no chunk with the HTTP duel client (proof that the game code was scanned).
+//   cards (no catalog card), so they ship on purpose there (local work with no store). Production
+//   is NEXT_PUBLIC_DUEL_SOURCE=api (#120): CI's `check` and `e2e-production` jobs run this with it.
+// It also fails when the scan can't be trusted: no chunks, no chunk with the HTTP duel client (a
+// duel API build) or with the fixture duel client (the default build), and no chunk with the HTTP
+// slider game client unless the build was made with NEXT_PUBLIC_GAME_MODE=duel (proof that the
+// game code was scanned). With NEXT_PUBLIC_GAME_MODE=duel set at build time Next inlines the flag,
+// /play's slider branch is dead code and the slider game, HTTP client included, gets no chunk:
+// production sets it (deploy/Dockerfile), and so does CI. Unset or `slider`, the slider is in.
 //
 // The sample cards themselves (packages/data/fixtures/cards.ts, not the duel's) may ship: S6
 // Closest life and the ladder show them openly as sample lives, the /kit showcase uses one, and
 // they share no card with the catalog (eslint.config.mjs, SAMPLE_CARD_MODULES).
 //
 // Usage: node scripts/check-client-bundle.mjs [path/to/.next]   (default apps/web/.next)
+// It reads NEXT_PUBLIC_DUEL_SOURCE and NEXT_PUBLIC_GAME_MODE from the environment: pass the build's.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +41,9 @@ const DUEL_SAMPLE_PATH = join(root, 'packages/data/fixtures/cards.duel.sample.js
 
 /** The duel's data source the build was made with (same rule as apps/web/src/lib/config.ts duelSource). */
 const envDuelSource = () => (process.env.NEXT_PUBLIC_DUEL_SOURCE === 'api' ? 'api' : 'fixtures');
+
+/** NEXT_PUBLIC_GAME_MODE as the build saw it: 'duel', 'slider', or undefined when it was unset. */
+const envGameMode = () => process.env.NEXT_PUBLIC_GAME_MODE || undefined;
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -65,10 +75,11 @@ function literalIn(path, literal) {
  *   storage key and an error message no other module has) and, when the duel plays against the
  *   server (`duelSource: 'api'`), the fixture duel client's result id prefix and every duel
  *   sample card id;
- * - required: the HTTP game client's guess route and, in a duel API build, the HTTP duel
- *   client's pick route.
+ * - required: the HTTP duel client's pick route in a duel API build, else the fixture duel client's
+ *   result id prefix; and the HTTP game client's guess route unless the build set
+ *   NEXT_PUBLIC_GAME_MODE=duel (then the slider game has no chunk at all).
  */
-export function bundleRules({ duelSource = envDuelSource() } = {}) {
+export function bundleRules({ duelSource = envDuelSource(), gameMode = envGameMode() } = {}) {
   const catalog = JSON.parse(readFileSync(CATALOG_PATH, 'utf8'));
   if (!Array.isArray(catalog) || catalog.length === 0) throw new Error('packages/data/cards/cards.json: expected a non-empty array of cards');
   const fixtureSource = readFileSync(FIXTURE_CLIENT_PATH, 'utf8');
@@ -95,10 +106,12 @@ export function bundleRules({ duelSource = envDuelSource() } = {}) {
         : []),
     ],
     required: [
-      { label: 'HTTP game client (/api/daily/guess)', pattern: new RegExp(escapeRe(literalIn(HTTP_CLIENT_PATH, '/api/daily/guess'))) },
-      ...(duelSource === 'api'
-        ? [{ label: 'HTTP duel client (/api/daily/pick)', pattern: new RegExp(escapeRe(literalIn(HTTP_DUEL_CLIENT_PATH, '/api/daily/pick'))) }]
-        : []),
+      ...(gameMode === 'duel'
+        ? []
+        : [{ label: 'HTTP game client (/api/daily/guess)', pattern: new RegExp(escapeRe(literalIn(HTTP_CLIENT_PATH, '/api/daily/guess'))) }]),
+      duelSource === 'api'
+        ? { label: 'HTTP duel client (/api/daily/pick)', pattern: new RegExp(escapeRe(literalIn(HTTP_DUEL_CLIENT_PATH, '/api/daily/pick'))) }
+        : { label: 'fixture duel client (its result id prefix)', pattern: new RegExp(escapeRe(duelMarker)) },
     ],
   };
 }
@@ -130,7 +143,7 @@ function main() {
   if (problems.length > 0) {
     console.error(`Browser chunks in ${relative(root, staticDir) || staticDir} leak game answers or can't be checked:`);
     for (const p of problems) console.error(`  - ${p}`);
-    console.error('Build with NEXT_PUBLIC_GAME_SOURCE=api (and run this with the build\'s NEXT_PUBLIC_DUEL_SOURCE) for this check. See scripts/check-client-bundle.mjs.');
+    console.error('Build with NEXT_PUBLIC_GAME_SOURCE=api and run this with the same NEXT_PUBLIC_DUEL_SOURCE and NEXT_PUBLIC_GAME_MODE as the build. See scripts/check-client-bundle.mjs.');
     process.exit(1);
   }
   const count = listChunks(staticDir).length;
