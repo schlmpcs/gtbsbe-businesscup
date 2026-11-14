@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Ladder UI (features/ladder/ui) with hand-made view-models: states the e2e path can't reach yet
-// (S9 review before T6/T7 land, parse errors and confirmation on S7) and the S8 debt form units.
+// (S9 errors and review states, parse errors and confirmation on S7) and the S8 debt form units.
 import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -33,6 +33,7 @@ function uploadVM(over: Partial<StatementUploadVM> = {}): StatementUploadVM {
   return {
     status: 'idle',
     error: null,
+    lastRead: null,
     pending: [],
     history: [],
     hasDriftHistory: false,
@@ -86,9 +87,16 @@ describe('StatementUpload (S9)', () => {
     expect(screen.getByText(ladder.upload.keep.sentTitle)).toBeInTheDocument();
   });
 
+  it('while reading: says so and disables the picker', () => {
+    render(<StatementUpload vm={uploadVM({ readFile: vi.fn(), status: 'reading' })} progress={progress} />);
+    expect(screen.getByRole('status')).toHaveTextContent(ladder.upload.reading);
+    expect(screen.getByLabelText(ladder.upload.pickerLabel)).toBeDisabled();
+  });
+
   it('review: shows each month, then apply or discard', async () => {
     const vm = uploadVM({
       status: 'review',
+      lastRead: { transactions: 1234, skippedPending: 2, skippedOther: 1, from: '2026-09-01', to: '2026-10-31', categorizedBy: 'rules' },
       pending: [
         { month: '2026-09', totals: zeros({ groceries: 600, subscriptions: 30 }), total: 630, oneOffs: [{ label: 'SOFA', amount: 800 }], detectedPay: 5400 },
         { month: '2026-10', totals: zeros({ groceries: 700 }), total: 700, oneOffs: [], detectedPay: null },
@@ -100,6 +108,10 @@ describe('StatementUpload (S9)', () => {
     expect(within(sep).getByRole('list', { name: ladder.upload.monthLabel('2026-09') })).toHaveTextContent(common.categories.groceries);
     expect(within(sep).getByText(ladder.upload.detectedPay('$5,400'))).toBeInTheDocument();
     expect(within(sep).getByText('SOFA')).toBeInTheDocument();
+    const read = screen.getByTestId('statement-read');
+    expect(read).toHaveTextContent('Read 1,234 transactions from Sep 1, 2026 to Oct 31, 2026.');
+    expect(read).toHaveTextContent('2 pending lines (they count once they post) and 1 line that isn’t a transaction left out.');
+    expect(read).toHaveTextContent(ladder.upload.categorizedBy.rules);
     const keep = screen.getByRole('region', { name: ladder.upload.keep.title });
     expect(keep).toHaveTextContent('Sep 2026, Oct 2026');
     expect(keep).toHaveTextContent(ladder.upload.keep.payFound);
@@ -117,6 +129,17 @@ describe('StatementUpload (S9)', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(ladder.upload.errors.badInput);
     await userEvent.click(screen.getByRole('button', { name: ladder.upload.dismiss }));
     expect(vm.discard).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [{ kind: 'unreadable', reason: 'noColumns' }, ladder.upload.errors.unreadable.noColumns],
+    [{ kind: 'unreadable', reason: 'notCsv' }, ladder.upload.errors.unreadable.notCsv],
+    [{ kind: 'rateLimited' }, ladder.upload.errors.rateLimited],
+    [{ kind: 'network' }, ladder.upload.errors.network],
+    [{ kind: 'invalidResponse' }, ladder.upload.errors.unknown],
+  ] as const)('error %o: explains it', (error, text) => {
+    render(<StatementUpload vm={uploadVM({ status: 'error', error })} progress={progress} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(text);
   });
 });
 

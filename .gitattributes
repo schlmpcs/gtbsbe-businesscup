@@ -1,0 +1,2 @@
+# Keep this fixture byte-for-byte (BOM + CRLF line endings): it tests that the CSV reader handles them.
+packages/data/fixtures/statement.credit-card.csv -text
