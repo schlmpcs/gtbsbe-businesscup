@@ -1,7 +1,7 @@
 'use client';
 
 // S12 Loan Lab (Y11): the view-model hook feeds the presentational screen. The debt payoff planner (M13) is
-// composed beside it: usePayoffWiring() answers null until its engine is bound, and then the screen is unchanged.
+// composed beside it: usePayoffWiring() hands it the real payoff engine, the saved picks, the event sender and the clock.
 import Link from 'next/link';
 import { usePayoffWiring } from '@/features/loan/model/wiring';
 import { usePayoffPlanner } from '@/features/loan/model/usePayoffPlanner';

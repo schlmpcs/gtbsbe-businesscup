@@ -39,16 +39,17 @@ function fieldError(target: PayoffPlannerVM['target']): string | undefined {
   }
 }
 
-function resultText(target: PayoffPlannerVM['target'], extraNow: number): string | null {
+function resultText(target: PayoffPlannerVM['target'], extraNow: number, method: PayoffPlannerVM['method']): string | null {
   switch (target.status) {
     case 'needs': {
       const total = t.planner.target.needs(dateText(target.date), formatMoney(target.extraNeeded));
       return extraNow > 0 ? `${total} ${t.planner.target.needsMore(formatMoney(target.moreThanNow))}` : total;
     }
     case 'onTrack':
-      return target.atMinimums
-        ? t.planner.target.onTrackMinimums(dateText(target.date))
-        : t.planner.target.onTrack(dateText(target.date), formatMoney(extraNow));
+      if (target.atMinimums) return t.planner.target.onTrackMinimums(dateText(target.date));
+      return extraNow > 0
+        ? t.planner.target.onTrack(dateText(target.date), formatMoney(extraNow))
+        : t.planner.target.onTrackNoExtra(dateText(target.date), t.planner.method.names[method]);
     case 'unreachable':
       return t.planner.target.unreachable(dateText(target.date));
     case 'error':
@@ -60,7 +61,7 @@ function resultText(target: PayoffPlannerVM['target'], extraNow: number): string
 
 /** "Debt-free by [month]": the extra payment per month the engine finds for the picked method. */
 export function TargetDate({ vm }: { vm: PayoffPlannerVM }) {
-  const text = resultText(vm.target, vm.extra.value);
+  const text = resultText(vm.target, vm.extra.value, vm.method);
   return (
     <div className="flex flex-col gap-md">
       <h3 className="text-lg font-bold">{t.planner.target.title}</h3>

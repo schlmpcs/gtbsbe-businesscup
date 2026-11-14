@@ -92,7 +92,7 @@ const delta = (value: number, sameBelow: number): PayoffDelta =>
 
 function solveTarget(
   check: TargetCheck, extra: Money, debts: Debt[], method: PayoffChoice, engine: PayoffEngine | undefined, active: boolean,
-  selected: PayoffPlan | null,
+  selected: PayoffPlan | null, minimumMonths: number | null,
 ): PayoffTargetVM {
   if (!active || !engine) return { status: 'none' };
   if (check.status === 'tooFar') return { status: 'tooFar', years: MAX_SIMULATION_MONTHS / 12 };
@@ -104,7 +104,11 @@ function solveTarget(
   // On track is read off the plan on screen, not off the solver: it answers within $1 above the least extra that works,
   // so at an extra a little under its answer the plan can already finish in time.
   if (selected !== null && selected.monthsToDebtFree !== null && selected.monthsToDebtFree <= months) {
-    return { status: 'onTrack', date, months, atMinimums: solved.data.reachable && solved.data.extra === 0 };
+    // "At the minimums" says that the minimum payments finish by the month, which is a claim about the Minimums-only
+    // plan (the baseline column), not about the picked method at $0: that one can end sooner (it pays in rate or
+    // balance order, the baseline in the order the debts are listed). So both must finish in time.
+    const minimumsFinish = minimumMonths !== null && minimumMonths <= months;
+    return { status: 'onTrack', date, months, atMinimums: solved.data.reachable && solved.data.extra === 0 && minimumsFinish };
   }
   if (!solved.data.reachable) return { status: 'unreachable', date, months };
   // Rounded up to a whole dollar, so that paying the amount shown does finish by the month.
@@ -119,11 +123,11 @@ function solveTarget(
  */
 function useTargetSolve(
   targetDate: string | null, today: string | null, extra: Money, debts: Debt[], method: PayoffChoice,
-  engine: PayoffEngine | undefined, active: boolean, selected: PayoffPlan | null,
+  engine: PayoffEngine | undefined, active: boolean, selected: PayoffPlan | null, minimumMonths: number | null,
 ): PayoffTargetVM {
   return useMemo(
-    () => solveTarget(checkTarget(targetDate, today), extra, debts, method, engine, active, selected),
-    [targetDate, today, extra, debts, method, engine, active, selected],
+    () => solveTarget(checkTarget(targetDate, today), extra, debts, method, engine, active, selected, minimumMonths),
+    [targetDate, today, extra, debts, method, engine, active, selected, minimumMonths],
   );
 }
 
@@ -244,7 +248,7 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   }, [engine, active, selected, debts, method]);
 
   const check = checkTarget(targetDate, today);
-  const targetVM = useTargetSolve(targetDate, today, extra, debts, method, engine, active, selected);
+  const targetVM = useTargetSolve(targetDate, today, extra, debts, method, engine, active, selected, minimum?.monthsToDebtFree ?? null);
 
   // ----- the picks, kept after the person's own changes (what was only restored is not saved again) -----
   const touched = Object.keys(edits).length > 0;

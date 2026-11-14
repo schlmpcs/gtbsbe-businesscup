@@ -145,6 +145,39 @@ describe('the target date on the real engine', () => {
   });
 });
 
+describe('"your minimum payments finish by" is about the Minimums-only plan, on the real engine', () => {
+  // The demo's two debts with the car loan listed first and no offer. With no extra, avalanche pays the card first
+  // (24.36%) and ends in 52 months; the Minimums-only plan pays in the order listed, car loan first, and ends in 53.
+  // Those two month counts are the review's, read off two separate comparePayoff calls, not off the planner.
+  const auto: Debt = { id: 'auto-1', kind: 'auto', balance: 17_800, apr: 0.074, minPayment: { value: 412, isEstimate: false } };
+  const card: Debt = { id: 'card-1', kind: 'card', balance: 6_400, apr: 0.2436, minPayment: { value: 193.92, isEstimate: true } };
+
+  async function plannerOnAutoThenCard() {
+    useAppStore.setState({ profile: { ...cloneProfileDemo(), debts: [auto, card] } });
+    return ready({ initialOffers: [] });
+  }
+
+  it('starts from a real case: avalanche at $0 beats the Minimums-only plan by a month', () => {
+    const real = comparePayoff([auto, card], 0);
+    expect(real.avalanche.monthsToDebtFree).toBe(52);
+    expect(real.minimum.monthsToDebtFree).toBe(53);
+  });
+
+  it('a target of month 52: on track by avalanche, but not "at the minimums", since the Minimums-only column ends in month 53', async () => {
+    const { result } = await plannerOnAutoThenCard();
+    act(() => result.current.planner!.setTargetDate('2031-03')); // 52 months after November 2026
+    const p = result.current.planner!;
+    expect(p.columns.map((c) => [c.method, c.monthsToDebtFree])).toEqual([['avalanche', 52], ['snowball', 52], ['minimum', 53]]);
+    expect(p.target).toMatchObject({ status: 'onTrack', months: 52, atMinimums: false });
+  });
+
+  it('a target of month 53: the Minimums-only plan finishes in time, so it is on track at the minimums', async () => {
+    const { result } = await plannerOnAutoThenCard();
+    act(() => result.current.planner!.setTargetDate('2031-04')); // 53 months after November 2026
+    expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', months: 53, atMinimums: true });
+  });
+});
+
 describe('a plan that never pays off, on the real engine', () => {
   // $6,400 at 24% a year is $128 of interest in the first month, and the person's own minimum is $100.
   const card: Debt = { id: 'card-1', kind: 'card', balance: 6_400, apr: 0.24, minPayment: { value: 100, isEstimate: false } };

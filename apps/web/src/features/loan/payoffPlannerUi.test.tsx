@@ -252,6 +252,16 @@ describe('the target date', () => {
     expect(result()).toHaveTextContent(t.planner.target.onTrackMinimums('January 2031'));
   });
 
+  it('with no extra set, when the picked method finishes in time but the Minimums-only plan does not, never says "an extra $0"', async () => {
+    // Canned plans: avalanche ends in 40 months, Minimums only in 46; 2030-03 is month 40, so avalanche is on track at $0
+    // while the Minimums-only column ends later. It is not "your minimum payments finish by" either.
+    await open({ engineOptions: { solve: { extra: 0, reachable: true } } });
+    fireEvent.change(month(), { target: { value: '2030-03' } });
+    expect(result().textContent).not.toMatch(/extra \$0/);
+    expect(result().textContent).not.toContain(t.planner.target.onTrackMinimums('March 2030'));
+    expect(result()).toHaveTextContent(t.planner.target.onTrackNoExtra('March 2030', t.planner.method.names.avalanche));
+  });
+
   it('says it is not reachable, without a made-up amount', async () => {
     await open({ engineOptions: { solve: { extra: 1_000_000, reachable: false } } });
     fireEvent.change(month(), { target: { value: '2026-12' } });

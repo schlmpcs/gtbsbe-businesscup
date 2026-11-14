@@ -151,7 +151,10 @@ export type PayoffTargetVM =
   /** Beyond the longest plan the engine simulates (`years` long). */
   | { status: 'tooFar'; years: number }
   | { status: 'error'; error: VMError }
-  /** The picked plan, at the extra now set (even $0), already finishes by then; `atMinimums`: no extra at all would be enough. */
+  /**
+   * The picked plan, at the extra now set (even $0), already finishes by then. `atMinimums`: no extra at all would be enough,
+   * which holds only when the Minimums-only plan (the baseline column) also finishes by then, besides the picked method at $0.
+   */
   | { status: 'onTrack'; date: PayoffDate; months: number; atMinimums: boolean }
   /**
    * `extraNeeded`: the total extra per month, rounded up to a whole dollar so paying it does finish by then.

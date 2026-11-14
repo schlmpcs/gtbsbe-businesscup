@@ -247,7 +247,10 @@ export const loan = {
       /** After `needs`, when an extra is already set: how much more than that is (already formatted). */
       needsMore: (more: string) => `That is ${more} more than you have set.`,
       onTrack: (date: string, extra: string) => `You’re on track: an extra ${extra} a month finishes by ${date}.`,
+      /** The Minimums-only plan finishes by then, and so does the picked method with no extra: nothing on top is needed. */
       onTrackMinimums: (date: string) => `You’re on track: your minimum payments finish by ${date}.`,
+      /** No extra is set and the picked method finishes by then, but the Minimums-only plan does not (`method` is its name). */
+      onTrackNoExtra: (date: string, method: string) => `You’re on track: with no extra, the ${method.toLowerCase()} plan finishes by ${date}.`,
       unreachable: (date: string) =>
         `Not reachable by ${date} with extra payments alone, within the limits of this simulation.`,
       error: 'We couldn’t work this out. Check your debts and try again.',
