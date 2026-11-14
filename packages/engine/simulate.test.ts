@@ -262,6 +262,85 @@ describe('simulate: purchases', () => {
   });
 });
 
+describe('simulate: payOffFromSurplus', () => {
+  const p = profile({ pay: 3000, other: 2000, cash: 10_000 }); // $1,000 surplus a month
+  const rates = { ...ZERO, cardApr: 0.24 };
+  const tv = (amount: number, o: Partial<ScheduledPurchase> = {}): ScheduledPurchase => ({
+    label: 'TV', amount, recurring: false, payWith: 'card', payOffFromSurplus: true, ...o,
+  });
+
+  it('is off by default: no own card, no payoff flows', () => {
+    const s = simulate(p, 3, { rates, extra: [tv(500, { payOffFromSurplus: undefined })] });
+    expect(s.payoffCardIds).toEqual([null]);
+    for (const m of s.path) {
+      expect(m.payoffCardCharges).toBe(0);
+      expect(m.surplusToPayoffCards).toBe(0);
+    }
+  });
+
+  it('a card purchase goes on its own card, which the surplus pays off before cash', () => {
+    const s = simulate(p, 4, { rates, extra: [tv(2500)] });
+    const id = s.payoffCardIds[0]!;
+    expect(id).toBe('purchase-card-1');
+    // Month 1: charged 2,500, the 1,000 surplus pays it down, cash unchanged.
+    expect(s.path[1]).toMatchObject({ cardCharges: 2500, payoffCardCharges: 2500, surplusToPayoffCards: 1000, cash: 10_000 });
+    expect(s.path[1]!.debts[id]).toBe(1500);
+    // Month 2: 2% interest (30) and the card minimum max(25, 30 + 15) = 45; the other 955 pays it down.
+    expect(s.path[2]!.debtPayments).toBeCloseTo(45, 9);
+    expect(s.path[2]!.requiredDebtPayments).toBeCloseTo(45, 9);
+    expect(s.path[2]!.surplusToPayoffCards).toBeCloseTo(955, 9);
+    expect(s.path[2]!.debts[id]).toBeCloseTo(530, 9);
+    expect(s.path[2]!.cash).toBe(10_000);
+    // Month 3: interest 10.60, minimum $25, the remaining 515.60 is paid; the rest goes to cash.
+    expect(s.path[3]!.surplusToPayoffCards).toBeCloseTo(515.6, 9);
+    expect(s.path[3]!.debts[id]).toBe(0);
+    expect(s.path[3]!.cash).toBeCloseTo(10_000 + 975 - 515.6, 9);
+    expect(s.payoffMonth[id]).toBe(3);
+    expect(s.path[4]!.surplusToPayoffCards).toBe(0);
+  });
+
+  it('uses the profile card APR, leaves that card alone and pays before retirementShare', () => {
+    const card = debt({ id: 'c', kind: 'card', balance: 1000, apr: 0.12, min: 100 });
+    const q = profile({ pay: 3100, other: 2000, cash: 10_000, share: 0.5, debts: [card] }); // $1,000 surplus
+    const s = simulate(q, 2, { rates, extra: [tv(1500)] });
+    const id = s.payoffCardIds[0]!;
+    expect(s.path[1]!.debts.c).toBeCloseTo(1000 + 10 - 100, 9);
+    expect(s.path[1]!.debts[id]).toBe(500);
+    expect(s.path[1]!.retirement).toBe(0);
+    // Month 2: 1% interest (5), minimum $25, the remaining 480 from the surplus; 495 split 50/50.
+    expect(s.path[2]!.debts[id]).toBe(0);
+    expect(s.path[2]!.retirement).toBeCloseTo((1000 - 25 - 480) / 2, 9);
+    expect(s.path[2]!.cardBalance).toBeCloseTo(s.path[2]!.debts.c!, 9);
+  });
+
+  it('a cash purchase it cannot cover: the shortfall it caused goes on its own card', () => {
+    const s = simulate(p, 2, { rates, extra: [tv(12_000, { payWith: 'cash' })] });
+    const id = s.payoffCardIds[0]!;
+    // 10,000 cash + 1,000 surplus − 12,000 = −1,000.
+    expect(s.path[1]).toMatchObject({ cash: 0, shortfallToCard: 1000, payoffCardCharges: 1000, cardCharges: 0 });
+    expect(s.path[1]!.debts[id]).toBe(1000);
+    expect(s.path[1]!.debts[SYNTHETIC_CARD_ID]).toBeUndefined();
+    // Month 2: 20 interest, minimum 20 + 10 = 30, then the other 970 of the surplus: 20 left.
+    expect(s.path[2]!.debts[id]).toBeCloseTo(20, 9);
+    expect(s.path[2]!.cash).toBe(0);
+  });
+
+  it('only the shortfall the purchase caused: a plan already short keeps its own on the shared card', () => {
+    const short = profile({ pay: 1000, other: 1500, cash: 0 }); // −500 a month without the purchase
+    const s = simulate(short, 1, { rates, extra: [tv(300, { payWith: 'cash' })] });
+    expect(s.path[1]!.shortfallToCard).toBe(800);
+    expect(s.path[1]!.debts[s.payoffCardIds[0]!]).toBe(300);
+    expect(s.path[1]!.debts[SYNTHETIC_CARD_ID]).toBe(500);
+  });
+
+  it('a cash purchase that cash covers is unchanged by the flag', () => {
+    const extra = (payOffFromSurplus: boolean) => [tv(500, { payWith: 'cash', payOffFromSurplus })];
+    const on = simulate(p, 12, { rates, extra: extra(true) });
+    expect(on.path).toEqual(simulate(p, 12, { rates, extra: extra(false) }).path);
+    expect(on.payoffCardIds).toEqual([null]);
+  });
+});
+
 describe('simulate: estimates', () => {
   it('reports whether any read input is an estimate', () => {
     const p = profile({ pay: 1000 });

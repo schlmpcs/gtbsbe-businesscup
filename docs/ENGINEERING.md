@@ -181,6 +181,16 @@ Without rules 2 and 3, paying by card or loan never lowers cash, so everything w
 
 `cheapestWay` compares `'cash' | 'card' | 'loan'` by 10-year effect.
 
+Implementation notes (full detail in the header of `packages/engine/afford.ts`):
+
+- **Cushion** = `safetyCushionMonths` × that month's outflow: spending + required debt payments (including a loan or card the purchase adds) + the purchase's own monthly cost when it recurs (yearly ÷ 12).
+- **Rule 3 needs a payoff plan.** The forecast default pays a card only its minimum, so every card purchase would "revolve". Can I Afford It? simulates the purchase with `ScheduledPurchase.payOffFromSurplus`: whatever it puts on a card (the charge, or the part of a cash payment cash couldn't cover) sits on its own card balance, and each month's whole positive surplus pays it down before cash or retirement. A charge made in month c must be gone by the end of month c + 11. Savings above the cushion are not used to pay it (that would be the cash purchase).
+- **Window:** the purchase month and the 11 months after it (for "wait k", months k+1..k+12).
+- **baselineFails vs verdict:** `baselineFails` = rule 1 or 2 breaks in the next 12 months without the purchase. A failing rule counts against the purchase only if it holds without the purchase that month, or the purchase makes it worse. So `baselineFails` can come with any verdict: "fits" (the purchase doesn't touch what's broken), "wait" (the plan recovers first) or "no" (the purchase breaks or deepens a rule).
+- `failsOn` is set for "wait" and "no": the first rule that buying now breaks (earliest month, then cushion → debt load → card).
+- `with` = buying now as chosen (with the payoff plan); `without` = the plain forecast.
+- **cheapestWay** = highest net worth at month 120 (mid) over cash, card (paid off from the surplus) and the loan only when the user gave loan terms. There is no sourced default for personal-loan APR/term, so no loan is invented. Ties go to cash, then card.
+
 ### Month-end (Aibek, T9)
 
 ```

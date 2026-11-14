@@ -12,9 +12,11 @@
 //      money it freed flows into the surplus from then on;
 //   3. purchases due this month: cash ones are part of this month's outflow, card ones are added to
 //      the card balance, loan ones add an amortizing debt whose first payment is next month;
-//   4. surplus = income − spending − debt payments − cash purchases. Above 0: retirementShare of it
-//      goes to retirement, the rest to cash. Below 0: drawn from cash; once cash would go below 0,
-//      the shortfall is added to a card balance (see `cardTarget`).
+//   4. surplus = income − spending − debt payments − cash purchases. Above 0: it first pays down the
+//      card balances of `payOffFromSurplus` purchases (oldest purchase first), then retirementShare
+//      of the rest goes to retirement and the rest to cash. Below 0: drawn from cash; once cash
+//      would go below 0, the shortfall is added to a card balance (see `cardTarget`; the part a
+//      `payOffFromSurplus` purchase caused goes on that purchase's own card balance instead).
 // - income = takeHomePay × (1 + incomeGrowth)^(t/12); spending = Σ categories except debtPayments
 //   × (1 + inflation)^(t/12). `spending.debtPayments` is informational: payments come from `debts`.
 // - Purchases are consumption, not assets: nothing is added to net worth for the thing bought.
@@ -49,8 +51,16 @@ export type ForecastRates = {
  * A purchase plus when it first happens. `startMonth` is the 0-based month index of the first
  * occurrence (default 0 = this month); recurring purchases repeat every month / every 12 months from
  * there. A plain `Purchase` is a valid `ScheduledPurchase`.
+ *
+ * `payOffFromSurplus` (default false) models paying off what the purchase puts on a card instead of
+ * letting it revolve at the minimum payment (Can I Afford It?, rule 3). Every card balance the
+ * purchase creates (its card charges, and the part of its cash payment or loan down payment that
+ * cash could not cover) goes on a card balance of its own, at the APR of the profile's first card
+ * (`cardApr` without one). That balance needs the card minimum like any card, and each month's
+ * positive surplus pays it down before anything goes to cash or retirement. Its id is in
+ * `Simulation.payoffCardIds`. Without the flag a purchase follows the forecast's default rules.
  */
-export type ScheduledPurchase = Purchase & { startMonth?: number };
+export type ScheduledPurchase = Purchase & { startMonth?: number; payOffFromSurplus?: boolean };
 
 /** Which inputs to use: point values (`mid`) or every estimate shifted against / in the user's favor. */
 export type Scenario = 'low' | 'mid' | 'high';
@@ -72,6 +82,9 @@ export type SimulationMonth = {
   cardCharges: Money;           // purchases put on a card
   surplus: Money;               // income − spending − debtPayments − purchasesCash
   shortfallToCard: Money;       // the part of a negative surplus that cash could not cover
+  payoffCardCharges: Money;     // added to `payOffFromSurplus` card balances (charges + their shortfall)
+  surplusToPayoffCards: Money;  // the part of a positive surplus that paid those balances down
+                                // (not in debtPayments, which are paid before the surplus)
   cash: Money;
   retirement: Money;
   debtBalance: Money;           // Σ all debt balances
@@ -87,6 +100,11 @@ export type Simulation = {
   path: SimulationMonth[];
   /** First month each debt's balance reached 0 (0 = already paid off; null = not within the horizon). */
   payoffMonth: Record<string, number | null>;
+  /**
+   * Per `opts.extra` entry, in the same order: the id of the card balance its `payOffFromSurplus`
+   * opened, or null (no flag, or nothing was ever put on a card within the horizon).
+   */
+  payoffCardIds: (string | null)[];
 };
 
 /** Effective monthly rate for a yearly rate: (1 + annual)^(1/12) − 1. */
@@ -269,6 +287,28 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     cardTarget.balance += amount;
   };
 
+  // `payOffFromSurplus` purchases: one card balance per purchase, opened at its first charge.
+  const payoffCardApr = debts.find((d) => d.kind === 'card')?.apr ?? rates.cardApr;
+  const payoffCards: (DebtState | null)[] = extra.map(() => null);
+  const chargePayoffCard = (i: number, amount: Money) => {
+    let d = payoffCards[i];
+    if (!d) {
+      d = {
+        id: uniqueId(`purchase-card-${i + 1}`),
+        kind: 'card',
+        apr: payoffCardApr,
+        balance: 0,
+        fixedPayment: null,
+        paymentFactor: 1,
+        extra: 0,
+        payoffMonth: null,
+      };
+      payoffCards[i] = d;
+      debts.push(d);
+    }
+    d.balance += amount;
+  };
+
   const rCash = monthlyRate(rates.cashYieldAnnual);
   const rRetirement = monthlyRate(rates.returnAnnualNominal);
 
@@ -290,7 +330,8 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
   const path: SimulationMonth[] = [
     snapshot(0, {
       income: 0, spending: 0, debtPayments: 0, requiredDebtPayments: 0, purchasesCash: 0,
-      cardCharges: 0, surplus: 0, shortfallToCard: 0, debtLoad: 0,
+      cardCharges: 0, surplus: 0, shortfallToCard: 0, payoffCardCharges: 0, surplusToPayoffCards: 0,
+      debtLoad: 0,
     }),
   ];
 
@@ -325,15 +366,31 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     // 3. Purchases due this month. Recurring prices rise with inflation from their first occurrence.
     let purchasesCash = 0;
     let cardCharges = 0;
+    let toCard = 0;                                // card charges without payOffFromSurplus
+    let payoffCardCharges = 0;
+    const payoffCash: [index: number, amount: Money][] = []; // cash paid by payOffFromSurplus purchases
     const newLoans: DebtState[] = [];
-    for (const x of extra) {
+    for (const [i, x] of extra.entries()) {
       if (!occursAt(x, t)) continue;
       const scale = (1 + rates.inflationAnnual) ** ((t - (x.startMonth ?? 0)) / 12);
-      if (x.payWith === 'cash') purchasesCash += x.amount * scale;
-      else if (x.payWith === 'card') cardCharges += x.amount * scale;
-      else {
+      const payOff = x.payOffFromSurplus === true;
+      if (x.payWith === 'cash') {
+        const amount = x.amount * scale;
+        purchasesCash += amount;
+        if (payOff) payoffCash.push([i, amount]);
+      } else if (x.payWith === 'card') {
+        const amount = x.amount * scale;
+        cardCharges += amount;
+        if (payOff) {
+          chargePayoffCard(i, amount);
+          payoffCardCharges += amount;
+        } else {
+          toCard += amount;
+        }
+      } else {
         const f = financePurchase(x.amount, x.payWith.loan, scale);
         purchasesCash += f.cashOut;
+        if (payOff && f.cashOut > 0) payoffCash.push([i, f.cashOut]);
         if (f.principal > PAID_OFF_EPSILON) {
           newLoans.push({
             id: uniqueId(`purchase-m${month}`),
@@ -349,14 +406,28 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
       }
     }
     debts.push(...newLoans);
-    chargeCard(cardCharges);
+    chargeCard(toCard);
 
-    // 4. Surplus: split between retirement and cash, or drawn from cash and then a card.
+    // 4. Surplus: pays off payOffFromSurplus cards, then is split between retirement and cash; or
+    //    drawn from cash and then a card.
     const surplus = income - spending - debtPayments - purchasesCash;
+    let surplusToPayoffCards = 0;
     if (surplus > 0) {
-      const toRetirement = surplus * retirementShare;
+      let left = surplus;
+      for (const d of payoffCards) {
+        if (!d || d.balance <= 0 || left <= 0) continue;
+        const pay = Math.min(left, d.balance);
+        d.balance -= pay;
+        left -= pay;
+        surplusToPayoffCards += pay;
+        if (d.balance <= PAID_OFF_EPSILON) {
+          d.balance = 0;
+          d.payoffMonth ??= month;
+        }
+      }
+      const toRetirement = left * retirementShare;
       retirement += toRetirement;
-      cash += surplus - toRetirement;
+      cash += left - toRetirement;
     } else {
       cash += surplus;
     }
@@ -364,17 +435,27 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     if (cash < 0) {
       shortfallToCard = -cash;
       cash = 0;
-      chargeCard(shortfallToCard);
+      // The purchase caused min(shortfall, its cash payment) of it: without the purchase the
+      // shortfall would be max(0, shortfall − payment).
+      let rest = shortfallToCard;
+      for (const [i, amount] of payoffCash) {
+        const part = Math.min(rest, amount);
+        if (part <= 0) break;
+        chargePayoffCard(i, part);
+        payoffCardCharges += part;
+        rest -= part;
+      }
+      chargeCard(rest);
     }
 
     const debtLoad = income > 0 ? requiredDebtPayments / income : requiredDebtPayments > 0 ? Infinity : 0;
     path.push(snapshot(month, {
       income, spending, debtPayments, requiredDebtPayments, purchasesCash, cardCharges, surplus,
-      shortfallToCard, debtLoad,
+      shortfallToCard, payoffCardCharges, surplusToPayoffCards, debtLoad,
     }));
   }
 
   const payoffMonth: Record<string, number | null> = {};
   for (const d of debts) payoffMonth[d.id] = d.payoffMonth;
-  return { rates, path, payoffMonth };
+  return { rates, path, payoffMonth, payoffCardIds: payoffCards.map((d) => d?.id ?? null) };
 }
