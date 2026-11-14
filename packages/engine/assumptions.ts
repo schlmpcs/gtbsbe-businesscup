@@ -936,3 +936,30 @@ export const vehicleDepreciationAnnual = {
   assumption: true,
   note: 'Rule-of-thumb depreciation for a typical car, not a valuation. Not yet listed in `assumptions` (the "How we calculate" map).',
 } satisfies Assumption<Rate>;
+
+// MP5: Monte Carlo (#165) -------------------------------------------------------------------------
+
+/**
+ * Yearly standard deviation of each asset group's growth in monteCarlo() when
+ * `MonteCarloSettings.growth` leaves the group out (the mean is then the rate plan() uses).
+ * Investments and retirement 15%, real estate 5%, the rest 0 (cash yield, car depreciation and other
+ * assets do not vary by path).
+ */
+export const monteCarloGrowthSd = {
+  value: { cash: 0, investments: 0.15, retirement: 0.15, realEstate: 0.05, vehicle: 0, otherAsset: 0 },
+  assumption: true,
+  note:
+    'Round numbers for the spread of yearly returns: about 15% for a stock-heavy portfolio, about 5% for ' +
+    'home prices. Not a measured volatility. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<Record<'cash' | 'investments' | 'retirement' | 'realEstate' | 'vehicle' | 'otherAsset', Rate>>;
+
+/**
+ * Lowest yearly rate a Monte Carlo draw can take (inflation or growth): a normal draw has no floor, but
+ * a rate of −100% or less has no meaning (simulate() rejects it). −99% = nearly everything lost in a year.
+ */
+export const monteCarloRateFloor = {
+  value: -0.99 as Rate,
+  assumption: true,
+  note: 'A technical floor, reached only by extreme draws. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<Rate>;
+// ----- end MP5 --------------------------------------------------------------------------------
