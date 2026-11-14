@@ -17,6 +17,7 @@ export const SCREEN_ROUTES = {
   S13: '/decide',
   S14: '/checkin',
   S15: '/pro',
+  S23: '/tools/overpaying',
 } as const satisfies Record<ScreenId, string>;
 
 /** Screens in order S1–S15. */
