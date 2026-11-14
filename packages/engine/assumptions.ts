@@ -524,6 +524,24 @@ export const subsDoubledMonthsMaxShare = {
   note: 'An occasional double charge is a retry or a duplicate and is counted once; a charge in most months twice over is not a monthly subscription.',
 } satisfies Assumption<number>;
 
+/** Charges at which a pattern is `high` confidence (a catalogue match with fewer is `medium`, or `high` with the minimum of 2). */
+export const subsHighConfidenceMinCharges = {
+  value: 3,
+  assumption: true,
+  note: 'Three charges in a row is a pattern; two could be a coincidence unless the catalogue knows the merchant.',
+} satisfies Assumption<number>;
+
+/**
+ * Classes in which a pattern with no catalogue match can be `high` confidence. Any other class that is
+ * still a candidate (`other`: a transfer to a person, rent, a regular shop) stays `low` at any number
+ * of charges: shown to the user to confirm, not counted in the totals until confirmed.
+ */
+export const subsPatternHighClasses = {
+  value: ['subscriptions'] as readonly StatementClass[],
+  assumption: true,
+  note: 'Owner decision on the issue\'s two confidence rules: the categorizer calling a recurring line a subscription is the evidence that lifts a pattern with no catalogue entry.',
+} satisfies Assumption<readonly StatementClass[]>;
+
 /** The M3 assumptions, spread into `assumptions` below. */
 export const subscriptionAssumptions = {
   subsMinCharges,
@@ -546,6 +564,8 @@ export const subscriptionAssumptions = {
   subsPlanGapSlackMonths,
   subsReportStoppedSightings,
   subsDoubledMonthsMaxShare,
+  subsHighConfidenceMinCharges,
+  subsPatternHighClasses,
 } as const;
 
 // ----- end M3 ---------------------------------------------------------------------------------

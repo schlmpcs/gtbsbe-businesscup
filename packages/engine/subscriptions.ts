@@ -30,8 +30,9 @@ import {
 } from '@lifeguessr/types';
 import {
   subsAmountTolerance, subsCandidateClasses, subsDayWindow, subsDaysPerMonth, subsDoubledMonthsMaxShare,
-  subsIntroMaxCharges, subsIntroMaxRatio, subsMinAdjacentPairs, subsMinAmount, subsMinCharges, subsMissedPeriodsAllowed,
-  subsOverlapCategories, subsPlanGapSlackMonths, subsPlanPriceTolerance, subsPriceUpMinDollars, subsPriceUpMinRatio,
+  subsHighConfidenceMinCharges, subsIntroMaxCharges, subsIntroMaxRatio, subsMinAdjacentPairs, subsMinAmount, subsMinCharges,
+  subsMissedPeriodsAllowed, subsOverlapCategories, subsPatternHighClasses, subsPlanGapSlackMonths, subsPlanPriceTolerance,
+  subsPriceUpMinDollars, subsPriceUpMinRatio,
   subsReportStoppedSightings, subsSteadyMinCharges, subsStepMaxRatio, subsStoppedAfterPeriods,
 } from './assumptions';
 import { merchantKey } from './statement';
@@ -322,6 +323,8 @@ type Draft = {
   detected: Detected;
   service: KnownService | null;       // recognised, never ambiguous: what `serviceId` and the confidence use
   category: ServiceCategory;
+  matched: boolean;                   // a catalogue entry matched, ambiguous or not
+  cls: StatementClass | undefined;    // the categorizer's class for the latest label
   capped: boolean;                    // no class for the label: nothing above `medium`
 };
 
@@ -343,9 +346,32 @@ function priceFlags(segments: readonly Segment[], months: number): { flags: Subs
   return { flags };
 }
 
-function confidenceOf(chargesSeen: number, recognised: boolean, capped: boolean): SubscriptionFinding['confidence'] {
-  const base = chargesSeen >= 3 ? 'high' : chargesSeen === 2 ? (recognised ? 'high' : 'low') : 'medium';
-  return capped && base === 'high' ? 'medium' : base;
+/**
+ * How sure the detector is, in order:
+ * - A catalogue entry matched the merchant (an ambiguous one such as Apple counts for the match but
+ *   not as a recognised service): 3 or more charges `high`; 2 charges `high` when the service is
+ *   recognised and `low` when it is only an ambiguous match; 1 charge `medium`.
+ * - No catalogue entry, a pattern alone. The issue says both "a pattern alone is `low`, shown to
+ *   confirm and not counted until confirmed" (decision 2) and "`high` with 3 or more charges"
+ *   (confidence rule). Reading (owner's decision): the categorizer's class settles it. Class
+ *   `subscriptions` with 3 or more charges is `high`; with 2 charges, and class `other` at any
+ *   number of charges (a transfer to a person, rent, a regular shop), it is `low`: shown to the user,
+ *   not counted in the totals until confirmed.
+ * Without a class for the label (strict mode) nothing is above `medium`.
+ */
+function confidenceOf(chargesSeen: number, draft: Draft): SubscriptionFinding['confidence'] {
+  let base: SubscriptionFinding['confidence'];
+  if (!draft.matched) {
+    const classLiftsPattern = draft.cls !== undefined && subsPatternHighClasses.value.includes(draft.cls);
+    base = classLiftsPattern && chargesSeen >= subsHighConfidenceMinCharges.value ? 'high' : 'low';
+  } else if (chargesSeen >= subsHighConfidenceMinCharges.value) {
+    base = 'high';
+  } else if (chargesSeen >= subsMinCharges.value) {
+    base = draft.service !== null ? 'high' : 'low';
+  } else {
+    base = 'medium';
+  }
+  return draft.capped && base === 'high' ? 'medium' : base;
 }
 
 function toFinding(draft: Draft, id: string, asOf: { mi: number; day: number }): SubscriptionFinding {
@@ -376,7 +402,7 @@ function toFinding(draft: Draft, id: string, asOf: { mi: number; day: number }):
     status: stopped ? 'stopped' : 'active',
     flags: flags.sort((a, b) => SUBSCRIPTION_FLAGS.indexOf(a) - SUBSCRIPTION_FLAGS.indexOf(b)),
     ...(previousAmount !== undefined ? { previousAmount } : {}),
-    confidence: confidenceOf(d.charges.length, service !== null, draft.capped),
+    confidence: confidenceOf(d.charges.length, draft),
     origin: 'statement',
     isEstimate: false,
   };
@@ -461,7 +487,7 @@ export function detectSubscriptions(items: readonly StatementItem[], opts: Detec
     // An ambiguous entry (Apple, Google, Amazon) bills many products: no service id and no category guessed.
     const category = service?.category ?? 'other';
     const capped = cls === undefined;
-    const draft = (detected: Detected): Draft => ({ key, detected, service, category, capped });
+    const draft = (detected: Detected): Draft => ({ key, detected, service, category, matched: matched !== null, cls, capped });
 
     const series = findSeries(charges, 1);
     if (series.length === 0) series.push(...findSeries(charges, 3));
