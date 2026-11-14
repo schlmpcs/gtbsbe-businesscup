@@ -162,6 +162,17 @@ describe('forecast schemas', () => {
     }
   });
 
+  it('requires the point month to be a non-negative integer', () => {
+    for (const month of [-1, 1.5, Number.NaN]) {
+      expect(ForecastPointSchema.safeParse({ month, mid: 1, low: 0, high: 2 }).success).toBe(false);
+      const b = bundle();
+      b.base.points[10] = { ...b.base.points[10]!, month };
+      expect(ForecastBundleSchema.safeParse(b).success).toBe(false);
+    }
+    expect(ForecastPointSchema.safeParse({ month: 0, mid: 1, low: 0, high: 2 }).success).toBe(true);
+    expect(ForecastPointSchema.safeParse({ month: 120, mid: 1, low: 0, high: 2 }).success).toBe(true);
+  });
+
   it('rejects a bundle whose source is not ai or rules', () => {
     expect(ForecastBundleSchema.safeParse({ ...bundle(), source: 'x' }).success).toBe(false);
     expect(ForecastBundleSchema.safeParse({ ...bundle(), source: undefined }).success).toBe(false);

@@ -133,7 +133,7 @@ export const ProfilePatchSchema = z.object({
 // z.number() already rejects NaN and ±Infinity (zod 4), which is what an LLM answer with a broken
 // number needs: schemas.test.ts pins it.
 export const ForecastPointSchema = z.object({
-  month: z.number(), mid: MoneySchema, low: MoneySchema, high: MoneySchema,   // balance
+  month: z.number().int().min(0), mid: MoneySchema, low: MoneySchema, high: MoneySchema,   // balance
 });
 
 /** At least 121 points (months 0..120, so `in10y` exists). Ordering and ranges are checked by the engine. */

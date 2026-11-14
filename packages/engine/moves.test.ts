@@ -1,15 +1,23 @@
 // rankMoves() and the unlock helpers (Y3). Most cases run with every rate at 0 (no inflation, no
 // cash yield, no investment return), so a monthly saving of $s is worth exactly 120 × s in 10 years
 // and the expected effects can be checked by hand.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Debt, Money, Move, Profile } from '@lifeguessr/types';
 import { areaByZip, cloneProfileDemo, profileDemo } from '@lifeguessr/data/fixtures';
 import { applyPatch, forecast } from './forecast';
+import type * as ForecastModule from './forecast';
 import {
   DISCRETIONARY_CATEGORIES, MOVES_SHOWN, MOVE_LEVELS, type MoveCandidate, isLevelUnlocked, moveCandidates,
   moveKindOf, movesLevel, rankCandidates, rankMoves,
 } from './moves';
 import { type ForecastRates, inflationAnnualOf } from './simulate';
+
+// forecast() is wrapped, not replaced: every test still gets the real result, and one test below
+// counts the calls rankMoves makes.
+vi.mock('./forecast', async (importOriginal) => {
+  const actual = await importOriginal<typeof ForecastModule>();
+  return { ...actual, forecast: vi.fn(actual.forecast) };
+});
 
 const ZERO_RATES: Partial<ForecastRates> = { inflationAnnual: 0, cashYieldAnnual: 0, returnAnnualNominal: 0 };
 const m = (v: number) => ({ value: v, isEstimate: false });
@@ -368,6 +376,34 @@ describe('moveCandidates and rankCandidates (the split behind rankMoves)', () =>
       cancelSubscriptions: 40_000, 'cutCategory:eatingOut': 30_000, 'payCardFirst:card-b': 20_000, 'cutCategory:other': 0.5,
     }));
     expect(ids(ranked)).toEqual(['cancelSubscriptions', 'cutCategory:eatingOut', 'payCardFirst:card-b']);
+  });
+});
+
+describe('rankMoves: forecast cost', () => {
+  const calls = () => vi.mocked(forecast).mock.calls.length;
+
+  it('a profile with no candidates runs no forecast', () => {
+    const none = profile({}, { eatingOut: 0, subscriptions: 0, other: 0 });
+    expect(moveCandidates(none, { rates: ZERO_RATES })).toEqual([]);
+    vi.mocked(forecast).mockClear();
+    expect(rankMoves(none, { rates: ZERO_RATES })).toEqual([]);
+    expect(calls()).toBe(0);
+  });
+
+  it('a card with no surplus (pay 2,100 = rent 2,000 + minimum 100) and nothing to cut runs no forecast either', () => {
+    const tight = profile({ takeHomePay: m(2100), debts: [card('c', 0.25, 3000, 100)] }, { eatingOut: 0, subscriptions: 0, other: 0 });
+    vi.mocked(forecast).mockClear();
+    expect(rankMoves(tight, { rates: ZERO_RATES })).toEqual([]);
+    expect(calls()).toBe(0);
+  });
+
+  it('with candidates it runs the base forecast once plus one per candidate', () => {
+    const p = profile({ debts: [card('card-a', 0.18, 3000, 100)] });
+    const candidates = moveCandidates(p, { rates: ZERO_RATES });
+    expect(candidates.length).toBeGreaterThan(1);
+    vi.mocked(forecast).mockClear();
+    rankMoves(p, { rates: ZERO_RATES });
+    expect(calls()).toBe(1 + candidates.length);
   });
 });
 

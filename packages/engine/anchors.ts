@@ -99,17 +99,24 @@ export function deflateForecast(f: Forecast, inflationAnnual: Rate): Forecast {
     const deflator = (1 + inflationAnnual) ** (p.month / MONTHS_PER_YEAR);
     return { month: p.month, mid: p.mid / deflator, low: p.low / deflator, high: p.high / deflator };
   };
-  return { points: f.points.map(deflate), in10y: deflate(f.in10y), todaysDollars: true };
+  const points = f.points.map(deflate);
+  // in10y is the month-120 point, the same object as in forecast() and anchorsToForecast().
+  return { points, in10y: points[MONTHS] ?? deflate(f.in10y), todaysDollars: true };
 }
 
 /**
- * Whether an AI forecast is plausible next to the rules forecast of the same inputs (both nominal);
+ * Whether an AI forecast is plausible next to the rules forecast of the same inputs (both in the same dollars, nominal in practice);
  * [] = plausible. Compares the year-end points (month 12·k, k = 1..10). With
  * tol = max(relative × |rules mid|, floorMonths × takeHomePay), the AI mid must lie in
  * [rules low − tol, rules high + tol] and its band may be at most max(bandMaxRatio × rules band, tol)
  * wide. The tolerance has a floor in months of pay so a net worth near zero, a negative one, or a
  * zero-width rules band (no estimated input) still leaves room for a sensible answer. Catches
- * wrong-unit and runaway answers; it does not grade accuracy. A NaN fails every comparison.
+ * wrong-unit and runaway answers; it does not grade accuracy.
+ *
+ * Non-finite values in the candidate are issues (the model got them wrong). Anything the caller
+ * controls is a programmer error and throws RangeError, because a NaN tolerance would make every
+ * comparison false and pass every candidate: a non-finite `takeHomePay` or reference value, a
+ * reference with a missing point, or forecasts in different units (`todaysDollars` differs).
  */
 export function forecastSanityIssues(
   candidate: Forecast,
@@ -117,11 +124,18 @@ export function forecastSanityIssues(
   takeHomePay: Money,
   envelope: AiForecastSanity = aiForecastSanity.value,
 ): string[] {
+  if (candidate.todaysDollars !== reference.todaysDollars) {
+    throw new RangeError("the candidate and the reference forecast must be in the same dollars (todaysDollars differs)");
+  }
+  if (!Number.isFinite(takeHomePay)) throw new RangeError(`takeHomePay must be a finite number, got ${takeHomePay}`);
   const issues: string[] = [];
   for (let year = 1; year <= YEARS; year++) {
     const month = year * MONTHS_PER_YEAR;
     const ref = reference.points[month];
     if (!ref) throw new RangeError(`the reference forecast has no point for month ${month}`);
+    if (![ref.low, ref.mid, ref.high].every(Number.isFinite)) {
+      throw new RangeError(`the reference forecast has a non-finite value at month ${month}`);
+    }
     const cand = candidate.points[month];
     if (!cand) {
       issues.push(`year ${year}: the forecast has no point for month ${month}`);
@@ -151,20 +165,27 @@ export function forecastSanityIssues(
 }
 
 /**
- * Whether an AI scenario's 10-year effect (`scenario.in10y.mid − base.in10y.mid`, nominal) is
+ * Whether an AI scenario's 10-year effect (`scenario.in10y.mid − base.in10y.mid`) is
  * plausible next to the rules effect; [] = plausible. The yearly envelope is too loose to see a
  * scenario equal to the base, a flipped sign or a 5× effect, so each scenario is checked on its own
  * effect: accepted when within `effectFloor` dollars of the rules effect, otherwise rejected when
  * the rules effect is under $1 (it should be about nothing), the signs differ (a zero effect included),
- * or ai / rules falls outside [effectRatioMin, effectRatioMax].
+ * or ai / rules falls outside [effectRatioMin, effectRatioMax]. A non-finite candidate effect is an
+ * issue; a non-finite reference effect, or the four forecasts not sharing one `todaysDollars`, is a
+ * programmer error and throws RangeError.
  */
 export function scenarioEffectIssues(
   candidate: { base: Forecast; scenario: Forecast },
   reference: { base: Forecast; scenario: Forecast },
   envelope: AiForecastSanity = aiForecastSanity.value,
 ): string[] {
-  const ai = candidate.scenario.in10y.mid - candidate.base.in10y.mid;
+  const unit = reference.base.todaysDollars;
+  if (![reference.scenario, candidate.base, candidate.scenario].every((f) => f.todaysDollars === unit)) {
+    throw new RangeError('the four forecasts must be in the same dollars (todaysDollars differs)');
+  }
   const rules = reference.scenario.in10y.mid - reference.base.in10y.mid;
+  if (!Number.isFinite(rules)) throw new RangeError('the reference forecasts have a non-finite 10-year value');
+  const ai = candidate.scenario.in10y.mid - candidate.base.in10y.mid;
   if (!Number.isFinite(ai)) return ['the 10-year effect is not a finite number'];
   if (Math.abs(ai - rules) <= envelope.effectFloor) return [];
 

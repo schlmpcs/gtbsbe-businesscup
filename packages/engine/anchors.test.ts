@@ -189,6 +189,15 @@ describe('deflateForecast', () => {
     expect(real.in10y).toEqual(real.points[120]);
   });
 
+  it('in10y is the month-120 point itself, as in forecast() and anchorsToForecast()', () => {
+    const real10 = deflateForecast(nominal, 0.03);
+    expect(real10.in10y).toBe(real10.points[120]);
+    const longer = forecast(profileDemo, 20); // 241 points: in10y is still the month-120 point
+    const real = deflateForecast(longer, 0.03);
+    expect(real.in10y).toBe(real.points[120]);
+    expect(real.in10y.month).toBe(120);
+  });
+
   it('matches forecast(…, { todaysDollars: true }) for the same rate', () => {
     const inflationAnnual = inflationAnnualOf(areaByZip(profileDemo.zip!));
     const direct = forecast(profileDemo, 10, { rates: { inflationAnnual }, todaysDollars: true });
@@ -363,6 +372,42 @@ describe('forecastSanityIssues', () => {
   });
 });
 
+describe('forecastSanityIssues: programmer errors throw instead of passing every candidate', () => {
+  const ref = forecast(profileDemo, 10, { rates });
+  const pay = profileDemo.takeHomePay.value;
+
+  it.each([['NaN', Number.NaN], ['Infinity', Number.POSITIVE_INFINITY], ['-Infinity', Number.NEGATIVE_INFINITY]])(
+    'throws RangeError for a takeHomePay of %s',
+    (_label, bad) => {
+      expect(() => forecastSanityIssues(ref, ref, bad)).toThrow(RangeError);
+    },
+  );
+
+  it.each(['low', 'mid', 'high'] as const)('throws RangeError for a non-finite reference %s, even for a perfect candidate', (field) => {
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      const broken = remap(ref, (p) => (p.month === 36 ? { mid: p.mid, low: p.low, high: p.high, [field]: bad } : p));
+      expect(() => forecastSanityIssues(broken, broken, pay)).toThrow(RangeError);
+      expect(() => forecastSanityIssues(ref, broken, pay)).toThrow(RangeError);
+    }
+  });
+
+  it('a non-finite value in the candidate is still an issue, not a throw', () => {
+    const nan = remap(ref, (p) => (p.month === 36 ? { mid: Number.NaN, low: p.low, high: p.high } : p));
+    expect(forecastSanityIssues(nan, ref, pay).join('\n')).toMatch(/year 3/);
+  });
+
+  it('throws RangeError when the candidate and the reference are not in the same dollars', () => {
+    const real = deflateForecast(ref, 0.03);
+    expect(() => forecastSanityIssues(real, ref, pay)).toThrow(RangeError);
+    expect(() => forecastSanityIssues(ref, real, pay)).toThrow(RangeError);
+  });
+
+  it('accepts two forecasts that are both in today’s dollars', () => {
+    const real = deflateForecast(ref, 0.03);
+    expect(forecastSanityIssues(real, real, pay)).toEqual([]);
+  });
+});
+
 describe('forecastSanityIssues: the tolerance at the extremes of net worth', () => {
   /** The same net worth at every month, with a symmetric band of ± `half`. */
   const flat = (mid: number, half = 0): Forecast => {
@@ -465,6 +510,45 @@ describe('scenarioEffectIssues', () => {
     const strict = { ...aiForecastSanity.value, effectFloor: 0, effectRatioMax: 1.2 };
     expect(scenarioEffectIssues(pair(7_500), reference, strict).length).toBeGreaterThan(0);
     expect(scenarioEffectIssues(pair(5_500), reference, strict)).toEqual([]);
+  });
+
+  describe('programmer errors throw instead of blaming the model', () => {
+    const reference = pair(5_000);
+
+    it.each([['NaN', Number.NaN], ['Infinity', Number.POSITIVE_INFINITY], ['-Infinity', Number.NEGATIVE_INFINITY]])(
+      'throws RangeError for a reference effect of %s',
+      (_label, bad) => {
+        expect(() => scenarioEffectIssues(pair(5_000), { base: at120(base), scenario: at120(bad) })).toThrow(RangeError);
+        expect(() => scenarioEffectIssues(pair(5_000), { base: at120(bad), scenario: at120(base) })).toThrow(RangeError);
+        expect(() => scenarioEffectIssues(pair(5_000), { base: at120(bad), scenario: at120(bad) })).toThrow(RangeError);
+      },
+    );
+
+    it('a non-finite candidate effect is still an issue, not a throw', () => {
+      expect(scenarioEffectIssues(pair(Number.NaN), reference).join(' ')).toMatch(/finite/);
+      expect(scenarioEffectIssues({ base: at120(Number.NaN), scenario: at120(base) }, reference).join(' ')).toMatch(/finite/);
+    });
+
+    it.each(['candidate.base', 'candidate.scenario', 'reference.base', 'reference.scenario'])(
+      'throws RangeError when %s is in other dollars than the other three',
+      (which) => {
+        const inReal = (f: Forecast): Forecast => ({ ...f, todaysDollars: true });
+        const c = pair(5_000);
+        const r = pair(5_000);
+        if (which === 'candidate.base') c.base = inReal(c.base);
+        if (which === 'candidate.scenario') c.scenario = inReal(c.scenario);
+        if (which === 'reference.base') r.base = inReal(r.base);
+        if (which === 'reference.scenario') r.scenario = inReal(r.scenario);
+        expect(() => scenarioEffectIssues(c, r)).toThrow(RangeError);
+      },
+    );
+
+    it('accepts four forecasts that are all in today’s dollars', () => {
+      const inReal = (f: Forecast): Forecast => ({ ...f, todaysDollars: true });
+      const real = (effect: number) => ({ base: inReal(at120(base)), scenario: inReal(at120(base + effect)) });
+      expect(scenarioEffectIssues(real(5_900), real(5_000))).toEqual([]);
+      expect(scenarioEffectIssues(real(25_000), real(5_000)).length).toBeGreaterThan(0);
+    });
   });
 
   it('a real rules pair passes against itself', () => {
