@@ -1,7 +1,7 @@
 import type { DuelLetter, DuelRound } from '@lifeguessr/types';
 import { anonKey } from './anonKey';
 import { newResultId, RESULT_ID } from './game';
-import type { DuelScored, DuelStore, StoredPick } from './duel';
+import type { DuelCounts, DuelScored, DuelStore, StoredPick } from './duel';
 import type { Db, Tx } from './postgres';
 
 type Row = { round: DuelRound; choice: DuelLetter; hints: number; scored: DuelScored; result_id: string };
@@ -49,9 +49,18 @@ export function createPostgresDuelStore(db: Db): DuelStore {
       const picks = await db.query<Row>('SELECT round, choice, hints, scored, result_id FROM duel_picks WHERE result_id=$1 ORDER BY round', [resultId]);
       return { date: days.rows[0].date, picks: picks.rows.map(pick) };
     },
-    async crowd(date, round) {
-      const { rows } = await db.query<{ a: number; b: number }>("SELECT COUNT(*) FILTER (WHERE choice='A')::int AS a, COUNT(*) FILTER (WHERE choice='B')::int AS b FROM duel_picks WHERE play_date=$1 AND round=$2", [date, round]);
-      return { A: rows[0]!.a, B: rows[0]!.b };
+    async crowds(date, rounds) {
+      const result = new Map<DuelRound, DuelCounts>(rounds.map(round => [round, { A: 0, B: 0 }]));
+      if (rounds.length === 0) return result;
+      // duel_picks_crowd (play_date, round, choice) answers this from the index alone. Not inside
+      // a transaction or the player's advisory lock: it is a read of everyone's committed picks, and
+      // a pick landing a moment later simply shows up in the next reply.
+      const { rows } = await db.query<{ round: DuelRound; choice: DuelLetter; n: number }>(
+        'SELECT round, choice, COUNT(*)::int AS n FROM duel_picks WHERE play_date=$1 AND round = ANY($2::smallint[]) GROUP BY round, choice',
+        [date, [...rounds]],
+      );
+      for (const row of rows) result.get(row.round)![row.choice] = row.n;
+      return result;
     },
   };
 }

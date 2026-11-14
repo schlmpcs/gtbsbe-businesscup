@@ -19,6 +19,8 @@ import leaseScenarioJson from './leaseScenario.sample.json';
 import loanOffersJson from './loanOffers.sample.json';
 import profileJson from './profile.demo.json';
 import statementTotalsJson from './statementTotals.sample.json';
+import { TogetherPartnerSchema, type TogetherPartner } from '@lifeguessr/types';
+import togetherPartnerJson from './togetherPartner.sample.json';
 
 const deepFreeze = <T>(value: T): T => {
   if (value && typeof value === 'object') {
@@ -104,3 +106,10 @@ export function areaByZip(zip: string): AreaData {
 export function cloneProfileDemo(): Profile {
   return ProfileSchema.parse(profileJson); // zod builds new objects/arrays on every parse
 }
+
+/**
+ * "Together" (/together): a made-up second partner, only the numbers a shared plan holds for one
+ * person (no names, ZIP or age; the nickname is a placeholder). Some values estimated. Engine tests
+ * and the feature's tests use it.
+ */
+export const togetherPartnerSample: Readonly<TogetherPartner> = deepFreeze(TogetherPartnerSchema.parse(togetherPartnerJson));

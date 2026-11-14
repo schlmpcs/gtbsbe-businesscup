@@ -1,16 +1,19 @@
 // View-model types for the forecast feature (S1, S10). Tasks: Y7 (model) / Y10 (ui).
 // ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
 // Hooks: useToday (S1) in ./useToday.ts, useFuture (S10) in ./useFuture.ts.
-import type { MoveCandidate } from '@lifeguessr/engine';
+import type { CushionBand, MoveCandidate } from '@lifeguessr/engine';
 import type {
   Goal, GoalStatus, GoalVerdict, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, HorizonYears,
   LifeEventKind, LifeEventPreset, Money, Move, MoveKind, Profile, Rate, Source, YearMonth,
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 import type { FoldedNote, LifeEventCategory, ProfileOrigin } from '@/state';
+import type { SpendSummaryVM } from '@/features/spend/model/types';
+import type { NextBillVM } from '@/features/bills/model/types';
 
 export type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 export type { FoldedNote, LifeEventCategory, ProfileOrigin } from '@/state';
+export type { SpendSummaryVM } from '@/features/spend/model/types';
 export type {
   CostCategory, ForecastPoint, ForecastSource, HorizonYears, LifeEventKind, LifeEventPreset, Money, MoveKind, Source, YearMonth,
 } from '@lifeguessr/types';
@@ -186,6 +189,8 @@ export type TodayVM = {
   goal: { target: Money; years: number; verdict: GoalVerdict } | null;
   /** At least one input the forecast reads is an estimate (the "Make it exact" nudge). */
   hasEstimates: boolean;
+  /** Emergency cushion: months cash covers with zero income (engine emergencyCushion). */
+  cushion: Loadable<CushionVM>;
   /** Daily game call to action. */
   game: {
     /** Which game /play is: the duel (rounds; the default) or the slider (homes). Picks the copy. */
@@ -200,6 +205,25 @@ export type TodayVM = {
      */
     homes: TodayHomeVM[];
   };
+  /** The daily log's month so far (spent, usual, projected month end, safe to spend today). */
+  daily?: Loadable<SpendSummaryVM>;
+  /** The next bill due (bills calendar), or null when no bill is known. Optional: absent means none. */
+  nextBill?: NextBillVM;
+};
+
+/**
+ * The Home cushion card (engine emergencyCushion). Months are unrounded; null = no spending to cover.
+ * `bands` = the guideline edges in months (assumption cushionBandMonths), for the meter.
+ */
+export type CushionVM = {
+  monthsEssential: number | null;
+  monthsFull: number | null;
+  band: CushionBand;
+  bands: { thin: number; okay: number; solid: number };
+  /** The next band up and the extra cash it takes (null at 6+ or with nothing to cover). */
+  next: { months: number; extraCash: Money } | null;
+  /** Cash or an essential input is an estimate. */
+  isEstimate: boolean;
 };
 
 /** S10 You in N years (the picked horizon) + Next Moves. */

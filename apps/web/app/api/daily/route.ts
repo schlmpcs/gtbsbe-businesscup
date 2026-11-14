@@ -13,8 +13,9 @@
 // With x-anon-id the reply also carries what the server recorded for this player today, so a
 // browser that lost its state shows what the server will count:
 // - slider: DailyProgress, the opened clues and scored guesses;
-// - duel: DuelProgressWire, the picks as scored (with a live `crowd`, null for now) and the hint
-//   text of each round the server recorded a hint for, never one the player did not ask for.
+// - duel: DuelProgressWire, the picks as scored (with a live `crowd`, null below
+//   DUEL_CROWD_MIN_PICKS picks) and the hint text of each round the server recorded a hint for,
+//   never one the player did not ask for.
 // Without the header there is no `progress` and the store is not touched.
 // The game switch is a query parameter, not a server flag: the browser knows its mode at build time
 // and old slider clients keep working while the duel rolls out (#109, #120).

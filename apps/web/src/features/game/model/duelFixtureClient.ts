@@ -95,6 +95,9 @@ export function createFixtureDuelClient(
         breakdown: score.breakdown,
         decidedBy: score.decidedBy,
         lesson: t.lessons[score.lesson],
+        // This browser only knows its own pick, so there is no crowd to report: null shows "Not
+        // enough picks yet", which is true here. Never make one up (#116); only the server, which
+        // stores everyone's picks, answers real counts.
         crowd: null,
       };
       log!.picks[round] = { choice, result };
