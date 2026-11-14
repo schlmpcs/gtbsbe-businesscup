@@ -85,18 +85,12 @@ export const forecast = {
 
   /** S1 Today. */
   today: {
-    /** The hero headline and lead while /play is the slider game (NEXT_PUBLIC_GAME_MODE=slider). */
+    /** The game card's question while /play is the slider game (NEXT_PUBLIC_GAME_MODE=slider). */
     title: 'What does their life cost?',
-    lead: 'Guess what a stranger’s month costs, then price your own and see your next 10 years.',
     /** The same while /play is the duel (the default). */
     duel: {
       title: 'Which life costs more?',
-      lead: 'Pick the costlier of two lives, five times a day. Then price your own month and see your next 10 years.',
-      steps: ['Play 5 quick rounds', 'Price your own month', 'See you in 10 years'],
     },
-    note: 'No sign-up, no bank login',
-    /** Opens the forecast on the sample profile (shown only while the profile is still the sample one). */
-    sampleCta: 'Try with sample data',
     /** First visit (no profile, no game yet): what the app is, in one look. No user numbers. */
     firstVisit: {
       title: 'Which life costs more?',
@@ -108,10 +102,6 @@ export const forecast = {
       steps: ['Play 5 quick rounds', 'Price your own month', 'See you in 10 years'],
       vs: 'vs',
     },
-    steps: {
-      label: 'How it works',
-      items: ['Guess strangers’ months', 'Price your own month', 'See you in 10 years'],
-    },
     monthEnd: {
       title: 'This month',
       projected: 'Projected spending',
@@ -120,7 +110,6 @@ export const forecast = {
       fromProfile: 'From your profile.',
       /** There are statements, but none has lines for this month (`month` = "November"). */
       noRowsThisMonth: (month: string) => `No ${month} transactions yet, so this is your usual month.`,
-      vsAverage: 'Compared with your 3-month average',
       /** `amount` is signed: +$240 = spending more than the average. */
       vsAverageValue: (amount: string) => `${amount} vs your 3-month average`,
       driftsTitle: 'Drifting from usual',
@@ -150,11 +139,9 @@ export const forecast = {
       doneSticker: 'Today’s five · done',
       /** The big line once the day is done: rounds picked of today's total. */
       doneScore: (played: number, total: number) => `${played} of ${total}`,
-      done: 'Done for today. Five new duels tomorrow. Now try your own month.',
       doneCta: 'See your results',
-      priceOwn: 'Price my own month',
     },
-    /** The game call to action while /play is the slider game (NEXT_PUBLIC_GAME_MODE=slider). */
+    /** The game card while /play is the slider game (NEXT_PUBLIC_GAME_MODE=slider). */
     play: {
       cta: 'Play today’s homes',
       continue: (played: number, total: number) => `Keep playing (${played} of ${total})`,
@@ -162,37 +149,40 @@ export const forecast = {
       doneSticker: 'Today’s homes · done',
       /** The big line once the day is done: homes guessed of today's total. */
       doneScore: (played: number, total: number) => `${played} of ${total}`,
-      done: 'Done for today. New homes tomorrow. Now try your own month.',
       doneCta: 'See your results',
-      /** Main call to action once the day is done, while the profile is still the sample one. */
-      priceOwn: 'Price my own month',
     },
     move: {
       committedTitle: 'Your move',
-      topTitle: 'Best move',
       none: 'No move helps right now.',
       markDone: 'I did it',
-      seeAll: 'See all moves',
     },
-    kicker: 'Daily game',
-    inProgress: 'Today’s game is on',
-    homes: {
-      label: 'Today’s homes',
-      home: (n: number) => `Home ${n}`,
-      start: 'Start here',
-      played: 'Guessed',
-      /** Masked price shown before a guess (no number). */
-      hidden: '$?,???',
-      hiddenLabel: 'Price hidden until you guess',
-    },
-    tools: {
-      title: 'Plan a decision',
-      afford: { title: 'Can I Afford It?', body: 'Check a purchase' },
-      loan: { title: 'Loan Lab', body: 'Compare loans' },
-      decide: { title: 'Decision: the car', body: 'Buy, lease or keep' },
-      checkin: { title: 'Monthly check-in', body: 'How the month went' },
-      profile: { title: 'Build your profile', body: 'Make the numbers yours' },
-      profileEdit: { title: 'Update your profile', body: 'Edit numbers or upload' },
+    /** The Home dashboard (returning visits): your house, this month, your next move, today's game, What if?. */
+    home: {
+      /** The page's h1, as an eyebrow sticker over the 10-year number. */
+      title: 'My house',
+      /** Under the goal verdict sticker (`target` is formatted). */
+      goalLine: (target: string, years: number) => `Goal ${target} in ${years} ${years === 1 ? 'year' : 'years'}`,
+      openFuture: 'Open my future',
+      move: {
+        title: 'Your next move',
+        allMoves: 'All moves',
+      },
+      game: {
+        title: 'Today’s game',
+        tomorrow: 'Five new duels tomorrow',
+        tomorrowHomes: 'New homes tomorrow',
+      },
+      nudge: {
+        /** Still the starting profile (no sample asked for): the numbers are not the user's. */
+        demo: 'Sample numbers, not yours yet',
+        buildProfile: 'Build your profile',
+        estimates: 'Some of your numbers are estimates',
+        makeExact: 'Make it exact',
+      },
+      whatIf: {
+        title: 'What if?',
+        all: 'All tools',
+      },
     },
     allScreens: 'All screens',
   },
@@ -220,7 +210,6 @@ export const forecast = {
     /** After the range line: today's net worth (`amount` is formatted). */
     todayInline: (amount: string) => `today ${amount}`,
     howLink: 'How we calculate',
-    backCta: 'Back to Today',
     /** Shown while a new answer is on its way and the numbers on screen are the previous ones. */
     refreshing: 'Updating the forecast…',
   },
@@ -253,10 +242,10 @@ export const forecast = {
     empty: 'No move helps right now. Moves appear when money is left over or a card has a balance.',
     doneCount: (n: number) => (n === 1 ? 'You finished 1 move.' : `You finished ${n} moves.`),
     level2: {
-      title: 'Level 2 moves',
       locked: 'Commit to or finish a move to unlock.',
       unlocked: 'Unlocked. Coming soon.',
-      preview: 'Preview',
+      /** The closed summary line of the level 2 preview (`count` = how many moves it holds). */
+      summary: (count: number) => `Level 2 · ${count} more moves`,
     },
   },
 

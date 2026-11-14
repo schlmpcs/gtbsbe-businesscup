@@ -32,3 +32,21 @@ it('renders negative progress and unreachable saving as plain, bounded output', 
   expect(screen.getByTestId('goal-verdict').textContent).toBe(goalCopy.verdictLabel.behind);
   expect(screen.getByText(goalCopy.verdict.behind)).toBeTruthy();
 });
+
+it('offers at most 3 target presets as light chips and keeps the years input (no year chips)', () => {
+  const vm: GoalVM = {
+    goal: null,
+    setGoal: () => {},
+    clearGoal: () => {},
+    presets: { targets: [50000, 100000, 250000, 500000, 1000000], years: [5, 10, 15] },
+    inputError: false,
+    moveLabels: [],
+    status: { status: 'ready', data: null },
+    saving: { status: 'ready', data: null },
+    moves: { status: 'ready', data: null },
+  };
+  render(<GoalCard vm={vm} />);
+  expect(screen.getAllByRole('button', { name: /^\$[\d,]+$/ })).toHaveLength(3);
+  expect(screen.queryByRole('button', { name: /years$/ })).toBeNull();
+  expect(screen.getByRole('textbox', { name: goalCopy.years })).toBeTruthy();
+});

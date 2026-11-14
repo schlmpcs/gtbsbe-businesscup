@@ -1,12 +1,13 @@
 // S1 Today: month-end card (engine monthEnd), You in N years (the AI forecast, else rules, at the
 // horizon picked on S10), the committed / top move and the daily game call to action (the duel's
 // progress by default, the slider game's with NEXT_PUBLIC_GAME_MODE=slider: the game /play serves).
-import { monthEnd, monthEndHistoryMonths, type CurrentMonth } from '@lifeguessr/engine';
+import { goalStatus, hasEstimates as profileHasEstimates, monthEnd, monthEndHistoryMonths, type CurrentMonth } from '@lifeguessr/engine';
 import { useMemo } from 'react';
 import { readDuelDayProgress } from '@/features/game/model/duelProgress';
 import { gameMode, type GameMode } from '@/lib/config';
 import { localMonthDay, usEasternDate } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
+import { areaRates } from '@/lib/model/profile';
 import { isSampleActive, useAppReady, useAppStore, useGameStore } from '@/state';
 import { shownForecast } from './forecastAnswer';
 import type { Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
@@ -26,6 +27,7 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
   const isSample = useAppStore(isSampleActive);
   const isSampleFlag = useAppStore((s) => s.isSample);
   const selfGuess = useAppStore((s) => s.selfGuess);
+  const savedGoal = useAppStore((s) => s.goal);
   const gameDate = useGameStore((s) => s.date);
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);
@@ -68,6 +70,15 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
 
   // The number at the picked year in today's dollars, from the answer (S10 can also show nominal; S1 never does).
   const shown = useMemo(() => shownForecast(forecast, true, horizonYears), [forecast, horizonYears]);
+
+  // The goal's verdict, from the same rules-based goal model S10's goal card uses (engine goalStatus).
+  const goal: TodayVM['goal'] = useMemo(() => {
+    if (!savedGoal) return null;
+    const r = runEngine(() => goalStatus(profile, savedGoal, { rates: areaRates(profile) }));
+    return r.status === 'ready' ? { target: savedGoal.target, years: savedGoal.years, verdict: r.data.verdict } : null;
+  }, [profile, savedGoal]);
+
+  const hasEstimates = useMemo(() => profileHasEstimates(profile), [profile]);
 
   const rankedMoves = nextMoves.moves.status === 'ready' ? nextMoves.moves.data : NO_MOVES;
   // The committed move as ranked now (current number and label) when it is on the list, else as stored.
@@ -140,7 +151,11 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
       if (committedMove && !nextMoves.actionsDisabled) markMoveDone(committedMove);
     },
     actionsDisabled: nextMoves.actionsDisabled,
+    commit: nextMoves.commit,
+    uncommit: nextMoves.uncommit,
     topMove,
+    goal,
+    hasEstimates,
     game,
   };
 }

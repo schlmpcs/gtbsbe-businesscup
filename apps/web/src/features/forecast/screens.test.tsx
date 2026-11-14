@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { common, forecast as t } from '@/copy';
+import { common, forecast as t, goal as goalCopy, tools } from '@/copy';
 import { getArea } from '@lifeguessr/data/areas';
 import { APP_STORE_KEY, useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
@@ -36,7 +36,7 @@ function A({ href, children, ...rest }: { href: string; children?: ReactNode; cl
 }
 
 const links: TodayLinks = {
-  play: '/play', sample: '/future?sample=1', future: '/future', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
+  play: '/play', sample: '/future?sample=1', future: '/future', tools: '/tools', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
   profile: '/me/guess', upload: '/me/upload',
 };
 
@@ -47,7 +47,7 @@ function Today() {
 
 function Future({ explain }: { explain?: ExplainFn }) {
   const vm = useFuture({ explain });
-  return <FutureScreen vm={vm} links={{ today: '/', makeExact: '/me/upload' }} Link={A} />;
+  return <FutureScreen vm={vm} links={{ makeExact: '/me/upload' }} Link={A} />;
 }
 
 /** A hand-made Today view-model: ready, with the forecast answered by the rules. */
@@ -63,7 +63,8 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
     },
     horizonYears: 10, horizonReady: true, atHorizon: { month: 120, low: 1, mid: 2, high: 3 }, bandIsZero: false, bandKind: 'inputs',
     forecastStatus: 'ready', forecastError: null, source: 'rules', isRefreshing: false, actionsDisabled: false, committedMove: null,
-    markCommittedDone: () => {}, topMove: { status: 'ready', data: null },
+    markCommittedDone: () => {}, commit: () => {}, uncommit: () => {}, topMove: { status: 'ready', data: null },
+    goal: null, hasEstimates: false,
     game: { kind: 'duel', date: null, played: 0, total: 5, finished: false, homes: [] },
     ...over,
   };
@@ -103,7 +104,7 @@ describe('TodayScreen (S1) first visit', () => {
     render(<Today />);
     expect(await screen.findByTestId('at-horizon')).toBeInTheDocument();
     expect(screen.queryByTestId('today-first-visit')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sample-note')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nudge')).not.toBeInTheDocument();
   });
 });
 
@@ -111,23 +112,55 @@ describe('TodayScreen (S1)', () => {
   // Past the first visit: the user has guessed their own month.
   beforeEach(() => useAppStore.setState({ selfGuess: 3000 }));
 
-  it('shows the 10-year number with its range, the play CTA and the entry points', async () => {
+  it('is the Home dashboard: the house, this month, the next move, today’s game, What if? and all screens', async () => {
     render(<Today />);
+    expect(screen.getByRole('heading', { level: 1, name: t.today.home.title })).toBeInTheDocument();
     const card = await screen.findByTestId('at-horizon');
     await waitFor(() => expect(within(card).getByText(t.netWorthAt(10))).toBeInTheDocument());
     expect(within(card).getByText(/^Likely between \$[\d,]+ and \$[\d,]+$/)).toBeInTheDocument();
     expect(within(card).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
     expect(within(card).getByText(t.band.label)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t.today.home.openFuture })).toHaveAttribute('href', '/future');
+    expect(screen.getByTestId('month-end')).toBeInTheDocument();
+    expect(within(screen.getByTestId('month-end')).getByRole('link', { name: t.today.monthEnd.upload })).toHaveAttribute('href', '/me/upload');
+    expect(within(screen.getByTestId('today-move')).getByRole('link', { name: t.today.home.move.allMoves })).toHaveAttribute('href', '/future');
     // /play is the duel by default: rounds, not homes.
-    expect(screen.getByRole('heading', { level: 1, name: t.today.duel.title })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: t.today.playDuel.cta })).toHaveAttribute('href', '/play');
-    expect(screen.getByRole('link', { name: t.today.future.cta })).toHaveAttribute('href', '/future');
-    expect(screen.getByRole('link', { name: new RegExp(t.today.tools.afford.title) })).toHaveAttribute('href', '/afford');
-    expect(screen.getByRole('link', { name: new RegExp(t.today.tools.loan.title) })).toHaveAttribute('href', '/loan');
-    expect(screen.getByRole('link', { name: new RegExp(t.today.tools.decide.title) })).toHaveAttribute('href', '/decide');
-    expect(screen.getByRole('link', { name: new RegExp(t.today.tools.checkin.title) })).toHaveAttribute('href', '/checkin');
-    expect(screen.getByTestId('sample-note')).toBeInTheDocument();
+    const game = screen.getByTestId('play');
+    expect(within(game).getByText(t.today.duel.title)).toBeInTheDocument();
+    expect(within(game).getByRole('link', { name: t.today.playDuel.cta })).toHaveAttribute('href', '/play');
+    const whatIf = screen.getByRole('region', { name: t.today.home.whatIf.title });
+    for (const [key, href] of [['afford', '/afford'], ['loan', '/loan'], ['decide', '/decide'], ['checkin', '/checkin']] as const) {
+      expect(within(whatIf).getByRole('link', { name: new RegExp(tools.hub.items[key].question.replace('?', '\\?')) })).toHaveAttribute('href', href);
+    }
+    expect(within(whatIf).getByRole('link', { name: t.today.home.whatIf.all })).toHaveAttribute('href', '/tools');
+    // Still the starting profile: one nudge, to build yours.
+    expect(within(screen.getByTestId('nudge')).getByRole('link', { name: t.today.home.nudge.buildProfile })).toHaveAttribute('href', '/me/guess');
+    expect(screen.queryByText(t.today.firstVisit.sample)).not.toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: t.today.allScreens }).querySelectorAll('a[data-screen]')).toHaveLength(2);
+  });
+
+  it('shows the goal verdict from the view-model under the house number', () => {
+    render(<TodayScreen vm={todayVm({ goal: { target: 250_000, years: 10, verdict: 'withinRange' } })} links={links} screens={[]} Link={A} />);
+    const goal = screen.getByTestId('today-goal');
+    expect(goal).toHaveTextContent(goalCopy.verdictLabel.withinRange);
+    expect(goal).toHaveTextContent(t.today.home.goalLine('$250,000', 10));
+  });
+
+  it('shows a skeleton, never a number, while the forecast loads', () => {
+    render(<TodayScreen vm={todayVm({ forecastStatus: 'loading', source: null })} links={links} screens={[]} Link={A} />);
+    const card = screen.getByTestId('at-horizon');
+    expect(card.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(within(card).queryByText(/\$/)).not.toBeInTheDocument();
+  });
+
+  it('shows at most one nudge: none with the sample life, “make it exact” for estimates, none when all is exact', () => {
+    const { rerender } = render(<TodayScreen vm={todayVm({ isSample: true, isDemoProfile: true, hasEstimates: true })} links={links} screens={[]} Link={A} />);
+    expect(screen.queryByTestId('nudge')).not.toBeInTheDocument();
+    rerender(<TodayScreen vm={todayVm({ hasEstimates: true })} links={links} screens={[]} Link={A} />);
+    expect(screen.getByTestId('nudge')).toHaveTextContent(t.today.home.nudge.estimates);
+    expect(within(screen.getByTestId('nudge')).getByRole('link', { name: t.today.home.nudge.makeExact })).toHaveAttribute('href', '/me/upload');
+    rerender(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    expect(screen.queryByTestId('nudge')).not.toBeInTheDocument();
   });
 
   it('shows the projection only, and why, until 3 months of statements', async () => {
@@ -270,44 +303,48 @@ describe('TodayScreen (S1)', () => {
     expect(screen.getByText(t.today.monthEnd.fromStatement('November 12'))).toBeInTheDocument();
   });
 
-  it('marks the committed move done from Today', async () => {
+  it('adds the top move to the plan from Today, then marks it done', async () => {
     const user = userEvent.setup();
     render(<Today />);
     const moveCard = await screen.findByTestId('today-move');
     await waitFor(() => expect(within(moveCard).getByTestId('forecast-source')).toBeInTheDocument()); // the answer is in
-    expect(within(moveCard).getByText(t.today.move.topTitle)).toBeInTheDocument();
-    expect(within(moveCard).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(moveCard).getByText(t.today.home.move.title)).toBeInTheDocument();
+    expect(within(moveCard).queryByRole('button', { name: t.today.move.markDone })).not.toBeInTheDocument();
 
     const ranked = rankMoves(useAppStore.getState().profile, { rates: { inflationAnnual: inflationAnnualOf(getArea('75206')) } });
-    act(() => useAppStore.getState().commitMove(ranked[0]!));
+    await user.click(within(moveCard).getByRole('button', { name: t.moves.commit }));
+    expect(useAppStore.getState().profile.committedMoveId).toBe(ranked[0]!.id);
     await waitFor(() => expect(within(moveCard).getByText(t.today.move.committedTitle)).toBeInTheDocument());
+    expect(within(moveCard).getByRole('button', { name: t.moves.committed })).toHaveAttribute('aria-pressed', 'true');
     await user.click(within(moveCard).getByRole('button', { name: t.today.move.markDone }));
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([ranked[0]!.id]);
   });
 });
 
 describe('TodayScreen (S1) daily game copy', () => {
-  it('duel: counts today’s five and shows no home tiles', () => {
+  it('duel: counts today’s five in the game card, then says it is done until tomorrow', () => {
     const p = t.today.playDuel;
     const { unmount } = render(
       <TodayScreen vm={todayVm({ game: { kind: 'duel', date: '2026-11-14', played: 2, total: 5, finished: false, homes: [] } })} links={links} screens={[]} Link={A} />,
     );
-    expect(screen.getByRole('link', { name: p.continue(2, 5) })).toHaveAttribute('href', '/play');
-    expect(screen.queryByRole('region', { name: t.today.homes.label })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('play')).getByRole('link', { name: p.continue(2, 5) })).toHaveAttribute('href', '/play');
     expect(screen.queryByText(/today’s homes/i)).not.toBeInTheDocument();
     unmount();
 
     render(<TodayScreen vm={todayVm({ game: { kind: 'duel', date: '2026-11-14', played: 5, total: 5, finished: true, homes: [] } })} links={links} screens={[]} Link={A} />);
-    expect(screen.getByText(p.doneSticker)).toBeInTheDocument();
-    expect(screen.getByText(p.done)).toBeInTheDocument();
+    const game = screen.getByTestId('play');
+    expect(within(game).getByText(p.doneSticker)).toBeInTheDocument();
+    expect(within(game).getByText(p.doneScore(5, 5))).toBeInTheDocument();
+    expect(within(game).getByText(t.today.home.game.tomorrow)).toBeInTheDocument();
+    expect(within(game).queryByRole('link', { name: p.cta })).not.toBeInTheDocument();
   });
 
-  it('slider (NEXT_PUBLIC_GAME_MODE=slider): today’s homes, with their tiles', () => {
+  it('slider (NEXT_PUBLIC_GAME_MODE=slider): the game card counts homes', () => {
     const homes = [{ id: 'a', metro: 'Austin, TX', played: true }, { id: 'b', metro: 'Boise, ID', played: false }];
     render(<TodayScreen vm={todayVm({ game: { kind: 'slider', date: '2026-11-14', played: 1, total: 2, finished: false, homes } })} links={links} screens={[]} Link={A} />);
-    expect(screen.getByRole('heading', { level: 1, name: t.today.title })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: t.today.play.continue(1, 2) })).toHaveAttribute('href', '/play');
-    expect(screen.getByRole('region', { name: t.today.homes.label })).toBeInTheDocument();
+    const game = screen.getByTestId('play');
+    expect(within(game).getByText(t.today.title)).toBeInTheDocument();
+    expect(within(game).getByRole('link', { name: t.today.play.continue(1, 2) })).toHaveAttribute('href', '/play');
   });
 
   it('lists a screen under the title it is given (S2 as the duel)', () => {
@@ -362,6 +399,10 @@ describe('FutureScreen (S10)', () => {
     expect(moves.length).toBeLessThanOrEqual(3);
     for (const move of moves) expect(within(move).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
     expect(screen.getByTestId('level-2')).toHaveAttribute('data-locked', 'true');
+    // The level 2 preview is one closed line; the nav covers the way back to Home.
+    expect(screen.getByTestId('level-2').tagName).toBe('DETAILS');
+    expect(screen.getByTestId('level-2')).not.toHaveAttribute('open');
+    expect(screen.queryByRole('link', { name: /Back to Today/ })).not.toBeInTheDocument();
     const how = screen.getByTestId('how-we-calculate');
     expect(within(how).getByText(t.how.intro)).toBeInTheDocument();
     expect(within(how).getByText(t.how.labels.cardAprDefault)).toBeInTheDocument();

@@ -21,7 +21,7 @@ import {
 
 export type FutureScreenProps = {
   vm: FutureVM;
-  links: { today: string; makeExact: string };
+  links: { makeExact: string };
   Link: LinkComponent;
   /** The goal card (its own view-model), placed under the headline number when the route passes it. */
   goal?: ReactNode;
@@ -75,13 +75,7 @@ export function FutureScreen({ vm, links, Link, goal }: FutureScreenProps) {
 
         <NextMoves vm={vm} explanations={vm.explanations} onExplain={vm.explain} loading={loading} />
 
-        <div className="flex flex-col gap-xl lg:flex-row lg:items-start">
-          <HowWeCalculate vm={vm.howWeCalculate} source={vm.source} className="lg:flex-1" />
-          <Link href={links.today} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'lg:min-w-sm')}>
-            {f.backCta}
-            <span aria-hidden="true">→</span>
-          </Link>
-        </div>
+        <HowWeCalculate vm={vm.howWeCalculate} source={vm.source} />
       </Stack>
     </main>
   );

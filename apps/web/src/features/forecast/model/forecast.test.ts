@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {
-  applyPatch, cardAprDefault, deflateForecast, estimateSpread, forecast, hasEstimates, inflationAnnualFallback,
+  applyPatch, cardAprDefault, deflateForecast, estimateSpread, forecast, goalStatus, hasEstimates, inflationAnnualFallback,
   inflationAnnualOf, monthEnd, moveCandidates, pointAt, rankMoves, returnAnnualNominal, type MoveCandidate,
 } from '@lifeguessr/engine';
 import type * as Engine from '@lifeguessr/engine';
@@ -435,6 +435,32 @@ describe('useToday (S1)', () => {
     expect(result.current.committedMove).toBeNull();
     // The duel is /play by default: nothing picked today yet.
     expect(result.current.game).toEqual({ kind: 'duel', date: null, played: 0, total: 5, finished: false, homes: [] });
+  });
+
+  it('passes the goal verdict (engine goalStatus), the estimates flag and the plan actions through', async () => {
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitFor(() => expect(result.current.forecastStatus).toBe('ready'));
+    expect(result.current.goal).toBeNull();
+    expect(result.current.hasEstimates).toBe(hasEstimates(cloneProfileDemo()));
+
+    const goal = { target: 250_000, years: 10 };
+    act(() => useAppStore.getState().setGoal(goal));
+    expect(result.current.goal).toEqual({ ...goal, verdict: goalStatus(cloneProfileDemo(), goal, { rates }).verdict });
+
+    act(() => useAppStore.setState({ profile: measured(useAppStore.getState().profile) }));
+    expect(result.current.hasEstimates).toBe(false);
+  });
+
+  it('adds the top move to the plan from Today, and takes it out', async () => {
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitFor(() => expect(result.current.topMove.status).toBe('ready'));
+    const top = result.current.topMove.status === 'ready' ? result.current.topMove.data! : null;
+    act(() => result.current.commit(top!.id));
+    expect(useAppStore.getState().profile.committedMoveId).toBe(top!.id);
+    expect(result.current.committedMove?.id).toBe(top!.id);
+    act(() => result.current.uncommit());
+    expect(useAppStore.getState().profile.committedMoveId).toBeUndefined();
+    expect(result.current.committedMove).toBeNull();
   });
 
   it('counts today’s duel rounds from the duel log, with no home tiles', async () => {

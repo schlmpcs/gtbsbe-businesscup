@@ -17,6 +17,7 @@ const links: TodayLinks = {
   play: SCREEN_ROUTES.S2,
   sample: `${SCREEN_ROUTES.S10}?sample=1`,
   future: SCREEN_ROUTES.S10,
+  tools: '/tools',
   afford: SCREEN_ROUTES.S11,
   loan: SCREEN_ROUTES.S12,
   decide: SCREEN_ROUTES.S13,

@@ -1,6 +1,7 @@
-// S1 Today: the daily game hero, You in N years (the year picked on S10), the move to make, this month and the planning tools.
+// S1 Today. First visit: what the app is (Play, Try with sample data). After that, the Home
+// dashboard: your house (the 10-year number), this month, your next move, today's game and What if?.
 // Presentational: everything comes from TodayVM; links come from the route page.
-import { common, forecast as t, screenTitles, type ScreenId } from '@/copy';
+import { common, forecast as t, goal as g, screenTitles, tools, type ScreenId } from '@/copy';
 import {
   Art,
   Button,
@@ -14,7 +15,7 @@ import {
   Sticker,
   type ArtName,
 } from '@/ui-kit';
-import type { MonthEndVM, MoveVM, TodayHomeVM, TodayVM } from '../model/types';
+import type { MonthEndVM, MoveVM, TodayVM } from '../model/types';
 import {
   bandText,
   ErrorNote,
@@ -22,11 +23,9 @@ import {
   INK_BAND,
   moveDetail,
   moveTitle,
-  ON_INK_BUTTON,
   RangeText,
   Skeleton,
   SourceTag,
-  tilt,
   type LinkComponent,
 } from './shared';
 
@@ -35,6 +34,8 @@ export type TodayLinks = {
   /** "Try with sample data": S10 with the sample life loaded. */
   sample: string;
   future: string;
+  /** The "What if?" hub. */
+  tools: string;
   afford: string;
   loan: string;
   decide: string;
@@ -56,69 +57,26 @@ export type TodayScreenProps = {
 };
 
 const CARD = 'rounded-xl bg-surface p-xl shadow-md';
+const TEXT_LINK = 'inline-flex min-h-11 items-center gap-xs text-sm font-semibold text-primary hover:underline';
+const CARD_TITLE = 'text-xs font-bold uppercase tracking-wide';
+const VERDICT_TONE = { onTrack: 'positive', withinRange: 'primary', behind: 'ink' } as const;
 
 export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
   if (vm.firstVisit) return <FirstVisit links={links} screens={screens} Link={Link} />;
-  const ready = vm.status === 'ready';
-  const firstVisit = !ready || (vm.game.played === 0 && !vm.game.finished);
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl sm:py-3xl">
       <Stack gap="3xl">
-        <Hero vm={vm} links={links} Link={Link} />
+        <HouseHero vm={vm} futureHref={links.future} Link={Link} />
 
-        {firstVisit && <Steps items={vm.game.kind === 'duel' ? t.today.duel.steps : t.today.steps.items} />}
+        <Nudge vm={vm} links={links} Link={Link} />
 
-        {ready && vm.game.homes.length > 0 && <HomesRow homes={vm.game.homes} />}
-
-        {ready && vm.isDemoProfile && !vm.isSample && (
-          <div
-            data-testid="sample-note"
-            className="flex flex-wrap items-center justify-between gap-md rounded-xl bg-primary-soft px-xl py-lg"
-          >
-            <p className="text-sm font-semibold">{t.sampleProfile}</p>
-            <Link href={links.profile} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
-              {t.today.tools.profile.title}
-            </Link>
-          </div>
-        )}
-
-        <div className="grid items-stretch gap-xl lg:grid-cols-12">
-          <HorizonCard vm={vm} futureHref={links.future} Link={Link} />
+        <div className="grid items-stretch gap-xl md:grid-cols-2 lg:grid-cols-3">
+          <MonthCard vm={vm} uploadHref={links.upload} Link={Link} />
           <MoveCard vm={vm} futureHref={links.future} Link={Link} />
+          <GameCard vm={vm} playHref={links.play} Link={Link} />
         </div>
 
-        <section aria-labelledby="month-end-heading" data-testid="month-end" className={cx(INK_BAND, 'p-xl sm:p-2xl')}>
-          <h2 id="month-end-heading" className="text-xs font-bold uppercase tracking-wide text-primary">
-            {t.today.monthEnd.title}
-          </h2>
-          <div className="mt-md">
-            {!ready || vm.monthEnd.status === 'loading' ? (
-              <Skeleton />
-            ) : vm.monthEnd.status === 'error' ? (
-              <ErrorNote error={vm.monthEnd.error} />
-            ) : (
-              <MonthEnd data={vm.monthEnd.data} uploadHref={links.upload} Link={Link} />
-            )}
-          </div>
-        </section>
-
-        <section aria-labelledby="tools-heading">
-          <h2 id="tools-heading" className="font-display text-4xl font-extrabold leading-tight tracking-tight">
-            {t.today.tools.title}
-          </h2>
-          <ul className="mt-lg grid grid-cols-2 gap-lg sm:grid-cols-3 lg:grid-cols-5">
-            <ToolLink href={links.afford} art="afford-crane" {...t.today.tools.afford} Link={Link} />
-            <ToolLink href={links.loan} art="house-crane" {...t.today.tools.loan} Link={Link} />
-            <ToolLink href={links.decide} art="coins" {...t.today.tools.decide} Link={Link} />
-            <ToolLink href={links.checkin} art="calendar" {...t.today.tools.checkin} Link={Link} />
-            <ToolLink
-              href={links.profile}
-              art="house-blueprint"
-              {...(ready && !vm.isDemoProfile ? t.today.tools.profileEdit : t.today.tools.profile)}
-              Link={Link}
-            />
-          </ul>
-        </section>
+        <WhatIfRow links={links} Link={Link} />
 
         <AllScreens screens={screens} Link={Link} />
       </Stack>
@@ -126,83 +84,333 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
   );
 }
 
-/** The game hero: first visit / in progress (play), or done for today (price your own month). */
-function Hero({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: LinkComponent }) {
+/** The house: net worth in 10 years (AI estimate or rules, as the VM says), its range and the goal verdict. */
+function HouseHero({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; Link: LinkComponent }) {
   const ready = vm.status === 'ready';
-  const { played, total, finished } = vm.game;
-  const done = ready && finished;
-  const inProgress = ready && played > 0 && !finished;
-  // The duel counts rounds ("today's five"), the slider game homes.
-  const duel = vm.game.kind === 'duel';
-  const p = duel ? t.today.playDuel : t.today.play;
-
   return (
-    <section data-testid="play" className="grid items-center gap-2xl lg:grid-cols-2">
+    <section
+      aria-labelledby="house-heading"
+      className="grid items-center gap-2xl lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+    >
       <div className="flex min-w-0 flex-col items-start gap-lg">
-        {done ? (
-          <>
-            <Sticker tone="positive" tilt={-3} className="text-sm">
-              {p.doneSticker}
-            </Sticker>
-            <h1 className="font-display text-7xl font-extrabold leading-display tracking-tight tabular-nums sm:text-8xl lg:text-9xl">
-              {p.doneScore(played, total)}
-            </h1>
-            <p className="max-w-(--container-lg) text-xl">{p.done}</p>
-            <div className="flex flex-wrap items-center gap-md">
-              <Link href={links.profile} className={buttonClassName({ variant: 'primary', size: 'lg' })}>
-                {vm.isDemoProfile ? p.priceOwn : t.today.tools.profileEdit.title}
-                <span aria-hidden="true">→</span>
-              </Link>
-              <Link href={links.play} className={buttonClassName({ variant: 'secondary', size: 'lg' })}>
-                {p.doneCta}
-              </Link>
-            </div>
-          </>
-        ) : (
-          <>
-            <Sticker tone={inProgress ? 'primary' : 'ink'} tilt={-3}>
-              {inProgress ? t.today.inProgress : t.today.kicker}
-            </Sticker>
-            <h1 className="font-display text-6xl font-extrabold leading-display tracking-tight sm:text-7xl xl:text-8xl">
-              {duel ? t.today.duel.title : t.today.title}
-            </h1>
-            <p className="max-w-(--container-lg) text-xl">{duel ? t.today.duel.lead : t.today.lead}</p>
-            <div className="flex w-full flex-wrap items-center gap-md">
-              <Link
-                href={links.play}
-                className={cx(buttonClassName({ variant: 'primary', size: 'lg' }), 'w-full sm:w-auto')}
-              >
-                {inProgress ? p.continue(played, total) : p.cta}
-                <span aria-hidden="true">→</span>
-              </Link>
-              {ready && vm.isDemoProfile && (
-                <Link
-                  href={links.sample}
-                  className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}
-                >
-                  {t.today.sampleCta}
-                </Link>
+        <h1 id="house-heading">
+          <Sticker tone="ink" tilt={-3} className="text-sm">
+            {t.today.home.title}
+          </Sticker>
+        </h1>
+        <div data-testid="at-horizon" className="w-full">
+          {!ready || vm.forecastStatus === 'loading' ? (
+            <Skeleton lines={4} />
+          ) : vm.forecastStatus === 'error' && vm.forecastError ? (
+            <ErrorNote error={vm.forecastError} />
+          ) : (
+            <Stack gap="sm">
+              <div className="flex flex-wrap items-center gap-sm">
+                <span className={EYEBROW}>{vm.horizonReady ? t.netWorthAt(vm.horizonYears) : t.today.future.titleNeutral}</span>
+                {!vm.bandIsZero && <EstimateTag />}
+              </div>
+              <p className="font-display text-7xl font-extrabold leading-display tracking-tight tabular-nums break-words sm:text-8xl lg:text-9xl">
+                <Money value={vm.atHorizon.mid} />
+              </p>
+              <div className="flex flex-wrap items-baseline gap-x-sm text-sm text-text-muted">
+                <RangeText point={vm.atHorizon} isZero={vm.bandIsZero} />
+                {!vm.bandIsZero && <span aria-hidden="true">·</span>}
+                <span>{t.today.future.hint}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-sm">
+                <SourceTag source={vm.source} />
+                {!vm.bandIsZero && (
+                  <span className="text-xs text-text-muted">{bandText(vm.bandKind, false).label}</span>
+                )}
+                <span aria-live="polite" className="text-xs text-text-muted" data-testid="forecast-refreshing">
+                  {vm.isRefreshing ? t.future.refreshing : null}
+                </span>
+              </div>
+              {vm.goal && (
+                <div data-testid="today-goal" className="mt-sm flex flex-wrap items-center gap-sm">
+                  <Sticker tone={VERDICT_TONE[vm.goal.verdict]} tilt={-2}>
+                    {g.verdictLabel[vm.goal.verdict]}
+                  </Sticker>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {t.today.home.goalLine(formatMoney(vm.goal.target), vm.goal.years)}
+                  </span>
+                </div>
               )}
-            </div>
-            <p className="text-sm text-text-muted">{t.today.note}</p>
-          </>
+            </Stack>
+          )}
+        </div>
+        <Link href={futureHref} className={buttonClassName({ variant: 'secondary', size: 'lg' })}>
+          {t.today.home.openFuture}
+          <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+      {/* Decoration only: the art carries no number. */}
+      <Art name="house-build" className="mx-auto w-full max-w-60 sm:max-w-(--container-md)" />
+    </section>
+  );
+}
+
+/**
+ * At most one nudge: none while the sample life is on (the site banner says it); the starting
+ * profile asks you to build yours; estimated inputs ask for a statement.
+ */
+function Nudge({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: LinkComponent }) {
+  if (vm.status !== 'ready' || vm.isSample) return null;
+  const n = t.today.home.nudge;
+  const nudge = vm.isDemoProfile
+    ? { text: n.demo, cta: n.buildProfile, href: links.profile }
+    : vm.hasEstimates
+      ? { text: n.estimates, cta: n.makeExact, href: links.upload }
+      : null;
+  if (!nudge) return null;
+  return (
+    <div
+      data-testid="nudge"
+      className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs rounded-xl bg-primary-soft px-xl py-sm"
+    >
+      <p className="text-sm font-semibold">{nudge.text}</p>
+      <Link href={nudge.href} className={TEXT_LINK}>
+        {nudge.cta}
+        <span aria-hidden="true">→</span>
+      </Link>
+    </div>
+  );
+}
+
+function MonthCard({ vm, uploadHref, Link }: { vm: TodayVM; uploadHref: string; Link: LinkComponent }) {
+  const ready = vm.status === 'ready';
+  return (
+    <section aria-labelledby="month-end-heading" data-testid="month-end" className={cx(INK_BAND, 'flex flex-col gap-md p-xl')}>
+      <h2 id="month-end-heading" className={cx(CARD_TITLE, 'text-primary')}>
+        {t.today.monthEnd.title}
+      </h2>
+      <div className="flex-1">
+        {!ready || vm.monthEnd.status === 'loading' ? (
+          <Skeleton />
+        ) : vm.monthEnd.status === 'error' ? (
+          <ErrorNote error={vm.monthEnd.error} />
+        ) : (
+          <MonthEnd data={vm.monthEnd.data} />
         )}
       </div>
-      {/* Decoration only: the art carries no number or cost fact. */}
-      <Art name={done ? 'empty-plot' : 'duel-houses'} className="mx-auto w-full max-w-(--container-xl)" />
+      <Link href={uploadHref} className={cx(TEXT_LINK, 'self-start')}>
+        {t.today.monthEnd.upload}
+        <span aria-hidden="true">→</span>
+      </Link>
+    </section>
+  );
+}
+
+function MonthEnd({ data }: { data: MonthEndVM }) {
+  const m = t.today.monthEnd;
+  const hint = data.fromStatement
+    ? m.fromStatement(formatMonth(data.month, data.asOfDay ?? undefined))
+    : data.historyMonths > 0
+      ? m.noRowsThisMonth(formatMonth(data.month))
+      : m.fromProfile;
+  return (
+    <Stack gap="md">
+      <div>
+        <p className="font-display text-5xl font-extrabold leading-display tabular-nums">
+          <Money value={data.projectedSpend} />
+        </p>
+        <p className="mt-xs text-sm text-text-muted">{m.projected}</p>
+      </div>
+      <div>
+        <p className="font-display text-2xl font-extrabold leading-tight tabular-nums">
+          <Money value={data.takeHome.value} />
+        </p>
+        <p className="mt-xs flex flex-wrap items-center gap-xs text-sm text-text-muted">
+          <span>{m.takeHome}</span>
+          <span>{m.perMonth}</span>
+          {data.takeHome.isEstimate && <EstimateTag className="border-on-primary/40" />}
+        </p>
+      </div>
+      <p className="text-xs text-text-muted">{hint}</p>
+      {data.vsAverage === null ? (
+        <p
+          className="text-sm"
+          data-testid={data.noAverage === 'thisMonth' ? 'month-end-no-current' : 'month-end-no-history'}
+        >
+          {data.noAverage === 'thisMonth' ? m.needThisMonth(formatMonth(data.month)) : m.needHistory(data.historyMonths)}
+        </p>
+      ) : (
+        <div data-testid="month-end-drifts" className="flex flex-col gap-xs">
+          <p className="font-semibold tabular-nums text-primary">
+            {m.vsAverageValue(formatMoney(data.vsAverage, { signed: true }))}
+          </p>
+          {data.drifts.length === 0 ? (
+            <p className="text-sm text-text-muted">{m.noDrifts}</p>
+          ) : (
+            <ul aria-label={m.driftsTitle} className="flex flex-wrap gap-xs text-xs">
+              {data.drifts.map((d) => (
+                <li key={d.category} className="rounded-full bg-on-primary/10 px-md py-xs font-medium tabular-nums">
+                  {m.drift(common.categories[d.category], formatMoney(d.delta, { signed: true }))}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </Stack>
+  );
+}
+
+function MoveCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; Link: LinkComponent }) {
+  const committed = vm.committedMove;
+  const title = committed ? t.today.move.committedTitle : t.today.home.move.title;
+  let body;
+  if (vm.status !== 'ready') body = <Skeleton lines={2} />;
+  else if (committed) body = <MoveSummary move={committed} vm={vm} />;
+  else if (vm.topMove.status === 'loading') body = <Skeleton lines={2} />;
+  else if (vm.topMove.status === 'error') body = <ErrorNote error={vm.topMove.error} />;
+  else if (vm.topMove.data === null) body = <p className="text-sm text-text-muted">{t.today.move.none}</p>;
+  else body = <MoveSummary move={vm.topMove.data} vm={vm} />;
+
+  return (
+    <section
+      aria-labelledby="today-move-heading"
+      data-testid="today-move"
+      className={cx(CARD, 'flex flex-col gap-md border-2', committed ? 'border-positive' : 'border-transparent')}
+    >
+      <h2 id="today-move-heading" className={cx(CARD_TITLE, 'text-text-muted')}>
+        {title}
+      </h2>
+      <div className="flex-1">{body}</div>
+      <Link href={futureHref} className={cx(TEXT_LINK, 'self-start')}>
+        {t.today.home.move.allMoves}
+        <span aria-hidden="true">→</span>
+      </Link>
+    </section>
+  );
+}
+
+function MoveSummary({ move, vm }: { move: MoveVM; vm: TodayVM }) {
+  const detail = moveDetail(move);
+  const inPlan = vm.committedMove?.id === move.id;
+  return (
+    <Stack gap="sm">
+      <div>
+        <p className="font-display text-5xl font-extrabold leading-display tracking-tight text-primary tabular-nums">
+          {formatMoney(move.effect, { signed: true })}
+        </p>
+        <p className="mt-xs flex flex-wrap items-center gap-sm text-xs text-text-muted">
+          <span>{t.moves.effectLabel(move.horizonYears)}</span>
+          <SourceTag source={move.source} />
+        </p>
+      </div>
+      <p className="text-lg font-bold leading-tight">{moveTitle(move)}</p>
+      {detail && <p className="text-sm text-text-muted">{detail}</p>}
+      <div className="mt-sm flex flex-wrap items-center gap-sm">
+        {inPlan ? (
+          <>
+            <Button variant="secondary" size="sm" aria-pressed="true" onClick={vm.uncommit}>
+              {t.moves.committed}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={vm.markCommittedDone} disabled={vm.actionsDisabled}>
+              {t.today.move.markDone}
+            </Button>
+          </>
+        ) : (
+          <Button variant="dark" size="sm" onClick={() => vm.commit(move.id)} disabled={vm.actionsDisabled}>
+            {t.moves.commit}
+          </Button>
+        )}
+      </div>
+    </Stack>
+  );
+}
+
+/** Today's game: not started, in progress (n of 5) or done for today. */
+function GameCard({ vm, playHref, Link }: { vm: TodayVM; playHref: string; Link: LinkComponent }) {
+  const ready = vm.status === 'ready';
+  const { played, total, finished } = vm.game;
+  const duel = vm.game.kind === 'duel';
+  const p = duel ? t.today.playDuel : t.today.play;
+  const h = t.today.home.game;
+  const inProgress = played > 0 && !finished;
+  return (
+    <section aria-labelledby="today-game-heading" data-testid="play" className={cx(CARD, 'flex flex-col gap-md')}>
+      <h2 id="today-game-heading" className={cx(CARD_TITLE, 'text-text-muted')}>
+        {h.title}
+      </h2>
+      {/* Decoration only. */}
+      <Art name="duel-houses" className="mx-auto w-full max-w-48" />
+      {!ready ? (
+        <Skeleton lines={2} />
+      ) : finished ? (
+        <div className="flex flex-1 flex-col items-start gap-sm">
+          <Sticker tone="positive" tilt={-3}>
+            {p.doneSticker}
+          </Sticker>
+          <p className="font-display text-5xl font-extrabold leading-display tabular-nums">{p.doneScore(played, total)}</p>
+          <p className="text-sm text-text-muted">{duel ? h.tomorrow : h.tomorrowHomes}</p>
+          <Link href={playHref} className={cx(TEXT_LINK, 'mt-auto')}>
+            {p.doneCta}
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      ) : (
+        <div className="flex flex-1 flex-col items-start gap-md">
+          <p className="font-display text-2xl font-extrabold leading-tight">{duel ? t.today.duel.title : t.today.title}</p>
+          <Link href={playHref} className={cx(buttonClassName({ variant: 'primary' }), 'mt-auto w-full sm:w-auto')}>
+            {inProgress ? p.continue(played, total) : p.cta}
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      )}
+    </section>
+  );
+}
+
+type ToolKey = 'afford' | 'loan' | 'decide' | 'checkin';
+// The same art as the What if? hub (/tools).
+const WHAT_IF: { key: ToolKey; art: ArtName }[] = [
+  { key: 'afford', art: 'afford-crane' },
+  { key: 'loan', art: 'coins' },
+  { key: 'decide', art: 'home-family' },
+  { key: 'checkin', art: 'house-crane' },
+];
+
+function WhatIfRow({ links, Link }: { links: TodayLinks; Link: LinkComponent }) {
+  const w = t.today.home.whatIf;
+  return (
+    <section aria-labelledby="what-if-heading">
+      <div className="flex flex-wrap items-baseline justify-between gap-md">
+        <h2 id="what-if-heading" className="font-display text-3xl font-extrabold leading-tight tracking-tight">
+          {w.title}
+        </h2>
+        <Link href={links.tools} className={TEXT_LINK}>
+          {w.all}
+          <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+      <ul className="mt-md grid gap-md sm:grid-cols-2 lg:grid-cols-4">
+        {WHAT_IF.map(({ key, art }) => {
+          const item = tools.hub.items[key];
+          return (
+            <li key={key}>
+              <Link
+                href={links[key]}
+                className="flex h-full items-center gap-md rounded-xl bg-surface p-md shadow-md transition-transform hover:-translate-y-1"
+              >
+                <Art name={art} className="flex size-16 shrink-0 items-center" />
+                <span className="flex min-w-0 flex-col gap-xs">
+                  <span className="font-bold leading-tight">{item.question}</span>
+                  <span className="text-xs text-text-muted">{item.line}</span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
 
 const STEP_ART: ArtName[] = ['step-duels', 'step-month', 'step-future'];
 
-function Steps({
-  items = t.today.steps.items,
-  label = t.today.steps.label,
-}: {
-  items?: readonly string[];
-  label?: string;
-}) {
+function Steps({ items, label }: { items: readonly string[]; label: string }) {
   return (
     <ol aria-label={label} className="grid gap-xl sm:grid-cols-3">
       {items.map((title, i) => (
@@ -224,261 +432,6 @@ function Steps({
         </li>
       ))}
     </ol>
-  );
-}
-
-// Decorative art for the home tiles, in play order (the illustrations carry no facts about the card).
-const HOME_ART: ArtName[] = ['home-apartment', 'home-family', 'home-suburb', 'home-large'];
-const HOME_TILT = [-2, 1, -1, 2, -1, 1];
-
-/** Today's homes as tiles: where each one is, and which you already guessed. No prices before a guess. */
-function HomesRow({ homes }: { homes: TodayHomeVM[] }) {
-  const h = t.today.homes;
-  const next = homes.findIndex((home) => !home.played);
-  return (
-    <section aria-label={h.label}>
-      <ol className="grid grid-cols-2 gap-lg sm:grid-cols-3 lg:grid-cols-5">
-        {homes.map((home, i) => {
-          const isNext = i === next;
-          return (
-            <li key={home.id} className="relative pt-md" style={tilt(HOME_TILT[i % HOME_TILT.length]!)}>
-              {isNext && (
-                <Sticker tone="primary" tilt={-6} className="absolute top-0 right-md z-10">
-                  {h.start}
-                </Sticker>
-              )}
-              <div
-                className={cx(
-                  'flex h-full flex-col gap-sm rounded-xl bg-surface p-md shadow-md',
-                  isNext && 'ring-2 ring-primary',
-                )}
-              >
-                <Art name={HOME_ART[i % HOME_ART.length]!} className="mx-auto w-4/5" />
-                <div className="px-xs pb-xs">
-                  <p className={EYEBROW}>{h.home(i + 1)}</p>
-                  <p className="font-display text-lg font-extrabold leading-tight">{home.metro}</p>
-                  {home.played ? (
-                    <Sticker tone="positive" className="mt-xs">
-                      {h.played}
-                    </Sticker>
-                  ) : (
-                    <p
-                      className={cx(
-                        'font-display text-2xl font-extrabold leading-tight',
-                        isNext ? 'text-primary' : 'text-border',
-                      )}
-                    >
-                      <span aria-hidden="true">{h.hidden}</span>
-                      <span className="sr-only">{h.hiddenLabel}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
-  );
-}
-
-/** You in N years: the net worth at the year picked on S10 (a neutral title until the saved year is in). */
-function HorizonCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; Link: LinkComponent }) {
-  const ready = vm.status === 'ready';
-  return (
-    <section
-      aria-labelledby="at-horizon-heading"
-      data-testid="at-horizon"
-      className={cx(CARD, 'flex flex-col gap-lg sm:flex-row sm:items-center lg:col-span-7')}
-    >
-      <div className="min-w-0 flex-1">
-        <h2 id="at-horizon-heading" className="font-display text-2xl font-extrabold leading-tight">
-          {vm.horizonReady ? t.today.future.title(vm.horizonYears) : t.today.future.titleNeutral}
-        </h2>
-        <div className="mt-md">
-          {!ready || vm.forecastStatus === 'loading' ? (
-            <Skeleton />
-          ) : vm.forecastStatus === 'error' && vm.forecastError ? (
-            <ErrorNote error={vm.forecastError} />
-          ) : (
-            <Stack gap="sm">
-              <div className="flex flex-wrap items-center gap-sm">
-                <span className={EYEBROW}>{t.netWorthAt(vm.horizonYears)}</span>
-                {!vm.bandIsZero && <EstimateTag />}
-              </div>
-              <p className="font-display text-6xl font-extrabold leading-display tracking-tight break-words sm:text-7xl">
-                <Money value={vm.atHorizon.mid} />
-              </p>
-              <p className="text-sm text-text-muted">{t.today.future.hint}</p>
-              <RangeText point={vm.atHorizon} isZero={vm.bandIsZero} className="text-base" />
-              <div className="flex flex-wrap items-center gap-sm">
-                <SourceTag source={vm.source} />
-                {!vm.bandIsZero && (
-                  <span className="text-xs text-text-muted">{bandText(vm.bandKind, false).label}</span>
-                )}
-                <span aria-live="polite" className="text-xs text-text-muted" data-testid="forecast-refreshing">
-                  {vm.isRefreshing ? t.future.refreshing : null}
-                </span>
-              </div>
-              <Link href={futureHref} className={cx(buttonClassName({ variant: 'secondary' }), 'mt-sm self-start')}>
-                {t.today.future.cta}
-                <span aria-hidden="true">→</span>
-              </Link>
-            </Stack>
-          )}
-        </div>
-      </div>
-      {/* Decoration only. */}
-      <Art name="house-build" className="mx-auto w-48 shrink-0 sm:w-56" />
-    </section>
-  );
-}
-
-function MonthEnd({ data, uploadHref, Link }: { data: MonthEndVM; uploadHref: string; Link: LinkComponent }) {
-  const m = t.today.monthEnd;
-  const hint = data.fromStatement
-    ? m.fromStatement(formatMonth(data.month, data.asOfDay ?? undefined))
-    : data.historyMonths > 0
-      ? m.noRowsThisMonth(formatMonth(data.month))
-      : m.fromProfile;
-  return (
-    <div className="flex flex-col gap-xl lg:flex-row lg:items-end lg:justify-between">
-      <div className="flex flex-wrap gap-x-3xl gap-y-lg">
-        <div>
-          <p className="font-display text-5xl font-extrabold leading-display tabular-nums">
-            <Money value={data.projectedSpend} />
-          </p>
-          <p className="mt-xs text-sm text-text-muted">{m.projected}</p>
-        </div>
-        <div>
-          <p className="font-display text-5xl font-extrabold leading-display tabular-nums">
-            <Money value={data.takeHome.value} />
-          </p>
-          <p className="mt-xs flex flex-wrap items-center gap-xs text-sm text-text-muted">
-            <span>{m.takeHome}</span>
-            <span>{m.perMonth}</span>
-            {data.takeHome.isEstimate && <EstimateTag className="border-on-primary/40" />}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex max-w-(--container-md) flex-col items-start gap-sm">
-        <p className="text-sm text-text-muted">{hint}</p>
-        {data.vsAverage === null ? (
-          <div
-            className="flex flex-col items-start gap-sm"
-            data-testid={data.noAverage === 'thisMonth' ? 'month-end-no-current' : 'month-end-no-history'}
-          >
-            <p className="text-sm">
-              {data.noAverage === 'thisMonth' ? m.needThisMonth(formatMonth(data.month)) : m.needHistory(data.historyMonths)}
-            </p>
-            <Link href={uploadHref} className={ON_INK_BUTTON}>
-              {m.upload}
-              <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-        ) : (
-          <div data-testid="month-end-drifts" className="flex flex-col gap-xs">
-            <p className="font-semibold tabular-nums text-primary">{m.vsAverageValue(formatMoney(data.vsAverage, { signed: true }))}</p>
-            <h3 className="mt-sm text-xs font-bold uppercase tracking-wide text-text-muted">{m.driftsTitle}</h3>
-            {data.drifts.length === 0 ? (
-              <p className="text-sm text-text-muted">{m.noDrifts}</p>
-            ) : (
-              <ul className="flex flex-wrap gap-xs text-sm">
-                {data.drifts.map((d) => (
-                  <li key={d.category} className="rounded-full bg-on-primary/10 px-md py-xs font-medium tabular-nums">
-                    {m.drift(common.categories[d.category], formatMoney(d.delta, { signed: true }))}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function MoveCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; Link: LinkComponent }) {
-  const committed = vm.committedMove;
-  const title = committed ? t.today.move.committedTitle : t.today.move.topTitle;
-  let body;
-  if (vm.status !== 'ready') body = <Skeleton lines={2} />;
-  else if (committed) body = <MoveSummary move={committed} onDone={vm.markCommittedDone} disabled={vm.actionsDisabled} />;
-  else if (vm.topMove.status === 'loading') body = <Skeleton lines={2} />;
-  else if (vm.topMove.status === 'error') body = <ErrorNote error={vm.topMove.error} />;
-  else if (vm.topMove.data === null) body = <p className="text-sm text-text-muted">{t.today.move.none}</p>;
-  else body = <MoveSummary move={vm.topMove.data} />;
-
-  return (
-    <section
-      aria-labelledby="today-move-heading"
-      data-testid="today-move"
-      className={cx(
-        CARD,
-        'flex flex-col gap-md border-2 lg:col-span-5',
-        committed ? 'border-positive' : 'border-transparent',
-      )}
-    >
-      <div className="flex items-center justify-between gap-md">
-        <h2 id="today-move-heading" className="font-display text-2xl font-extrabold leading-tight">
-          {title}
-        </h2>
-        <Sticker tone={committed ? 'positive' : 'ink'} tilt={4}>
-          {t.moves.rank(1)}
-        </Sticker>
-      </div>
-      <div className="flex-1">{body}</div>
-      <Link href={futureHref} className="self-start text-sm font-semibold text-primary hover:underline">
-        {t.today.move.seeAll} <span aria-hidden="true">→</span>
-      </Link>
-    </section>
-  );
-}
-
-function MoveSummary({ move, onDone, disabled = false }: { move: MoveVM; onDone?: () => void; disabled?: boolean }) {
-  const detail = moveDetail(move);
-  return (
-    <Stack gap="sm">
-      <p className="font-display text-4xl font-extrabold leading-display tracking-tight text-primary tabular-nums">
-        {t.moves.effect(formatMoney(move.effect, { signed: true }), move.horizonYears)}
-      </p>
-      <SourceTag source={move.source} />
-      <p className="text-lg font-bold">{moveTitle(move)}</p>
-      {detail && <p className="text-sm text-text-muted">{detail}</p>}
-      {onDone && (
-        <Button variant="secondary" size="sm" className="mt-sm self-start" onClick={onDone} disabled={disabled}>
-          {t.today.move.markDone}
-        </Button>
-      )}
-    </Stack>
-  );
-}
-
-function ToolLink({
-  href,
-  art,
-  title,
-  body,
-  Link,
-}: {
-  href: string;
-  art: ArtName;
-  title: string;
-  body: string;
-  Link: LinkComponent;
-}) {
-  return (
-    <li>
-      <Link
-        href={href}
-        className="flex h-full flex-col gap-xs rounded-xl bg-surface p-lg shadow-md transition-transform hover:-translate-y-1"
-      >
-        <Art name={art} className="mx-auto mb-sm w-28" />
-        <span className="text-lg font-bold leading-tight">{title}</span>
-        <span className="text-sm text-text-muted">{body}</span>
-      </Link>
-    </li>
   );
 }
 

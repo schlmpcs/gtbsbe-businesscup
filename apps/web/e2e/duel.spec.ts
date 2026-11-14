@@ -91,8 +91,10 @@ test('/play is the duel: one pick shows on S1 Today as rounds, not homes, with n
 
   await page.goto('/');
   const p = forecast.today.playDuel;
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.today.duel.title);
-  await expect(page.getByRole('link', { name: p.continue(1, 5) })).toHaveAttribute('href', '/play');
-  await expect(page.getByRole('region', { name: forecast.today.homes.label })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.today.home.title);
+  const game = page.getByTestId('play');
+  await expect(game).toContainText(forecast.today.duel.title);
+  await expect(game.getByRole('link', { name: p.continue(1, 5) })).toHaveAttribute('href', '/play');
+  await expect(page.getByText(/today’s homes/i)).toHaveCount(0);
   await expect(page.locator('a[href*="stream=1"]')).toHaveCount(0);
 });
