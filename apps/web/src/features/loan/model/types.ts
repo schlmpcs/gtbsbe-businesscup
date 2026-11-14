@@ -151,10 +151,13 @@ export type PayoffTargetVM =
   /** Beyond the longest plan the engine simulates (`years` long). */
   | { status: 'tooFar'; years: number }
   | { status: 'error'; error: VMError }
-  /** The current extra (even $0) already finishes by then; `extraNeeded` is the least that would. */
-  | { status: 'onTrack'; date: PayoffDate; months: number; extraNeeded: Money }
-  /** `extraNeeded`: the total extra per month, rounded up to a whole dollar so paying it does finish by then. */
-  | { status: 'needs'; date: PayoffDate; months: number; extraNeeded: Money }
+  /** The picked plan, at the extra now set (even $0), already finishes by then; `atMinimums`: no extra at all would be enough. */
+  | { status: 'onTrack'; date: PayoffDate; months: number; atMinimums: boolean }
+  /**
+   * `extraNeeded`: the total extra per month, rounded up to a whole dollar so paying it does finish by then.
+   * `moreThanNow`: how much more than the extra now set that is, rounded up to a whole dollar.
+   */
+  | { status: 'needs'; date: PayoffDate; months: number; extraNeeded: Money; moreThanNow: Money }
   /** Even the largest extra the solver tries does not finish by then. */
   | { status: 'unreachable'; date: PayoffDate; months: number };
 

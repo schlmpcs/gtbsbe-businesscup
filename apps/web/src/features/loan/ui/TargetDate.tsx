@@ -41,10 +41,12 @@ function fieldError(target: PayoffPlannerVM['target']): string | undefined {
 
 function resultText(target: PayoffPlannerVM['target'], extraNow: number): string | null {
   switch (target.status) {
-    case 'needs':
-      return t.planner.target.needs(dateText(target.date), formatMoney(target.extraNeeded));
+    case 'needs': {
+      const total = t.planner.target.needs(dateText(target.date), formatMoney(target.extraNeeded));
+      return extraNow > 0 ? `${total} ${t.planner.target.needsMore(formatMoney(target.moreThanNow))}` : total;
+    }
     case 'onTrack':
-      return target.extraNeeded === 0
+      return target.atMinimums
         ? t.planner.target.onTrackMinimums(dateText(target.date))
         : t.planner.target.onTrack(dateText(target.date), formatMoney(extraNow));
     case 'unreachable':

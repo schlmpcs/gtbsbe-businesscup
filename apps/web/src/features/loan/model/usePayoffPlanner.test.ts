@@ -417,7 +417,57 @@ describe('usePayoffPlanner: the target date', () => {
     act(() => result.current.planner!.setTargetDate('2029-12'));
     expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), 37, 'avalanche');
     expect(result.current.planner!.targetDate).toBe('2029-12');
-    expect(result.current.planner!.target).toEqual({ status: 'needs', date: { month: '2029-12', year: 2029 }, months: 37, extraNeeded: 213 });
+    // The solver's 212.2 rounded up to $213; with no extra set, all of it is more than now.
+    expect(result.current.planner!.target).toEqual({ status: 'needs', date: { month: '2029-12', year: 2029 }, months: 37, extraNeeded: 213, moreThanNow: 213 });
+  });
+
+  it('says how much more than the extra already set: $213 in all with $50 set is $163 more', async () => {
+    const { options } = plannerOptions({ engineOptions: { solve: { extra: 212.2, reachable: true } } });
+    const { result } = await ready(options);
+    act(() => result.current.planner!.setExtra(50));
+    act(() => result.current.planner!.setTargetDate('2029-12'));
+    expect(result.current.planner!.target).toMatchObject({ status: 'needs', extraNeeded: 213, moreThanNow: 163 });
+  });
+
+  // The solver answers within $1 above the least extra that works. So at an extra a little under its answer the
+  // picked plan can already finish in time; what is on screen (the plan) and the sentence must agree.
+  describe('on track follows the picked plan, not the solver\'s $1 tolerance', () => {
+    const finishesFrom = (least: number, months: number, late: number) => (extra: number) => ({ monthsToDebtFree: extra >= least ? months : late });
+
+    it('2029-12 (37 months): at $142.50 the plan finishes in month 37, so on track, though the solver says $144', async () => {
+      const { options } = plannerOptions({ engineOptions: { solve: { extra: 143.4, reachable: true }, avalancheByExtra: finishesFrom(142.5, 37, 38) } });
+      const { result } = await ready(options);
+      act(() => result.current.planner!.setExtra(142.5));
+      act(() => result.current.planner!.setTargetDate('2029-12'));
+      expect(result.current.planner!.selected!.monthsToDebtFree).toBe(37);
+      expect(result.current.planner!.target).toEqual({ status: 'onTrack', date: { month: '2029-12', year: 2029 }, months: 37, atMinimums: false });
+    });
+
+    it('2028-11 (24 months): at $884.76 the plan finishes in month 24, so on track, though the solver says $886', async () => {
+      const { options } = plannerOptions({ engineOptions: { solve: { extra: 885.8, reachable: true }, avalancheByExtra: finishesFrom(884.76, 24, 25) } });
+      const { result } = await ready(options);
+      act(() => result.current.planner!.setExtra(884.76));
+      act(() => result.current.planner!.setTargetDate('2028-11'));
+      expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', months: 24, atMinimums: false });
+    });
+
+    it('a dollar short of finishing in time is not on track: at $141 the plan takes 38 months, so $144 in all, $3 more', async () => {
+      const { options } = plannerOptions({ engineOptions: { solve: { extra: 143.4, reachable: true }, avalancheByExtra: finishesFrom(142.5, 37, 38) } });
+      const { result } = await ready(options);
+      act(() => result.current.planner!.setExtra(141));
+      act(() => result.current.planner!.setTargetDate('2029-12'));
+      expect(result.current.planner!.selected!.monthsToDebtFree).toBe(38);
+      expect(result.current.planner!.target).toMatchObject({ status: 'needs', months: 37, extraNeeded: 144, moreThanNow: 3 });
+    });
+
+    it('a plan that never pays off at the extra set is not on track: it needs the solver\'s amount', async () => {
+      const { options } = plannerOptions({
+        engineOptions: { solve: { extra: 312.4, reachable: true }, avalanche: { monthsToDebtFree: null, monthsSavedVsMinimum: null } },
+      });
+      const { result } = await ready(options);
+      act(() => result.current.planner!.setTargetDate('2029-12'));
+      expect(result.current.planner!.target).toMatchObject({ status: 'needs', extraNeeded: 313, moreThanNow: 313 });
+    });
   });
 
   it('solves for the picked method', async () => {
@@ -428,19 +478,21 @@ describe('usePayoffPlanner: the target date', () => {
     expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), 24, 'snowball');
   });
 
-  it('is on track when the current extra already covers the extra needed (and when none is needed)', async () => {
-    const { options } = plannerOptions({ engineOptions: { solve: { extra: 212.2, reachable: true } } });
+  it('is on track when the extra already set gets there (the plan finishes by the month)', async () => {
+    const { options } = plannerOptions({
+      engineOptions: { solve: { extra: 212.2, reachable: true }, avalancheByExtra: (extra) => ({ monthsToDebtFree: extra >= 212.2 ? 37 : 40 }) },
+    });
     const { result } = await ready(options);
     act(() => result.current.planner!.setExtra(250));
     act(() => result.current.planner!.setTargetDate('2029-12'));
-    expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', months: 37, extraNeeded: 213 });
+    expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', months: 37, atMinimums: false });
   });
 
-  it('is on track at $0 extra when the minimums already finish by then', async () => {
+  it('is on track at the minimums when the solver needs no extra at all (2031-01 is 50 months, the plan takes 40)', async () => {
     const { options } = plannerOptions({ engineOptions: { solve: { extra: 0, reachable: true } } });
     const { result } = await ready(options);
     act(() => result.current.planner!.setTargetDate('2031-01'));
-    expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', extraNeeded: 0 });
+    expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', months: 50, atMinimums: true });
   });
 
   it('is unreachable when no extra the engine tries gets there, and never carries its limit as an amount', async () => {
@@ -471,7 +523,8 @@ describe('usePayoffPlanner: the target date', () => {
     expect(result.current.planner!.target).toEqual({ status: 'tooFar', years: PAYOFF_TIMELINE_MAX_MONTHS / 12 });
     expect(extraToFinishBy).not.toHaveBeenCalled();
     act(() => result.current.planner!.setTargetDate(last));
-    expect(result.current.planner!.target.status).toBe('needs');
+    // The plan (40 months) finishes long before the last month the solver is asked about.
+    expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', months: PAYOFF_TIMELINE_MAX_MONTHS });
     expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), PAYOFF_TIMELINE_MAX_MONTHS, 'avalanche');
     expect(result.current.planner!.targetBounds).toEqual({ min: '2026-12', max: last });
   });

@@ -95,7 +95,10 @@ export function minimumPlan(over: PlanOver = {}): PayoffPlan {
 }
 
 export type FakeEngineOptions = {
+  /** What the avalanche plan is, whatever the extra. */
   avalanche?: PlanOver;
+  /** What the avalanche plan is for a given extra (over `avalanche`): lets a test shape "finishes in time from $X". */
+  avalancheByExtra?: (extra: Money) => PlanOver;
   snowball?: PlanOver;
   minimum?: PlanOver;
   /** What extraToFinishBy answers. */
@@ -110,7 +113,7 @@ export function fakeEngine(opts: FakeEngineOptions = {}) {
     if (opts.throws !== undefined) throw opts.throws;
     return {
       extra,
-      avalanche: avalanchePlan(opts.avalanche),
+      avalanche: avalanchePlan({ ...opts.avalanche, ...opts.avalancheByExtra?.(extra) }),
       snowball: snowballPlan(opts.snowball),
       minimum: minimumPlan(opts.minimum),
     };

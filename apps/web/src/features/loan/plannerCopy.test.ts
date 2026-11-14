@@ -54,6 +54,17 @@ describe('payoff planner copy', () => {
     expect(loan.planner.method.describes.minimum).toMatch(/baseline/);
   });
 
+  it('does not name a cause for a plan that does not finish: it may be a payment under the interest, or just too slow', () => {
+    expect(loan.planner.never.body).not.toMatch(/interest|enough|cover the/i);
+    expect(loan.planner.never.body).toMatch(/100 years/);
+  });
+
+  it('calls the extra it finds a total, and says the difference to what is set when there is one', () => {
+    expect(loan.planner.never.fix('$122', 10)).toBe('A total extra of $122 a month would clear it within 10 years.');
+    expect(loan.planner.target.needs('March 2030', '$122')).toBe('To be debt-free by March 2030: a total extra of $122 a month.');
+    expect(loan.planner.target.needsMore('$72')).toBe('That is $72 more than you have set.');
+  });
+
   it('has a sentence for a plan that costs more than minimums only, that does not read as a saving', () => {
     expect(loan.planner.savings.interestCosts('$300')).toBe('$300 more interest');
     expect(loan.planner.savings.monthsCosts(165)).toBe('165 months later');

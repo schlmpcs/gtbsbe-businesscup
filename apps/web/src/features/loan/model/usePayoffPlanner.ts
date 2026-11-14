@@ -88,6 +88,7 @@ const delta = (value: number, sameBelow: number): PayoffDelta =>
 
 function solveTarget(
   check: TargetCheck, extra: Money, debts: Debt[], method: PayoffChoice, engine: PayoffEngine | undefined, active: boolean,
+  selected: PayoffPlan | null,
 ): PayoffTargetVM {
   if (!active || !engine) return { status: 'none' };
   if (check.status === 'tooFar') return { status: 'tooFar', years: PAYOFF_TIMELINE_MAX_MONTHS / 12 };
@@ -96,10 +97,15 @@ function solveTarget(
   if (solved.status === 'error') return { status: 'error', error: solved.error };
   if (solved.status === 'loading' || hasNonFinite(solved.data) || solved.data.extra < 0) return { status: 'error', error: { kind: 'invalidResponse' } };
   const { date, months } = check;
+  // On track is read off the plan on screen, not off the solver: it answers within $1 above the least extra that works,
+  // so at an extra a little under its answer the plan can already finish in time.
+  if (selected !== null && selected.monthsToDebtFree !== null && selected.monthsToDebtFree <= months) {
+    return { status: 'onTrack', date, months, atMinimums: solved.data.reachable && solved.data.extra === 0 };
+  }
   if (!solved.data.reachable) return { status: 'unreachable', date, months };
   // Rounded up to a whole dollar, so that paying the amount shown does finish by the month.
   const extraNeeded = Math.ceil(solved.data.extra);
-  return solved.data.extra <= extra ? { status: 'onTrack', date, months, extraNeeded } : { status: 'needs', date, months, extraNeeded };
+  return { status: 'needs', date, months, extraNeeded, moreThanNow: Math.max(0, Math.ceil(extraNeeded - extra)) };
 }
 
 export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferId'>, options: PayoffPlannerOptions | null): PayoffPlannerVM | null {
@@ -223,7 +229,7 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   // Plain calls, not useMemo: a manual useMemo here makes the React Compiler skip this hook
   // (react-hooks/preserve-manual-memoization), and the compiler memoizes plain calls itself.
   const check = checkTarget(targetDate, today);
-  const targetVM = solveTarget(check, extra, debts, method, engine, active);
+  const targetVM = solveTarget(check, extra, debts, method, engine, active, selected);
 
   // ----- the picks, kept after the person's own changes (what was only restored is not saved again) -----
   const touched = Object.keys(edits).length > 0;

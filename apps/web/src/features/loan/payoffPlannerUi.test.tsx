@@ -218,14 +218,24 @@ describe('the target date', () => {
   const month = () => screen.getByLabelText(t.planner.target.label) as HTMLInputElement;
   const result = () => screen.getByTestId('payoff-target-result');
 
-  it('says the extra per month a chosen month needs, rounded up to the dollar', async () => {
+  it('says the total extra per month a chosen month needs, rounded up to the dollar', async () => {
     await open({ engineOptions: { solve: { extra: 212.2, reachable: true } } });
     fireEvent.change(month(), { target: { value: '2029-12' } });
     expect(result()).toHaveTextContent(t.planner.target.needs('December 2029', '$213'));
+    expect(result().textContent).not.toContain(t.planner.target.needsMore('$213')); // nothing set yet: all of it is new
+    expect(result().textContent).toMatch(/total extra/);
+  });
+
+  it('with an extra already set, says the total and how much more that is: $213 in all, $163 more than $50', async () => {
+    await open({ engineOptions: { solve: { extra: 212.2, reachable: true } } });
+    fireEvent.change(screen.getByRole('slider', { name: t.planner.extra.label }), { target: { value: '50' } });
+    fireEvent.change(month(), { target: { value: '2029-12' } });
+    expect(result()).toHaveTextContent(t.planner.target.needs('December 2029', '$213'));
+    expect(result()).toHaveTextContent(t.planner.target.needsMore('$163'));
   });
 
   it('says "on track" when the current extra already gets there', async () => {
-    await open({ engineOptions: { solve: { extra: 212.2, reachable: true } } });
+    await open({ engineOptions: { solve: { extra: 212.2, reachable: true }, avalancheByExtra: (extra) => ({ monthsToDebtFree: extra >= 212.2 ? 37 : 40 }) } });
     fireEvent.change(screen.getByRole('slider', { name: t.planner.extra.label }), { target: { value: '250' } });
     fireEvent.change(month(), { target: { value: '2029-12' } });
     expect(result()).toHaveTextContent(t.planner.target.onTrack('December 2029', '$250'));

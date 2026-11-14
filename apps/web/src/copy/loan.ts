@@ -190,9 +190,9 @@ export const loan = {
 
     never: {
       title: 'Not at these payments',
-      body: 'The payments don’t cover the interest, so the balance never reaches zero.',
-      /** "within 10 years" (a whole number of years). */
-      fix: (extra: string, years: number) => `An extra ${extra} a month would clear it within ${years} years.`,
+      body: 'At these payments your debts are not paid off within the 100 years this simulation runs.',
+      /** A total extra on top of the minimums, not on top of any extra already set; "within 10 years" (a whole number of years). */
+      fix: (extra: string, years: number) => `A total extra of ${extra} a month would clear it within ${years} years.`,
       fixNone: 'No extra payment within the limits of this simulation would clear it.',
     },
 
@@ -220,7 +220,10 @@ export const loan = {
       invalid: 'Enter a month, like 2030-12.',
       past: 'Pick a month after this one.',
       tooFar: (years: number) => `Pick a month within the next ${years} years: the simulation stops there.`,
-      needs: (date: string, extra: string) => `To be debt-free by ${date}: an extra ${extra} a month.`,
+      /** The total extra per month on top of the minimums (not on top of the extra already set). */
+      needs: (date: string, extra: string) => `To be debt-free by ${date}: a total extra of ${extra} a month.`,
+      /** After `needs`, when an extra is already set: how much more than that is (already formatted). */
+      needsMore: (more: string) => `That is ${more} more than you have set.`,
       onTrack: (date: string, extra: string) => `You’re on track: an extra ${extra} a month finishes by ${date}.`,
       onTrackMinimums: (date: string) => `You’re on track: your minimum payments finish by ${date}.`,
       unreachable: (date: string) =>
