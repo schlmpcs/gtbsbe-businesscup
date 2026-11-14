@@ -6,7 +6,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-on-primary shadow-sm hover:bg-primary-hover',
-  secondary: 'border-2 border-text bg-surface text-text hover:bg-surface-strong',
+  secondary: 'border-2 border-primary bg-transparent text-text hover:bg-primary-soft',
   ghost: 'text-primary hover:bg-surface',
   /** Black button, for use on an orange "arena" surface (Figma: Card tone="arena"). */
   dark: 'bg-ink text-on-primary shadow-md hover:opacity-90',
@@ -16,7 +16,7 @@ const VARIANT: Record<ButtonVariant, string> = {
 const SIZE: Record<ButtonSize, string> = {
   sm: 'px-md py-xs text-sm',
   md: 'px-lg py-md text-base',
-  lg: 'px-2xl py-lg text-xl font-display font-extrabold',
+  lg: 'px-2xl py-lg text-xl font-bold',
 };
 
 export type ButtonStyleOptions = { variant?: ButtonVariant; size?: ButtonSize; fullWidth?: boolean };

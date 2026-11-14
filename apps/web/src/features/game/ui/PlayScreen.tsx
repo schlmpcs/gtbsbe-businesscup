@@ -58,36 +58,56 @@ export function PlayScreen({ vm, guessOwnHref, ClueSlot = HouseScene3D }: PlaySc
 
   const showProgress = vm.status === 'ready' && vm.phase !== 'summary' && vm.progress.total > 0;
   const progressLabel = showProgress ? t.progress(vm.progress.index + 1, vm.progress.total) : null;
+  const maxPerHome = vm.day.maxPerHome.toLocaleString('en-US');
+  const exploring = vm.status === 'ready' && vm.phase === 'explore' && vm.card !== null;
 
   return (
     // S4 turns the whole page into the orange arena; white tiles on it set their own text color.
     <main className={cx('w-full', large && 'min-h-dvh bg-primary text-on-primary')}>
       <div className="mx-auto flex w-full max-w-(--container-7xl) flex-col gap-xl px-lg py-xl">
-        <header className="flex flex-wrap items-center justify-between gap-md">
-          <div className="flex flex-wrap items-center gap-md">
-            <h1
-              className={cx(
-                'font-display font-extrabold uppercase tracking-wide leading-tight',
-                large ? 'text-2xl' : 'text-sm text-text-muted',
-              )}
-            >
-              {screenTitles[screen]}
-            </h1>
-            {large && (
-              <Sticker tone="ink" className="text-sm">
+        {/* Centered round header (Design v3): progress segments, the round sticker, the big question. */}
+        <header className="flex flex-col items-center gap-md text-center">
+          {large ? (
+            <div className="flex flex-wrap items-center justify-center gap-md">
+              <h1 className="font-display text-2xl font-extrabold uppercase leading-tight tracking-wide">
+                {screenTitles[screen]}
+              </h1>
+              <Sticker tone="ink" tilt={-3} className="text-sm">
                 <span aria-hidden="true" className="inline-block size-sm rounded-full bg-on-primary" />
                 {t.streamer.live}
               </Sticker>
-            )}
-          </div>
-          {showProgress && vm.day.homes.length > 0 && <HomeStrip day={vm.day} />}
+            </div>
+          ) : (
+            <h1 className="sr-only">{screenTitles[screen]}</h1>
+          )}
+          {showProgress && vm.day.homes.length > 0 && <HomeStrip day={vm.day} large={large} />}
+          {exploring && (
+            <>
+              <Sticker tone="ink" className={large ? 'text-base' : 'text-sm'}>
+                <span>{progressLabel}</span>
+                <span aria-hidden="true">·</span>
+                <span>{t.round.maxPoints(maxPerHome)}</span>
+              </Sticker>
+              <p
+                className={cx(
+                  'font-display font-extrabold leading-display text-balance',
+                  large ? 'text-display sm:text-[length:calc(var(--text-display)*1.4)]' : 'text-4xl sm:text-display',
+                )}
+              >
+                {t.round.question}
+              </p>
+              <p className={cx('max-w-prose', large ? 'text-xl text-on-primary' : 'text-base text-text-muted')}>
+                {t.round.subline}
+              </p>
+            </>
+          )}
         </header>
 
         <div ref={contentRef} tabIndex={-1} className="flex flex-col gap-xl focus:outline-none">
           {vm.status === 'loading' && <LoadingState />}
 
           {vm.status === 'error' && (
-            <Card title={t.errors.title} className="text-text">
+            <Card title={t.errors.title} className="mx-auto w-full max-w-prose text-text">
               <p className="mb-md text-text-muted">{vm.error ? errorText(vm.error) : t.errors.byKind.unknown}</p>
               <Button onClick={vm.retry}>{t.errors.retry}</Button>
             </Card>
@@ -100,7 +120,7 @@ export function PlayScreen({ vm, guessOwnHref, ClueSlot = HouseScene3D }: PlaySc
                 <div className="flex min-w-0 flex-col gap-xl">
                   {streamer && <Countdown streamer={streamer} />}
                   {/* The house draws the decor itself; with the static board the home card lists it. */}
-                  <HomeCard card={vm.card} progressLabel={progressLabel} large={large} showDecor={ClueSlot === ClueBoard} />
+                  <HomeCard card={vm.card} large={large} showDecor={ClueSlot === ClueBoard} />
                   <GuessPanel
                     guess={vm.card.guess}
                     onGuessChange={vm.setGuess}
@@ -108,13 +128,14 @@ export function PlayScreen({ vm, guessOwnHref, ClueSlot = HouseScene3D }: PlaySc
                     submitting={vm.card.submitting}
                     error={vm.card.guessError}
                     large={large}
+                    maxPoints={maxPerHome}
                   />
                 </div>
               </div>
               <Scoreboard
                 label={t.score.label}
                 items={[
-                  { id: 'max', value: vm.day.maxPerHome.toLocaleString('en-US'), label: t.score.maxPerHome },
+                  { id: 'max', value: maxPerHome, label: t.score.maxPerHome },
                   {
                     id: 'multiplier',
                     value: formatRate(vm.card.multiplier),

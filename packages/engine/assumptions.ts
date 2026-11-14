@@ -96,6 +96,16 @@ export const clueFloor = {
   note: 'Tune after playtests.',
 } satisfies Assumption<number>;
 
+/**
+ * Game (duel): two lives closer than this share of the costlier total are never paired (a coin
+ * flip, not a question). The pick score reuses clueCost and clueFloor per hint.
+ */
+export const duelMinGap = {
+  value: 0.03,
+  assumption: true,
+  note: 'Tune after playtests.',
+} satisfies Assumption<number>;
+
 // ----- Y1: life cards and scoring (costOfLife, cardToProfile, scoreGuess) ----------------------
 
 /**
@@ -356,15 +366,15 @@ export type AiForecastSanity = {
  */
 export const aiForecastSanity = {
   value: {
-    relative: 0.5,
+    relative: 0.25,
     floorMonths: 12,
     bandMaxRatio: 3,
-    effectRatioMin: 0.25,
-    effectRatioMax: 4,
+    effectRatioMin: 1 / 3,
+    effectRatioMax: 3,
     effectFloor: 1_000 as Money,
   },
   assumption: true,
-  note: 'Guard values, tunable against the fixtures: they only have to reject wrong-unit and runaway answers, not grade accuracy.',
+  note: 'Guard values, tunable against the fixtures. They reject wrong-unit and runaway answers, and (tightened 2026-11-14 from ±50% and 0.25×–4×) an answer far off the simulation: in a live run Sonnet 5.5 once put the demo profile 60% below it and passed the old ±50%. They do not grade accuracy within the envelope.',
 } satisfies Assumption<AiForecastSanity>;
 
 // ----- end Y15 --------------------------------------------------------------------------------
@@ -383,6 +393,7 @@ export const assumptions = {
   safetyCushionMonths,
   clueCost,
   clueFloor,
+  duelMinGap,
   ...lifeCardAssumptions,
   avgMealPrice,
   monthlyGallons,
@@ -397,3 +408,16 @@ export const assumptions = {
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;
+
+/** Solver bound: at most $1 million of additional debt payments per month. */
+export const PAYOFF_MAX_EXTRA = 1_000_000;
+/** Dollar precision of the feasible upper bound returned by the payoff solver. */
+export const PAYOFF_SOLVE_TOLERANCE = 1;
+/** Rent spread when Census quartile ratios are unavailable; an assumed range, not measured quartiles. */
+export const RENT_RANGE_FALLBACK = 0.2;
+/** Insurance premiums depend on coverage and driver details absent here; assumed ±20% range. */
+export const INSURANCE_TOLERANCE = 0.2;
+/** Grocery plans vary by household; assumed ±15% range around the sourced plan. */
+export const GROCERY_TOLERANCE = 0.15;
+/** Childcare varies by provider; assumed ±20% range around the county benchmark. */
+export const CHILDCARE_TOLERANCE = 0.2;

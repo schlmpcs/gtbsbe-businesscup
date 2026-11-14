@@ -31,6 +31,7 @@ describe('check-client-bundle', () => {
     expect(labels).toContain('catalog card lc-001');
     expect(labels).toContain('fixture game client (FIXTURE_LOG_KEY)');
     expect(labels).toContain('fixture game client (its error message)');
+    expect(labels).toContain('fixture duel client (FIXTURE_DUEL_LOG_KEY)');
   });
 
   it('passes an API build: HTTP client present, sample lives allowed, no catalog card, no fixture client', () => {
@@ -63,6 +64,14 @@ describe('check-client-bundle', () => {
       'fixture game client (FIXTURE_LOG_KEY) is in chunks/fixture.js',
       'fixture game client (its error message) is in chunks/fixture.js',
     ]);
+  });
+
+  it('finds the fixture duel client', () => {
+    const dir = staticDir({
+      'chunks/a.js': HTTP_CLIENT,
+      'chunks/duel.js': 'const D="lifeguessr.fixtureDuel";',
+    });
+    expect(scanChunks(dir, rules)).toEqual(['fixture duel client (FIXTURE_DUEL_LOG_KEY) is in chunks/duel.js']);
   });
 
   it("fails a scan it can't trust: no build, no chunks, no HTTP game client", () => {

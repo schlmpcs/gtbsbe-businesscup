@@ -3,7 +3,7 @@
 // Hooks: useToday (S1) in ./useToday.ts, useFuture (S10) in ./useFuture.ts.
 import type { MoveCandidate } from '@lifeguessr/engine';
 import type {
-  CostCategory, ForecastBundle, ForecastPoint, ForecastSource, Money, Move, MoveKind, Profile, Rate, Source,
+  Goal, GoalStatus, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, Money, Move, MoveKind, Profile, Rate, Source,
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 import type { ProfileOrigin } from '@/state';
@@ -104,6 +104,14 @@ export type TodayHomeVM = { id: string; metro: string; played: boolean };
 export type TodayVM = {
   /** Saved state loaded. The 10-year number has its own `forecastStatus`: it may take a while. */
   status: 'loading' | 'ready';
+  /**
+   * First visit: no profile of the user's own (nor the sample life asked for), nothing entered, no
+   * home played. The screen shows what the app is (Play, Try with sample data) and no numbers.
+   * False while loading.
+   */
+  firstVisit: boolean;
+  /** The sample life ("Try with sample data") is on; the site-wide banner already says so. */
+  isSample: boolean;
   profileOrigin: ProfileOrigin;
   /** Still the sample profile: nudge to the ladder (S5). */
   isDemoProfile: boolean;
@@ -212,3 +220,15 @@ export type AssumptionVM = {
 
 /** The assumptions behind the forecast and behind Next Moves. */
 export type HowWeCalculateVM = { forecast: AssumptionVM[]; moves: AssumptionVM[] };
+
+export type GoalVM = {
+  goal: Goal | null;
+  setGoal: (goal: Goal) => void;
+  clearGoal: () => void;
+  status: Loadable<GoalStatus | null>;
+  saving: Loadable<SavingToReach | null>;
+  moves: Loadable<MovesTowardGoal | null>;
+  moveLabels: {id:string;kind:MoveKind;category?:CostCategory}[];
+  inputError: boolean;
+  presets: {targets:Money[];years:number[]};
+};

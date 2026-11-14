@@ -41,3 +41,19 @@ export function getArea(zip: string): AreaData {
   if (!area) throw new Error(`No AreaData for ZIP ${zip} in packages/data/out/areas.json`);
   return area;
 }
+
+/** Covered metros and available tiers, sorted for a stable explicit area picker. */
+export function coveredMetros(): { metro: string; state: string; tiers: AreaData['tier'][] }[] {
+  const metros = new Map<string, {metro: string; state: string; tiers: AreaData['tier'][]}>();
+  for (const area of areaData) {
+    const key = `${area.state}:${area.metro}`;
+    const entry = metros.get(key) ?? {metro:area.metro,state:area.state,tiers:[]};
+    if (!entry.tiers.includes(area.tier)) entry.tiers.push(area.tier);
+    metros.set(key,entry);
+  }
+  return [...metros.values()].sort((a,b)=>a.metro.localeCompare(b.metro));
+}
+/** Representative area for an explicitly chosen metro/tier; callers must use coverage 'metro'. */
+export function areaForMetro(metro: string, tier: AreaData['tier']): AreaData | null {
+  return areaData.find(area=>area.metro===metro && area.tier===tier) ?? null;
+}

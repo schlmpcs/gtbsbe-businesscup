@@ -35,7 +35,7 @@ function A({ href, children, ...rest }: { href: string; children?: ReactNode; cl
 }
 
 const links: TodayLinks = {
-  play: '/play', future: '/future', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
+  play: '/play', sample: '/future?sample=1', future: '/future', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
   profile: '/me/guess', upload: '/me/upload',
 };
 
@@ -52,7 +52,7 @@ function Future({ explain }: { explain?: ExplainFn }) {
 /** A hand-made Today view-model: ready, with the forecast answered by the rules. */
 function todayVm(over: Partial<TodayVM> = {}): TodayVM {
   return {
-    status: 'ready', profileOrigin: 'user', isDemoProfile: false,
+    status: 'ready', firstVisit: false, isSample: false, profileOrigin: 'user', isDemoProfile: false,
     monthEnd: {
       status: 'ready',
       data: {
@@ -71,7 +71,36 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
 const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
 
+describe('TodayScreen (S1) first visit', () => {
+  it('explains the app with Play and Try with sample data, and shows no numbers', async () => {
+    render(<Today />);
+    const f = t.today.firstVisit;
+    expect(await screen.findByRole('heading', { level: 1, name: f.title })).toBeInTheDocument();
+    expect(screen.getByText(f.body)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: new RegExp(`^${f.play}`) })).toHaveAttribute('href', '/play');
+    expect(screen.getByRole('link', { name: f.sample })).toHaveAttribute('href', '/future?sample=1');
+    expect(screen.getByText(f.note)).toBeInTheDocument();
+    const steps = within(screen.getByRole('region', { name: f.stepsLabel })).getAllByRole('listitem');
+    expect(steps.map((li) => li.textContent)).toEqual(f.steps.map((step, i) => `${i + 1}${step}`));
+    expect(screen.queryByText(/\$\d/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('in10y')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('month-end')).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: t.today.allScreens }).querySelectorAll('a[data-screen]')).toHaveLength(2);
+  });
+
+  it('shows the usual Today once the sample life is loaded, without the sample note (the banner says it)', async () => {
+    act(() => void useAppStore.getState().loadSample());
+    render(<Today />);
+    expect(await screen.findByTestId('in10y')).toBeInTheDocument();
+    expect(screen.queryByTestId('today-first-visit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sample-note')).not.toBeInTheDocument();
+  });
+});
+
 describe('TodayScreen (S1)', () => {
+  // Past the first visit: the user has guessed their own month.
+  beforeEach(() => useAppStore.setState({ selfGuess: 3000 }));
+
   it('shows the 10-year number with its range, the play CTA and the entry points', async () => {
     render(<Today />);
     const card = await screen.findByTestId('in10y');
@@ -109,20 +138,22 @@ describe('TodayScreen (S1)', () => {
     await waitFor(() => expect(within(move).getByTestId('forecast-source')).toHaveTextContent(t.source.ai));
   });
 
-  it('shows this month while the 10-year number is still on its way', async () => {
+  it('shows this month and the rules-based 10-year number at once, then the AI estimate when it lands', async () => {
     let release!: () => void;
     route = mockForecastRoute((body) => new Promise((resolve) => (release = () => resolve(aiAnswer(body)))));
     render(<Today />);
     const monthEnd = await screen.findByTestId('month-end');
     await waitFor(() => expect(within(monthEnd).getByTestId('month-end-no-history')).toBeInTheDocument());
     const card = screen.getByTestId('in10y');
-    expect(card.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(within(card).queryByTestId('forecast-source')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('today-move')).queryByTestId('forecast-source')).not.toBeInTheDocument();
+    expect(card.querySelector('[aria-busy="true"]')).toBeNull(); // no skeleton
+    expect(within(card).getByTestId('forecast-source')).toHaveAttribute('data-source', 'rules');
+    expect(within(card).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
+    expect(within(card).getByText(t.future.refreshing)).toBeInTheDocument();
+    expect(within(screen.getByTestId('today-move')).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
 
     act(() => release());
-    await waitFor(() => expect(within(card).getByText(t.netWorthIn10y)).toBeInTheDocument());
-    expect(card.querySelector('[aria-busy="true"]')).toBeNull();
+    await waitFor(() => expect(within(card).getByTestId('forecast-source')).toHaveAttribute('data-source', 'ai'));
+    expect(within(card).queryByText(t.future.refreshing)).not.toBeInTheDocument();
   });
 
   it('says so, instead of a skeleton forever, when the forecast cannot be built', () => {
@@ -336,19 +367,18 @@ describe('FutureScreen (S10)', () => {
     expect(within(aiChart).queryByText(t.band.label)).not.toBeInTheDocument();
   });
 
-  it('shows a neutral “How we calculate” intro, naming no source, until the first answer is in', async () => {
+  it('describes the rules forecast in “How we calculate” while the model’s answer is on its way, then the AI one', async () => {
     let release!: () => void;
     route = mockForecastRoute((body) => new Promise((resolve) => (release = () => resolve(aiAnswer(body)))));
     render(<Future />);
-    const how = screen.getByTestId('how-we-calculate');
-    expect(within(how).getByText(t.how.introPending)).toBeInTheDocument();
-    expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
+    const how = await screen.findByTestId('how-we-calculate');
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    expect(within(how).getByText(t.how.intro)).toBeInTheDocument(); // the numbers on screen are the rules'
     expect(within(how).queryByText(t.how.introAi)).not.toBeInTheDocument();
 
-    await waitFor(() => expect(route.calls).toHaveLength(1));
     act(() => release());
     await waitFor(() => expect(within(how).getByText(t.how.introAi)).toBeInTheDocument());
-    expect(within(how).queryByText(t.how.introPending)).not.toBeInTheDocument();
+    expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
   });
 
   it('says the forecast is updating while a new answer is on its way', async () => {
@@ -366,7 +396,7 @@ describe('FutureScreen (S10)', () => {
     expect(route.calls).toHaveLength(2);
   });
 
-  it('disables the move buttons while the forecast is refreshing, and enables them again with the new answer', async () => {
+  it('keeps the move buttons enabled on a profile change: the moves on screen are the new profile’s rules ranking', async () => {
     render(<Future />);
     const first = (await screen.findAllByRole('article'))[0]!;
     await waitFor(() => expect(within(first).getByRole('button', { name: t.moves.commit })).toBeEnabled());
@@ -374,8 +404,8 @@ describe('FutureScreen (S10)', () => {
     act(() => useAppStore.getState().setSpending('eatingOut', 100));
     await waitFor(() => expect(screen.getByText(t.future.refreshing)).toBeInTheDocument());
     for (const article of screen.getAllByRole('article')) {
-      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeDisabled();
-      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeDisabled();
+      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeEnabled();
+      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeEnabled();
     }
     await waitFor(() => expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument(), {
       timeout: FORECAST_DEBOUNCE_MS + 1_000,
