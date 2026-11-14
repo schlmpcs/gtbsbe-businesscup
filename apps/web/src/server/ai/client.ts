@@ -1,11 +1,12 @@
 // Server-only: the one LLM client (docs/ARCHITECTURE.md → Default stack). Never import this from
 // client components; the key is read from the server environment.
 //
-// Data policy: the provider has no per-request "don't retain" flag to set here. Zero data
-// retention is an arrangement on the Anthropic organization/workspace that owns
-// ANTHROPIC_API_KEY, and the Messages API (the only endpoint we call) is eligible for it. We
-// don't use features outside it (no message threads, batches or Files API). Enable it on the
-// account; nothing in this code changes when it is on.
+// Data policy: Anthropic does not train models on API data. Zero data retention is NOT enabled
+// on the account that owns ANTHROPIC_API_KEY, so user-facing copy must not claim it (the S9
+// "What we keep" panel says only that labels go to the provider to be sorted). If it is ever
+// enabled: it is an organization/workspace arrangement with no per-request flag, the Messages
+// API (the only endpoint we call) is eligible, and we use nothing outside it (no batches or
+// Files API); nothing in this code changes, only the copy may then mention it.
 //
 // Prompt caching: our system prompts are a few hundred tokens, below the minimum cacheable
 // prefix, so we don't set cache_control.
