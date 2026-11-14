@@ -29,9 +29,10 @@ import {
   type StatementItem, type SubscriptionAudit, type SubscriptionFinding, type SubscriptionFlag,
 } from '@lifeguessr/types';
 import {
-  subsAmountTolerance, subsCandidateClasses, subsDayWindow, subsDaysPerMonth, subsIntroMaxCharges, subsIntroMaxRatio,
-  subsMinAmount, subsMinCharges, subsOverlapCategories, subsPlanPriceTolerance, subsPriceUpMinDollars,
-  subsPriceUpMinRatio, subsSteadyMinCharges, subsStepMaxRatio, subsStoppedAfterPeriods,
+  subsAmountTolerance, subsCandidateClasses, subsDayWindow, subsDaysPerMonth, subsDoubledMonthsMaxShare,
+  subsIntroMaxCharges, subsIntroMaxRatio, subsMinAdjacentPairs, subsMinAmount, subsMinCharges, subsMissedPeriodsAllowed,
+  subsOverlapCategories, subsPlanGapSlackMonths, subsPlanPriceTolerance, subsPriceUpMinDollars, subsPriceUpMinRatio,
+  subsReportStoppedSightings, subsSteadyMinCharges, subsStepMaxRatio, subsStoppedAfterPeriods,
 } from './assumptions';
 import { merchantKey } from './statement';
 
@@ -110,18 +111,28 @@ const prepareCatalogue = (catalogue: readonly KnownService[]): CatalogueEntry[] 
   catalogue.map((service) => ({ service, matchers: service.matchers.map(merchantKey).filter((m) => m !== '') }));
 
 /**
- * The one catalogue service whose matcher is a whole-word run inside the merchant key, or null:
- * none matches, or two different services do (a guess would be wrong half the time).
+ * The catalogue service whose matcher is a whole-word run inside the merchant key, or null. When
+ * several services match, the one with the longest matcher wins (SPOTIFY PREMIUM over SPOTIFY: the
+ * more specific name); two services whose longest matchers are equally long stay unresolved, and
+ * so is no match (a guess would be wrong half the time).
  */
 function matchService(key: string, catalogue: readonly CatalogueEntry[]): KnownService | null {
   const padded = ` ${key} `;
-  let found: KnownService | null = null;
+  let best: KnownService | null = null;
+  let bestLength = 0;
+  let tied = false;
   for (const entry of catalogue) {
-    if (!entry.matchers.some((m) => padded.includes(` ${m} `))) continue;
-    if (found !== null) return null;
-    found = entry.service;
+    const length = Math.max(0, ...entry.matchers.filter((m) => padded.includes(` ${m} `)).map((m) => m.length));
+    if (length === 0) continue;
+    if (length > bestLength) {
+      best = entry.service;
+      bestLength = length;
+      tied = false;
+    } else if (length === bestLength) {
+      tied = true;
+    }
   }
-  return found;
+  return tied ? null : best;
 }
 
 const withinPlanPrice = (cents: number, price: Money) =>
@@ -152,10 +163,19 @@ function buildLanes(charges: readonly Charge[]): Lane[] {
   }
   const lanes: Lane[] = [];
   for (const cluster of clusters) {
+    const byMonth = new Map<number, Charge[]>();
+    for (const c of cluster) byMonth.set(c.mi, [...(byMonth.get(c.mi) ?? []), c]);
+    // Charged two or more times in most months: weekly, or two identical plans. Not one monthly charge.
+    const doubled = [...byMonth.values()].filter((month) => month.length > 1).length;
+    if (doubled > subsDoubledMonthsMaxShare.value * byMonth.size) continue;
+    // An occasional second line in a month (a retry, a duplicate) counts once: the one nearest the usual day.
     const usualDay = median(cluster.map((c) => c.day));
-    const kept = cluster.filter((c) => onUsualDay(c, usualDay)).sort(byTime);
+    const distance = (c: Charge) => Math.abs(c.day - Math.min(usualDay, daysInMonthIndex(c.mi)));
+    const kept = [...byMonth.values()]
+      .map((month) => [...month].sort((a, b) => distance(a) - distance(b) || byTime(a, b))[0]!)
+      .filter((c) => onUsualDay(c, usualDay))
+      .sort(byTime);
     if (kept.length === 0) continue;
-    if (new Set(kept.map((c) => c.mi)).size !== kept.length) continue; // weekly or doubled: not a monthly charge
     lanes.push({ charges: kept, cents: Math.round(median(kept.map((c) => c.cents))), day: median(kept.map((c) => c.day)) });
   }
   return lanes.sort((a, b) => byTime(a.charges[0]!, b.charges[0]!) || a.cents - b.cents);
@@ -187,10 +207,14 @@ const isPriceRise = (prev: Segment, next: Segment) =>
 
 const segmentOf = (lane: Lane): Segment => ({ cents: lane.cents, charges: lane.charges });
 
+/** Two charges of one series are a whole number of periods apart: one period, or one with missed periods in between (up to the allowance). */
+const isSeriesGap = (gap: number, months: number) =>
+  gap >= months && gap % months === 0 && gap <= (1 + subsMissedPeriodsAllowed.value) * months;
+
 function canExtend(chain: readonly Lane[], lane: Lane, months: number): boolean {
   const prev = chain.at(-1)!;
   const gap = lane.charges[0]!.mi - prev.charges.at(-1)!.mi;
-  if (gap < 1 || gap % months !== 0 || gap > 2 * months) return false;
+  if (!isSeriesGap(gap, months)) return false;
   if (Math.abs(lane.day - prev.day) > subsDayWindow.value + EPSILON) return false;
   const [from, to] = [segmentOf(prev), segmentOf(lane)];
   return (chain.length === 1 && isIntroStep(from, to, months)) || isPriceChangeStep(from, to);
@@ -226,11 +250,11 @@ function latestRun(chain: readonly Lane[], months: 1 | 3): Detected | null {
   for (const entry of flat) {
     const run = runs.at(-1);
     const gap = run ? entry.charge.mi - run.at(-1)!.charge.mi : 0;
-    if (run && (gap === months || gap === 2 * months)) run.push(entry);
+    if (run && isSeriesGap(gap, months)) run.push(entry);
     else runs.push([entry]);
   }
-  const adjacent = (r: typeof flat) => r.some((e, i) => i > 0 && e.charge.mi - r[i - 1]!.charge.mi === months);
-  const run = runs.filter((r) => r.length >= subsMinCharges.value && adjacent(r)).at(-1);
+  const adjacentPairs = (r: typeof flat) => r.filter((e, i) => i > 0 && e.charge.mi - r[i - 1]!.charge.mi === months).length;
+  const run = runs.filter((r) => r.length >= subsMinCharges.value && adjacentPairs(r) >= subsMinAdjacentPairs.value).at(-1);
   if (!run) return null;
   const segments: Segment[] = [];
   let last = -1;
@@ -263,7 +287,7 @@ function findPlanPriced(charges: readonly Charge[], service: KnownService, month
   const prices = service.plans.filter((p) => p.cadence === cadence).map((p) => p.price);
   const candidates = charges.filter((c) => prices.some((price) => withinPlanPrice(c.cents, price)));
   if (candidates.length === 0) return null;
-  const slack = months === 12 ? 1 : 0;
+  const slack = subsPlanGapSlackMonths.value[cadence];
   const chain = [candidates.at(-1)!];
   for (const c of candidates.slice(0, -1).reverse()) {
     const gap = chain[0]!.mi - c.mi;
@@ -274,10 +298,16 @@ function findPlanPriced(charges: readonly Charge[], service: KnownService, month
   return { months, charges: chain, segments: [], amountCents };
 }
 
-/** One charge of a service that bills monthly: at a monthly plan's price, or when every plan is monthly. */
-function findSingleMonthly(charges: readonly Charge[], service: KnownService): Detected | null {
-  if (charges.length !== 1) return null;
-  const c = charges[0]!;
+/**
+ * The latest charge of a recognised service that bills monthly, at a monthly plan's price or when
+ * every plan is monthly. This is the issue's "medium for a catalogue match with 1": a known merchant
+ * whose charges form no series (one charge in a one-month statement, or several that do not repeat
+ * on a pattern) is reported by its latest charge alone, as a single sighting. The earlier charges
+ * are not counted (`chargesSeen` is 1), and no price or intro flag is raised: those need a steady
+ * amount held for 2 or more charges, which is what was not found.
+ */
+function findLatestMonthly(charges: readonly Charge[], service: KnownService): Detected | null {
+  const c = charges.at(-1)!;
   const priced = service.plans.some((p) => p.cadence === 'monthly' && withinPlanPrice(c.cents, p.price));
   const onlyMonthly = service.plans.every((p) => p.cadence === 'monthly');
   if (!priced && !onlyMonthly) return null;
@@ -375,10 +405,12 @@ function markOverlaps(findings: SubscriptionFinding[]): SubscriptionFinding[] {
     if (f.status !== 'active' || !subsOverlapCategories.value.includes(f.category)) continue;
     byCategory.set(f.category, [...(byCategory.get(f.category) ?? []), f]);
   }
+  // A service never overlaps itself (two plans of one service are two findings, not a duplicate service).
+  const serviceOf = (f: SubscriptionFinding) => f.serviceId ?? f.merchantKey;
   const overlaps = new Map<string, string[]>();
   for (const group of byCategory.values()) {
-    if (group.length < 2) continue;
-    for (const f of group) overlaps.set(f.id, group.filter((o) => o.id !== f.id).map((o) => o.id).sort(compareText));
+    if (new Set(group.map(serviceOf)).size < 2) continue;
+    for (const f of group) overlaps.set(f.id, group.filter((o) => serviceOf(o) !== serviceOf(f)).map((o) => o.id).sort(compareText));
   }
   return findings.map((f) => {
     const overlapsWith = overlaps.get(f.id);
@@ -405,7 +437,8 @@ export function detectSubscriptions(items: readonly StatementItem[], opts: Detec
   const groups = new Map<string, Charge[]>();
   for (const item of items) {
     const mi = monthIndexOf(item.month);
-    if (mi === null || !Number.isFinite(item.amount) || !Number.isInteger(item.day) || item.day < 1 || item.day > 31) continue;
+    // A line that is not a real calendar day (31 February) is ignored: it could not be a charge date or the as-of date.
+    if (mi === null || !Number.isFinite(item.amount) || !Number.isInteger(item.day) || item.day < 1 || item.day > daysInMonthIndex(mi)) continue;
     months.add(mi);
     if (asOf === null || mi > asOf.mi || (mi === asOf.mi && item.day > asOf.day)) asOf = { mi, day: item.day };
     const cents = Math.round(item.amount * 100);
@@ -425,7 +458,8 @@ export function detectSubscriptions(items: readonly StatementItem[], opts: Detec
     const cls = opts.classOf?.(charges.at(-1)!.label);
     if (matched === null && !(cls !== undefined && candidateClasses.includes(cls))) continue;
     const service = matched !== null && matched.ambiguous !== true ? matched : null;
-    const category = matched?.category ?? 'other';
+    // An ambiguous entry (Apple, Google, Amazon) bills many products: no service id and no category guessed.
+    const category = service?.category ?? 'other';
     const capped = cls === undefined;
     const draft = (detected: Detected): Draft => ({ key, detected, service, category, capped });
 
@@ -434,7 +468,7 @@ export function detectSubscriptions(items: readonly StatementItem[], opts: Detec
     if (series.length > 0) {
       drafts.push(...series.map(draft));
     } else if (service !== null) {
-      const single = findPlanPriced(charges, service, 12) ?? findPlanPriced(charges, service, 3) ?? findSingleMonthly(charges, service);
+      const single = findPlanPriced(charges, service, 12) ?? findPlanPriced(charges, service, 3) ?? findLatestMonthly(charges, service);
       if (single) drafts.push(draft(single));
     }
   }
@@ -447,8 +481,8 @@ export function detectSubscriptions(items: readonly StatementItem[], opts: Detec
       const suffix = perMerchant.get(d.key)! > 1 ? `-${d.detected.amountCents}` : '';
       return toFinding(d, assignId(d.key, suffix), asOf!);
     })
-    // A single charge that already looks stopped shows no recurrence at all: it is not reported.
-    .filter((f) => !(f.chargesSeen === 1 && f.cadence === 'monthly' && f.status === 'stopped'));
+    // A single monthly sighting that already looks stopped shows no recurrence at all: not reported.
+    .filter((f) => subsReportStoppedSightings.value || !(f.chargesSeen === 1 && f.cadence === 'monthly' && f.status === 'stopped'));
 
   // The contract caps an audit at SUBSCRIPTION_FINDINGS_MAX findings: keep the costliest (a statement
   // with hundreds of recurring merchants is not a subscription list anyone reads), before the overlaps

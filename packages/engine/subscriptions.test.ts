@@ -137,10 +137,14 @@ describe('detectSubscriptions: the basics', () => {
     expect(run([item('2026-01', 5, 'GYM CLUB # NY', -9.99), item('2026-02', 5, 'GYM CLUB # NY', -9.99)], { classOf: subscriptions }).findings).toEqual([]);
   });
 
-  it('skips lines with no merchant (a label that is only masks) and charges under a dollar', () => {
-    const masked = monthly('[ref] 1234', 9.99, 5, range(1, 3));
-    const tiny = monthly('CARD CHECK CO', 0.5, 5, range(1, 3));
-    expect(run([...masked, ...tiny], { classOf: subscriptions }).findings).toEqual([]);
+  it('skips lines with no merchant (a label that is only masks)', () => {
+    expect(run(monthly('[ref] 1234', 9.99, 5, range(1, 3)), { classOf: subscriptions }).findings).toEqual([]);
+  });
+
+  it('reports a steady amount of 50 cents or more and not 49 cents: the floor against card checks', () => {
+    const at = (amount: number) => run(monthly('CARD CHECK CO', amount, 5, range(1, 3)), { classOf: subscriptions });
+    expect(at(0.49).findings).toEqual([]);
+    expect(only(at(0.5))).toMatchObject({ amount: 0.5, monthly: 0.5, yearly: 6 });   // 0.50 × 12
   });
 });
 
@@ -451,7 +455,7 @@ describe('detectSubscriptions: introEnded', () => {
   const trial = (...amounts: number[]) => amounts.map((amount, i) => item(ym(i + 1), 8, 'TRIAL TV # NY', amount));
 
   it('flags a $0.99 first charge followed by $9.99', () => {
-    // 0.99 ÷ 9.99 = 0.099, at most 0.5. The dollar floor applies to the steady amount, not to the intro.
+    // 0.99 ÷ 9.99 = 0.099, at most 0.5.
     const f = only(run(trial(0.99, 9.99, 9.99, 9.99), { classOf: subscriptions }));
     expect(f).toMatchObject({ flags: ['introEnded'], amount: 9.99, chargesSeen: 4, yearly: 119.88, confidence: 'high' });
     expect(f.previousAmount).toBeUndefined();
@@ -470,9 +474,13 @@ describe('detectSubscriptions: introEnded', () => {
   it('allows two intro charges, and not three: a longer run at the low price is the price', () => {
     const two = only(run(trial(0.99, 0.99, 9.99, 9.99), { classOf: subscriptions }));
     expect([two.flags, two.chargesSeen]).toEqual([['introEnded'], 4]);
-    // Three at $0.99 is a series of its own, under a dollar, so it is not reported; the $9.99 charges are a series without a flag.
-    const three = only(run(trial(0.99, 0.99, 0.99, 9.99, 9.99), { classOf: subscriptions }));
-    expect([three.flags, three.amount, three.chargesSeen]).toEqual([[], 9.99, 2]);
+    // Three at $0.99 is a series of its own (stopped by May), and the $9.99 charges another, neither flagged: two findings
+    // from one merchant, told apart by amount in cents. 9.99 × 12 = 119.88 sorts before 0.99 × 12 = 11.88.
+    const three = run(trial(0.99, 0.99, 0.99, 9.99, 9.99), { classOf: subscriptions });
+    expect(three.findings.map((f) => [f.id, f.flags, f.amount, f.chargesSeen, f.status])).toEqual([
+      ['trial-tv-ny-999', [], 9.99, 2, 'active'],
+      ['trial-tv-ny-99', [], 0.99, 3, 'stopped'],
+    ]);
   });
 
   it('flags an intro of exactly half the price and not a cent over', () => {
@@ -718,12 +726,217 @@ describe('auditTotals', () => {
   });
 });
 
+// ----- review round 1 --------------------------------------------------------------------------
+
+describe('review 1: a doubled line in a month', () => {
+  it('keeps the series: $9.99 on the 5th from January to May with a second $9.99 on 5 February', () => {
+    const items = [...monthly('GYM CLUB # NY', 9.99, 5, range(1, 5)), item('2026-02', 5, 'GYM CLUB # NY', 9.99)];
+    const f = only(run(items, { classOf: subscriptions }));
+    expect([f.chargesSeen, f.amount, f.confidence]).toEqual([5, 9.99, 'high']);       // the two February lines count as one month
+  });
+
+  it('keeps a known service too: Netflix with a second charge on 7 March', () => {
+    const items = [...monthly('NETFLIX.COM', 17.99, 7, range(1, 5)), item('2026-03', 7, 'NETFLIX.COM', 17.99)];
+    const f = only(run(items, { classOf: subscriptions, catalogue: CATALOGUE }));
+    expect([f.serviceId, f.chargesSeen, f.confidence]).toEqual(['netflix', 5, 'high']);
+  });
+
+  it('keeps the line nearest the usual day of the month', () => {
+    // March has the usual 5th and a second charge on the 7th (within the window): the 5th is the March charge.
+    const items = [...monthly('GYM CLUB # NY', 9.99, 5, range(1, 3)), item('2026-03', 7, 'GYM CLUB # NY', 9.99)];
+    const f = only(run(items, { classOf: subscriptions }));
+    expect([f.chargesSeen, f.lastCharge, f.nextExpected]).toEqual([3, { month: '2026-03', day: 5 }, { month: '2026-04', day: 5 }]);
+  });
+
+  it('rejects a charge repeated in most months, and keeps one repeated in half of them or fewer', () => {
+    const twice = (months: string[]) => months.flatMap((m) => [item(m, 5, 'GYM CLUB # NY', 9.99), item(m, 5, 'GYM CLUB # NY', 9.99)]);
+    const once = (months: string[]) => months.map((m) => item(m, 5, 'GYM CLUB # NY', 9.99));
+    // Four months, two of them doubled: exactly half, not most.
+    expect(only(run([...twice(['2026-01', '2026-02']), ...once(['2026-03', '2026-04'])], { classOf: subscriptions })).chargesSeen).toBe(4);
+    // Four months, three doubled: most.
+    expect(run([...twice(['2026-01', '2026-02', '2026-03']), ...once(['2026-04'])], { classOf: subscriptions }).findings).toEqual([]);
+    // Two identical plans billed together every month are not one series either.
+    expect(run(twice(range(1, 3)), { classOf: subscriptions }).findings).toEqual([]);
+  });
+});
+
+describe('review 1: a known service whose charges do not form a series', () => {
+  const opts = { classOf: subscriptions, catalogue: CATALOGUE } as const;
+
+  it('reports the latest charge as medium: Netflix $15.49 in October, then $17.99 in November', () => {
+    // The old amount was charged once, and the issue's price rise needs the old steady amount held for 2 charges,
+    // so this is not a series with a flagged step: one catalogue match, one charge, medium.
+    const f = only(run([item('2026-10', 7, 'NETFLIX.COM', 15.49), item('2026-11', 7, 'NETFLIX.COM', 17.99)], opts));
+    expect(f).toMatchObject({
+      serviceId: 'netflix', cadence: 'monthly', amount: 17.99, chargesSeen: 1, confidence: 'medium', flags: [],
+      status: 'active', lastCharge: { month: '2026-11', day: 7 }, nextExpected: { month: '2026-12', day: 7 },
+    });
+  });
+
+  it('reports the latest charge: Netflix on 7 January and 7 March only', () => {
+    const f = only(run([item('2026-01', 7, 'NETFLIX.COM', 17.99), item('2026-03', 7, 'NETFLIX.COM', 17.99)], opts));
+    expect([f.chargesSeen, f.confidence, f.lastCharge]).toEqual([1, 'medium', { month: '2026-03', day: 7 }]);
+  });
+
+  it('reports the latest charge: Netflix on 7 January, 20 February and 7 March', () => {
+    const f = only(run([item('2026-01', 7, 'NETFLIX.COM', 17.99), item('2026-02', 20, 'NETFLIX.COM', 17.99), item('2026-03', 7, 'NETFLIX.COM', 17.99)], opts));
+    expect([f.chargesSeen, f.confidence, f.lastCharge]).toEqual([1, 'medium', { month: '2026-03', day: 7 }]);
+  });
+
+  it('does the same in strict mode, and not for an unknown merchant or an ambiguous one', () => {
+    const items = [item('2026-01', 7, 'NETFLIX.COM', 17.99), item('2026-03', 7, 'NETFLIX.COM', 17.99)];
+    expect(only(run(items, { catalogue: CATALOGUE })).confidence).toBe('medium');
+    expect(run([item('2026-01', 5, 'GYM CLUB # NY', 9.99), item('2026-03', 5, 'GYM CLUB # NY', 9.99)], opts).findings).toEqual([]);
+    expect(run([item('2026-01', 3, 'APPLE.COM/BILL # CA', 2.99), item('2026-03', 3, 'APPLE.COM/BILL # CA', 2.99)], opts).findings).toEqual([]);
+  });
+
+  it('drops that latest charge when it already looks stopped', () => {
+    const items = [item('2026-01', 7, 'NETFLIX.COM', 17.99), item('2026-03', 7, 'NETFLIX.COM', 17.99), payday('2026-06', 2)];
+    expect(run(items, opts).findings).toEqual([]);
+  });
+
+  it('leaves a real series alone: the fallback is only for a service with no series', () => {
+    const f = only(run([...monthly('NETFLIX.COM', 17.99, 7, range(1, 4)), item('2026-02', 20, 'NETFLIX.COM', 50)], opts));
+    expect([f.chargesSeen, f.amount]).toEqual([4, 17.99]);
+  });
+});
+
+describe('review 1: small subscriptions', () => {
+  it('finds a $0.99 recurring catalogue service: iCloud on the 4th, five months', () => {
+    const icloud = [service('icloud', 'iCloud', 'cloud', ['ICLOUD'], [[0.99, 'monthly']])];
+    const f = only(run(monthly('ICLOUD STORAGE', 0.99, 4, range(1, 5)), { classOf: subscriptions, catalogue: icloud }));
+    expect([f.serviceId, f.amount, f.monthly, f.yearly, f.chargesSeen, f.confidence]).toEqual(['icloud', 0.99, 0.99, 11.88, 5, 'high']); // 0.99 × 12
+  });
+
+  it('finds an unknown $0.99 monthly series', () => {
+    const f = only(run(monthly('TINY APP # CA', 0.99, 9, range(1, 4)), { classOf: subscriptions }));
+    expect([f.amount, f.yearly, f.chargesSeen, f.confidence]).toEqual([0.99, 11.88, 4, 'high']);
+  });
+});
+
+describe('review 1: overlap', () => {
+  it('never overlaps a service with itself: two Netflix plans billed the same day', () => {
+    const items = [...monthly('NETFLIX.COM', 15.49, 7, range(1, 4)), ...monthly('NETFLIX.COM', 7.99, 7, range(1, 4))];
+    const audit = run(items, { classOf: subscriptions, catalogue: CATALOGUE });
+    expect(audit.findings.map((f) => [f.id, f.serviceId, f.flags, f.overlapsWith])).toEqual([
+      ['netflix-com-1549', 'netflix', [], undefined],
+      ['netflix-com-799', 'netflix', [], undefined],
+    ]);
+  });
+
+  it('names only the other services when one of them has two plans', () => {
+    const items = [...monthly('NETFLIX.COM', 15.49, 7, range(1, 4)), ...monthly('NETFLIX.COM', 7.99, 7, range(1, 4)), ...monthly('HULU # CA', 9.99, 12, range(1, 4))];
+    const audit = run(items, { classOf: subscriptions, catalogue: CATALOGUE });
+    expect(byId(audit, 'netflix-com-1549').overlapsWith).toEqual(['hulu-ca']);
+    expect(byId(audit, 'netflix-com-799').overlapsWith).toEqual(['hulu-ca']);
+    expect(byId(audit, 'hulu-ca').overlapsWith).toEqual(['netflix-com-1549', 'netflix-com-799']);
+  });
+
+  it('does not use an ambiguous entry for overlap: no category is guessed for it', () => {
+    // An ambiguous merchant (it bills many products) whose catalogue category happens to be video.
+    const streaming = [service('bundle', 'Bundle', 'video', ['BUNDLE CO'], [[14.99, 'monthly']], true), ...CATALOGUE];
+    const items = [...monthly('BUNDLE CO # NY', 14.99, 3, range(1, 4)), ...monthly('NETFLIX.COM', 17.99, 7, range(1, 4))];
+    const audit = run(items, { classOf: subscriptions, catalogue: streaming });
+    expect(byId(audit, 'bundle-co-ny')).toMatchObject({ category: 'other', flags: [] });
+    expect('serviceId' in byId(audit, 'bundle-co-ny')).toBe(false);
+    expect(byId(audit, 'netflix-com')).toMatchObject({ category: 'video', flags: [] });
+  });
+});
+
+describe('review 1: the catalogue match', () => {
+  const spotifyPlans = [
+    service('spotify', 'Spotify', 'music', ['SPOTIFY'], [[11.99, 'monthly']]),
+    service('spotify-premium', 'Spotify Premium', 'music', ['SPOTIFY PREMIUM'], [[15.99, 'monthly']]),
+  ];
+
+  it('prefers the longest matcher: SPOTIFY PREMIUM is the premium plan, not an ambiguous match with SPOTIFY', () => {
+    const items = monthly('SPOTIFY PREMIUM', 15.99, 12, range(1, 3));
+    expect(only(run(items, { catalogue: spotifyPlans })).serviceId).toBe('spotify-premium');
+    expect(only(run(monthly('SPOTIFY USA # NY', 11.99, 12, range(1, 3)), { catalogue: spotifyPlans })).serviceId).toBe('spotify');
+  });
+
+  it('still reads two entries whose matchers are the same length as ambiguous: no match', () => {
+    const tie = [service('abc', 'Abc', 'video', ['ABC DEF'], [[9.99, 'monthly']]), service('xyz', 'Xyz', 'music', ['XYZ UVW'], [[9.99, 'monthly']])];
+    expect(run(monthly('ABC DEF XYZ UVW', 9.99, 5, range(1, 3)), { catalogue: tie }).findings).toEqual([]);   // strict: no match, no candidate
+    expect(only(run(monthly('ABC DEF XYZ UVW', 9.99, 5, range(1, 3)), { classOf: subscriptions, catalogue: tie })).serviceId).toBeUndefined();
+  });
+});
+
+describe('review 1: lines that are not a real calendar day', () => {
+  const gym = monthly('GYM CLUB # NY', 9.99, 5, range(1, 3));
+
+  it('ignores 31 February: it neither sets asOf nor counts as a month', () => {
+    // The pay line of "31 February" would be the newest line of a February statement; the real newest is the 5th.
+    const audit = run([...gym.slice(0, 2), item('2026-02', 31, 'ACME LOGISTICS INC PAYROLL PPD ID: #', -2000)], { classOf: subscriptions });
+    expect([audit.asOf, audit.monthsCovered]).toEqual([{ month: '2026-02', day: 5 }, 2]);
+    expect(run([item('2026-02', 31, 'ACME LOGISTICS INC PAYROLL PPD ID: #', -2000)])).toEqual({ findings: [], monthlyTotal: 0, yearlyTotal: 0, monthsCovered: 0, asOf: null });
+  });
+
+  it('ignores a charge on 31 April, 29 February of a common year, and a month of 13', () => {
+    const extra = [item('2026-04', 31, 'GYM CLUB # NY', 9.99), item('2026-13', 5, 'GYM CLUB # NY', 9.99)];
+    const audit = run([...gym, ...extra], { classOf: subscriptions });
+    expect([only(audit).chargesSeen, only(audit).lastCharge, audit.asOf, audit.monthsCovered]).toEqual([3, { month: '2026-03', day: 5 }, { month: '2026-03', day: 5 }, 3]);
+    expect(run([item('2027-02', 29, 'GYM CLUB # NY', 9.99), payday('2027-02', 28)], { classOf: subscriptions }).asOf).toEqual({ month: '2027-02', day: 28 });
+  });
+
+  it('accepts 29 February of a leap year', () => {
+    expect(run([item('2028-02', 29, 'ACME LOGISTICS INC PAYROLL PPD ID: #', -2000)]).asOf).toEqual({ month: '2028-02', day: 29 });
+  });
+});
+
+describe('review 1: boundaries', () => {
+  const streamco = (...amounts: number[]) => amounts.map((amount, i) => item(ym(i + 1), 10, 'STREAMCO # NY', amount));
+
+  it('treats a charge exactly 3% above as the same price, and a cent more as a step', () => {
+    // 10.00 and 10.00, then 10.30 (cents 1030 = 1000 × 1.03): one steady amount, the median 10.00.
+    const same = only(run(streamco(10, 10, 10.3), { classOf: subscriptions }));
+    expect([same.amount, same.chargesSeen, same.flags]).toEqual([10, 3, []]);
+    // 10.31 is outside: a step to a new amount (1.031 is under the 1.05 of a price rise, so no flag).
+    const step = only(run(streamco(10, 10, 10.31), { classOf: subscriptions }));
+    expect([step.amount, step.chargesSeen, step.flags]).toEqual([10.31, 3, []]);
+  });
+
+  it('keeps a step of exactly 2 times in the series and drops one a cent over', () => {
+    const twice = only(run(streamco(10, 10, 20), { classOf: subscriptions }));
+    expect([twice.amount, twice.chargesSeen, twice.flags, twice.previousAmount]).toEqual([20, 3, ['priceUp'], 10]);
+    const over = only(run(streamco(10, 10, 20.01), { classOf: subscriptions }));
+    expect([over.amount, over.chargesSeen, over.flags]).toEqual([10, 2, []]);
+  });
+
+  it('chains yearly charges a year apart give or take a month, and not two months off', () => {
+    const prime = (...months: string[]) => [...months.map((m) => item(m, 9, 'AMAZON PRIME*[ref] Amzn.com/bill WA', 139)), payday('2026-11', 12)];
+    const seen = (months: string[]) => only(run(prime(...months), { classOf: subscriptions, catalogue: CATALOGUE })).chargesSeen;
+    expect(seen(['2025-09', '2026-08'])).toBe(2);                     // 11 months
+    expect(seen(['2025-08', '2026-08'])).toBe(2);                     // 12
+    expect(seen(['2025-07', '2026-08'])).toBe(2);                     // 13
+    expect(seen(['2025-10', '2026-08'])).toBe(1);                     // 10
+    expect(seen(['2025-06', '2026-08'])).toBe(1);                     // 14
+  });
+
+  it('chains quarterly plan charges exactly three months apart, not two or four', () => {
+    const news = (...months: string[]) => months.map((m) => item(m, 15, 'CITY NEWS # NY', 30));
+    const seen = (months: string[]) => only(run(news(...months), { classOf: subscriptions, catalogue: CATALOGUE })).chargesSeen;
+    expect(seen(['2026-01', '2026-04'])).toBe(2);                     // a quarterly series
+    expect(seen(['2026-01', '2026-05'])).toBe(1);                     // four months apart: only the latest
+    expect(seen(['2026-01', '2026-03'])).toBe(1);                     // two months apart
+  });
+
+  it('names its thresholds in the assumptions', () => {
+    expect(subscriptionAssumptions.subsMissedPeriodsAllowed.value).toBe(1);
+    expect(subscriptionAssumptions.subsMinAdjacentPairs.value).toBe(1);
+    expect(subscriptionAssumptions.subsPlanGapSlackMonths.value).toEqual({ yearly: 1, quarterly: 0 });
+    expect(subscriptionAssumptions.subsReportStoppedSightings.value).toBe(false);
+    expect(subscriptionAssumptions.subsDoubledMonthsMaxShare.value).toBe(0.5);
+    expect(subscriptionAssumptions.subsMinAmount.value).toBe(0.5);
+  });
+});
+
 // ----- housekeeping ----------------------------------------------------------------------------
 
 describe('M3 assumptions', () => {
   it('are in the assumptions list, each flagged as an assumption', () => {
     const ids = Object.keys(subscriptionAssumptions);
-    expect(ids).toHaveLength(15);
+    expect(ids).toHaveLength(20);
     for (const id of ids) {
       expect((assumptions as Record<string, { assumption?: boolean }>)[id]?.assumption, id).toBe(true);
     }

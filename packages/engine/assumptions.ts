@@ -474,10 +474,45 @@ export const subsPlanPriceTolerance = {
 
 /** Smallest steady amount reported: below it a charge is a card check or a rounding artefact, not a subscription. */
 export const subsMinAmount = {
-  value: 1 as Money,
+  value: 0.5 as Money,
   assumption: true,
-  note: 'Also keeps the monthly figure of a yearly charge above zero cents.',
+  note: 'Real $0.99 plans exist (cloud storage), so the floor is low; it also keeps the monthly figure of a yearly charge above zero cents.',
 } satisfies Assumption<Money>;
+
+/** Billing periods that may pass with no charge between two charges of one series (a failed payment, a paused month). */
+export const subsMissedPeriodsAllowed = {
+  value: 1,
+  assumption: true,
+  note: 'One missed month is a hiccup; two in a row is a series that ended.',
+} satisfies Assumption<number>;
+
+/** A monthly or quarterly series needs this many pairs of charges in adjacent periods. */
+export const subsMinAdjacentPairs = {
+  value: 1,
+  assumption: true,
+  note: 'Charges every other month are a two-month cycle, not a monthly charge that skips a month each time.',
+} satisfies Assumption<number>;
+
+/** Months that two charges of a yearly or quarterly plan may be off from a whole year or quarter and still be the same series. */
+export const subsPlanGapSlackMonths = {
+  value: { yearly: 1, quarterly: 0 },
+  assumption: true,
+  note: 'A yearly renewal drifts a month with the billing date and the statement; a quarter is short enough to be exact.',
+} satisfies Assumption<{ yearly: number; quarterly: number }>;
+
+/** Whether a single sighting (one charge of a known service, no pattern) that already looks stopped is still reported. */
+export const subsReportStoppedSightings = {
+  value: false,
+  assumption: true,
+  note: 'One old charge shows no recurrence: it is more likely a one-off than a subscription that has been cancelled.',
+} satisfies Assumption<boolean>;
+
+/** More than this share of a lane's months with two or more charges means a weekly or multi-per-month pattern, not a monthly one. */
+export const subsDoubledMonthsMaxShare = {
+  value: 0.5,
+  assumption: true,
+  note: 'An occasional double charge is a retry or a duplicate and is counted once; a charge in most months twice over is not a monthly subscription.',
+} satisfies Assumption<number>;
 
 /** The M3 assumptions, spread into `assumptions` below. */
 export const subscriptionAssumptions = {
@@ -496,6 +531,11 @@ export const subscriptionAssumptions = {
   subsCandidateClasses,
   subsPlanPriceTolerance,
   subsMinAmount,
+  subsMissedPeriodsAllowed,
+  subsMinAdjacentPairs,
+  subsPlanGapSlackMonths,
+  subsReportStoppedSightings,
+  subsDoubledMonthsMaxShare,
 } as const;
 
 // ----- end M3 ---------------------------------------------------------------------------------
