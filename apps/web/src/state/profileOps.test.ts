@@ -3,7 +3,7 @@ import { COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifegu
 import { describe, expect, it } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import {
-  addDebt, applyUserPatch, mergeStatementHistory, mergeStatementTotals, setSpending, skipField, updateDebt,
+  addDebt, applyUserPatch, mergeStatementHistory, mergeStatementTotals, setSpending, setSubscriptionsLine, skipField, updateDebt,
 } from './profileOps';
 
 const totals = (over: Partial<Record<CostCategory, number>>): Record<CostCategory, number> =>
@@ -15,6 +15,14 @@ describe('profileOps', () => {
     const next = setSpending(p, 'eatingOut', 200);
     expect(next.spending.eatingOut).toEqual({ value: 200, isEstimate: false });
     expect(p.spending.eatingOut).toEqual({ value: 340, isEstimate: true });
+  });
+
+  it('setSubscriptionsLine: measured from a statement, an estimate from ticks, other lines untouched', () => {
+    const p = cloneProfileDemo();
+    expect(setSubscriptionsLine(p, 69.54, true).spending.subscriptions).toEqual({ value: 69.54, isEstimate: false });
+    expect(setSubscriptionsLine(p, 54.97, false).spending.subscriptions).toEqual({ value: 54.97, isEstimate: true });
+    expect(setSubscriptionsLine(p, 54.97, false).spending.eatingOut).toEqual(p.spending.eatingOut);
+    expect(p.spending.subscriptions).toEqual({ value: 85, isEstimate: false }); // the input is not changed
   });
 
   it('skipField keeps the value and flags it as an estimate', () => {

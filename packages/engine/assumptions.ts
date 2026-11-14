@@ -576,6 +576,24 @@ export const subscriptionAssumptions = {
 
 // ----- end M3 ---------------------------------------------------------------------------------
 
+// ----- M5: subscription audit screen ----------------------------------------------------------
+
+/**
+ * Where a monthly guess lands against the actual total, as guess ÷ actual, written as numerator and
+ * denominator pairs so the edges are compared in whole cents with no floating point. Lowest first:
+ * under 1/2, 1/2 up to 4/5, 4/5 up to 5/4, 5/4 up to 2/1, 2/1 and over (MISS_BUCKETS in packages/types, in that order).
+ */
+export const subsMissEdges = {
+  value: [[1, 2], [4, 5], [5, 4], [2, 1]] as readonly (readonly [number, number])[],
+  assumption: true,
+  note: 'Half and double are the plain "way off" marks; 4/5 and 5/4 are reciprocals, a fifth under or over: "about right". Each bucket includes its lower edge.',
+} satisfies Assumption<readonly (readonly [number, number])[]>;
+
+/** The M5 assumptions, spread into `assumptions` below. */
+export const subscriptionAuditAssumptions = { subsMissEdges } as const;
+
+// ----- end M5 ---------------------------------------------------------------------------------
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
@@ -603,6 +621,7 @@ export const assumptions = {
   oneOffOutlierMinAmount,
   oneOffOutlierMultiple,
   ...subscriptionAssumptions,
+  ...subscriptionAuditAssumptions,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;
