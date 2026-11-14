@@ -1,5 +1,7 @@
 # ARCHITECTURE.md
 
+> **Implementation override:** The user approved Go for all calculations and API routes, Next.js for presentation, Supabase Postgres, and Docker/Caddy on a VPS. Cookie sessions replace browser bearer IDs. See [IMPLEMENTATION.md](IMPLEMENTATION.md) for current ownership and commands; original TypeScript/Vercel references below are historical specifications.
+
 ## Principle
 
 Build all logic and data behind fixed contracts first, with placeholder screens, so the Figma design can be dropped in screen by screen without touching logic.

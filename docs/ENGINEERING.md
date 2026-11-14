@@ -1,5 +1,7 @@
 # ENGINEERING.md — conventions, math specs, testing, Figma handoff
 
+> **Implementation override:** The user approved Go for all calculations and API routes, Next.js for presentation, Supabase Postgres, and Docker/Caddy on a VPS. Cookie sessions replace browser bearer IDs. See [IMPLEMENTATION.md](IMPLEMENTATION.md) for current ownership and commands; original TypeScript/Vercel references below are historical specifications.
+
 ## Ownership (avoid editing each other's folders)
 
 | Area | Owner |

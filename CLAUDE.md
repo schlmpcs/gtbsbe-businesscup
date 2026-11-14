@@ -1,5 +1,7 @@
 # CLAUDE.md — LifeGuessr (working name)
 
+> **Implementation override:** The user approved Go for all calculations and API routes, Next.js for presentation, Supabase Postgres, and Docker/Caddy on a VPS. Cookie sessions replace browser bearer IDs. See [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for current ownership and commands; original TypeScript/Vercel references below are historical specifications.
+
 Read this first. It tells you what the product is, how the repo is laid out, and the rules you must follow when writing code here.
 
 ## What we are building

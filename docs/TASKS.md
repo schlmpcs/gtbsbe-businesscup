@@ -1,5 +1,7 @@
 # TASKS.md — split and status
 
+> **Implementation override:** The user approved Go for all calculations and API routes, Next.js for presentation, Supabase Postgres, and Docker/Caddy on a VPS. Cookie sessions replace browser bearer IDs. See [IMPLEMENTATION.md](IMPLEMENTATION.md) for current ownership and commands; original TypeScript/Vercel references below are historical specifications.
+
 Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) + T12 (the house scene, sized at Hour 0), **Kiko** (UI/UX) on Figma, tokens and the sprite kit. Each task is a GitHub issue. Every task can start on fixtures. "Depends on" names the real piece that later replaces a fixture. Update the checkboxes as you go.
 
 ## Hour 0 (together)
