@@ -1,0 +1,67 @@
+[
+  {
+    "id": "car",
+    "A": {
+      "label": "A $35k car",
+      "art": "car-premium",
+      "changes": [
+        {
+          "kind": "purchase",
+          "category": "car",
+          "purchase": {
+            "label": "$35k car",
+            "amount": 35000,
+            "recurring": false,
+            "payWith": { "loan": { "amount": 35000, "downPayment": 3500, "apr": 0.069, "termMonths": 60 } }
+          }
+        }
+      ]
+    },
+    "B": {
+      "label": "A $22k car",
+      "art": "car-budget",
+      "changes": [
+        {
+          "kind": "purchase",
+          "category": "car",
+          "purchase": {
+            "label": "$22k car",
+            "amount": 22000,
+            "recurring": false,
+            "payWith": { "loan": { "amount": 22000, "downPayment": 2200, "apr": 0.069, "termMonths": 60 } }
+          }
+        }
+      ]
+    },
+    "source": { "name": "Illustrative car loan terms (10% down, 6.9% APR, 60 months), not a quote", "year": 2026 },
+    "isEstimate": true
+  },
+  {
+    "id": "city",
+    "A": { "label": "Austin", "art": "city-sunbelt", "changes": [{ "kind": "move", "zip": "78704" }] },
+    "B": { "label": "Chicago", "art": "city-dense", "changes": [{ "kind": "move", "zip": "60618" }] },
+    "source": { "name": "Mid-priced ZIP of each metro in our area data (HUD, DOL NDCP, NAIC, EIA)", "year": 2026 },
+    "isEstimate": true
+  },
+  {
+    "id": "baby",
+    "A": { "label": "A baby now", "art": "baby-nursery", "changes": [{ "kind": "kid", "age": "infant", "inMonths": 0 }] },
+    "B": { "label": "A baby in 2 years", "art": "savings", "changes": [{ "kind": "kid", "age": "infant", "inMonths": 24 }] },
+    "source": { "name": "Childcare by age from DOL NDCP for your county; kid groceries and other costs are engine assumptions", "year": 2026 },
+    "isEstimate": true
+  },
+  {
+    "id": "card",
+    "A": { "label": "Pay off the card", "art": "credit-card", "changes": [{ "kind": "payDebt", "debtKind": "card" }] },
+    "B": { "label": "Keep the cash", "art": "savings", "changes": [] },
+    "source": { "name": "Your own card balance, APR and cash", "year": 2026 },
+    "isEstimate": false
+  },
+  {
+    "id": "rent",
+    "A": { "label": "Downtown", "art": "rent-downtown", "changes": [{ "kind": "moveTier", "tier": "expensive" }] },
+    "B": { "label": "The suburbs", "art": "rent-suburbs", "changes": [{ "kind": "moveTier", "tier": "suburb" }] },
+    "source": { "name": "The pricier and suburban ZIPs of your metro in our area data (HUD Small Area FMR)", "year": 2026 },
+    "isEstimate": true
+  }
+]
