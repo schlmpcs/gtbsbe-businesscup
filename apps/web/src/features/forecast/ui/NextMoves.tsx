@@ -112,11 +112,11 @@ function MoveItem({
                 {m.uncommit}
               </Button>
             ) : (
-              <Button size="sm" onClick={onCommit}>
+              <Button size="sm" variant={rank === 1 ? 'primary' : 'secondary'} onClick={onCommit}>
                 {m.commit}
               </Button>
             )}
-            <Button size="sm" variant="secondary" onClick={onDone}>
+            <Button size="sm" variant="ghost" onClick={onDone}>
               {m.markDone}
             </Button>
             {explanation?.status !== 'ready' && explanation?.status !== 'error' && (

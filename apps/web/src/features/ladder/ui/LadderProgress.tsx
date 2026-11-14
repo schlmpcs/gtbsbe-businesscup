@@ -1,7 +1,6 @@
-// Ladder progress: the five rungs (done / not yet / this step), the 10-year number with its range
-// band, how far the user's own numbers have narrowed that band, the next rung and "See your future".
-// Styled as the Figma tiles: a white tile with the rungs as pills and a big orange 10-year number,
-// then the big orange CTA.
+// Ladder progress, compact: one row of rung pills (done / not yet / this step, read out to screen
+// readers), the 10-year number with its range, how far the user's own numbers have narrowed that
+// band (the explanation is collapsed), then one primary CTA and the other as a ghost link.
 import { useId } from 'react';
 import { ladder, screenTitles } from '@/copy';
 import { buttonClassName, Card, cx, EstimateTag, formatMoney, formatRate, Stack } from '@/ui-kit';
@@ -22,12 +21,12 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
   const futureFirst = !next || screen === 'S8';
 
   return (
-    <Stack gap="xl">
-      <Card title={t.progressTitle} as="section">
-        <Stack gap="xl">
+    <Stack gap="lg">
+      <Card>
+        <Stack gap="lg">
           <nav aria-label={t.stepsLabel}>
-            <p className="mb-sm text-sm text-text-muted">{ready ? t.stepsDone(doneCount, rungs.length) : t.loading}</p>
-            <ol className="grid grid-cols-1 gap-sm sm:grid-cols-5">
+            <p className="sr-only">{ready ? t.stepsDone(doneCount, rungs.length) : t.loading}</p>
+            <ol className="flex flex-wrap gap-sm">
               {rungs.map((rung, i) => {
                 const isCurrent = rung.screen === screen;
                 const state = isCurrent ? t.current : rung.done ? t.done : t.notYet;
@@ -39,7 +38,7 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
                       data-rung={rung.screen}
                       data-done={rung.done ? 'true' : 'false'}
                       className={cx(
-                        'flex h-full items-center gap-sm rounded-lg border-2 px-md py-sm text-sm',
+                        'flex items-center gap-xs rounded-full border-2 py-xs pr-md pl-xs text-sm',
                         isCurrent
                           ? 'border-text bg-surface font-semibold'
                           : 'border-transparent bg-surface-strong hover:border-border',
@@ -58,12 +57,8 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
                       >
                         {rung.done ? '✓' : i + 1}
                       </span>
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="leading-tight">{t.rungs[rung.screen]}</span>
-                        <span className={cx('text-xs font-normal', rung.done ? 'text-positive' : 'text-text-muted')}>
-                          {state}
-                        </span>
-                      </span>
+                      {t.rungs[rung.screen]}
+                      <span className="sr-only">({state})</span>
                     </a>
                   </li>
                 );
@@ -72,29 +67,28 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
           </nav>
 
           {ready && (
-            <div className="grid gap-xl lg:grid-cols-2 lg:items-end">
+            <div className="grid gap-lg sm:grid-cols-2 sm:items-end">
               <div className="flex flex-col gap-xs">
                 <span className="flex flex-wrap items-center gap-sm text-sm font-medium text-text-muted">
                   {t.in10yLabel}
                   {estimates.left > 0 && <EstimateTag />}
                 </span>
                 <div data-testid="ladder-in10y">
-                  <p className="font-display text-4xl font-extrabold leading-display text-primary tabular-nums sm:text-display">
+                  <p className="font-display text-4xl font-extrabold leading-display text-primary tabular-nums">
                     {formatMoney(in10y.mid)}
                   </p>
                 </div>
-                <p className="text-sm text-text-muted">{t.in10yHint}</p>
-                <p className="text-sm font-medium tabular-nums" data-testid="ladder-range">
+                <p className="text-xs text-text-muted tabular-nums" data-testid="ladder-range">
                   {t.range(formatMoney(in10y.low), formatMoney(in10y.high))}
                 </p>
               </div>
 
-              <div className="flex flex-col gap-sm">
+              <div className="flex flex-col gap-xs">
                 <div className="flex items-baseline justify-between gap-md text-sm">
                   <span id={narrowedId} className="font-medium">
                     {t.narrowedLabel}
                   </span>
-                  <span className="font-display text-2xl font-extrabold tabular-nums">{formatRate(bandNarrowed, 0)}</span>
+                  <span className="font-bold tabular-nums">{formatRate(bandNarrowed, 0)}</span>
                 </div>
                 <div
                   role="progressbar"
@@ -103,16 +97,21 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
                   aria-valuemax={1}
                   aria-valuenow={bandNarrowed}
                   aria-valuetext={t.narrowed(formatRate(bandNarrowed, 0))}
-                  className="h-md w-full overflow-hidden rounded-full bg-surface-strong"
+                  className="h-sm w-full overflow-hidden rounded-full bg-surface-strong"
                 >
                   <div
                     className="h-full origin-left rounded-full bg-positive transition-transform duration-500"
                     style={{ transform: `scaleX(${bandNarrowed})` }}
                   />
                 </div>
-                <p className="text-xs text-text-muted">
-                  {t.estimatesLeft(estimates.left, estimates.total)} {t.bandNote}
-                </p>
+                <details className="text-xs text-text-muted">
+                  <summary className="cursor-pointer">
+                    {t.estimatesLeft(estimates.left, estimates.total)} · {t.howTitle}
+                  </summary>
+                  <p className="mt-xs">
+                    {t.in10yHint} {t.bandNote}
+                  </p>
+                </details>
               </div>
             </div>
           )}
@@ -122,7 +121,7 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
       <div className="flex flex-col-reverse gap-md sm:flex-row sm:items-center sm:justify-end">
         <a
           href={progress.futureHref}
-          className={buttonClassName({ variant: futureFirst ? 'primary' : 'secondary', size: 'lg' })}
+          className={buttonClassName({ variant: futureFirst ? 'primary' : 'ghost', size: 'lg' })}
         >
           {t.futureCta}
         </a>
@@ -130,7 +129,7 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
           <a
             href={next.href}
             className={cx(
-              buttonClassName({ variant: futureFirst ? 'secondary' : 'primary', size: 'lg' }),
+              buttonClassName({ variant: futureFirst ? 'ghost' : 'primary', size: 'lg' }),
               futureFirst ? 'sm:order-first' : 'sm:order-last',
             )}
           >

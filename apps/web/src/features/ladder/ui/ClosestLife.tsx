@@ -24,9 +24,9 @@ export function ClosestLife({ vm, progress }: ClosestLifeProps) {
   const chosen = vm.candidates.find((c) => c.cardId === vm.chosenCardId);
   return (
     <LadderShell screen="S6" progress={progress} loading={vm.status === 'loading'} centered>
-      <p className="text-center text-sm text-text-muted">
-        {vm.selfGuess !== null ? t.sortedByGuess(formatMoney(vm.selfGuess)) : t.unsorted}
-      </p>
+      {vm.selfGuess !== null && (
+        <p className="text-center text-sm text-text-muted">{t.sortedByGuess(formatMoney(vm.selfGuess))}</p>
+      )}
       <ul aria-label={t.listLabel} className="grid grid-cols-1 gap-xl pt-sm sm:grid-cols-2 lg:grid-cols-3">
         {vm.candidates.map((c, i) => (
           <li key={c.cardId} className="min-w-0">

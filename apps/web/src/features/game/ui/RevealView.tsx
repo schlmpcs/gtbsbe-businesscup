@@ -72,18 +72,15 @@ export function RevealView({ reveal, onNext, progressLabel = null, large = false
                 {t.reveal.pointsSticker(fmt(result.points))}
               </Sticker>
               <Sticker tone="ink" tilt={3} className="text-sm">
-                {reveal.direction === 'in' ? t.reveal.inRangeSticker : t.reveal.missedBy(formatMoney(reveal.missBy))}
+                {reveal.direction === 'in' ? t.reveal.inRangeSticker : t.reveal.missed[reveal.direction](formatMoney(reveal.missBy))}
               </Sticker>
             </div>
             <div className="flex flex-wrap items-end justify-between gap-x-md">
               <span className="text-sm text-text-muted">{t.reveal.yourGuess}</span>
               <Money value={reveal.guess} className="font-display text-4xl font-extrabold leading-tight" />
             </div>
-            <p className="font-semibold">{t.reveal.direction[reveal.direction]}</p>
             <RangeScale reveal={reveal} />
-            <p className="text-sm text-text-muted">
-              {t.reveal.pointsOf(fmt(result.points), fmt(reveal.maxPoints))}
-              {' · '}
+            <p className="text-xs text-text-muted">
               {t.reveal.pointsDetail(fmt(result.basePoints), formatRate(result.multiplier), reveal.cluesOpened.length)}
             </p>
           </div>
@@ -137,9 +134,6 @@ export function RevealView({ reveal, onNext, progressLabel = null, large = false
       </section>
 
       <Card title={t.reveal.whoLivedHere} headingLevel={2} className="text-text">
-        <p className="mb-sm text-text-muted">
-          {reveal.card.metro} · {reveal.card.caption}
-        </p>
         <ClueFacts facts={reveal.cardFacts} />
       </Card>
 
@@ -151,7 +145,7 @@ export function RevealView({ reveal, onNext, progressLabel = null, large = false
                 href={reveal.shareImage.story}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={buttonClassName({ variant: 'secondary' })}
+                className={buttonClassName({ variant: 'ghost' })}
               >
                 {t.reveal.shareCard}
               </a>
@@ -159,7 +153,7 @@ export function RevealView({ reveal, onNext, progressLabel = null, large = false
                 href={reveal.shareImage.square}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={buttonClassName({ variant: 'secondary' })}
+                className={buttonClassName({ variant: 'ghost' })}
               >
                 {t.reveal.shareCardSquare}
               </a>

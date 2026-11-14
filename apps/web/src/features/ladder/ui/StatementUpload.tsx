@@ -53,9 +53,8 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
               <h2 id={titleId} className="font-display text-3xl font-extrabold leading-tight">
                 {t.pickerTitle}
               </h2>
-              <p className="text-base text-text-muted">{t.pickerSub}</p>
               <div className="flex w-full max-w-(--container-sm) flex-col gap-sm text-left">
-                <label htmlFor={inputId} className="text-sm font-medium">
+                <label htmlFor={inputId} className="sr-only">
                   {t.pickerLabel}
                 </label>
                 <input
@@ -107,7 +106,7 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
                   <Button size="lg" onClick={vm.apply}>
                     {t.apply}
                   </Button>
-                  <Button size="lg" variant="secondary" onClick={vm.discard}>
+                  <Button size="lg" variant="ghost" onClick={vm.discard}>
                     {t.discard}
                   </Button>
                 </Row>
@@ -134,16 +133,16 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
 
           <section
             aria-labelledby={bankTitleId}
-            className="flex flex-col gap-md rounded-xl bg-ink p-xl text-on-primary shadow-md"
+            className="flex flex-col gap-sm rounded-xl bg-ink p-lg text-on-primary shadow-md"
           >
-            <h2 id={bankTitleId} className="flex items-baseline gap-sm font-display text-2xl font-extrabold leading-tight">
+            <h2 id={bankTitleId} className="flex items-baseline gap-sm font-display text-xl font-extrabold leading-tight">
               <span className="text-sm font-normal text-on-primary/60">{t.bank.or}</span>
               {t.bank.title}
             </h2>
-            <p id={bankNoteId} className="text-sm text-on-primary/70">
+            <p id={bankNoteId} className="text-xs text-on-primary/70">
               {t.bank.note}
             </p>
-            <Button variant="secondary" fullWidth disabled aria-describedby={bankNoteId}>
+            <Button variant="ghost" fullWidth disabled aria-describedby={bankNoteId}>
               {t.bank.button} · {t.bank.soon}
             </Button>
           </section>
@@ -168,12 +167,17 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
 function ReadSummary({ read }: { read: StatementReadVM }) {
   return (
     <div className="flex flex-col gap-xs text-xs text-text-muted" data-testid="statement-read">
-      <p>
-        {t.readSummary(read.transactions, read.from, read.to)}
-        {(read.skippedPending > 0 || read.skippedOther > 0) && ` ${t.skipped(read.skippedPending, read.skippedOther)}`}
-      </p>
-      <p>{t.categorizedBy[read.categorizedBy]}</p>
-      <p>{t.excludedNote}</p>
+      <p>{t.readSummary(read.transactions, read.from, read.to)}</p>
+      <details>
+        <summary className="cursor-pointer">{t.readMore}</summary>
+        <div className="mt-xs flex flex-col gap-xs">
+          {(read.skippedPending > 0 || read.skippedOther > 0) && (
+            <p>{t.skipped(read.skippedPending, read.skippedOther)}</p>
+          )}
+          <p>{t.categorizedBy[read.categorizedBy]}</p>
+          <p>{t.excludedNote}</p>
+        </div>
+      </details>
     </div>
   );
 }

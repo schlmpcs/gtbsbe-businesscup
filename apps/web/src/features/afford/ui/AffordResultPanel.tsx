@@ -48,7 +48,6 @@ function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }
       >
         {headline}
       </p>
-      {data.verdict === 'fits' && <p className={body}>{t.result.fitsBody}</p>}
       {data.verdict === 'fits' && data.baselineFails && (
         <p role="note" className="rounded-lg bg-surface-strong p-md text-sm">
           {t.result.baseline.fits}
@@ -58,7 +57,6 @@ function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }
       {data.verdict === 'wait' && (
         <>
           {data.baselineFails ? <p className={body}>{t.result.baseline.wait}</p> : reason && <p className={body}>{reason}</p>}
-          {data.waitMonths !== null && <p className={body}>{t.result.waitBody(data.waitMonths)}</p>}
         </>
       )}
 
@@ -83,10 +81,22 @@ function Cheapest({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWit
         <span aria-hidden="true">·</span>
         <span>{t.result.cheapestWays[data.cheapestWay]}</span>
       </p>
-      <p className="text-xs text-text-muted">
-        {data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent} {t.result.cheapestHint}
-      </p>
+      <p className="text-xs text-text-muted">{data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent}</p>
     </div>
+  );
+}
+
+/** Collapsed: the rules behind the verdict (and the wait, and the cheapest way). */
+function HowWeDecide({ data }: { data: AffordResultVM }) {
+  return (
+    <details className="text-sm text-text-muted">
+      <summary className="cursor-pointer font-medium">{t.result.howTitle}</summary>
+      <div className="mt-sm flex flex-col gap-xs">
+        <p>{t.result.how}</p>
+        {data.verdict === 'wait' && data.waitMonths !== null && <p>{t.result.waitBody(data.waitMonths)}</p>}
+        <p>{t.result.cheapestHint}</p>
+      </div>
+    </details>
   );
 }
 
@@ -160,25 +170,25 @@ export function AffordVerdictTile({ result, rules, invalidFields, chosenWay }: O
     <div className="relative pt-lg" aria-live="polite">
       <Card as="section" aria-label={t.result.title} className="relative flex flex-col gap-lg" style={{ transform: 'rotate(1deg)' }}>
         <Sticker tone={STICKER_TONE[data.verdict]} tilt={-5} className="absolute -top-lg right-xl px-lg py-sm text-base">
-          {t.result.sticker[data.verdict]}
+          {t.result.sticker}
         </Sticker>
         <Art name="afford" className="w-1/2 max-w-(--container-3xs)" tilt={-2} />
         <Verdict data={data} rules={rules} />
         <Cheapest data={data} chosenWay={chosenWay} />
+        <HowWeDecide data={data} />
       </Card>
     </div>
   );
 }
 
-/** The black score bar (net worth change at 4 horizons), the with / without chart and the table behind it. */
+/** The black score bar (net worth change at 4 horizons), the with / without chart and, collapsed, the table behind it. */
 export function AffordEffects({ result, purchaseLabel }: Pick<AffordResultPanelProps, 'result' | 'purchaseLabel'>) {
   if (result?.status !== 'ready') return null;
   const data = result.data;
   return (
     <Stack gap="lg">
       {data.horizons.length > 0 && (
-        <div className="flex flex-col gap-sm">
-          <Scoreboard
+        <Scoreboard
             label={t.result.effectsLabel}
             items={data.horizons.map((h, i) => ({
               id: String(h.month),
@@ -186,24 +196,24 @@ export function AffordEffects({ result, purchaseLabel }: Pick<AffordResultPanelP
               label: t.result.effects[h.month],
               tone: h.deltaMid > 0 ? 'positive' : i === 0 ? 'primary' : 'default',
             }))}
-          />
-          <p className="text-xs text-text-muted">{t.result.effectsNote}</p>
-        </div>
+        />
       )}
-      <div className="grid grid-cols-1 gap-lg lg:grid-cols-[3fr_2fr]">
-        <Card>
-          <ForecastChart
-            title={t.result.chartTitle(purchaseLabel)}
-            series={{ label: t.result.chartWith(purchaseLabel), points: data.withPoints }}
-            compare={{ label: t.result.chartWithout, points: data.withoutPoints }}
-            footnote={t.result.chartFootnote}
-          />
-        </Card>
-        <Card title={t.result.horizonsTitle}>
-          <Horizons data={data} />
-          <p className="mt-sm text-xs text-text-muted">{t.result.chartFootnote}</p>
-        </Card>
-      </div>
+      <Card>
+        <ForecastChart
+          title={t.result.chartTitle(purchaseLabel)}
+          series={{ label: t.result.chartWith(purchaseLabel), points: data.withPoints }}
+          compare={{ label: t.result.chartWithout, points: data.withoutPoints }}
+          footnote={t.result.chartFootnote}
+        />
+        {data.horizons.length > 0 && (
+          <details className="mt-md">
+            <summary className="cursor-pointer text-sm font-medium text-text-muted">{t.result.horizonsTitle}</summary>
+            <div className="mt-sm">
+              <Horizons data={data} />
+            </div>
+          </details>
+        )}
+      </Card>
     </Stack>
   );
 }

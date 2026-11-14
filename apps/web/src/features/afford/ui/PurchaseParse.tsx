@@ -100,9 +100,7 @@ export function PurchaseParse({ parse }: { parse: ParseConfirmVM<Purchase> }) {
         {parse.status === 'confirming' && parse.parsed && (
           <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg border-2 border-border bg-surface p-lg">
             <h3 className="text-base font-bold">{t.parse.confirmTitle}</h3>
-            <p className="text-xs text-text-muted">{t.parse.confirmNote}</p>
             <ParsedPurchase purchase={parse.parsed} inferred={parse.inferred} />
-            {parse.inferred.length > 0 && <p className="text-xs text-text-muted">{t.parse.inferredNote}</p>}
             <Row>
               <Button onClick={parse.confirm}>{t.parse.confirm}</Button>
               <Button variant="ghost" onClick={parse.cancel}>

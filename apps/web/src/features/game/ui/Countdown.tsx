@@ -20,23 +20,20 @@ export function Countdown({ streamer }: { streamer: StreamerVM }) {
           {t.streamer.lockedIn}
         </p>
       ) : (
-        <>
-          <div className="flex flex-wrap gap-sm">
-            {countdown.running ? (
-              <Button variant="dark" size="lg" onClick={streamer.stopCountdown}>
-                {t.streamer.pause}
-              </Button>
-            ) : (
-              <Button variant="dark" size="lg" onClick={streamer.startCountdown}>
-                {t.streamer.start}
-              </Button>
-            )}
-            <Button variant="secondary" size="lg" onClick={streamer.resetCountdown}>
-              {t.streamer.reset}
+        <div className="flex flex-wrap gap-sm">
+          {countdown.running ? (
+            <Button variant="dark" size="lg" onClick={streamer.stopCountdown}>
+              {t.streamer.pause}
             </Button>
-          </div>
-          <p className="text-base">{t.streamer.autoLock}</p>
-        </>
+          ) : (
+            <Button variant="dark" size="lg" onClick={streamer.startCountdown}>
+              {t.streamer.start}
+            </Button>
+          )}
+          <Button variant="secondary" size="lg" onClick={streamer.resetCountdown}>
+            {t.streamer.reset}
+          </Button>
+        </div>
       )}
     </div>
   );

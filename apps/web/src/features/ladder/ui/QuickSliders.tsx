@@ -1,6 +1,6 @@
 // S7 Quick sliders (Figma S07): one slider per spending category plus the retirement share in a white
-// tile on the left; "Your month" on the right with a huge total, a stacked color bar and its legend,
-// updating live. Free text can fill the sliders after the user confirms.
+// tile on the left; "Your month" on the right with a huge total, a stacked color bar, a compact
+// legend and take-home / left over, updating live. Free text can fill the sliders after the user confirms.
 import { common, ladder } from '@/copy';
 import { Card, cx, EstimateTag, formatMoney, formatRate, Slider, Stack, Sticker } from '@/ui-kit';
 import type { LadderProgressVM, QuickSlidersVM } from '../model/types';
@@ -8,11 +8,6 @@ import { DescribeLife } from './DescribeLife';
 import { LadderShell } from './LadderShell';
 
 const t = ladder.sliders;
-
-const HINTS: Partial<Record<QuickSlidersVM['sliders'][number]['category'], string>> = {
-  rentUtilities: t.rentHint,
-  car: t.carHint,
-};
 
 /** Segment colors of the stacked bar, by position (sliders in order, then debt payments). */
 const COLORS = [
@@ -45,7 +40,6 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
                     max={s.max}
                     step={s.step}
                     isEstimate={s.isEstimate}
-                    hint={HINTS[s.category]}
                     hideBounds
                     formatValue={(v) => formatMoney(v)}
                     onValueChange={(v) => vm.setSpending(s.category, v)}
@@ -60,7 +54,6 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
                   max={savings.max}
                   step={savings.step}
                   isEstimate={savings.isEstimate}
-                  hint={t.savingsHint}
                   hideBounds
                   formatValue={(v) => formatRate(v, 0)}
                   onValueChange={vm.setSavingsShare}
@@ -79,13 +72,8 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
               </Sticker>
             )}
             <Stack gap="lg">
-              <p className="font-display text-display font-extrabold leading-display tabular-nums">
+              <p className="font-display text-display font-extrabold leading-display tabular-nums" data-testid="month-cost">
                 {formatMoney(vm.monthlyCost)}
-              </p>
-              <p className="text-sm" data-testid="month-cost">
-                {vm.selfGuess !== null
-                  ? t.vsGuess(formatMoney(vm.monthlyCost), formatMoney(vm.selfGuess))
-                  : t.noGuess(formatMoney(vm.monthlyCost))}
               </p>
 
               <div aria-hidden="true" className="flex h-md w-full gap-xs">
@@ -100,7 +88,7 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
                       />
                     ))}
               </div>
-              <ul aria-label={t.breakdownLabel} className="flex flex-col gap-sm text-sm">
+              <ul aria-label={t.breakdownLabel} className="flex flex-col gap-xs text-sm">
                 {rows.map((r) => (
                   <li key={r.id} className="flex items-center justify-between gap-md">
                     <span className="flex min-w-0 flex-wrap items-center gap-sm">
@@ -113,30 +101,17 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
                 ))}
               </ul>
 
-              <dl className="grid grid-cols-2 gap-md border-t border-border pt-lg text-sm">
-                <div className="flex flex-col gap-xs">
+              <dl className="grid grid-cols-2 gap-md border-t border-border pt-md text-sm">
+                <div className="flex flex-col">
                   <dt className="flex flex-wrap items-center gap-sm text-text-muted">
                     {t.takeHome}
                     {month.takeHome.isEstimate && <EstimateTag />}
                   </dt>
-                  <dd className="font-display text-2xl font-extrabold tabular-nums">{formatMoney(month.takeHome.value)}</dd>
+                  <dd className="text-xl font-bold tabular-nums">{formatMoney(month.takeHome.value)}</dd>
                 </div>
-                <div className="flex flex-col gap-xs">
-                  <dt className="text-text-muted">{t.spending}</dt>
-                  <dd className="font-display text-2xl font-extrabold tabular-nums">{formatMoney(month.spending)}</dd>
-                </div>
-                <div className="flex flex-col gap-xs">
-                  <dt className="text-text-muted">{t.debtPayments}</dt>
-                  <dd className="font-display text-2xl font-extrabold tabular-nums">{formatMoney(month.debtPayments)}</dd>
-                </div>
-                <div className="flex flex-col gap-xs">
+                <div className="flex flex-col">
                   <dt className="text-text-muted">{short ? t.shortfall : t.surplus}</dt>
-                  <dd
-                    className={cx(
-                      'font-display text-2xl font-extrabold tabular-nums',
-                      short ? 'text-negative' : 'text-positive',
-                    )}
-                  >
+                  <dd className={cx('text-xl font-bold tabular-nums', short ? 'text-negative' : 'text-positive')}>
                     {formatMoney(month.surplus)}
                   </dd>
                 </div>

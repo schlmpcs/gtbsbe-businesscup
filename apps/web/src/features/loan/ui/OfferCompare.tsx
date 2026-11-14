@@ -138,7 +138,6 @@ export function OfferCompare({ offers, selectedOfferId, selectOffer }: OfferComp
           })}
         </tbody>
       </table>
-      <p className="text-xs text-text-muted">{t.compare.totalCostHint}</p>
     </section>
   );
 }

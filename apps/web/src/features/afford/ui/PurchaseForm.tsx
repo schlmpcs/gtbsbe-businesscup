@@ -50,7 +50,7 @@ export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecu
           <Field label={t.form.label} error={error('label')}>
             <TextInput name="label" value={form.label} onValueChange={setLabel} placeholder={t.form.labelPlaceholder} maxLength={120} />
           </Field>
-          <Field label={t.form.amount} hint={t.form.amountHint} error={error('amount')}>
+          <Field label={t.form.amount} error={error('amount')}>
             <NumberInput name="amount" value={form.amount} onValueChange={setAmount} prefix="$" />
           </Field>
         </div>
@@ -84,7 +84,7 @@ export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecu
               {t.form.loanTitle}
             </p>
             <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
-              <Field label={t.form.apr} hint={t.form.aprHint} error={error('loan.apr')}>
+              <Field label={t.form.apr} error={error('loan.apr')}>
                 <NumberInput
                   name="apr"
                   percent

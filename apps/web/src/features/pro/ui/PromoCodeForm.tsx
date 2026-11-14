@@ -38,7 +38,6 @@ export function PromoCodeForm({ code, onCodeChange, onRedeem, busy, disabled, er
   };
   return (
     <Card tone="muted" title={copy.promo.title} headingLevel={2}>
-      <p className="mb-md text-sm text-text-muted">{copy.promo.body}</p>
       <form onSubmit={submit} className="flex flex-col gap-md">
         {/* Polite live region: the error under the field is announced when it appears. */}
         <div aria-live="polite">

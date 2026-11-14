@@ -131,13 +131,12 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
           {
             id: 'netWorth',
             value: formatMoney(vm.netWorth),
-            label: t.netWorthScore,
+            label: (
+              <>
+                {t.netWorthScore} <span className="opacity-60">({t.netWorthNote})</span>
+              </>
+            ),
             tone: 'primary',
-          },
-          {
-            id: 'debtLoad',
-            value: formatRate(vm.debtLoad.value, 0),
-            label: t.debtLoadScore,
           },
         ]}
       />
@@ -177,7 +176,7 @@ function BalanceField({ field, vm }: { field: BalanceFieldKey; vm: BalanceSheetV
       )}
       <Field
         label={t.fields[field]}
-        hint={isEstimate ? t.estimatedHint : t.hints[field]}
+        hint={isEstimate ? t.estimatedHint : field === 'age' ? undefined : t.hints[field]}
         isEstimate={isEstimate}
         className="[&_label]:text-base [&_label]:text-text-muted"
       >
