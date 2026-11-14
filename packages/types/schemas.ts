@@ -757,13 +757,17 @@ export const MonteCarloResultSchema = z.object({
   paths: z.number().int().min(1).max(MONTE_CARLO_MAX_PATHS),
   seed: SeedSchema,
   successRate: ShareSchema,
-  bands: z.array(z.object({ year: PlanYearNumberSchema, p10: MoneySchema, p50: MoneySchema, p90: MoneySchema })),
+  bands: z.array(z.object({
+    year: PlanYearNumberSchema, p10: MoneySchema, p50: MoneySchema, p90: MoneySchema,
+    p5: MoneySchema.optional(), p95: MoneySchema.optional(),
+  })),
   samplePaths: z.array(z.object({ success: z.boolean(), netWorth: z.array(MoneySchema) })).max(MONTE_CARLO_MAX_SAMPLE_PATHS),
   histograms: z.object({
     atRetirement: z.array(HistogramBinSchema),
     atEnd: z.array(HistogramBinSchema),
     shortfallAge: z.array(HistogramBinSchema),
   }),
+  pathsWithoutShortfall: z.number().int().min(0).optional(),
 });
 
 const budgetRowFields = {
