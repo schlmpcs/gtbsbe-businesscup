@@ -191,7 +191,8 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 | `sceneOf` | Aibek | `(card: LifeCard, area: AreaData) => { public: PublicCard; clues: Record<ClueId, ClueReveal> }` (deterministic; the only place scene props come from) |
 | `forecast` | Amir | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` |
 | `applyPatch` | Amir | `(p: Profile, patch: ProfilePatch) => Profile` |
-| `rankMoves` | Amir | `(p: Profile) => Move[]` |
+| `rankMoves` | Amir | `(p: Profile, opts?: { rates?: Partial<ForecastRates>; subscriptionsDetected?: boolean }) => Move[]` (level 1, top 3; `effect10y` in today's dollars; the committed move is the one with `id === p.committedMoveId`) |
+| `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
 | `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
 | `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
 | `loan` | Aibek | `(p: Profile, l: LoanInput) => LoanResult` |
