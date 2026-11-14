@@ -13,6 +13,18 @@ import type {
 
 const other = (letter: DuelLetter): DuelLetter => (letter === 'A' ? 'B' : 'A');
 
+/**
+ * The letter a scored result belongs to: the costlier life when the pick was right, the other one
+ * when it was wrong. A source answers a repeated pick of a round with the FIRST pick's result, even
+ * when the repeat named the other letter (a second tab, a stale page), so the view shows this
+ * letter, not the one just tapped. Null only for a tie, which no scored pick has.
+ */
+export function choiceOf(result: PickResult): DuelLetter | null {
+  const { costlier } = duelDifference(result.totals);
+  if (!costlier) return null;
+  return result.correct ? costlier : other(costlier);
+}
+
 /** Green = right, yellow = right with a hint (fewer than full points), ink = missed. */
 export function duelTileColor(result: PickResult): DuelTileColor {
   if (!result.correct) return 'ink';

@@ -13,7 +13,7 @@ import type {
   AreaData, CostBreakdown, DuelHint, DuelLetter, DuelRound, LifeCard, PickResult, PublicDuel,
 } from '@lifeguessr/types';
 import { duel as t } from '@/copy/duel';
-import { duelCardsSample } from '@/fixtures/cards';
+import { duelCardsSample } from '@/fixtures/duelCards';
 import { ApiError } from '@/lib/api/http';
 import { areaForZip } from '@/lib/areas';
 import { hintOf, publicDuelCard } from '@/lib/duel/publicDuelCard';
