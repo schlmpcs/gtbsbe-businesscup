@@ -37,6 +37,17 @@ export function useClosestLife(): ClosestLifeVM {
         bedrooms: card.bedrooms,
         carPrice: card.car?.price ?? null,
         monthly: breakdown ? { ...breakdown.total } : { low: Number.NaN, mid: Number.NaN, high: Number.NaN },
+        items: breakdown
+          ? breakdown.items
+              .map((i, n) => ({
+                id: `${i.category}-${n}`,
+                category: i.category,
+                amount: i.amount,
+                source: i.source,
+                isEstimate: i.isEstimate,
+              }))
+              .sort((a, b) => b.amount - a.amount)
+          : [],
         fromToday,
         isNearest: false,
         available: area !== null && breakdown !== null,

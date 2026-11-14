@@ -59,4 +59,5 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | UI kit: Button, Card, Slider (linear + log), Stat, Gauge, Tabs, Sheet, ForecastChart, BarBreakdown, Field/NumberInput, EstimateTag, SourceNote, Money, Stack/Row; showcase at `/kit` | Done |
 | View-model hooks S1–S12 (`features/*/model`) + client state (`src/state`: Zustand store persisted to localStorage, anon id, session sync seam); game playable on fixtures (`NEXT_PUBLIC_GAME_SOURCE`) | Done (Y7) |
 | Screens S1–S15 | Placeholder pages |
+| Ladder S5–S9 (`/me/guess`, `/me/closest`, `/me/sliders`, `/me/balance`, `/me/upload`): guess vs. engine estimate, closest life with sources, sliders + "describe your life" (confirm before apply), balance sheet with debts, statement review + "What we keep"; rung progress and the 10-year range narrowing as estimates become real | Placeholder UI done (Y9); S9 file reading waits for T6/T7 |
 | Deploy (live URL) | Pending: Vercel access |

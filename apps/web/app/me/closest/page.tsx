@@ -1,6 +1,10 @@
-import { ScreenPage } from '../../_components/ScreenPage';
+'use client';
 
-// S6: feature ladder (Y9). Placeholder until its task lands.
+import { useClosestLife } from '@/features/ladder/model/useClosestLife';
+import { useLadderProgress } from '@/features/ladder/model/useLadderProgress';
+import { ClosestLife } from '@/features/ladder/ui/ClosestLife';
+
+// S6 Closest life (ladder, Y9).
 export default function ClosestLifePage() {
-  return <ScreenPage id="S6" />;
+  return <ClosestLife vm={useClosestLife()} progress={useLadderProgress()} />;
 }

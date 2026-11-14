@@ -1,6 +1,10 @@
-import { ScreenPage } from '../../_components/ScreenPage';
+'use client';
 
-// S7: feature ladder (Y9). Placeholder until its task lands.
+import { useLadderProgress } from '@/features/ladder/model/useLadderProgress';
+import { useQuickSliders } from '@/features/ladder/model/useQuickSliders';
+import { QuickSliders } from '@/features/ladder/ui/QuickSliders';
+
+// S7 Quick sliders (ladder, Y9).
 export default function QuickSlidersPage() {
-  return <ScreenPage id="S7" />;
+  return <QuickSliders vm={useQuickSliders()} progress={useLadderProgress()} />;
 }
