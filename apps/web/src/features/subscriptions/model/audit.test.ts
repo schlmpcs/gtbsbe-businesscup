@@ -1,6 +1,6 @@
 import { statementItemsSample, subscriptionsExpected } from '@lifeguessr/data/fixtures/tools';
-import { auditTotals, detectSubscriptions } from '@lifeguessr/engine';
-import { SubscriptionFindingSchema, type SubscriptionFinding } from '@lifeguessr/types';
+import { assumptions, auditTotals, detectSubscriptions, subsMissEdges } from '@lifeguessr/engine';
+import { MISS_BUCKETS, SubscriptionFindingSchema, type SubscriptionFinding } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import { bigCatalogue, ruleClasses, testCatalogue } from '@/test/subscriptions';
@@ -107,6 +107,15 @@ describe('missFactor and missBucketOf (guess ÷ actual)', () => {
     expect(missFactor(0, 0)).toBeNull();
     expect(missBucketOf(null, 100)).toBeNull();
     expect(missBucketOf(50, 0)).toBeNull();
+  });
+
+  it('takes its edges from the engine assumptions: 1/2, 4/5, 5/4 and 2, one fewer than the buckets, each with a reason', () => {
+    expect(subsMissEdges.value).toEqual([[1, 2], [4, 5], [5, 4], [2, 1]]);
+    expect(subsMissEdges.value).toHaveLength(MISS_BUCKETS.length - 1);
+    const ratios = subsMissEdges.value.map(([n, d]) => n / d);
+    expect(ratios).toEqual([...ratios].sort((a, b) => a - b)); // ascending
+    expect(subsMissEdges.note).toMatch(/\S/);
+    expect(assumptions.subsMissEdges).toBe(subsMissEdges);
   });
 
   // Edges of an actual of $100, hand-picked: 0.5 → 50, 0.8 → 80, 1.25 → 125, 2 → 200. Each bucket

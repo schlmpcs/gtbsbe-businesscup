@@ -1,12 +1,12 @@
 // Pure parts of the subscription audit view-model (M5): ticks as findings, the reveal's miss factor
 // and bucket, what counts, how a statement and the ticks combine, and the cancel plan's move.
 // No React, no clock. The sums come from the engine (`auditTotals`); nothing here adds a new formula.
-import { auditTotals, merchantKey, type MoveCandidate } from '@lifeguessr/engine';
+import { auditTotals, merchantKey, subsMissEdges, type MoveCandidate } from '@lifeguessr/engine';
 import {
-  CADENCE_MONTHS, MAX_ID_LENGTH,
+  CADENCE_MONTHS, MAX_ID_LENGTH, MISS_BUCKETS,
   type KnownService, type MissBucket, type Money, type Profile, type ServicePlan, type SubscriptionFinding,
 } from '@lifeguessr/types';
-import { MISS_EDGES, TICK_LIST_MAX } from './constants';
+import { TICK_LIST_MAX } from './constants';
 import type { SubscriptionsToolState, Tick } from './state';
 
 /** Code-unit order, so the result does not depend on the locale (as the engine's audit order). */
@@ -114,8 +114,8 @@ export function missBucketOf(guess: Money | null, actual: Money): MissBucket | n
   if (missFactor(guess, actual) === null) return null;
   const g = cents(guess!);
   const a = cents(actual);
-  for (const { edge: [n, d], bucket } of MISS_EDGES) if (g * d < a * n) return bucket;
-  return 'over2';
+  for (const [i, [n, d]] of subsMissEdges.value.entries()) if (g * d < a * n) return MISS_BUCKETS[i]!;
+  return MISS_BUCKETS[MISS_BUCKETS.length - 1]!;
 }
 
 // ----- findings ----------------------------------------------------------------------------------

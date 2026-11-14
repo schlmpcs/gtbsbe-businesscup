@@ -10,7 +10,7 @@
 // Everything that comes from outside the feature is a parameter (`SubscriptionsDeps`): the catalogue
 // of known services (M4), the tool's slice of the local store (M2), the statement categorizer client
 // and the event sender. Wiring them is `./wiring.ts`.
-import { auditTotals, detectSubscriptions, rankCandidates, type MoveCandidate } from '@lifeguessr/engine';
+import { auditTotals, detectSubscriptions, rankCandidates, subsMinCharges, type MoveCandidate } from '@lifeguessr/engine';
 import {
   EVENT_COUNT_MAX, SERVICE_CATEGORIES,
   type ClientFunnelEvent, type KnownService, type MissBucket, type Move, type Profile, type ServiceCategory,
@@ -30,7 +30,7 @@ import {
   CANCEL_MOVE_ID, cancelCandidate, carryMarks, combineFindings, displayNameOf, forgottenIds, isCounted, markedFindings,
   missBucketOf, missFactor, monthlyOf, tickIdOf, tickServices,
 } from './audit';
-import { GUESS_PRESETS, SHORT_STATEMENT_MONTHS, SURVEY } from './constants';
+import { GUESS_PRESETS, SURVEY } from './constants';
 import { readStatementForAudit, toStatementError } from './readForAudit';
 import { emptyToolState, type SubscriptionsStore, type SubscriptionsToolState } from './state';
 import type {
@@ -287,7 +287,8 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     status: upload.status === 'idle' ? (hasAudit ? 'done' : 'idle') : upload.status,
     error: upload.error,
     monthsCovered,
-    isShort: hasAudit && monthsCovered < SHORT_STATEMENT_MONTHS,
+    // Fewer months than charges the detector needs for a pattern: a monthly series cannot show in it.
+    isShort: hasAudit && monthsCovered < subsMinCharges.value,
     asOf: state.audit?.asOf ?? null,
     upload: uploadStatement,
     dismissError,

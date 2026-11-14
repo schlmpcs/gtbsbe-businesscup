@@ -350,6 +350,13 @@ describe('statement path', () => {
     expect(vm.findings.active.map((f) => [f.serviceId, f.confidence, f.chargesSeen])).toEqual([['netflix', 'medium', 1]]);
   });
 
+  it('a statement of two months is not short: two charges are the least the detector reads a pattern from (subsMinCharges)', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    await uploaded(tool, csvFile(['2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99']));
+    expect(tool.result.current.vm.statement).toMatchObject({ monthsCovered: 2, isShort: false });
+  });
+
   it('a statement with nothing recurring: no findings, totals 0, no factor for a guess', async () => {
     const tool = renderTool();
     await ready(tool);
