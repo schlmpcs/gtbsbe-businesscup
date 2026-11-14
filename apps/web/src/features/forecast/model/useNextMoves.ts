@@ -71,7 +71,7 @@ export function useNextMoves(profile: Profile): NextMovesVM {
     return runEngine(() => rankAnswer(forecast.answer, { committedMoveId, doneMoveIds }));
   }, [candidatesError, forecast, committedMoveId, doneMoveIds]);
 
-  // Until the answer for the current profile is here, the list on screen is the previous answer's: a click
+  // Until an answer for the current profile is here, the list on screen is the previous profile's: a click
   // would act on its patches (a move's patch is absolute, sized for the profile it was measured on).
   const actionsDisabled = forecastIsBusy(forecast);
 

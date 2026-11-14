@@ -23,12 +23,15 @@ export type ForecastAnswer = { bundle: ForecastBundle; profile: Profile; candida
 
 /**
  * The 10-year forecast of S1 and S10 (POST /api/ai/forecast, else the local rules engine).
- * 'ready' always holds an answer, labeled by `source`. `isRefreshing`: the profile changed and
- * `answer` is still the previous one while the new one is on its way.
+ * 'ready' always holds an answer, labeled by `source`. `isRefreshing`: a newer answer is on its way.
+ * `isStale` says whether `answer` is out of date for it: true when it answers another profile (the
+ * profile changed, so its ids, patches and numbers are the previous one's); false when it answers
+ * the current one and only the route's rules answer or the local fallback is being asked for again
+ * to see whether the model is back (the numbers on screen are right, they may just get upgraded).
  */
 export type ForecastState =
   | { status: 'loading' }
-  | { status: 'ready'; source: ForecastSource; answer: ForecastAnswer; isRefreshing: boolean }
+  | { status: 'ready'; source: ForecastSource; answer: ForecastAnswer; isRefreshing: boolean; isStale: boolean }
   | { status: 'error'; error: VMError };
 
 /** A Next Move as the UI shows it. Copy comes from `kind` (+ `category`). */
@@ -55,8 +58,9 @@ export type NextMovesVM = {
   /** The forecast the ranking and the screen's numbers come from. */
   forecast: ForecastState;
   /**
-   * True until the forecast for the current profile has arrived (first load, or a refresh): the moves on
-   * screen are then the previous answer's, so `commit` and `markDone` do nothing and their buttons are disabled.
+   * True until the forecast for the current profile has arrived (first load, or after the profile changed): the
+   * moves on screen are then the previous profile's, so `commit` and `markDone` do nothing and their buttons are
+   * disabled. Not true while only a background revalidation of the current profile's rules answer runs.
    */
   actionsDisabled: boolean;
   /** Highest unlocked level (engine movesLevel): 2 once a level 1 move is done or committed. */
@@ -106,7 +110,7 @@ export type TodayVM = {
   committedMove: MoveVM | null;
   /** Mark the committed move done. Does nothing while `actionsDisabled`. */
   markCommittedDone: () => void;
-  /** The forecast is loading or refreshing: the move buttons are disabled (see NextMovesVM.actionsDisabled). */
+  /** The forecast is loading or out of date for the profile: the move buttons are disabled (see NextMovesVM.actionsDisabled). */
   actionsDisabled: boolean;
   /** Best move right now (first of rankMoves), or why there is none. */
   topMove: Loadable<MoveVM | null>;
@@ -128,7 +132,10 @@ export type FutureVM = NextMovesVM & {
   in10y: ForecastPoint;
   /** Who made the numbers on screen (also on each move). Null until there is an answer. */
   source: ForecastSource | null;
-  /** The profile changed and the numbers on screen are the previous answer, until the new one arrives. */
+  /**
+   * A newer answer is on its way: the profile changed and the numbers on screen are the previous one's, or
+   * a rules answer is being asked for again in the background to see whether the model is back.
+   */
   isRefreshing: boolean;
   /**
    * 'inputs' (rules forecast): the band shows only uncertainty in estimated inputs, zero when nothing is

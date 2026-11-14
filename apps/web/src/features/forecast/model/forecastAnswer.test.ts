@@ -14,8 +14,8 @@ const candidates = moveCandidates(profile, { rates: areaRates(profile) });
 const scenarios = candidates.map(({ id, patch }) => ({ id, patch }));
 const bundle = rulesBundle(profile, scenarios, areaRates(profile));
 const answer: ForecastAnswer = { bundle, profile, candidates };
-const ready = (source: 'ai' | 'rules', isRefreshing = false, a: ForecastAnswer = answer): ForecastState => ({
-  status: 'ready', source, answer: a, isRefreshing,
+const ready = (source: 'ai' | 'rules', isRefreshing = false, a: ForecastAnswer = answer, isStale = false): ForecastState => ({
+  status: 'ready', source, answer: a, isRefreshing, isStale,
 });
 
 describe('patchesEqual', () => {
@@ -131,9 +131,10 @@ describe('shownForecast', () => {
 });
 
 describe('forecastIsBusy', () => {
-  it('is true while loading and while refreshing only', () => {
+  it('is true while loading and while the answer shown is the previous profile’s, not while the current one is revalidated', () => {
     expect(forecastIsBusy({ status: 'loading' })).toBe(true);
-    expect(forecastIsBusy(ready('rules', true))).toBe(true);
+    expect(forecastIsBusy(ready('rules', true, answer, true))).toBe(true);
+    expect(forecastIsBusy(ready('rules', true, answer, false))).toBe(false); // same key, asked again in the background
     expect(forecastIsBusy(ready('rules', false))).toBe(false);
     expect(forecastIsBusy({ status: 'error', error: { kind: 'unknown', message: 'x' } })).toBe(false);
   });

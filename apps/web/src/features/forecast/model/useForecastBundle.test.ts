@@ -242,7 +242,7 @@ describe('useForecastBundle: when it asks', () => {
 
     const second = inputs(withEatingOut(cloneProfileDemo(), 100));
     rerender(second);
-    expect(result.current).toMatchObject({ status: 'ready', isRefreshing: true });
+    expect(result.current).toMatchObject({ status: 'ready', isRefreshing: true, isStale: true }); // another profile's
     expect(ready(result).answer).toBe(before.answer);
     await settle(FORECAST_DEBOUNCE_MS);
     expect(ready(result).isRefreshing).toBe(false);
@@ -406,7 +406,8 @@ describe('useForecastBundle: remembered answers that are not the model’s (stal
 
     fail = false;
     const again = renderBundle(inputs(cloneProfileDemo()));
-    expect(again.result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true }); // no skeleton
+    // No skeleton, and not stale: it answers this very profile, it is only asked for again.
+    expect(again.result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true, isStale: false });
     expect(ready(again.result).answer.bundle).toEqual(rulesOf(start));
     expect(route.calls).toHaveLength(2); // in the background, at once
     await waitFor(() => expect(ready(again.result)).toMatchObject({ source: 'ai', isRefreshing: false }));
@@ -424,7 +425,7 @@ describe('useForecastBundle: remembered answers that are not the model’s (stal
 
     model = true; // the outage is over
     const again = renderBundle();
-    expect(again.result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true });
+    expect(again.result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true, isStale: false });
     expect(ready(again.result).answer).toBe(rulesAnswerShown);
     expect(route.calls).toHaveLength(2);
     await waitFor(() => expect(ready(again.result)).toMatchObject({ source: 'ai', isRefreshing: false }));
@@ -505,11 +506,79 @@ describe('useForecastBundle: remembered answers that are not the model’s (stal
     expect(route.calls).toHaveLength(2);
 
     rerender(inputs(cloneProfileDemo()));
-    expect(ready(result)).toMatchObject({ isRefreshing: true });
+    expect(ready(result)).toMatchObject({ isRefreshing: true, isStale: false });
     expect(ready(result).answer).toBe(answerA);
     expect(route.calls).toHaveLength(3); // no timer advanced
     await settle();
     expect(ready(result).isRefreshing).toBe(false);
+  });
+
+  it('takes an AI answer that lands after the view was opened, instead of waiting for it forever', async () => {
+    // The memory fills after the render that opened this view: another screen's request settled while this
+    // one sat unready (the app was loading). The hook must take the answer, not wait for its own request.
+    control.ready = false;
+    const route = mockForecastRoute((body) => aiAnswer(body));
+    const start = inputs(cloneProfileDemo());
+    const waiting = renderBundle(start); // nothing remembered yet, nothing asked while not ready
+    expect(waiting.result.current).toEqual({ status: 'loading' });
+    control.ready = true;
+    const other = renderBundle(inputs(cloneProfileDemo()));
+    await waitFor(() => expect(other.result.current.status).toBe('ready'));
+    expect(route.calls).toHaveLength(1);
+
+    // It hears of the answer without a render of its own caller...
+    expect(waiting.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false, isStale: false });
+    expect(waiting.result.current).toMatchObject({ answer: ready(other.result).answer });
+    waiting.rerender(start); // ...and a render of it later does not ask either
+    expect(waiting.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false });
+    expect(route.calls).toHaveLength(1);
+  });
+
+  it('takes an AI answer that lands while a remembered rules answer is waiting to be revalidated', async () => {
+    let model = false;
+    const route = mockForecastRoute((body) => (model ? aiAnswer(body) : rulesAnswer(body)));
+    const first = renderBundle();
+    await waitFor(() => expect(first.result.current.status).toBe('ready'));
+    first.unmount();
+
+    model = true;
+    control.ready = false;
+    const start = inputs(cloneProfileDemo());
+    const waiting = renderBundle(start); // shows the remembered rules answer (not ready: the hook says loading)
+    control.ready = true;
+    const other = renderBundle(inputs(cloneProfileDemo())); // revalidates it, and the model answers
+    await waitFor(() => expect(ready(other.result)).toMatchObject({ source: 'ai', isRefreshing: false }));
+    expect(route.calls).toHaveLength(2);
+
+    expect(waiting.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false });
+    waiting.rerender(start);
+    expect(waiting.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false });
+    expect(route.calls).toHaveLength(2);
+  });
+
+  it('keeps the model’s answer when another screen’s request lands first and this one’s slower request answers with rules', async () => {
+    let n = 0;
+    let slow!: (b: ForecastBundle) => void;
+    const route = mockForecastRoute((body) =>
+      n++ === 0 ? new Promise<ForecastBundle>((resolve) => (slow = resolve)) : aiAnswer(body),
+    );
+    const first = renderBundle(); // its request is slow
+    const other = renderBundle(inputs(cloneProfileDemo())); // the same screen elsewhere: the model answers at once
+    await waitFor(() => expect(ready(other.result)).toMatchObject({ source: 'ai', isRefreshing: false }));
+    expect(route.calls).toHaveLength(2);
+    expect(first.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false }); // heard of it
+
+    act(() => slow(rulesAnswer(route.calls[0]))); // the slow one finally answers, with the route's rules answer
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(first.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false });
+    first.unmount();
+    other.unmount();
+
+    const third = renderBundle(); // the memory still has the model's answer: nothing is asked
+    expect(third.result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false });
+    expect(route.calls).toHaveLength(2);
   });
 
   it('does not flash the old key’s answer when the new key has none and the old one was an error', async () => {

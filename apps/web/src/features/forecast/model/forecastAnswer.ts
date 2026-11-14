@@ -117,9 +117,14 @@ export function bandIsZero(source: ForecastSource, profile: Profile, in10y: Fore
 /** Zero point shown until there is a forecast (the screens show a skeleton, not this). */
 export const NO_IN10Y: ForecastPoint = { month: 120, low: 0, mid: 0, high: 0 };
 
-/** Moves can be committed or marked done only once the numbers on screen are the current profile's. */
+/**
+ * Moves can be committed or marked done only once the numbers on screen answer the current profile: not
+ * while loading, nor while the answer on screen is the previous profile's (`isStale`). Asking again for the
+ * current profile's own rules answer (`isRefreshing` without `isStale`) leaves them enabled: the answer shown
+ * has the same ids and patches as the one on its way.
+ */
 export function forecastIsBusy(forecast: ForecastState): boolean {
-  return forecast.status === 'loading' || (forecast.status === 'ready' && forecast.isRefreshing);
+  return forecast.status === 'loading' || (forecast.status === 'ready' && forecast.isStale);
 }
 
 /** The base forecast of a `ForecastState` as a screen shows it, and what goes with it. */

@@ -4,7 +4,7 @@
 //
 // - One request per distinct (profile facts, scenarios, rates), identified by a canonical key. A
 //   profile change asks again after FORECAST_DEBOUNCE_MS, with the previous answer still on screen
-//   (`isRefreshing`). The first request goes at once.
+//   (`isRefreshing` and `isStale`: it answers another profile). The first request goes at once.
 // - Every answer carries the (profile, candidates) pair it was asked about (`ForecastAnswer`), so
 //   a screen can rank with the bundle's own ids and patches and never with another request's.
 // - Whatever goes wrong (offline, 4xx/5xx, a broken or incomplete body, no answer within
@@ -12,11 +12,12 @@
 //   only for when that fails as well.
 // - Every settled answer is remembered for the session (stale-while-revalidate). An 'ai' answer is
 //   reused as it is. Any other (the route's own rules answer, or this file's fallback) is shown at
-//   once, marked as refreshing, and asked for again in the background without the debounce, so an
-//   outage heals without a reload and a hung server does not cost a skeleton on every visit.
+//   once, marked as refreshing (not stale: it answers this very key), and asked for again in the
+//   background without the debounce, so an outage heals without a reload and a hung server does not
+//   cost a skeleton on every visit.
 import { rulesBundle, type MoveCandidate } from '@lifeguessr/engine';
 import type { ForecastBundle, Move, Profile } from '@lifeguessr/types';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { fetchForecastBundle } from '@/lib/api/aiForecast';
 import { toVMError } from '@/lib/model/errors';
 import type { VMError } from '@/lib/model/types';
@@ -42,35 +43,50 @@ const isAi = (entry: Answered): boolean => entry.answer.bundle.source === 'ai';
 
 /** Settled answers of this session by request key (insertion order = age), of every source. */
 const memory = new Map<string, Answered>();
+const listeners = new Set<() => void>();
+
+/** Screens read the memory through `useSyncExternalStore`, so an answer that lands from any request reaches them. */
+function subscribeToMemory(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => void listeners.delete(listener);
+}
+const notify = () => listeners.forEach((listener) => listener());
 
 /** Forget every answer of the session (the next screen asks again, with nothing to show meanwhile). */
 export function resetForecastMemory(): void {
   memory.clear();
+  notify();
 }
 
+/** Remember a settled answer as the newest. The model's answer for a key is never replaced by a rules one. */
 function remember(entry: Answered): void {
+  const existing = memory.get(entry.key);
+  if (existing !== undefined && isAi(existing) && !isAi(entry)) return;
   memory.delete(entry.key);
   memory.set(entry.key, entry);
   for (const oldest of memory.keys()) {
     if (memory.size <= MEMORY_LIMIT) break;
     memory.delete(oldest);
   }
+  notify();
 }
 
 /**
- * What the hook shows for the request `key` it is on.
- * - `result`: how that request settled; an 'ai' answer from the session counts as settled.
- * - `shown`: until then, the answer on screen: this key's remembered non-'ai' answer, else the one that
- *   came before it (it answers other inputs, so the screen marks it as refreshing).
+ * What this hook knows about the request `key` it is on, besides the memory.
+ * - `result`: how its own request settled (an answer, or an error when the local engine failed too).
+ * - `before`: the answer that was on screen under the previous key. It answers other inputs, so it is
+ *   shown (as stale) only while this key has no answer of its own.
  */
-type View = { key: string; result: Settled | null; shown: Answered | null };
+type View = { key: string; result: Settled | null; before: Answered | null };
 
-function openView(key: string, before: View | null): View {
-  const cached = memory.get(key);
-  if (cached !== undefined && isAi(cached)) return { key, result: cached, shown: null };
+/** The answer on screen under `previous`'s key: the model's if one has landed since, else its own result or remembered one. */
+function shownUnder(previous: View | null): Answered | null {
+  if (previous === null) return null;
+  const remembered = memory.get(previous.key);
+  if (remembered !== undefined && isAi(remembered)) return remembered;
   // A failure leaves nothing to show: the answer before it is two requests old.
-  const previous = before === null ? null : before.result === null ? before.shown : 'answer' in before.result ? before.result : null;
-  return { key, result: null, shown: cached ?? previous };
+  if (previous.result !== null) return 'answer' in previous.result ? previous.result : null;
+  return remembered ?? previous.before;
 }
 
 const LOADING: ForecastState = { status: 'loading' };
@@ -88,20 +104,22 @@ export function useForecastBundle(
   const ready = useAppReady();
   const request = useMemo(() => buildRequest(profile, candidates, preview), [profile, candidates, preview]);
   const { key } = request;
-  const [view, setView] = useState(() => openView(key, null));
+  const [view, setView] = useState<View>({ key, result: null, before: null });
+  // This key's remembered answer, whoever's request settled it and whenever it did.
+  const remembered = useSyncExternalStore(subscribeToMemory, () => memory.get(key), () => undefined);
 
   // A new request key opens a new view (adjusting state while rendering: React re-renders at once, so
   // the screen never shows the old key's view under the new key).
   let current = view;
   if (view.key !== key) {
-    current = openView(key, view);
+    current = { key, result: null, before: shownUnder(view) };
     setView(current);
   }
 
   // The effect below runs when the key changes, not on every render: it reads the rest from here.
   const latest = useRef({ profile, candidates, request, hasPrevious: false });
   useEffect(() => {
-    latest.current = { profile, candidates, request, hasPrevious: current.shown !== null };
+    latest.current = { profile, candidates, request, hasPrevious: current.before !== null };
   });
 
   useEffect(() => {
@@ -119,7 +137,7 @@ export function useForecastBundle(
       finished = true;
       clearTimeout(timeout);
       const result = next();
-      setView((v) => (v.key === key ? { key, result, shown: null } : v));
+      setView((v) => (v.key === key ? { ...v, result } : v));
     };
     const fromServer = (bundle: ForecastBundle): Settled => {
       if (!coversRequest(bundle, asked.request.scenarios)) return fallback();
@@ -173,15 +191,23 @@ export function useForecastBundle(
 
   return useMemo((): ForecastState => {
     if (!ready) return LOADING;
-    const { result, shown } = current;
+    // The model's answer for this key, once it is in the memory, wins over whatever this hook settled
+    // with (a rules answer from a request that was already on its way when it landed).
+    const result = remembered !== undefined && isAi(remembered) ? remembered : current.result;
     if (result !== null) {
       return 'error' in result
         ? { status: 'error', error: result.error }
-        : { status: 'ready', source: result.answer.bundle.source, answer: result.answer, isRefreshing: false };
+        : { status: 'ready', source: result.answer.bundle.source, answer: result.answer, isRefreshing: false, isStale: false };
     }
+    // Not settled yet: this key's remembered rules answer (current, being revalidated), else the previous
+    // key's (stale).
+    const shown = remembered ?? current.before;
     if (shown !== null) {
-      return { status: 'ready', source: shown.answer.bundle.source, answer: shown.answer, isRefreshing: true };
+      return {
+        status: 'ready', source: shown.answer.bundle.source, answer: shown.answer, isRefreshing: true,
+        isStale: shown.key !== key,
+      };
     }
     return LOADING;
-  }, [ready, current]);
+  }, [ready, key, remembered, current]);
 }

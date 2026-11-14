@@ -298,6 +298,22 @@ describe('FutureScreen (S10)', () => {
     }
   });
 
+  it('keeps the move buttons enabled while a remembered rules answer for this profile is asked for again', async () => {
+    const first = render(<Future />);
+    await screen.findAllByRole('article'); // the rules answer is in and remembered
+    first.unmount();
+
+    route = mockForecastRoute(() => new Promise(() => {})); // the model is slow
+    render(<Future />);
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    const articles = await screen.findAllByRole('article'); // the remembered answer, no skeleton
+    expect(screen.getByText(t.future.refreshing)).toBeInTheDocument();
+    for (const article of articles) {
+      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeEnabled();
+      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeEnabled();
+    }
+  });
+
   it('shows the effect in signed dollars', async () => {
     render(<Future />);
     const first = (await screen.findAllByRole('article'))[0]!;

@@ -170,6 +170,7 @@ describe('useFuture (S10)', () => {
 
     act(() => useAppStore.getState().setSpending('eatingOut', 100));
     expect(result.current.isRefreshing).toBe(true);
+    expect(result.current.forecast).toMatchObject({ status: 'ready', isStale: true }); // the previous profile's answer
     expect(result.current.actionsDisabled).toBe(true);
     const before = useAppStore.getState();
     act(() => result.current.commit(first!.id));
@@ -182,6 +183,34 @@ describe('useFuture (S10)', () => {
     if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
     const id = result.current.moves.data[0]!.id;
     act(() => result.current.commit(id));
+    expect(useAppStore.getState().profile.committedMoveId).toBe(id);
+  });
+
+  it('keeps the moves enabled while this profile’s remembered rules answer is asked for again, and commit works', async () => {
+    const first = renderHook(() => useFuture());
+    await waitForReady(first.result);
+    expect(first.result.current.source).toBe('rules');
+    first.unmount();
+
+    // A later visit: the route is slow (or the provider is down). The remembered answer is for this very profile.
+    let release!: (b: ForecastBundle) => void;
+    route = mockForecastRoute((body) => new Promise<ForecastBundle>((resolve) => (release = () => resolve(aiAnswer(body)))));
+    const { result } = renderHook(() => useFuture());
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    expect(result.current.status).toBe('ready'); // at once, no skeleton
+    expect(result.current.isRefreshing).toBe(true); // "Updating the forecast…"
+    expect(result.current.forecast).toMatchObject({ status: 'ready', isRefreshing: true, isStale: false });
+    expect(result.current.actionsDisabled).toBe(false);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    const id = result.current.moves.data[0]!.id;
+    act(() => result.current.commit(id));
+    expect(useAppStore.getState().profile.committedMoveId).toBe(id);
+    expect(result.current.committedPreview?.moveId).toBe(id);
+    expect(route.calls).toHaveLength(1); // committing a ranked move asks nothing new, and the revalidation goes on
+
+    act(() => release(aiAnswer(route.calls[0])));
+    await waitFor(() => expect(result.current.source).toBe('ai'));
+    expect(result.current.isRefreshing).toBe(false);
     expect(useAppStore.getState().profile.committedMoveId).toBe(id);
   });
 
@@ -421,6 +450,22 @@ describe('useToday (S1)', () => {
     await waitFor(() => expect(result.current.actionsDisabled).toBe(false), AFTER_CHANGE);
     act(() => result.current.markCommittedDone());
     expect(useAppStore.getState().profile.doneMoveIds).toHaveLength(1);
+  });
+
+  it('keeps “I did it” working while this profile’s remembered rules answer is asked for again', async () => {
+    const first = renderHook(() => useToday());
+    await waitFor(() => expect(first.result.current.forecastStatus).toBe('ready'));
+    first.unmount();
+    route = mockForecastRoute(() => new Promise<ForecastBundle>(() => {})); // slow: never answers in this test
+    const { result } = renderHook(() => useToday());
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    expect(result.current.forecastStatus).toBe('ready');
+    expect(result.current.actionsDisabled).toBe(false);
+    if (result.current.topMove.status !== 'ready' || !result.current.topMove.data) throw new Error('no move');
+    const move = result.current.topMove.data;
+    act(() => useAppStore.getState().commitMove({ id: move.id, kind: move.kind, level: move.level, category: move.category, effect10y: move.effect10y, patch: move.patch }));
+    act(() => result.current.markCommittedDone());
+    expect(useAppStore.getState().profile.doneMoveIds).toEqual([move.id]);
   });
 
   it('uses past statement months as history and this month as the month in progress', async () => {
