@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
-import { cardToProfile, costOfLife, lifeCardFromFacts, OWN_LIFE_CARD_ID } from '@lifeguessr/engine';
-import { COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifeguessr/types';
+import {
+  cardToProfile, costOfLife, lifeCardFromFacts, OWN_LIFE_CARD_ID, statementFollowUps, statementTotals,
+  type ClassifiedStatementItem,
+} from '@lifeguessr/engine';
+import { COST_CATEGORIES, type CategoryTotals, type CostCategory, type StatementClass } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFixtureGameClient } from '@/features/game/model/fixtureClient';
@@ -16,7 +19,8 @@ import { differentiatorsFor, useClosestLife } from './useClosestLife';
 import { useGuessYourself } from './useGuessYourself';
 import { useLadderProgress } from './useLadderProgress';
 import { useQuickSliders } from './useQuickSliders';
-import { useStatementUpload } from './useStatementUpload';
+import type { StatementFileResult } from '@/features/upload/model/types';
+import { readableLabel, useStatementUpload } from './useStatementUpload';
 
 beforeEach(resetClientState);
 
@@ -178,6 +182,19 @@ describe('mixed profile (typed pay + sample spending)', () => {
 });
 
 describe('useQuickSliders (S7)', () => {
+  it('after a statement import, says which full months the measured values come from', async () => {
+    const { result } = renderHook(() => useQuickSliders());
+    await waitForReady(result);
+    expect(result.current.statementMonths).toEqual([]);
+    act(() => useAppStore.getState().applyStatementTotals([
+      { month: '2026-09', totals: totals({ groceries: 500 }), oneOffs: [], firstDay: 1, lastDay: 30 },
+      { month: '2026-10', totals: totals({ groceries: 600 }), oneOffs: [], firstDay: 1, lastDay: 31 },
+      { month: '2026-11', totals: totals({ groceries: 90 }), oneOffs: [], firstDay: 1, lastDay: 6 },
+    ]));
+    expect(result.current.statementMonths).toEqual(['2026-09', '2026-10']);
+    expect(result.current.sliders.find((s) => s.category === 'groceries')).toMatchObject({ value: 550, isEstimate: false });
+  });
+
   it('dragging a slider to the end again and again never grows its range (no runaway)', async () => {
     const { result } = renderHook(() => useQuickSliders());
     await waitForReady(result);
@@ -362,16 +379,112 @@ describe('useStatementUpload (S9)', () => {
     convention: 'outflowNegative' as const, categorizedBy: 'rules' as const,
   };
   const file = new File(['Date,Description,Amount'], 'statement.csv', { type: 'text/csv' });
+  type FileResult = StatementFileResult;
+  /** What readStatementFile gives for months whose lines the server did not describe (no follow-ups). */
+  const fileResult = (m: CategoryTotals[]): FileResult => ({ months: m, summary, classified: null, followUps: [] });
+
+  describe('follow-up questions (JF6)', () => {
+    // Two full months of a checking account: the rent and pay are clear, Target and an ATM are
+    // 'other', and there are no groceries at all (bought with a card that isn't in this file).
+    const line = (month: string, day: number, label: string, amount: number, cls: StatementClass): ClassifiedStatementItem =>
+      ({ month, day, label, amount, cls, oneOffHint: false });
+    const classified = ['2026-09', '2026-10'].flatMap((mo) => [
+      line(mo, 1, 'OAKWOOD APTS', 1700, 'rentUtilities'),
+      line(mo, 4, 'TARGET # DALLAS TX', 120, 'other'),
+      line(mo, 12, 'ATM WITHDRAWAL #/# MAIN ST', 60, 'other'),
+      line(mo, 28, 'ACME PAYROLL', -2400, 'pay'),
+    ]);
+    const readWith = (items: ClassifiedStatementItem[]) => vi.fn(async (): Promise<FileResult> => ({
+      months: statementTotals(items), summary, classified: items, followUps: statementFollowUps(items),
+    }));
+
+    it('asks them, re-sums the months in code when one is answered, and applies a typed amount as measured', async () => {
+      const { result } = renderHook(() => useStatementUpload({ readStatementFile: readWith(classified) }));
+      await waitForReady(result);
+      await act(async () => result.current.readFile!(file));
+      await waitFor(() => expect(result.current.status).toBe('review'));
+      expect(result.current.questions.map((q) => [q.id, q.kind, q.merchant, q.category, q.monthly])).toEqual([
+        ['missing:groceries', 'missing', null, 'groceries', 0],
+        ['cash:cash', 'cash', null, null, 60],
+        ['merchant:TARGET DALLAS TX', 'merchant', 'TARGET DALLAS TX', null, 120],
+      ]);
+      expect(result.current.questions[2]!.options).not.toContain('debtPayments');
+      expect(result.current.questions.every((q) => q.answer === null && q.question === null)).toBe(true);
+      expect(result.current.pending[1]!.totals).toMatchObject({ groceries: 0, eatingOut: 0, other: 180 });
+      expect(result.current.pending.map((m) => m.averaged)).toEqual([true, true]);
+
+      act(() => result.current.answerCategory('merchant:TARGET DALLAS TX', 'groceries'));
+      act(() => result.current.answerCategory('cash:cash', 'eatingOut'));
+      act(() => result.current.answerAmount('missing:groceries', 450));
+      expect(result.current.pending[1]!.totals).toMatchObject({ groceries: 120, eatingOut: 60, other: 0 });
+      expect(result.current.pending[1]!.total).toBe(1880);
+      expect(result.current.questions.map((q) => q.answer)).toEqual([
+        { kind: 'amount', monthly: 450 }, { kind: 'category', category: 'eatingOut' }, { kind: 'category', category: 'groceries' },
+      ]);
+
+      act(() => result.current.apply());
+      const { profile, statementMonths } = useAppStore.getState();
+      // Target and the cash count where the user said; the groceries paid elsewhere are what they typed.
+      expect(profile.spending.eatingOut).toEqual({ value: 60, isEstimate: false });
+      expect(profile.spending.groceries).toEqual({ value: 450, isEstimate: false });
+      expect(profile.spending.other).toEqual({ value: 0, isEstimate: false });
+      // The saved months are what the statement shows (with the re-sorting), not the typed amount.
+      expect(statementMonths.map((m) => m.totals.groceries)).toEqual([120, 120]);
+      expect(result.current.questions).toEqual([]);
+    });
+
+    it('skipping keeps the months as sorted and a missing category as it was; answers to unknown ids or wrong kinds are ignored', async () => {
+      const before = useAppStore.getState().profile.spending.groceries;
+      const { result } = renderHook(() => useStatementUpload({ readStatementFile: readWith(classified) }));
+      await waitForReady(result);
+      await act(async () => result.current.readFile!(file));
+      await waitFor(() => expect(result.current.status).toBe('review'));
+      const original = result.current.pending;
+      act(() => {
+        result.current.skipQuestion('missing:groceries');
+        result.current.skipQuestion('merchant:TARGET DALLAS TX');
+        result.current.answerCategory('missing:groceries', 'groceries'); // a missing category takes an amount
+        result.current.answerAmount('cash:cash', 300);                  // cash takes a category
+        result.current.answerCategory('merchant:NOPE', 'groceries');
+        result.current.answerCategory('cash:cash', 'debtPayments');     // never assigned
+      });
+      expect(result.current.pending).toEqual(original);
+      expect(result.current.questions.map((q) => q.answer)).toEqual([{ kind: 'skipped' }, null, { kind: 'skipped' }]);
+      act(() => result.current.apply());
+      expect(useAppStore.getState().profile.spending.groceries).toEqual(before); // never seen: not $0
+    });
+
+    it('a new file or discard forgets the questions and the answers', async () => {
+      const { result } = renderHook(() => useStatementUpload({ readStatementFile: readWith(classified) }));
+      await waitForReady(result);
+      await act(async () => result.current.readFile!(file));
+      await waitFor(() => expect(result.current.status).toBe('review'));
+      act(() => result.current.answerCategory('cash:cash', 'eatingOut'));
+      await act(async () => result.current.readFile!(file));
+      await waitFor(() => expect(result.current.status).toBe('review'));
+      expect(result.current.questions.every((q) => q.answer === null)).toBe(true);
+      act(() => result.current.discard());
+      expect(result.current.questions).toEqual([]);
+    });
+  });
+
+  it('readableLabel: masks out, a person as "someone"', () => {
+    expect(readableLabel('Zelle to [name]')).toBe('Zelle to someone');
+    expect(readableLabel('TARGET # DALLAS TX')).toBe('TARGET DALLAS TX');
+    expect(readableLabel('AMAZON MKTPL*[ref] Amzn.com/bill WA')).toBe('AMAZON MKTPL Amzn.com/bill WA');
+    expect(readableLabel('ATM WITHDRAWAL #/# GREENVILLE AVE')).toBe('ATM WITHDRAWAL GREENVILLE AVE');
+    expect(readableLabel('#')).toBe('#');
+  });
 
   it('readFile: reading → review with what was read → apply clears it', async () => {
-    let resolve!: (v: { months: CategoryTotals[]; summary: typeof summary }) => void;
-    const readStatementFile = vi.fn(() => new Promise<{ months: CategoryTotals[]; summary: typeof summary }>((r) => { resolve = r; }));
+    let resolve!: (v: FileResult) => void;
+    const readStatementFile = vi.fn(() => new Promise<FileResult>((r) => { resolve = r; }));
     const { result } = renderHook(() => useStatementUpload({ readStatementFile }));
     await waitForReady(result);
     act(() => result.current.readFile!(file));
     expect(result.current.status).toBe('reading');
     expect(readStatementFile).toHaveBeenCalledWith(file, expect.objectContaining({ anonId: expect.any(String), signal: expect.any(AbortSignal) }));
-    await act(async () => resolve({ months: [months[1]!, months[0]!], summary }));
+    await act(async () => resolve(fileResult([months[1]!, months[0]!])));
     expect(result.current.status).toBe('review');
     expect(result.current.pending.map((m) => m.month)).toEqual(['2026-08', '2026-09']);
     expect(result.current.lastRead).toEqual({
@@ -402,7 +515,7 @@ describe('useStatementUpload (S9)', () => {
   it('trySample: the sample statement goes through the same reader as a picked file, then review', async () => {
     const sample = new File(['Date,Description,Amount'], 'statement.sample.csv', { type: 'text/csv' });
     const fetchSampleStatement = vi.fn(async () => sample);
-    const readStatementFile = vi.fn(async () => ({ months: [months[0]!], summary }));
+    const readStatementFile = vi.fn(async () => fileResult([months[0]!]));
     const { result } = renderHook(() => useStatementUpload({ readStatementFile, fetchSampleStatement }));
     await waitForReady(result);
     act(() => result.current.trySample());
@@ -425,14 +538,14 @@ describe('useStatementUpload (S9)', () => {
   });
 
   it('readFile: a newer file wins over one still being read', async () => {
-    const resolvers: ((v: { months: CategoryTotals[]; summary: typeof summary }) => void)[] = [];
-    const readStatementFile = vi.fn(() => new Promise<{ months: CategoryTotals[]; summary: typeof summary }>((r) => { resolvers.push(r); }));
+    const resolvers: ((v: FileResult) => void)[] = [];
+    const readStatementFile = vi.fn(() => new Promise<FileResult>((r) => { resolvers.push(r); }));
     const { result } = renderHook(() => useStatementUpload({ readStatementFile }));
     await waitForReady(result);
     act(() => result.current.readFile!(file));
     act(() => result.current.readFile!(file));
-    await act(async () => resolvers[1]!({ months: [months[2]!], summary }));
-    await act(async () => resolvers[0]!({ months: [months[0]!], summary }));
+    await act(async () => resolvers[1]!(fileResult([months[2]!])));
+    await act(async () => resolvers[0]!(fileResult([months[0]!])));
     expect(result.current.pending.map((m) => m.month)).toEqual(['2026-10']);
   });
 });

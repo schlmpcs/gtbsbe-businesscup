@@ -1,5 +1,5 @@
 // Client for POST /api/statement/categorize (T7, apps/web/app/api/statement/categorize/route.ts):
-//   { items: StatementItem[] } → 200 { ok: true, months: CategoryTotals[], categorizedBy }
+//   { items: StatementItem[] } → 200 { ok: true, months: CategoryTotals[], categorizedBy, classes?, lines?, followUps? }
 // The items carry only masked labels, amounts, months and days (toStatementItems). The reply is
 // validated with the shared contract schema.
 import {
@@ -14,5 +14,11 @@ export async function categorizeStatement(
   opts: CategorizeOptions = {},
 ): Promise<StatementCategorizeResponse> {
   const res = await postJson('/api/statement/categorize', { items }, StatementCategorizeResponseSchema, opts);
-  return { months: res.months, categorizedBy: res.categorizedBy, ...(res.classes && {classes:res.classes}) };
+  return {
+    months: res.months,
+    categorizedBy: res.categorizedBy,
+    ...(res.classes && { classes: res.classes }),
+    ...(res.lines && { lines: res.lines }),
+    ...(res.followUps && { followUps: res.followUps }),
+  };
 }

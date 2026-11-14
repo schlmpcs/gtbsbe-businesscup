@@ -9,14 +9,20 @@
 // with the problems listed, then use what was valid and the keyword rules for the rest. Without
 // an API key, or when the provider fails, the keyword rules sort everything. All money is summed by
 // statementTotals in @lifeguessr/engine.
+//
+// The reply also carries how each line was sorted (`lines`, in request order), so the browser can
+// re-sort a merchant when the user answers a follow-up and sum the totals again with the same
+// engine function, and the follow-up questions themselves (JF6): found and priced by the engine
+// (`statementFollowUps`), worded by the model when there is one (./followUps.ts).
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { statementTotals, type ClassifiedStatementItem } from '@lifeguessr/engine';
+import { statementFollowUps, statementTotals, type ClassifiedStatementItem } from '@lifeguessr/engine';
 import {
   STATEMENT_CLASSES, type StatementCategorizeResponse, type StatementClass, type StatementItem,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { maskLabel } from '@/lib/statement/mask';
 import { devLog, llmModel, responseText, type LlmClient } from '../ai/client';
+import { wordFollowUps } from './followUps';
 import { ruleClass, type Direction, type RuleResult } from './rules';
 
 /** Request body cap: 5,000 lines at the 200-character label cap fit (a busy year is ~100 KB). */
@@ -186,5 +192,7 @@ export async function categorizeStatement(
     classes: [...classes].map(([label, cls])=>({label,class:cls})),
     months: statementTotals(classified),
     categorizedBy: byAi === 0 ? 'rules' : byAi === entries.size ? 'ai' : 'mixed',
+    lines: classified.map(({ cls, oneOffHint }) => ({ cls, oneOffHint })),
+    followUps: await wordFollowUps(statementFollowUps(classified), client),
   };
 }

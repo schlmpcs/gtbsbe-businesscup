@@ -3,13 +3,19 @@
 // own extra payment, the debt-free date, the interest and months against minimums, and the extra per month that
 // would finish by a chosen month. Composed beside useLoanLab, which it never changes.
 //
+// The extra starts at the engine's suggestion (suggestedPayoffExtra, issue #144): a share of what is left in the month
+// after spending and every required payment, the new loan's included. Starting at $0 showed three identical columns,
+// which read as a broken comparison. A pick the person made (now, or saved from an earlier visit) always wins over it.
+//
 // Code does the math: every figure here comes from the payoff engine (comparePayoff, extraToFinishBy; issue #88).
 // The engine, the event sender and today's date come in through `options`, so the planner can be built and tested
 // before they are bound; with `options` null it answers null and Loan Lab stays as it is (wiring.ts).
 import { MAX_SIMULATION_MONTHS } from '@lifeguessr/engine';
-import type { ClientFunnelEvent, Debt, Money, PayoffComparison, PayoffMethod, PayoffPlan } from '@lifeguessr/types';
+import type { ForecastRates } from '@lifeguessr/engine';
+import type { ClientFunnelEvent, Debt, Money, PayoffComparison, PayoffMethod, PayoffPlan, Profile } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { runEngine } from '@/lib/model/errors';
+import { areaRates } from '@/lib/model/profile';
 import { linearSliderVM } from '@/lib/model/slider';
 import type { Loadable } from '@/lib/model/types';
 import { SCREEN_ROUTES } from '@/lib/screens';
@@ -17,8 +23,10 @@ import { useAppReady, useProfile } from '@/state';
 import { hasNonFinite } from './finite';
 import { addMonths, monthsBetween, type PayoffDate } from './payoffDates';
 import { NEW_LOAN_DEBT_ID, PAYOFF_PAID_OFF_EPSILON, payoffDebts } from './payoffDebts';
+import { payoffTie } from './payoffTie';
 import type {
-  LoanLabVM, PayoffChartVM, PayoffChoice, PayoffColumnVM, PayoffDelta, PayoffFixVM, PayoffOrderRowVM, PayoffPlannerVM, PayoffTargetVM,
+  LoanLabVM, PayoffChartVM, PayoffChoice, PayoffColumnVM, PayoffDelta, PayoffFixVM, PayoffOrderRowVM, PayoffPlannerVM,
+  PayoffSuggestionVM, PayoffTargetVM,
 } from './types';
 
 /** Largest extra the box accepts per month: far above any household's budget; the engine takes any finite amount. */
@@ -36,17 +44,19 @@ export const PAYOFF_CHART_NEVER_MONTHS = 120;
 /** Under this many dollars of difference to minimums only, the interest is called "the same" (it shows as $0). */
 export const PAYOFF_SAME_INTEREST: Money = 0.5;
 
-/** The two engine functions the planner uses; their signatures are those of packages/engine/loan/payoff.ts (issue #88). */
+/** The engine functions the planner uses; their signatures are those of packages/engine/loan/payoff.ts (issues #88, #144). */
 export type PayoffEngine = {
   comparePayoff: (debts: Debt[], extra: Money) => PayoffComparison;
   extraToFinishBy: (debts: Debt[], months: number, method: PayoffChoice) => { extra: Money; reachable: boolean };
+  suggestedPayoffExtra: (p: Profile, debts: Debt[], opts: { step: Money; rates?: Partial<ForecastRates> }) => PayoffSuggestionVM;
 };
 
 /**
  * What the store keeps for the planner (`tools.payoff`, M2): the picks, browser-local. `targetMonth` is the calendar
  * month as picked ('YYYY-MM'), restored as it was: how many months away it is comes from today, on each render.
+ * `extra` is there only once the person set one; without it the planner starts at the suggestion again.
  */
-export type PayoffStoredState = { method: PayoffChoice; extra: Money; targetMonth?: string };
+export type PayoffStoredState = { method: PayoffChoice; extra?: Money; targetMonth?: string };
 
 export type PayoffPlannerOptions = {
   engine: PayoffEngine;
@@ -151,11 +161,31 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   const owing = useMemo(() => debts.filter((d) => d.balance > PAYOFF_PAID_OFF_EPSILON), [debts]);
   const hasDebts = owing.length > 0;
 
-  // ----- the picks: what the person changed, over what was saved -----
+  // ----- the engine's suggested starting extra -----
+  const active = ready && !hidden && hasDebts;
+  // Worked out only when it can be shown: never in streamer mode (nothing personal is computed there), never before the
+  // profile is loaded (it would follow the placeholder profile for a moment), never without debts. A failure or a
+  // non-number leaves no suggestion, and the extra starts at $0 as it used to.
+  const suggestion = useMemo((): PayoffSuggestionVM | null => {
+    if (!engine || !active) return null;
+    // The area's rates, as Loan Lab's "left over each month" uses: the amount the suggestion quotes as left over is then
+    // the same figure that card shows after the selected offer (its month-1 surplus minus the new loan's payment).
+    const result = runEngine(() => engine.suggestedPayoffExtra(profile, debts, { step: PAYOFF_EXTRA_STEP, rates: areaRates(profile) }));
+    if (result.status !== 'ready' || hasNonFinite(result.data) || result.data.extra < 0) return null;
+    return result.data;
+  }, [engine, active, profile, debts]);
+
+  // ----- the picks: what the person changed, over what was saved, over the suggestion -----
   const [edits, setEdits] = useState<Edits>({});
   const storedMethod = stored?.method;
   const method: PayoffChoice = edits.method ?? (isChoice(storedMethod) ? storedMethod : 'avalanche');
-  const extra = clampExtra(edits.extra ?? stored?.extra ?? 0);
+  // `??` on purpose: a $0 the person set (now or saved) is a pick and beats the suggestion; only "never set" falls through.
+  // A saved amount that cannot be an extra (negative, not a number: the store's schema refuses those, but the store is
+  // the browser's and can hold anything) counts as never set, not as $0.
+  const storedExtra = stored?.extra;
+  const pickedExtra = edits.extra ?? (typeof storedExtra === 'number' && Number.isFinite(storedExtra) && storedExtra >= 0 ? storedExtra : undefined);
+  const extraIsSuggested = pickedExtra === undefined;
+  const extra = clampExtra(pickedExtra ?? suggestion?.extra ?? 0);
   // A saved target is a calendar month, restored as it was. One that cannot be a target today (this month or earlier,
   // past the longest plan, not a month) is dropped, not shown; today moves on, so the check is made on each render.
   const storedMonth = stored?.targetMonth ?? null;
@@ -168,7 +198,6 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   const setTargetDate = useCallback((month: string | null) => setEdits((e) => ({ ...e, target: month === '' ? null : month })), []);
 
   // ----- the engine -----
-  const active = ready && !hidden && hasDebts;
   const comparison = useMemo((): Loadable<PayoffComparison> | null => {
     if (!engine || hidden) return null;
     if (!ready) return { status: 'loading' };
@@ -222,6 +251,8 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
     }
   }
 
+  const tie = plans ? payoffTie(plans, PAYOFF_SAME_INTEREST) : null;
+
   const savings =
     pickedColumn && pickedColumn.interestSaved !== null
       ? {
@@ -251,8 +282,14 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   const targetVM = useTargetSolve(targetDate, today, extra, debts, method, engine, active, selected, minimum?.monthsToDebtFree ?? null);
 
   // ----- the picks, kept after the person's own changes (what was only restored is not saved again) -----
+  // The extra is saved only when it is a pick. Picking a method alone must not freeze today's suggestion as if the
+  // person had chosen it: the suggestion follows the profile (a raise, a new offer), a pick does not.
   const touched = Object.keys(edits).length > 0;
-  const toStore: PayoffStoredState = { method, extra, ...(check.status === 'ok' && targetDate !== null ? { targetMonth: targetDate } : {}) };
+  const toStore: PayoffStoredState = {
+    method,
+    ...(extraIsSuggested ? {} : { extra }),
+    ...(check.status === 'ok' && targetDate !== null ? { targetMonth: targetDate } : {}),
+  };
   const storeKey = touched ? JSON.stringify(toStore) : null;
   const onStoreRef = useRef(options?.onStore);
   useEffect(() => {
@@ -298,6 +335,8 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
     extra: linearSliderVM(extra, 0, sliderMax, PAYOFF_EXTRA_STEP),
     extraLimit: PAYOFF_EXTRA_LIMIT,
     setExtra,
+    suggestion,
+    extraIsSuggested,
     comparison,
     columns,
     selected,
@@ -306,6 +345,7 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
     interestSaved: pickedColumn ? pickedColumn.interestSaved : null,
     monthsSaved: pickedColumn && pickedColumn.interestSaved !== null ? pickedColumn.monthsSaved : null,
     savings,
+    tie,
     isEstimate: owing.some((d) => d.minPayment.isEstimate),
     chart,
     fix,
