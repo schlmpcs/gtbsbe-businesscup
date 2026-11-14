@@ -1,13 +1,13 @@
-// AreaData lookup for the browser. Until the data pipeline (T2) ships areas.json, the only areas
-// are the fixture ZIPs; an unknown ZIP returns null and callers fall back to national defaults.
+// AreaData lookup for the browser: the real T2 data (packages/data/out/areas.json, 60 ZIPs in
+// 15 metros, every value sourced). An unknown ZIP returns null and callers fall back to national
+// defaults. Area data is public; the life-card catalog (answers) is never imported here.
 import { inflationAnnualOf } from '@lifeguessr/engine';
+import { findArea } from '@lifeguessr/data/areas';
 import type { AreaData, Rate } from '@lifeguessr/types';
-import { areaDataSample } from '@/fixtures';
 
 /** AreaData for a ZIP, or null when we have no data for it. */
 export function areaForZip(zip: string | undefined | null): AreaData | null {
-  if (!zip) return null;
-  return areaDataSample.find((a) => a.zip === zip) ?? null;
+  return findArea(zip);
 }
 
 /** Yearly inflation for a ZIP (BLS CPI-U from its AreaData, else the engine's fallback). */

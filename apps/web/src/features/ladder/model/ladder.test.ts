@@ -4,7 +4,8 @@ import { COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifegu
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFixtureGameClient } from '@/features/game/model/client';
-import { areaByZip, cardById, cardsSample } from '@/fixtures';
+import { getArea } from '@lifeguessr/data/areas';
+import { cardById, cardsSample } from '@/fixtures';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
 import { thisMonth } from '@/lib/model/profile';
 import { useAppStore, useGameStore } from '@/state';
@@ -75,7 +76,7 @@ describe('useClosestLife (S6)', () => {
     expect(dist(candidates[0]!.monthly.mid)).toBeLessThanOrEqual(dist(candidates[1]!.monthly.mid));
     expect(result.current.nearestCardId).toBe(candidates[0]!.cardId);
     const card = cardById(candidates[0]!.cardId);
-    const cost = costOfLife(card, areaByZip(card.zip));
+    const cost = costOfLife(card, getArea(card.zip));
     expect(candidates[0]!.monthly).toEqual(cost.total);
     // Cost lines with sources, largest first, unique ids, summing to the mid.
     const { items } = candidates[0]!;
@@ -92,7 +93,7 @@ describe('useClosestLife (S6)', () => {
     const id = cardsSample[3]!.id;
     act(() => result.current.choose(id));
     const card = cardById(id);
-    expect(useAppStore.getState().profile).toEqual(cardToProfile(card, areaByZip(card.zip)));
+    expect(useAppStore.getState().profile).toEqual(cardToProfile(card, getArea(card.zip)));
     expect(useAppStore.getState().profileOrigin).toBe('closestLife');
     expect(result.current.chosenCardId).toBe(id);
   });
@@ -399,6 +400,6 @@ describe('debtsChanged / startingDebts', () => {
     expect(debtsChanged(null, [])).toBe(false);
     expect(startingDebts('no-such-card', cardsSample)).toBeNull();
     const withCar = cardsSample.find((c) => c.car)!;
-    expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, areaByZip(withCar.zip)).debts);
+    expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, getArea(withCar.zip)).debts);
   });
 });
