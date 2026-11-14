@@ -26,7 +26,46 @@
 //   `purchasesCash`), a one-off income is added to cash; both × (1 + inflation)^(t/12). The latest
 //   start wins on a field, a tie goes to the later event in the list.
 // - Purchases are consumption, not assets: nothing is added to net worth for the thing bought.
-import type { AreaData, Debt, LoanInput, Money, Profile, Purchase, Rate } from '@lifeguessr/types';
+//
+// Plan options (MP3, #163; used by plan() and monteCarlo()). All optional; without any of them the
+// simulation is exactly the one above and `SimulationMonth.groups` / `.shortfall` are absent.
+// - Asset groups: besides cash and retirement, `balances` opens investments, realEstate, vehicle and
+//   otherAsset balances. Each group grows in step 1 at the effective monthly rate of its yearly rate:
+//   cash cashYield (only while positive), investments and retirement returnAnnualNominal, realEstate
+//   and otherAsset inflation, vehicle vehicleDepreciationAnnual (−15%). `growth[group]` replaces the
+//   default (plan() passes AreaData.homeAppreciationAnnual as `growth.realEstate`); a
+//   `yearlyRates.growth[group]` array replaces both, year by year. Liability groups are ignored there.
+// - `yearlyRates.inflation[y]`: inflation of plan year y. Plan years are calendar years from `p.asOf`
+//   (y = 0 is the year of asOf, possibly partial), or 12-month blocks from month 0 without asOf. Prices
+//   then follow the compounded path P(0) = 1, P(t + 1) = P(t) × (1 + i_y(t))^(1/12) in place of
+//   (1 + inflation)^(t/12): spending, extraMonthly, one-off events and recurring purchases (scale
+//   P(t) / P(start)); income too, unless `rates.incomeGrowthAnnual` is set. Every array must cover
+//   every plan year simulated (RangeError otherwise).
+// - `expenses`: 'budget' (default) = the profile's categories; 'manual' = one `other` line of
+//   `monthly` in place of all of them (spending events still replace their category).
+// - `savingsSplit`: the positive surplus left after payOffFromSurplus cards is split across asset
+//   groups, left × share each (shares ≥ 0 summing to 1 within 1e-9), instead of retirementShare to
+//   retirement and the rest to cash.
+// - `withdrawalOrder`: once cash would go below 0, the rest is drawn from these asset groups in order
+//   (cash is always drawn first, wherever it is listed). Only what they cannot cover goes on, to a
+//   card ('card', default) or, with `shortfallMode: 'separate'`, to the `shortfall` balance: unfunded
+//   expenses, never paid back, growing each month at the monthly inflation rate before new unfunded
+//   outflow is added. In 'separate' mode no card is ever charged for a shortfall (a payOffFromSurplus
+//   purchase's uncovered cash part included); card purchases still go on a card.
+// - With any plan option, netWorth = all asset groups − debtBalance − shortfall.
+import {
+  ASSET_GROUPS,
+  type AccountGroup,
+  type AreaData,
+  type AssetGroup,
+  type Debt,
+  type LoanInput,
+  type Money,
+  type PlanAssumptions,
+  type Profile,
+  type Purchase,
+  type Rate,
+} from '@lifeguessr/types';
 import {
   cardAprDefault,
   cardMinPayment,
@@ -35,8 +74,9 @@ import {
   inflationAnnualFallback,
   minForecastMonths,
   returnAnnualNominal,
+  vehicleDepreciationAnnual,
 } from './assumptions';
-import { scheduleEvents } from './events';
+import { eventStartMonth, scheduleEvents } from './events';
 import { MAX_SIMULATION_MONTHS, PAID_OFF_EPSILON, amortizedPayment } from './loan/amortize';
 
 /** Id of the card debt the simulation opens when it needs a card and the profile has none. */
@@ -69,13 +109,42 @@ export type ScheduledPurchase = Purchase & { startMonth?: number; payOffFromSurp
 /** Which inputs to use: point values (`mid`) or every estimate shifted against / in the user's favor. */
 export type Scenario = 'low' | 'mid' | 'high';
 
+/** Asset groups other than cash and retirement (the profile has its own fields for those two). */
+export type ExtraAssetGroup = Exclude<AssetGroup, 'cash' | 'retirement'>;
+
+/**
+ * Per plan year rates (MP5 feeds one sampled draw per year). Index y = plan year (see the header).
+ * Liability groups in `growth` are ignored.
+ */
+export type YearlyRates = {
+  inflation?: readonly Rate[];
+  growth?: Partial<Record<AccountGroup, readonly Rate[]>>;
+};
+
 export type SimulateOptions = {
   /** Additional monthly saving in today's dollars; inflated with prices, never income growth. */
   extraMonthly?: Money;
   extra?: readonly ScheduledPurchase[];
   rates?: Partial<ForecastRates>;
   scenario?: Scenario;
+  // ----- Plan options (MP3); see the header. -----
+  /** Where the outflow nothing can cover goes: a card (default) or the `shortfall` balance. */
+  shortfallMode?: 'card' | 'separate';
+  /** Asset groups drawn in order once cash is empty (cash is always first). Liabilities: RangeError. */
+  withdrawalOrder?: readonly AccountGroup[];
+  /** Split of the positive surplus by asset group; shares ≥ 0 summing to 1. Liabilities: RangeError. */
+  savingsSplit?: PlanAssumptions['savingsSplit'];
+  /** Opening BALANCES (≥ 0) of the asset groups the profile has no field for. */
+  balances?: Partial<Record<ExtraAssetGroup, Money>>;
+  /** Yearly growth per asset group, replacing the group default. */
+  growth?: PlanAssumptions['growth'];
+  /** Spending base: the profile's categories ('budget', default) or one manual monthly amount. */
+  expenses?: PlanAssumptions['expenses'];
+  yearlyRates?: YearlyRates;
 };
+
+/** One asset group over one month: flows for the month, the balance at its end. */
+export type GroupMonth = { balance: Money; growth: Money; deposits: Money; withdrawals: Money };
 
 /** State at the end of one month. Flows are for that month; balances are at its end. */
 export type SimulationMonth = {
@@ -96,8 +165,12 @@ export type SimulationMonth = {
   debtBalance: Money;           // Σ all debt balances
   cardBalance: Money;           // Σ balances of kind 'card' (the synthetic card included)
   debts: Record<string, Money>; // balance by debt id
-  netWorth: Money;              // cash + retirement − debtBalance
+  netWorth: Money;              // cash + retirement − debtBalance (plan options: Σ groups − debtBalance − shortfall)
   debtLoad: Rate;               // requiredDebtPayments / income (∞ when income is 0 and payments > 0)
+  // Present only with a plan option (MP3):
+  groups?: Record<AssetGroup, GroupMonth>; // cash and retirement included (same balances as above)
+  shortfall?: Money;            // unfunded expenses so far (a BALANCE, ≥ 0)
+  shortfallAdded?: Money;       // unfunded outflow of this month (in `shortfall`, after its growth)
 };
 
 export type Simulation = {
@@ -215,6 +288,25 @@ function financePurchase(amount: Money, l: LoanInput, scale: number): { cashOut:
   };
 }
 
+const EXTRA_ASSET_GROUPS = ['investments', 'realEstate', 'vehicle', 'otherAsset'] as const satisfies readonly ExtraAssetGroup[];
+
+function isAssetGroup(g: AccountGroup): g is AssetGroup {
+  return (ASSET_GROUPS as readonly AccountGroup[]).includes(g);
+}
+
+function checkRate(name: string, value: number): void {
+  if (!Number.isFinite(value) || value <= -1) throw new RangeError(`Invalid ${name}: ${value}`);
+}
+
+function hasPlanOptions(opts: SimulateOptions): boolean {
+  return opts.shortfallMode !== undefined || opts.withdrawalOrder !== undefined || opts.savingsSplit !== undefined
+    || opts.balances !== undefined || opts.growth !== undefined || opts.expenses !== undefined
+    || opts.yearlyRates !== undefined;
+}
+
+const zeroGroups = (): Record<AssetGroup, Money> =>
+  ({ cash: 0, investments: 0, retirement: 0, realEstate: 0, vehicle: 0, otherAsset: 0 });
+
 function occursAt(x: ScheduledPurchase, t: number): boolean {
   const start = x.startMonth ?? 0;
   if (t < start) return false;
@@ -229,7 +321,7 @@ function occursAt(x: ScheduledPurchase, t: number): boolean {
  * input by ±estimateSpread (income, cash, retirement up = favorable; spending down = favorable;
  * retirementShare up when retirement returns beat cash; an estimated debt payment up when the
  * debt's APR beats the cash yield), event values included. RangeError when the profile has events
- * but no `asOf`.
+ * but no `asOf`, or a plan option is invalid.
  */
 export function simulate(p: Profile, months: number, opts: SimulateOptions = {}): Simulation {
   if (!Number.isInteger(months) || months < 0 || months > MAX_SIMULATION_MONTHS) {
@@ -245,6 +337,66 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     if (!Number.isInteger(start) || start < 0) throw new RangeError(`Invalid purchase startMonth: ${start}`);
   }
 
+  // Plan options (MP3).
+  const planMode = hasPlanOptions(opts);
+  if (opts.shortfallMode !== undefined && opts.shortfallMode !== 'card' && opts.shortfallMode !== 'separate') {
+    throw new RangeError(`Invalid shortfallMode: ${String(opts.shortfallMode)}`);
+  }
+  const separate = opts.shortfallMode === 'separate';
+  const drawOrder: Exclude<AssetGroup, 'cash'>[] = [];
+  for (const g of opts.withdrawalOrder ?? []) {
+    if (!isAssetGroup(g)) throw new RangeError(`Invalid withdrawalOrder group: ${g}`);
+    if (g !== 'cash') drawOrder.push(g);
+  }
+  let split: { group: AssetGroup; share: Rate }[] | null = null;
+  if (opts.savingsSplit) {
+    split = [];
+    let sum = 0;
+    for (const { group, share } of opts.savingsSplit) {
+      if (!isAssetGroup(group)) throw new RangeError(`Invalid savingsSplit group: ${group}`);
+      if (!Number.isFinite(share) || share < 0) throw new RangeError(`Invalid savingsSplit share: ${share}`);
+      split.push({ group, share });
+      sum += share;
+    }
+    if (Math.abs(sum - 1) > 1e-9) throw new RangeError(`savingsSplit shares must sum to 1, got ${sum}`);
+  }
+  const bal: Record<ExtraAssetGroup, Money> = { investments: 0, realEstate: 0, vehicle: 0, otherAsset: 0 };
+  for (const g of EXTRA_ASSET_GROUPS) {
+    const v = opts.balances?.[g];
+    if (v === undefined) continue;
+    if (!Number.isFinite(v) || v < 0) throw new RangeError(`Invalid ${g} balance: ${v}`);
+    bal[g] = v;
+  }
+  for (const g of ASSET_GROUPS) {
+    const r = opts.growth?.[g];
+    if (r !== undefined) checkRate(`${g} growth`, r);
+  }
+  const yearly = opts.yearlyRates;
+  // Plan year of month t: calendar years from asOf (asOf's month of the year is the offset), else
+  // 12-month blocks.
+  const monthOffset = yearly && p.asOf !== undefined ? eventStartMonth(`${p.asOf.slice(0, 4)}-01`, p.asOf) : 0;
+  const yearOf = (t: number) => Math.floor((monthOffset + t) / 12);
+  const yearCount = months > 0 ? yearOf(months - 1) + 1 : 0;
+  const checkYearly = (name: string, arr: readonly Rate[]) => {
+    if (arr.length < yearCount) throw new RangeError(`${name} covers ${arr.length} plan years, needs ${yearCount}`);
+    for (const r of arr) checkRate(name, r);
+  };
+  if (yearly?.inflation) checkYearly('yearlyRates.inflation', yearly.inflation);
+  for (const g of ASSET_GROUPS) {
+    const arr = yearly?.growth?.[g];
+    if (arr) checkYearly(`yearlyRates.growth.${g}`, arr);
+  }
+  // Price level path P(t) when inflation varies by year; null = (1 + inflation)^(t/12).
+  let priceAt: number[] | null = null;
+  if (yearly?.inflation) {
+    const inflation = yearly.inflation;
+    priceAt = [1];
+    for (let t = 0; t < months; t++) priceAt.push(priceAt[t]! * (1 + monthlyRate(inflation[yearOf(t)]!)));
+  }
+  const incomeFollowsPrices = priceAt !== null && opts.rates?.incomeGrowthAnnual === undefined;
+  const cashYield0 = opts.growth?.cash ?? rates.cashYieldAnnual;
+  const retirementReturn0 = opts.growth?.retirement ?? rates.returnAnnualNominal;
+
   const events = scheduleEvents(p);
   let nextEvent = 0;
 
@@ -252,13 +404,20 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
   let takeHome = shift(p.takeHomePay.value, p.takeHomePay.isEstimate, scenario, true);
   const categorySpending = new Map<string, Money>(); // insertion order = the order summed
   let monthlySpending = 0;
-  for (const [category, e] of Object.entries(p.spending)) {
-    if (category === 'debtPayments') continue;
-    const value = shift(e.value, e.isEstimate, scenario, false);
-    categorySpending.set(category, value);
-    monthlySpending += value;
+  if (opts.expenses?.mode === 'manual') {
+    const monthly = opts.expenses.monthly;
+    if (!Number.isFinite(monthly) || monthly < 0) throw new RangeError(`Invalid manual expenses: ${monthly}`);
+    categorySpending.set('other', monthly);
+    monthlySpending = monthly;
+  } else {
+    for (const [category, e] of Object.entries(p.spending)) {
+      if (category === 'debtPayments') continue;
+      const value = shift(e.value, e.isEstimate, scenario, false);
+      categorySpending.set(category, value);
+      monthlySpending += value;
+    }
   }
-  const retirementBeatsCash = rates.returnAnnualNominal > rates.cashYieldAnnual;
+  const retirementBeatsCash = retirementReturn0 > cashYield0;
   const retirementShare = Math.min(
     1,
     Math.max(0, shift(p.retirementShare.value, p.retirementShare.isEstimate, scenario, retirementBeatsCash)),
@@ -272,7 +431,7 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     apr: d.apr,
     balance: d.balance,
     fixedPayment: usesCardFormula(d) ? null : d.minPayment.value,
-    paymentFactor: shift(1, d.minPayment.isEstimate, scenario, d.apr > rates.cashYieldAnnual),
+    paymentFactor: shift(1, d.minPayment.isEstimate, scenario, d.apr > cashYield0),
     extra: d.extraPayment ?? 0,
     payoffMonth: d.balance <= PAID_OFF_EPSILON ? 0 : null,
   }));
@@ -327,10 +486,49 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     d.balance += amount;
   };
 
-  const rCash = monthlyRate(rates.cashYieldAnnual);
-  const rRetirement = monthlyRate(rates.returnAnnualNominal);
+  // Monthly growth rates; with yearly arrays they are reset at the start of each plan year.
+  const inflationOf = (y: number): Rate => yearly?.inflation?.[y] ?? rates.inflationAnnual;
+  const annualGrowth = (g: AssetGroup, y: number): Rate => {
+    const arr = yearly?.growth?.[g];
+    if (arr) return arr[y]!;
+    const fixed = opts.growth?.[g];
+    if (fixed !== undefined) return fixed;
+    switch (g) {
+      case 'cash': return rates.cashYieldAnnual;
+      case 'investments':
+      case 'retirement': return rates.returnAnnualNominal;
+      case 'vehicle': return vehicleDepreciationAnnual.value;
+      case 'realEstate':
+      case 'otherAsset': return inflationOf(y);
+    }
+  };
+  let rCash = monthlyRate(annualGrowth('cash', 0));
+  let rRetirement = monthlyRate(annualGrowth('retirement', 0));
+  const rGroup: Record<ExtraAssetGroup, Rate> = { investments: 0, realEstate: 0, vehicle: 0, otherAsset: 0 };
+  let rInflation = 0;
+  let ratesYear = 0;
+  const setGroupRates = (y: number) => {
+    for (const g of EXTRA_ASSET_GROUPS) rGroup[g] = monthlyRate(annualGrowth(g, y));
+    rInflation = monthlyRate(inflationOf(y));
+  };
+  setGroupRates(0);
 
-  const snapshot = (month: number, flows: Omit<SimulationMonth, 'month' | 'cash' | 'retirement' | 'debtBalance' | 'cardBalance' | 'debts' | 'netWorth'>): SimulationMonth => {
+  // Plan-mode state: the shortfall balance and this month's flows per asset group.
+  let shortfall = 0;
+  const balanceOf = (g: AssetGroup): Money => (g === 'cash' ? cash : g === 'retirement' ? retirement : bal[g]);
+  const addTo = (g: AssetGroup, amount: Money) => {
+    if (g === 'cash') cash += amount;
+    else if (g === 'retirement') retirement += amount;
+    else bal[g] += amount;
+  };
+  type PlanFlows = { growth: Record<AssetGroup, Money>; deposits: Record<AssetGroup, Money>;
+    withdrawals: Record<AssetGroup, Money>; shortfallAdded: Money };
+
+  const snapshot = (
+    month: number,
+    flows: Omit<SimulationMonth, 'month' | 'cash' | 'retirement' | 'debtBalance' | 'cardBalance' | 'debts' | 'netWorth'>,
+    plan?: PlanFlows,
+  ): SimulationMonth => {
     let debtBalance = 0;
     let cardBalance = 0;
     const byId: Record<string, Money> = {};
@@ -339,22 +537,42 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
       debtBalance += d.balance;
       if (d.kind === 'card') cardBalance += d.balance;
     }
+    if (!plan) {
+      return {
+        month, ...flows, cash, retirement, debtBalance, cardBalance, debts: byId,
+        netWorth: cash + retirement - debtBalance,
+      };
+    }
+    const groups = {} as Record<AssetGroup, GroupMonth>;
+    for (const g of ASSET_GROUPS) {
+      groups[g] = { balance: balanceOf(g), growth: plan.growth[g], deposits: plan.deposits[g], withdrawals: plan.withdrawals[g] };
+    }
     return {
       month, ...flows, cash, retirement, debtBalance, cardBalance, debts: byId,
-      netWorth: cash + retirement - debtBalance,
+      netWorth: cash + retirement + bal.investments + bal.realEstate + bal.vehicle + bal.otherAsset - debtBalance - shortfall,
+      groups, shortfall, shortfallAdded: plan.shortfallAdded,
     };
   };
 
+  const noPlanFlows = (): PlanFlows =>
+    ({ growth: zeroGroups(), deposits: zeroGroups(), withdrawals: zeroGroups(), shortfallAdded: 0 });
   const path: SimulationMonth[] = [
     snapshot(0, {
       income: 0, spending: 0, debtPayments: 0, requiredDebtPayments: 0, purchasesCash: 0,
       cardCharges: 0, surplus: 0, shortfallToCard: 0, payoffCardCharges: 0, surplusToPayoffCards: 0,
       debtLoad: 0,
-    }),
+    }, planMode ? noPlanFlows() : undefined),
   ];
 
   for (let t = 0; t < months; t++) {
     const month = t + 1;
+    const flow = planMode ? noPlanFlows() : undefined;
+    if (yearly && yearOf(t) !== ratesYear) {
+      ratesYear = yearOf(t);
+      rCash = monthlyRate(annualGrowth('cash', ratesYear));
+      rRetirement = monthlyRate(annualGrowth('retirement', ratesYear));
+      setGroupRates(ratesYear);
+    }
 
     // 0. Life events starting this month (earliest first, so the latest start wins).
     let oneOffCost = 0;
@@ -378,13 +596,25 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
       for (const value of categorySpending.values()) monthlySpending += value;
     }
 
-    const priceFactor = (1 + rates.inflationAnnual) ** (t / 12);
-    const income = takeHome * (1 + rates.incomeGrowthAnnual) ** (t / 12);
+    const priceFactor = priceAt ? priceAt[t]! : (1 + rates.inflationAnnual) ** (t / 12);
+    const income = takeHome * (incomeFollowsPrices ? priceFactor : (1 + rates.incomeGrowthAnnual) ** (t / 12));
     const spending = monthlySpending * priceFactor;
 
-    // 1. Growth on the opening balances.
+    // 1. Growth on the opening balances (and, in plan mode, the other groups and the shortfall).
+    const cash0 = cash;
+    const retirement0 = retirement;
     if (cash > 0) cash *= 1 + rCash;
     retirement *= 1 + rRetirement;
+    if (flow) {
+      flow.growth.cash = cash - cash0;
+      flow.growth.retirement = retirement - retirement0;
+      for (const g of EXTRA_ASSET_GROUPS) {
+        const before = bal[g];
+        bal[g] *= 1 + rGroup[g];
+        flow.growth[g] = bal[g] - before;
+      }
+      shortfall *= 1 + rInflation;
+    }
 
     // 2. Debts: interest, then the payment (never more than what is owed).
     let debtPayments = 0;
@@ -414,7 +644,9 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     const newLoans: DebtState[] = [];
     for (const [i, x] of extra.entries()) {
       if (!occursAt(x, t)) continue;
-      const scale = (1 + rates.inflationAnnual) ** ((t - (x.startMonth ?? 0)) / 12);
+      const scale = priceAt
+        ? priceAt[t]! / priceAt[x.startMonth ?? 0]!
+        : (1 + rates.inflationAnnual) ** ((t - (x.startMonth ?? 0)) / 12);
       const payOff = x.payOffFromSurplus === true;
       if (x.payWith === 'cash') {
         const amount = x.amount * scale;
@@ -450,9 +682,9 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     debts.push(...newLoans);
     chargeCard(toCard);
 
-    // 4. Surplus: pays off payOffFromSurplus cards, then is split between retirement and cash; or
-    //    drawn from cash and then a card.
-    const surplus = income - spending - debtPayments - purchasesCash + extraMonthly * (1 + rates.inflationAnnual) ** (t / 12);
+    // 4. Surplus: pays off payOffFromSurplus cards, then is split between retirement and cash (or by
+    //    savingsSplit); or drawn from cash, then the withdrawalOrder groups, then a card (or shortfall).
+    const surplus = income - spending - debtPayments - purchasesCash + extraMonthly * priceFactor;
     let surplusToPayoffCards = 0;
     if (surplus > 0) {
       let left = surplus;
@@ -467,35 +699,67 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
           d.payoffMonth ??= month;
         }
       }
-      const toRetirement = left * retirementShare;
-      retirement += toRetirement;
-      cash += left - toRetirement;
+      if (split) {
+        for (const s of split) {
+          const amount = left * s.share;
+          addTo(s.group, amount);
+          flow!.deposits[s.group] += amount;
+        }
+      } else {
+        const toRetirement = left * retirementShare;
+        retirement += toRetirement;
+        cash += left - toRetirement;
+        if (flow) {
+          flow.deposits.retirement += toRetirement;
+          flow.deposits.cash += left - toRetirement;
+        }
+      }
     } else {
       cash += surplus;
     }
     cash += oneOffIncome * priceFactor;
+    if (flow) flow.deposits.cash += oneOffIncome * priceFactor;
     let shortfallToCard = 0;
     if (cash < 0) {
-      shortfallToCard = -cash;
+      let need = -cash;
       cash = 0;
-      // The purchase caused min(shortfall, its cash payment) of it: without the purchase the
-      // shortfall would be max(0, shortfall − payment).
-      let rest = shortfallToCard;
-      for (const [i, amount] of payoffCash) {
-        const part = Math.min(rest, amount);
-        if (part <= 0) break;
-        chargePayoffCard(i, part);
-        payoffCardCharges += part;
-        rest -= part;
+      // Cash covered the part of the drawn surplus it could: max(0, −surplus) − what is still needed.
+      if (flow) flow.withdrawals.cash = Math.max(0, Math.max(0, -surplus) - need);
+      for (const g of drawOrder) {
+        if (need <= 0) break;
+        const have = balanceOf(g);
+        if (have <= 0) continue;
+        const take = Math.min(need, have);
+        addTo(g, -take);
+        flow!.withdrawals[g] += take;
+        need -= take;
       }
-      chargeCard(rest);
+      if (separate) {
+        shortfall += need;
+        flow!.shortfallAdded = need;
+      } else {
+        shortfallToCard = need;
+        // The purchase caused min(shortfall, its cash payment) of it: without the purchase the
+        // shortfall would be max(0, shortfall − payment).
+        let rest = shortfallToCard;
+        for (const [i, amount] of payoffCash) {
+          const part = Math.min(rest, amount);
+          if (part <= 0) break;
+          chargePayoffCard(i, part);
+          payoffCardCharges += part;
+          rest -= part;
+        }
+        chargeCard(rest);
+      }
+    } else if (flow && surplus < 0) {
+      flow.withdrawals.cash = -surplus;
     }
 
     const debtLoad = income > 0 ? requiredDebtPayments / income : requiredDebtPayments > 0 ? Infinity : 0;
     path.push(snapshot(month, {
       income, spending, debtPayments, requiredDebtPayments, purchasesCash, cardCharges, surplus,
       shortfallToCard, payoffCardCharges, surplusToPayoffCards, debtLoad,
-    }));
+    }, flow));
   }
 
   const payoffMonth: Record<string, number | null> = {};
