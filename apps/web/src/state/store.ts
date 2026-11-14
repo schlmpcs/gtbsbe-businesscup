@@ -13,6 +13,7 @@ import {
 import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
 import { ToolsStateSchema, type ToolsState } from '@lifeguessr/types';
+import { CheckinRecordSchema, type CheckinRecord } from '@lifeguessr/types';
 import { restoreTools } from './tools';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -50,7 +51,15 @@ export type AppData = {
    * profile is still the demo one (`isSampleActive`): any edit makes the life the user's own.
    */
   isSample: boolean;
+  /**
+   * S14: saved monthly check-ins, oldest first (Pro). Kept in this browser only: the server session
+   * contract has no field for them. Cleared when the life changes (closest life, sample, reset).
+   */
+  checkins: CheckinRecord[];
 };
+
+/** Most check-ins kept (10 years of months); older ones are dropped first. */
+export const CHECKINS_MAX = 120;
 
 export type AppActions = {
   setGoal: (goal:Goal) => void;
@@ -85,6 +94,9 @@ export type AppActions = {
   loadSample: () => boolean;
   /** Stop showing the sample life as such ("Use mine"); the profile is left as it is. */
   clearSample: () => void;
+  /** S14: save a check-in (stamped now); a month already saved is replaced. */
+  saveCheckin: (record: CheckinRecord) => void;
+  clearCheckins: () => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -106,6 +118,7 @@ export function initialAppData(): AppData {
     wishlist: [],
     committedMove: null,
     isSample: false,
+    checkins: [],
   };
 }
 
@@ -144,6 +157,7 @@ const persistedFields = {
   wishlist: z.array(WishlistItemSchema),
   committedMove: MoveSchema.nullable(),
   isSample: z.boolean(),
+  checkins: z.array(CheckinRecordSchema).max(CHECKINS_MAX),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -174,7 +188,7 @@ export const useAppStore = create<AppState>()(
       setProfile: (profile, origin) => set({ profile, profileOrigin: origin }),
       setSelfGuess: (guess) => set({ selfGuess: guess }),
       chooseClosestLife: (cardId, profile) =>
-        set({ profile, profileOrigin: 'closestLife', closestCardId: cardId, committedMove: null }),
+        set({ profile, profileOrigin: 'closestLife', closestCardId: cardId, committedMove: null, checkins: [] }),
       setSpending: (category, value) => set((s) => ({ profile: setSpending(s.profile, category, value), profileOrigin: 'user' })),
       setField: (field, value) => set((s) => ({ profile: setField(s.profile, field, value), profileOrigin: 'user' })),
       skipField: (field) => set((s) => ({ profile: skipField(s.profile, field) })),
@@ -222,7 +236,7 @@ export const useAppStore = create<AppState>()(
         }),
       loadSample: () => {
         if (get().profileOrigin !== 'demo') return false;
-        set({ profile: cloneProfileDemo(), profileOrigin: 'demo', committedMove: null, isSample: true });
+        set({ profile: cloneProfileDemo(), profileOrigin: 'demo', committedMove: null, isSample: true, checkins: [] });
         return true;
       },
       clearSample: () => set({ isSample: false }),
@@ -230,6 +244,15 @@ export const useAppStore = create<AppState>()(
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
       clearTool: key => set(s=>{const tools={...s.tools};delete tools[key];return {tools};}),
+      saveCheckin: (record) =>
+        set((s) => {
+          const saved = CheckinRecordSchema.parse({ ...record, savedAt: new Date().toISOString() });
+          const checkins = [...s.checkins.filter((c) => c.month !== saved.month), saved]
+            .sort((a, b) => a.month.localeCompare(b.month))
+            .slice(-CHECKINS_MAX);
+          return { checkins };
+        }),
+      clearCheckins: () => set({ checkins: [] }),
       reset: () => set(initialAppData()),
     }),
     {
@@ -249,6 +272,7 @@ export const useAppStore = create<AppState>()(
         wishlist: s.wishlist,
         committedMove: s.committedMove,
         isSample: s.isSample,
+        checkins: s.checkins,
       }),
       merge: mergePersisted,
     },

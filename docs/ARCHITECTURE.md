@@ -80,7 +80,7 @@ lifeguessr/
 | S11 | Can I Afford It? | `/afford` | afford | Real |
 | S12 | Loan Lab | `/loan` | loan | Real |
 | S13 | Decision (car example) | `/decide` | mocks | Mock |
-| S14 | Monthly check-in | `/checkin` | mocks | Mock |
+| S14 | Monthly check-in | `/checkin` | checkin | Real: simulated months from the engine (labelled), forecast vs actual, number, goal and move progress, value check; save + history are Pro (browser store only), `.ics` reminder |
 | S15 | Paywall | `/pro` | pro | Simulated checkout (nothing charged; Stripe test mode instead when a key is set) + promo code, no real money |
 
 ## Contracts (`packages/types/index.ts`, draft)
@@ -226,6 +226,7 @@ export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: 
 | `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
 | `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
 | `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
+| `simulateMonth` / `checkinRecord` / `checkinStart` / `checkinSummary` | Kiko | `(p: Profile, monthIndex: number, seed: number) => SimulatedMonth` / `(start: Profile, month: string, m: SimulatedMonth, opts?: { rates? }) => CheckinRecord` / `(p: Profile, history: CheckinRecord[], opts?) => Profile` / `(plan: Profile, history: CheckinRecord[], current: CheckinRecord \| null, opts?: { rates?; goal?; committedMove? }) => CheckinSummary` (S14; see ENGINEERING.md → Monthly check-in) |
 | `loan` | Aibek | `(p: Profile, l: LoanInput, opts?: { rates?: Partial<ForecastRates> }) => LoanResult` (`effect10y` in today's dollars, like moves) |
 | `compareLoans` | Aibek | `(p: Profile, ls: LoanInput[], opts?: { rates?: Partial<ForecastRates> }) => LoanResult[]` (same order as `ls`) |
 | `payoffOrder` | Aibek | `(debts: Debt[], extra: Money, method: 'avalanche' \| 'snowball') => { order: string[] /* debt ids */; payoffMonth: number \| null; totalInterest: Money }` |
