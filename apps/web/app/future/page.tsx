@@ -3,6 +3,7 @@
 // S10 You in N years + Next Moves (`/future`): thin route. The view-model hook feeds the screen.
 // `?sample=1` ("Try with sample data" on S1) loads the sample life first.
 import Link from 'next/link';
+import { AvatarPanel } from '../_components/AvatarPanel';
 import { use } from 'react';
 import { useGoal } from '@/features/forecast/model/useGoal';
 import { GoalCard } from '@/features/forecast/ui/GoalCard';
@@ -21,7 +22,7 @@ export default function FuturePage({ searchParams }: { searchParams: Promise<{ s
       vm={vm}
       links={links}
       Link={Link}
-      goal={<GoalCard vm={goal} makeExactHref={links.makeExact} Link={Link} />}
+      goal={<><GoalCard vm={goal} makeExactHref={links.makeExact} Link={Link} /><AvatarPanel forecastSeen={vm.status==='ready'} /></>}
     />
   );
 }
