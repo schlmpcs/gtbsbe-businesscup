@@ -109,5 +109,20 @@ export type StatementItem = { label: string; amount: Money; month: string; day: 
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
   oneOffs: { label: string; amount: Money }[]; detectedPay?: Money };
 
+// ----- Pro (S15): the paywall demo -----------------------------------------------------------
+// No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo` = the promo code
+// shown on the Pro screen (so the jury can pass the paywall without paying). The server is the
+// authority on who is Pro; the browser only caches the last answer. Keyed by the anonymous id.
+export type ProPlan = 'yearly' | 'monthly';
+export type ProSource = 'stripe_test' | 'demo';
+export type ProStatus =
+  | { pro: false }
+  | { pro: true; source: ProSource; plan?: ProPlan; since: string };  // plan: stripe_test only; since: ISO 8601 UTC
+export type ProErrorCode =
+  | 'bad_request' | 'too_large' | 'rate_limited' | 'unavailable' | 'upstream_error'
+  | 'not_paid'            // confirm: the Checkout Session is not complete and paid
+  | 'session_mismatch'    // confirm: the session belongs to another anonymous id, or is already claimed
+  | 'invalid_code';       // demo-unlock: wrong code, or demo unlock is switched off
+
 export * from './constants';
 export * from './schemas';
