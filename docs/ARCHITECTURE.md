@@ -67,7 +67,7 @@ lifeguessr/
 
 | ID | Screen | Route | Feature folder | Build |
 | --- | --- | --- | --- | --- |
-| S1 | Today (month-end card, You in 10 years, play) | `/` | forecast | Real (drift flags need ≥ 3 uploaded months; before that the card shows the projection only) |
+| S1 | Today (first visit: Play / Try with sample data, no numbers; then month-end card, You in 10 years, play) | `/` | forecast | Real (drift flags need ≥ 3 uploaded months; before that the card shows the projection only) |
 | S2 | Game: explore the home (house scene, tap rooms for clues) + guess | `/play` | game | Real (falls back to a static card if the scene isn't ready) |
 | S3 | Reveal | `/play` (state) | game | Real |
 | S4 | Streamer mode | `/play?stream=1` | game | Real |
@@ -75,7 +75,7 @@ lifeguessr/
 | S6 | Closest life | `/me/closest` | ladder | Real |
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
 | S8 | Balance sheet | `/me/balance` | ladder | Real |
-| S9 | Statement upload + "What we keep" (+ "connect your bank app", coming soon) | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: Mock) |
+| S9 | Statement upload + "What we keep" + "Try with sample statement" | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: not shown until built) |
 | S10 | You in 10 years + Next Moves | `/future` | forecast | Real |
 | S11 | Can I Afford It? | `/afford` | afford | Real |
 | S12 | Loan Lab | `/loan` | loan | Real |
@@ -244,7 +244,8 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `GET /api/leaderboard` | Aibek | query `date` (default today), `limit` (1–100, default 50) (+ own `anonId` in a header) → `{ ok, date, players, entries, rank, todayStats }`, summed from stored guesses. Ties on points share a rank; handles are made up from a hash (no id, no PII). The client never sends a score. |
 | `GET /api/share` | Aibek | query `resultId, format` (`9x16` default, `1x1`) → PNG (1080×1920 or 1080×1080, `next/og`) from a stored result, so share cards can't be faked; cached as immutable |
 | `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → `{ ok: true, ...SessionState }`. `anonId` = `crypto.randomUUID()` (a UUID, required). `{ anonId }` alone loads; each field sent replaces the saved one whole. 402 `not_paid` when the save would add to the wishlist without Pro; 503 `unavailable` when the store is down or not configured. `GET /api/session` with the `x-anon-id` header loads too. |
-| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed', classes?: { label, class: StatementClass }[] /* how each distinct masked label was sorted; additive, filled by M4 */ }`; keyword rules without an API key; nothing stored |
+| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed', classes?: { label, class: StatementClass }[] /* how each distinct masked label was sorted */ }`; keyword rules without an API key; nothing stored |
+| `GET /api/statement/sample` | Amir | → `text/csv`: `packages/data/fixtures/statement.sample.csv`, prerendered at build. S9's "Try with sample statement" reads it as a File through the same browser path as an upload |
 | `POST /api/events` | Aibek | `{ anonId, events: [{ id, name, props? }] }` (1–25) → `{ ok: true, accepted }`. Names from `CLIENT_EVENT_NAMES`; props are small enums and counts only (`EventsRequestSchema`), so no personal data; `id` = the browser's UUID per event, so a resent batch is stored once. The browser batches them (`src/lib/events.ts`, on with `NEXT_PUBLIC_EVENTS_SOURCE=api`, off under GPC / Do Not Track); the Pro routes record `checkout_started`, `pro_purchased`, `pro_demo_purchased` and `pro_promo_redeemed` themselves. 503 when the store is down. |
 | `GET /api/events/funnel` | Aibek | query `days` (1–90, default 7) → `FunnelReport`: distinct anonymous ids per event and per `FUNNEL_STEPS` step (with how many went through every earlier step, and the conversion), plus clues per home, blind-guess, finish and share rates. Aggregates only. |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
@@ -299,7 +300,7 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - The server receives only `StatementItem`s: merchant label, amount, month and day of month. The day lets the server detect subscriptions and yearly charges. It returns totals; raw items are not stored.
 - Labels pass through the LLM provider for categorizing: only the distinct masked labels, each marked money in or out, never amounts or dates. The provider (Anthropic) does not train on API data. Zero data retention is not enabled on the account, so the "What we keep" panel must not claim it; it says only that the labels go to the provider to be sorted and that we don't store them. Without an API key, keyword rules on the server sort them instead.
 - Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The store keeps only its SHA-256 hash, so a leaked row cannot be turned back into an ID that loads the profile. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
-- Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
+- Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is not shown (dead buttons are hidden).
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
 - Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test`, `demo_checkout` or `demo`), when, and the Stripe test Checkout Session ID for a Stripe test payment. No card data or email ever reaches our server: the simulated checkout has no card field, and the Stripe test checkout page belongs to Stripe.
 - The forecast request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers to the model provider, which does not train on API data. Zero data retention is not enabled, so no copy claims it; the "What we keep" panel says only that these numbers (no names or account numbers) go to the provider, which does not train on API data.

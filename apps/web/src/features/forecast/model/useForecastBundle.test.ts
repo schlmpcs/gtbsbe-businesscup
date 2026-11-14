@@ -77,6 +77,14 @@ const deferred = <T>() => {
   return { promise, resolve };
 };
 
+/** Rules first: until the key has an answer, the rules bundle computed for it, labeled rules and refreshing. */
+function expectRulesFirst(result: { current: ReturnType<typeof useForecastBundle> }, of: Inputs) {
+  expect(result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true, isStale: false });
+  const { answer } = ready(result);
+  expect(answer.profile).toBe(of.profile);
+  expect(answer.bundle).toEqual(rulesBundle(of.profile, scenariosOf(of.candidates), areaRates(of.profile)));
+}
+
 function ready(result: { current: ReturnType<typeof useForecastBundle> }) {
   if (result.current.status !== 'ready') throw new Error(`forecast is ${result.current.status}`);
   return result.current;
@@ -87,8 +95,8 @@ describe('useForecastBundle: answers', () => {
     const route = mockForecastRoute((body) => aiAnswer(body, { baseShift: 5_000 }));
     const start = inputs(cloneProfileDemo());
     const { result } = renderBundle(start);
-    expect(result.current).toEqual({ status: 'loading' });
-    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expectRulesFirst(result, start); // no skeleton while the model works
+    await waitFor(() => expect(result.current).toMatchObject({ source: 'ai' }));
     const state = ready(result);
     expect(state).toMatchObject({ source: 'ai', isRefreshing: false });
     expect(state.answer.bundle.source).toBe('ai');
@@ -163,10 +171,10 @@ describe('useForecastBundle: answers', () => {
     const start = inputs(cloneProfileDemo());
     const { result } = renderBundle(start);
     await settle(FORECAST_CLIENT_TIMEOUT_MS - 1);
-    expect(result.current).toEqual({ status: 'loading' });
+    expectRulesFirst(result, start);
     await settle(1);
     const state = ready(result);
-    expect(state.source).toBe('rules');
+    expect(state).toMatchObject({ source: 'rules', isRefreshing: false });
     expect(state.answer.bundle).toEqual(rulesBundle(start.profile, scenariosOf(start.candidates), areaRates(start.profile)));
     expect(route.signals[0]!.aborted).toBe(true);
   });
@@ -183,9 +191,9 @@ describe('useForecastBundle: answers', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(result.current).toEqual({ status: 'loading' }); // the aborted request is not an answer, nor a failure
+    expectRulesFirst(result, second); // the aborted request is not an answer, nor a failure
     held[1]!.resolve(aiAnswer(route.calls[1]));
-    await waitFor(() => expect(result.current.status).toBe('ready'));
+    await waitFor(() => expect(result.current).toMatchObject({ source: 'ai' }));
     const state = ready(result);
     expect(state.source).toBe('ai');
     expect(state.answer.profile).toBe(second.profile);
@@ -232,21 +240,36 @@ describe('useForecastBundle: when it asks', () => {
     expect(route.calls).toHaveLength(2);
   });
 
-  it('shows the previous answer as refreshing until the new one arrives', async () => {
+  it('shows the new profile’s rules forecast at once, refreshing, until the model’s answer arrives', async () => {
     const settle = useFakeClock();
-    mockForecastRoute();
+    mockForecastRoute((body) => aiAnswer(body));
     const first = inputs(cloneProfileDemo());
     const { result, rerender } = renderBundle(first);
     await settle();
-    const before = ready(result);
+    expect(ready(result).source).toBe('ai');
 
     const second = inputs(withEatingOut(cloneProfileDemo(), 100));
     rerender(second);
-    expect(result.current).toMatchObject({ status: 'ready', isRefreshing: true, isStale: true }); // another profile's
-    expect(ready(result).answer).toBe(before.answer);
+    expectRulesFirst(result, second); // the numbers move with the edit; not the old profile's answer
     await settle(FORECAST_DEBOUNCE_MS);
-    expect(ready(result).isRefreshing).toBe(false);
+    expect(ready(result)).toMatchObject({ source: 'ai', isRefreshing: false, isStale: false });
     expect(ready(result).answer.profile).toBe(second.profile);
+  });
+
+  it('shows the previous answer as stale only when the local engine cannot build the new one', async () => {
+    const settle = useFakeClock();
+    mockForecastRoute((body) => aiAnswer(body));
+    const { result, rerender } = renderBundle(inputs(cloneProfileDemo()));
+    await settle();
+    const before = ready(result);
+
+    control.rulesFails = true;
+    rerender(inputs(withEatingOut(cloneProfileDemo(), 100)));
+    expect(result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: true, isStale: true }); // another profile's
+    expect(ready(result).answer).toBe(before.answer);
+    control.rulesFails = false; // the route stub builds its answers with the engine too
+    await settle(FORECAST_DEBOUNCE_MS);
+    expect(ready(result)).toMatchObject({ source: 'ai', isRefreshing: false, isStale: false });
   });
 
   it('keeps the newest answer when an older request resolves last, and sends only the newest of a burst', async () => {
@@ -323,7 +346,7 @@ describe('useForecastBundle: when it asks', () => {
     first.unmount();
     resetForecastMemory();
     const again = renderBundle();
-    expect(again.result.current).toEqual({ status: 'loading' });
+    expect(again.result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true }); // rules first, not the forgotten answer
     expect(route.calls).toHaveLength(2);
     await waitFor(() => expect(again.result.current.status).toBe('ready'));
   });
@@ -603,9 +626,10 @@ describe('useForecastBundle: remembered answers that are not the model’s (stal
     const { result, rerender } = renderBundle(inputs(cloneProfileDemo()));
     await waitFor(() => expect(result.current.status).toBe('error'));
     control.rulesFails = false;
-    rerender(inputs(withEatingOut(cloneProfileDemo(), 100)));
-    expect(result.current).toEqual({ status: 'loading' }); // nothing to show: the error was not an answer
-    await waitFor(() => expect(result.current.status).toBe('ready'));
+    const next = inputs(withEatingOut(cloneProfileDemo(), 100));
+    rerender(next);
+    expectRulesFirst(result, next); // this key's own rules forecast, not the old key's error
+    await waitFor(() => expect(ready(result).isRefreshing).toBe(false));
   });
 });
 

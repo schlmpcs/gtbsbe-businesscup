@@ -7,6 +7,8 @@ export const pro = {
   demoBadge: {
     stripe: 'Demo · Stripe test mode, no real charge',
     demo: 'Demo · simulated checkout, nothing is charged',
+    /** While the server has not said which checkout is on, and when none is: true of every mode. */
+    neutral: 'Demo · no real charge',
   },
   headline: 'Keep playing your future.',
   loading: 'Checking your Pro status…',
@@ -20,17 +22,10 @@ export const pro = {
     priceNote: 'Demo prices.',
   },
 
+  /** Only what Pro unlocks in this build (no promises of unbuilt features). */
   includes: {
     title: 'What Pro includes',
-    now: ['A wishlist in Can I Afford It?'],
-    comingTitle: 'Coming to Pro',
-    coming: [
-      'Your life saved across devices',
-      'Monthly check-ins',
-      'Decision journal',
-      'Loan Lab history',
-      'Move levels',
-    ],
+    now: ['Save purchases to a wishlist in Can I Afford It?'],
   },
 
   checkout: {

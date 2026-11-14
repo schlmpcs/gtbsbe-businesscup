@@ -79,6 +79,17 @@ export const forecast = {
   /** S1 Today. */
   today: {
     title: 'Today',
+    /** First visit (no profile, no game yet): what the app is, in one look. No user numbers. */
+    firstVisit: {
+      title: 'Which life costs more?',
+      body: 'Guess what strangers’ lives cost. Then see where yours is going.',
+      play: 'Play',
+      sample: 'Try with sample data',
+      note: 'No sign-up. About a minute.',
+      stepsLabel: 'How it works',
+      steps: ['Play 5 quick rounds', 'Price your own month', 'See you in 10 years'],
+      vs: 'vs',
+    },
     monthEnd: {
       title: 'This month',
       projected: 'Projected spending',

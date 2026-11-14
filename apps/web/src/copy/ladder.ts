@@ -232,6 +232,9 @@ export const ladder = {
     pickerLabel: 'Bank statement (CSV)',
     pickerHint: 'Your bank’s CSV export. Read on this device.',
     pickerUnavailable: 'Not switched on in this build yet.',
+    /** Reads the sample statement fixture through the same steps as your own file. */
+    trySample: 'Try with sample statement',
+    trySampleHint: 'A made-up checking account, read the same way as yours.',
     reading: 'Reading your statement…',
     errors: {
       badInput: 'Its months or totals didn’t look right. Try another file.',
@@ -249,13 +252,6 @@ export const ladder = {
       unknown: 'Something went wrong. Try again.',
     },
     dismiss: 'Dismiss',
-    bank: {
-      or: 'or',
-      title: 'Connect your bank app',
-      note: 'Read-only, via a secure partner. We never see your password or move money.',
-      button: 'Connect bank',
-      soon: 'Coming soon',
-    },
     reviewTitle: 'Check your months',
     reviewNote: 'Each category becomes your monthly average. Nothing changes until you confirm.',
     readSummary: (transactions: number, from: string, to: string) =>
@@ -286,6 +282,7 @@ export const ladder = {
     driftNotYet: 'Drift alerts on Today start at 3 months.',
     keep: {
       title: 'What we keep',
+      tools: 'Subscription findings and tick choices, overpaying inputs and payoff settings are stored in this browser only.',
       none: 'Nothing from a statement yet.',
       gist: 'Only monthly category totals and take-home pay. Never the file.',
       details: 'Exactly what we keep',

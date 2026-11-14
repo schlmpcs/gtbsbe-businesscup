@@ -20,6 +20,11 @@ export const common = {
     ],
     pro: 'Go Pro',
   },
+  /** Shown on every screen while the sample life is on (Try with sample data). */
+  sampleBanner: {
+    text: 'You’re looking at a sample life.',
+    cta: 'Use mine',
+  },
   nav: {
     title: 'Screens',
     placeholderNote: 'Placeholder screen. The real UI lands with its task.',

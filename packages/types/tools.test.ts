@@ -1,24 +1,29 @@
 // M1: the contracts of the three micro-tools (subscription audit, overpaying check, debt payoff
-// planner). Every sample below is written by hand, with the numbers worked out in the comments;
-// nothing here is read back from an implementation. The committed fixtures (the sample statement's
+// planner). The subscription audit's own schemas (findings, audit, charge dates) are M1's; the catalogue,
+// overpaying, payoff and event schemas are declared by main (M2, M4, M10, M12), and the cases below that
+// still hold for them are kept as regression tests of that shared contract. Every sample is written by
+// hand, with the numbers worked out in the comments; nothing here is read back from an implementation. The committed fixtures (the sample statement's
 // items and its golden audit) are checked in packages/data/fixtures/tools.test.ts (against the
 // schemas and hand-worked figures) and apps/web/src/lib/statement/sampleItems.test.ts (against the
 // CSV reader).
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
-  BENCHMARK_LINES, BENCHMARK_POSITIONS, CADENCES, CADENCE_MONTHS, CLIENT_EVENT_NAMES, EVENT_COUNT_MAX, EVENTS_BATCH_MAX, FUNNEL_EVENT_NAMES,
-  FUNNEL_STEPS, MISS_BUCKETS, OVERPAYING_COVERAGES, OVERPAYING_SKIP_REASONS, PAYOFF_METHODS, SERVER_EVENT_NAMES,
-  SERVICE_CATEGORIES, STATEMENT_CLASSES, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_FINDINGS_MAX, SUBSCRIPTION_FLAGS,
-  SUBSCRIPTION_ORIGINS, SUBSCRIPTION_STATUSES, TOOL_IDS,
-  BenchmarkSchema, ClientEventEnvelopeSchema, EventsRequestSchema, KnownServiceSchema, MissBucketSchema,
-  OverpayingResultSchema, PayoffComparisonSchema, PayoffPlanSchema, StatementCategorizeResponseSchema,
-  SubscriptionAuditSchema, SubscriptionFindingSchema, ToolIdSchema, type ServicePlanSchema,
-  type Benchmark, type BenchmarkLine, type Cadence, type ClientEventEnvelope, type ClientFunnelEvent, type KnownService,
-  type MissBucket, type OverpayingResult, type PayoffComparison, type PayoffMethod, type PayoffPlan, type ServiceCategory,
-  type ServicePlan, type StatementCategorizeResponse, type StatementClass, type SubscriptionAudit, type SubscriptionFinding,
-  type SubscriptionFlag, type ToolId,
+  CADENCE_MONTHS, CLIENT_EVENT_NAMES, EVENTS_BATCH_MAX, FUNNEL_EVENT_NAMES, FUNNEL_STEPS, SERVER_EVENT_NAMES,
+  STATEMENT_CLASSES, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_FINDINGS_MAX, SUBSCRIPTION_FLAGS, SUBSCRIPTION_ORIGINS,
+  SUBSCRIPTION_STATUSES, TOOL_IDS,
+  BenchmarkSchema, ChargeDateSchema, ClientEventEnvelopeSchema, EventsRequestSchema, KnownServiceSchema, OverpayingResultSchema,
+  PayoffComparisonSchema, PayoffPlanSchema, StatementCategorizeResponseSchema, SubscriptionAuditSchema,
+  SubscriptionFindingSchema, type ServicePlanSchema,
+  type Benchmark, type ChargeDate, type ClientEventEnvelope, type ClientFunnelEvent, type KnownService, type MissBucket,
+  type OverpayingResult, type PayoffComparison, type PayoffPlan, type ServicePlan, type StatementCategorizeResponse,
+  type StatementClass, type SubscriptionAudit, type SubscriptionFinding, type SubscriptionFlag, type ToolId,
 } from './index';
+
+// main's bounds, written out so a change to them is noticed here: subs_flagged and subs_cancel_marked count
+// up to 5000 (EventsRequestSchema); the five miss buckets (guess ÷ actual, lowest first).
+const EVENT_COUNT_MAX = 5_000;
+const MISS_BUCKETS = ['under0.5', '0.5to0.8', '0.8to1.25', '1.25to2', 'over2'] as const satisfies readonly MissBucket[];
 
 const bad = (schema: z.ZodType, value: unknown) => expect(schema.safeParse(value).success).toBe(false);
 const good = (schema: z.ZodType, value: unknown) => expect(schema.safeParse(value).success).toBe(true);
@@ -46,30 +51,19 @@ describe('the micro-tool schemas match their contract types', () => {
 
   it('value lists cover every union member, once', () => {
     expectTypeOf<ToolId>().toEqualTypeOf<(typeof TOOL_IDS)[number]>();
-    expectTypeOf<MissBucket>().toEqualTypeOf<(typeof MISS_BUCKETS)[number]>();
-    expectTypeOf<Cadence>().toEqualTypeOf<(typeof CADENCES)[number]>();
-    expectTypeOf<ServiceCategory>().toEqualTypeOf<(typeof SERVICE_CATEGORIES)[number]>();
     expectTypeOf<SubscriptionFlag>().toEqualTypeOf<(typeof SUBSCRIPTION_FLAGS)[number]>();
     expectTypeOf<SubscriptionFinding['confidence']>().toEqualTypeOf<(typeof SUBSCRIPTION_CONFIDENCES)[number]>();
     expectTypeOf<SubscriptionFinding['status']>().toEqualTypeOf<(typeof SUBSCRIPTION_STATUSES)[number]>();
     expectTypeOf<SubscriptionFinding['origin']>().toEqualTypeOf<(typeof SUBSCRIPTION_ORIGINS)[number]>();
-    expectTypeOf<BenchmarkLine>().toEqualTypeOf<(typeof BENCHMARK_LINES)[number]>();
-    expectTypeOf<Benchmark['position']>().toEqualTypeOf<(typeof BENCHMARK_POSITIONS)[number]>();
-    expectTypeOf<OverpayingResult['coverage']>().toEqualTypeOf<(typeof OVERPAYING_COVERAGES)[number]>();
-    expectTypeOf<OverpayingResult['skipped'][number]['reason']>().toEqualTypeOf<(typeof OVERPAYING_SKIP_REASONS)[number]>();
-    expectTypeOf<PayoffMethod>().toEqualTypeOf<(typeof PAYOFF_METHODS)[number]>();
     for (const list of [
-      TOOL_IDS, MISS_BUCKETS, CADENCES, SERVICE_CATEGORIES, SUBSCRIPTION_FLAGS, SUBSCRIPTION_CONFIDENCES,
-      SUBSCRIPTION_STATUSES, SUBSCRIPTION_ORIGINS, BENCHMARK_LINES, BENCHMARK_POSITIONS, OVERPAYING_COVERAGES,
-      OVERPAYING_SKIP_REASONS, PAYOFF_METHODS,
+      TOOL_IDS, SUBSCRIPTION_FLAGS, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_STATUSES, SUBSCRIPTION_ORIGINS,
     ] as readonly (readonly string[])[]) {
       expect(new Set(list).size).toBe(list.length);
     }
   });
 
-  it('names the three tools, the five miss buckets and the three cadences the issue lists', () => {
+  it('names the three tools and the months in each cadence the issue lists', () => {
     expect(TOOL_IDS).toEqual(['subscriptions', 'overpaying', 'payoff']);
-    expect(MISS_BUCKETS).toEqual(['under0.5', '0.5to0.8', '0.8to1.25', '1.25to2', 'over2']);
     expect(CADENCE_MONTHS).toEqual({ monthly: 1, quarterly: 3, yearly: 12 });
   });
 });
@@ -96,8 +90,6 @@ describe('KnownService (the catalogue entry)', () => {
   it.each([
     ['a lower-case matcher (merchantKey never produces one, so it could never match)', { ...service, matchers: ['netflix com'] }],
     ['a mixed-case matcher', { ...service, matchers: ['Netflix'] }],
-    ['the same matcher twice', { ...service, matchers: ['NETFLIX COM', 'NETFLIX COM'] }],
-    ['the same matcher twice among others', { ...service, matchers: ['NETFLIX', 'NETFLIX COM', 'NETFLIX'] }],
     ['two spaces in a row', { ...service, matchers: ['NETFLIX  COM'] }],
     ['a leading space', { ...service, matchers: [' NETFLIX'] }],
     ['a trailing space', { ...service, matchers: ['NETFLIX '] }],
@@ -113,14 +105,28 @@ describe('KnownService (the catalogue entry)', () => {
     ['a price of NaN', { ...service, plans: [{ ...plan, price: Number.NaN }] }],
     ['a price of Infinity', { ...service, plans: [{ ...plan, price: Number.POSITIVE_INFINITY }] }],
     ['a negative price', { ...service, plans: [{ ...plan, price: -1 }] }],
-    ['a price of zero', { ...service, plans: [{ ...plan, price: 0 }] }],
     ['an unknown cadence', { ...service, plans: [{ ...plan, cadence: 'weekly' }] }],
-    ['two plans with the same id', { ...service, plans: [plan, { ...plan, price: 22.99 }] }],
     ['no source', { ...service, source: undefined }],
     ['a price year that is not a year', { ...service, priceYear: 26 }],
     ['an id that is not a short string', { ...service, id: 'x'.repeat(101) }],
     ['no isEstimate flag', { ...service, isEstimate: undefined }],
   ])('refuses %s', (_why, value) => bad(KnownServiceSchema, value));
+});
+
+describe('ChargeDate (a day inside a statement)', () => {
+  it('takes a month and a day that month has, in leap years too', () => {
+    const days: ChargeDate[] = [{ month: '2026-11', day: 30 }, { month: '2026-12', day: 31 }, { month: '2028-02', day: 29 }, { month: '2026-01', day: 1 }];
+    for (const day of days) good(ChargeDateSchema, day);
+  });
+
+  it.each([
+    ['a day the month does not have', { month: '2026-11', day: 31 }],
+    ['February 29 in a year that is not a leap year', { month: '2026-02', day: 29 }],
+    ['day zero', { month: '2026-11', day: 0 }],
+    ['a fractional day', { month: '2026-11', day: 7.5 }],
+    ['a month 13', { month: '2026-13', day: 1 }],
+    ['a month without its zero', { month: '2026-1', day: 1 }],
+  ])('refuses %s', (_why, value) => bad(ChargeDateSchema, value));
 });
 
 describe('SubscriptionFinding and SubscriptionAudit', () => {
@@ -304,7 +310,7 @@ describe('SubscriptionFinding and SubscriptionAudit', () => {
       });
     });
 
-    it('holds at most SUBSCRIPTION_FINDINGS_MAX findings, which is also the largest count an event can name', () => {
+    it('holds at most SUBSCRIPTION_FINDINGS_MAX findings, and an audit that full can be counted in one event', () => {
       // n copies of Netflix under different ids: n × 17.99 a month and n × 215.88 a year.
       const many = (n: number): SubscriptionAudit => ({
         findings: Array.from({ length: n }, (_, i) => ({ ...netflix, id: `service-${i}` })),
@@ -314,7 +320,8 @@ describe('SubscriptionFinding and SubscriptionAudit', () => {
       expect(atCap.findings).toHaveLength(SUBSCRIPTION_FINDINGS_MAX);
       good(SubscriptionAuditSchema, atCap);
       bad(SubscriptionAuditSchema, many(SUBSCRIPTION_FINDINGS_MAX + 1));
-      // The audit's whole finding list can be flagged, or marked to cancel, in one event.
+      // The audit's whole finding list can be flagged, or marked to cancel, in one event (main's cap is 5000).
+      expect(SUBSCRIPTION_FINDINGS_MAX).toBeLessThanOrEqual(EVENT_COUNT_MAX);
       const eventId = '6b1d4c55-0b7e-4a4e-9a51-0c4b1f2f9d10';
       for (const name of ['subs_flagged', 'subs_cancel_marked']) {
         good(ClientEventEnvelopeSchema, { id: eventId, name, props: { count: atCap.findings.length } });
@@ -354,13 +361,6 @@ describe('Benchmark and OverpayingResult', () => {
     ['a range that is not low ≤ mid ≤ high', { ...rent, typical: { low: 1_900, mid: 1_760, high: 1_940 } }],
     ['a line that is not one of the four', { ...rent, line: 'phone' }],
     ['a position that is not one of the three', { ...rent, position: 'over' }],
-    ['"inRange" for an amount above the range', { ...rent, position: 'inRange', gapPerMonth: 0, gapPerYear: 0 }],
-    ['"above" for an amount inside the range', { ...insurance, position: 'above' }],
-    ['"below" for an amount inside the range', { ...insurance, position: 'below' }],
-    ['a gap of zero on a line above the range', { ...rent, gapPerMonth: 0, gapPerYear: 0 }],
-    ['a gap that is not yours − high', { ...rent, gapPerMonth: 400, gapPerYear: 4_800 }],
-    ['a gap on a line inside the range', { ...insurance, gapPerMonth: 10, gapPerYear: 120 }],
-    ['a yearly gap that is not twelve monthly ones', { ...rent, gapPerYear: 210 }],
     ['a negative gap', { ...rent, gapPerMonth: -210, gapPerYear: -2_520 }],
     ['no source', { ...rent, source: undefined }],
     ['no isEstimate flag', { ...rent, isEstimate: undefined }],
@@ -381,12 +381,7 @@ describe('Benchmark and OverpayingResult', () => {
 
   it.each([
     ['a coverage that is not one of the three', { ...result, coverage: 'national' }],
-    ['a metro result that names no metro', { ...result, coverage: 'metro' }],
-    ['lines when there is no coverage', { ...result, coverage: 'none' }],
-    ['the same line twice', { ...result, lines: [rent, rent], skipped: [] }],
-    ['a line that is both compared and skipped', { ...result, skipped: [{ line: 'rent', reason: 'noData' }] }],
     ['a skip reason that is not one of the two', { ...result, skipped: [{ line: 'groceries', reason: 'tooHard' }] }],
-    ['more than four lines', { ...result, lines: [rent, insurance, rent, insurance, rent] }],
     ['lines that is not a list', { ...result, lines: rent }],
   ])('refuses %s', (_why, value) => bad(OverpayingResultSchema, value));
 });
@@ -427,20 +422,23 @@ describe('PayoffPlan and PayoffComparison', () => {
     ['negative total interest', { ...plan, totalInterest: -1 }],
     ['negative total paid', { ...plan, totalPaid: -400 }],
     ['a negative balance in the timeline', { ...plan, timeline: [{ month: 0, balance: -1 }] }],
-    ['a timeline that does not start at month 0', { ...plan, timeline: [{ month: 1, balance: 400 }, { month: 2, balance: 300 }] }],
-    ['a timeline with a gap between months', { ...plan, timeline: [{ month: 0, balance: 400 }, { month: 2, balance: 200 }] }],
-    ['an empty timeline', { ...plan, timeline: [] }],
     ['a timeline longer than the simulation cap', {
       ...plan, timeline: Array.from({ length: 1_202 }, (_, month) => ({ month, balance: 0 })),
     }],
-    ['a debt listed twice in the order', { ...plan, order: ['card-1', 'card-1'] }],
-    ['a debt listed twice in perDebt', { ...plan, perDebt: [plan.perDebt[0]!, plan.perDebt[0]!] }],
     ['a debt with a payoff month below zero', { ...plan, perDebt: [{ id: 'card-1', payoffMonth: -1, interest: 0 }] }],
     ['a debt with NaN interest', { ...plan, perDebt: [{ id: 'card-1', payoffMonth: 4, interest: Number.NaN }] }],
     ['an interest saving of NaN', { ...plan, interestSavedVsMinimum: Number.NaN }],
-    ['months saved below zero', { ...plan, monthsSavedVsMinimum: -2 }],
-    ['an id that is not a short string', { ...plan, order: ['x'.repeat(101)] }],
   ])('refuses %s', (_why, value) => bad(PayoffPlanSchema, value));
+
+  it('takes a negative number of months saved against the minimum plan: snowball can finish later than the input-order minimum', () => {
+    // Main's engine really does this (a 5-debt set at extra 0 gave -165 months), and a month count is a whole number of either sign.
+    for (const monthsSavedVsMinimum of [-165, -1, 0, 4]) good(PayoffPlanSchema, { ...plan, monthsSavedVsMinimum });
+    good(PayoffPlanSchema, { ...plan, monthsSavedVsMinimum: null });
+    bad(PayoffPlanSchema, { ...plan, monthsSavedVsMinimum: 1.5 });
+    bad(PayoffPlanSchema, { ...plan, monthsSavedVsMinimum: Number.NaN });
+    // The same for the money saved: a plan can cost more interest than the minimum plan.
+    good(PayoffPlanSchema, { ...plan, interestSavedVsMinimum: -250 });
+  });
 
   it('PayoffComparison holds one plan per method and a non-negative extra payment', () => {
     const comparison: PayoffComparison = {
@@ -453,7 +451,6 @@ describe('PayoffPlan and PayoffComparison', () => {
     good(PayoffComparisonSchema, { ...comparison, extra: 0 });
     bad(PayoffComparisonSchema, { ...comparison, extra: -1 });
     bad(PayoffComparisonSchema, { ...comparison, extra: Number.NaN });
-    bad(PayoffComparisonSchema, { ...comparison, snowball: plan });                 // a plan under the wrong key
     bad(PayoffComparisonSchema, { ...comparison, minimum: undefined });
   });
 });
@@ -495,19 +492,13 @@ describe('the micro-tool funnel events', () => {
     'renewals_exported', 'overpaying_checked', 'payoff_planned',
   ] as const;
 
-  it('adds the eight names to the client list, after the old ones, and to none of the server or funnel-step lists', () => {
+  it('lists the eight names as client events, and in none of the server or funnel-step lists', () => {
     for (const name of NEW_EVENTS) {
       expect(CLIENT_EVENT_NAMES).toContain(name);
       expect(FUNNEL_EVENT_NAMES).toContain(name);
       expect(SERVER_EVENT_NAMES).not.toContain(name);
       expect(FUNNEL_STEPS).not.toContain(name);
     }
-    expect(CLIENT_EVENT_NAMES.slice(0, 15)).toEqual([
-      'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared', 'own_guess_submitted',
-      'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited', 'statement_applied', 'forecast_viewed',
-      'move_committed', 'afford_checked', 'loan_compared', 'paywall_viewed',
-    ]);
-    expect(CLIENT_EVENT_NAMES.slice(15)).toEqual([...NEW_EVENTS]);
     expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(31);   // one bit each in the Postgres funnel query
   });
 
@@ -522,8 +513,7 @@ describe('the micro-tool funnel events', () => {
     expectTypeOf<Extract<ClientFunnelEvent, { name: 'tool_opened' }>['props']>().toEqualTypeOf<{ tool: ToolId }>();
     expectTypeOf<Extract<ClientFunnelEvent, { name: 'subs_started' }>['props']>().toEqualTypeOf<{ path: 'tickList' | 'statement' }>();
     expectTypeOf<Extract<ClientFunnelEvent, { name: 'subs_revealed' }>['props']>().toEqualTypeOf<{ miss: MissBucket }>();
-    expectTypeOf<Extract<ClientFunnelEvent, { name: 'subs_flagged' }>['props']>().toEqualTypeOf<{ count: number }>();
-    expectTypeOf<Extract<ClientFunnelEvent, { name: 'subs_cancel_marked' }>['props']>().toEqualTypeOf<{ count: number }>();
+    expectTypeOf<Extract<ClientFunnelEvent, { name: 'subs_flagged' | 'subs_cancel_marked' }>['props']>().toEqualTypeOf<{ count: number }>();
     expectTypeOf<Extract<ClientFunnelEvent, { name: 'overpaying_checked' }>['props']>().toEqualTypeOf<{ lines: number; above: number }>();
     expectTypeOf<Extract<ClientFunnelEvent, { name: 'payoff_planned' }>['props']>().toEqualTypeOf<{ method: 'avalanche' | 'snowball' }>();
     expectTypeOf<Extract<ClientFunnelEvent, { name: 'renewals_exported' }>>().toEqualTypeOf<{ name: 'renewals_exported' }>();
@@ -553,13 +543,14 @@ describe('the micro-tool funnel events', () => {
     good(EventsRequestSchema, { anonId, events });
   });
 
-  it('lets subs_flagged and subs_cancel_marked count as many findings as an audit may hold, and not one more', () => {
-    // One finding more than an event may count would make the whole POST /api/events batch a 400, and the
-    // browser drops a batch it gets a 400 for. So the two caps are one constant.
-    expect(EVENT_COUNT_MAX).toBe(SUBSCRIPTION_FINDINGS_MAX);
+  it('lets subs_flagged and subs_cancel_marked count up to the cap, which is above what an audit can hold', () => {
+    // An event over its cap would make the whole POST /api/events batch a 400, and the browser drops a batch it
+    // gets a 400 for. So the cap of the event must not be below the most findings an audit may hold.
+    expect(SUBSCRIPTION_FINDINGS_MAX).toBeLessThanOrEqual(EVENT_COUNT_MAX);
     for (const name of ['subs_flagged', 'subs_cancel_marked'] as const) {
+      good(ClientEventEnvelopeSchema, { id, name, props: { count: EVENT_COUNT_MAX } });
       good(ClientEventEnvelopeSchema, { id, name, props: { count: SUBSCRIPTION_FINDINGS_MAX } });
-      bad(ClientEventEnvelopeSchema, { id, name, props: { count: SUBSCRIPTION_FINDINGS_MAX + 1 } });
+      bad(ClientEventEnvelopeSchema, { id, name, props: { count: EVENT_COUNT_MAX + 1 } });
     }
     good(EventsRequestSchema, {
       anonId, events: [{ id, name: 'play_started' }, { id, name: 'subs_flagged', props: { count: SUBSCRIPTION_FINDINGS_MAX } }],
@@ -584,16 +575,8 @@ describe('the micro-tool funnel events', () => {
     ['a miss that is a number, not a bucket', { id, name: 'subs_revealed', props: { miss: 2.5 } }],
     ['a miss bucket that does not exist', { id, name: 'subs_revealed', props: { miss: '0.8to1.2' } }],
     ['the "minimum" method, which is not a plan the user picks', { id, name: 'payoff_planned', props: { method: 'minimum' } }],
-    ['more lines above the range than lines checked', { id, name: 'overpaying_checked', props: { lines: 2, above: 3 } }],
     ['more than four lines', { id, name: 'overpaying_checked', props: { lines: 5, above: 0 } }],
     ['an amount as the number of lines', { id, name: 'overpaying_checked', props: { lines: 2_150, above: 1 } }],
     ['an id that is not a UUID', { id: 'abc', name: 'renewals_exported' }],
   ])('refuses %s', (_why, event) => bad(ClientEventEnvelopeSchema, event));
-
-  it('MissBucketSchema and ToolIdSchema take exactly their lists', () => {
-    for (const bucket of MISS_BUCKETS) good(MissBucketSchema, bucket);
-    for (const tool of TOOL_IDS) good(ToolIdSchema, tool);
-    bad(MissBucketSchema, '1.25to2.5');
-    bad(ToolIdSchema, 'runway');
-  });
 });
