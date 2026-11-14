@@ -14,6 +14,7 @@ export const kitShowcase = {
     chart: 'ForecastChart',
     breakdown: 'BarBreakdown',
     layout: 'Stack / Row',
+    houseScene: 'HouseScene',
   },
   buttons: { primary: 'Primary', secondary: 'Secondary', ghost: 'Ghost', small: 'Small', large: 'Large', disabled: 'Disabled', full: 'Full width' },
   stats: {
@@ -71,4 +72,9 @@ export const kitShowcase = {
     insurance: 'Car insurance',
   },
   layout: { a: 'One', b: 'Two', c: 'Three' },
+  houseScene: {
+    hint: 'A fixture card through the engine’s sceneOf. Tap a room: it opens at once here (the game asks the server).',
+    badge: 'Tap',
+    closed: 'Tap to look',
+  },
 } as const;

@@ -11,6 +11,42 @@ import globals from 'globals';
 // next/*, other features) is an error.
 const UI_ALLOWED_IMPORT = String.raw`react|react/.+|@/ui-kit|@/ui-kit/.+|@/copy|\.\./model/types|\./[^/]+`;
 
+// The browser-code import rules below don't apply to server routes, server-only modules and tests.
+const BROWSER_RULE_IGNORES = ['apps/web/app/api/**', 'apps/web/src/server/**', 'apps/web/**/*.test.{ts,tsx}', 'apps/web/e2e/**'];
+
+const CATALOG_RESTRICTION = {
+  name: '@lifeguessr/data/cards',
+  message: 'Life cards hold the answers: load them only in server routes (app/api/**) and tests.',
+};
+
+// The browser modules that may load the sample cards (packages/data/fixtures/cards.ts):
+// - the fixture game client, which plays them (an API build has no chunk for it);
+// - S6 Closest life and the ladder progress, which show them openly as "sample lives" when today's
+//   game wasn't played. They are not the API game's answers: the API plays the catalog
+//   (packages/data/cards), which shares no card with the samples;
+// - the /kit showcase (one sample card for the house scene demo);
+// - apps/web/src/fixtures/cards.ts, the re-export they import.
+const SAMPLE_CARD_MODULES = [
+  'apps/web/src/features/game/model/fixtureClient.ts',
+  'apps/web/src/features/ladder/model/useClosestLife.ts',
+  'apps/web/src/features/ladder/model/useLadderProgress.ts',
+  'apps/web/app/kit/samples.ts',
+  'apps/web/src/fixtures/cards.ts', // the re-export itself
+];
+
+const SAMPLE_CARD_MESSAGE =
+  "The sample cards are the fixture game's answers: browser code may load them only in SAMPLE_CARD_MODULES (eslint.config.mjs).";
+const SAMPLE_CARD_RESTRICTIONS = [
+  { name: '@/fixtures/cards', message: SAMPLE_CARD_MESSAGE },
+  { name: '@lifeguessr/data/fixtures/cards', message: SAMPLE_CARD_MESSAGE },
+];
+
+const FIXTURE_CLIENT_RESTRICTION = {
+  regex: '(^|/)fixtureClient$',
+  message:
+    'The fixture game client holds the answers: only features/game/model/client.ts loads it, with a dynamic import() that an API build drops. Tests may import it.',
+};
+
 export default defineConfig([
   globalIgnores([
     '**/node_modules/**',
@@ -43,6 +79,29 @@ export default defineConfig([
   {
     files: ['scripts/**/*.mjs', '**/*.config.{js,mjs,ts}'],
     languageOptions: { globals: globals.node },
+  },
+
+  // The life-card catalog holds the game's answers: only server routes (app/api), server-only
+  // modules (src/server, which the browser never imports) and tests may load it, so it can never
+  // end up in a browser bundle. The sample cards are the fixture game's answers: browser code may
+  // load them only in SAMPLE_CARD_MODULES, and the fixture game client only through the dynamic
+  // import() in features/game/model/client.ts, which an API build drops (CI checks the built
+  // chunks: apps/web/scripts/check-client-bundle.mjs). (features/*/ui below is stricter still.)
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    ignores: [...BROWSER_RULE_IGNORES, ...SAMPLE_CARD_MODULES],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { paths: [CATALOG_RESTRICTION, ...SAMPLE_CARD_RESTRICTIONS], patterns: [FIXTURE_CLIENT_RESTRICTION] },
+      ],
+    },
+  },
+  {
+    files: SAMPLE_CARD_MODULES,
+    rules: {
+      'no-restricted-imports': ['error', { paths: [CATALOG_RESTRICTION], patterns: [FIXTURE_CLIENT_RESTRICTION] }],
+    },
   },
 
   // Presentational UI: the import rule.

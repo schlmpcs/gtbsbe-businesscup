@@ -1,5 +1,8 @@
-import type { Move } from '@lifeguessr/types';
+import { loan } from '@lifeguessr/engine';
+import type { ExplainRequest, Move, Profile } from '@lifeguessr/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cloneProfileDemo } from '@/fixtures';
+import { ExplainRequestSchema } from '@/server/ai/schemas';
 import { explainResult } from './aiExplain';
 import { ApiError } from './http';
 
@@ -9,6 +12,12 @@ const move: Move = {
   id: 'payCardFirst:card-1', kind: 'payCardFirst', level: 1, effect10y: 4321.5,
   patch: { debts: [{ id: 'card-1', extraPayment: 250 }] },
 };
+
+/** The demo profile with other debts and take-home pay. */
+function profileWith(debts: Profile['debts'], takeHome: number): Profile {
+  const p = cloneProfileDemo();
+  return { ...p, debts, takeHomePay: { value: takeHome, isEstimate: false } };
+}
 
 function stubFetch(status: number, body: unknown) {
   const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify(body), { status }));
@@ -36,6 +45,25 @@ describe('explainResult', () => {
       } as never,
     });
     expect(JSON.parse(fetchMock.mock.calls[0]![1].body as string).loanResult.schedule).toBeUndefined();
+  });
+
+  it('sends a debt load with no take-home pay (the engine’s Infinity) as null, not as a number', async () => {
+    const fetchMock = stubFetch(200, { text: 'One. Two.', source: 'template' });
+    const noPay = loan(profileWith([], 0), { amount: 12_000, apr: 0.09, termMonths: 36 });
+    expect(noPay.debtLoadAfter).toBe(Number.POSITIVE_INFINITY);
+    await explainResult({ loanResult: noPay });
+    const sent = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as ExplainRequest;
+    expect(sent.loanResult).toMatchObject({ debtLoadBefore: 0, debtLoadAfter: null, monthly: noPay.monthly });
+    // …and the server accepts exactly that body.
+    expect(ExplainRequestSchema.safeParse(sent).success).toBe(true);
+    expect(ExplainRequestSchema.safeParse(JSON.parse(JSON.stringify({ loanResult: { ...noPay, schedule: undefined } }))).success)
+      .toBe(true);
+  });
+
+  it('refuses a debt load that is not a number at all', async () => {
+    stubFetch(200, { text: 'One. Two.', source: 'template' });
+    const base = loan(profileWith([], 5_200), { amount: 12_000, apr: 0.09, termMonths: 36 });
+    await expect(explainResult({ loanResult: { ...base, debtLoadAfter: Number.NaN } })).rejects.toBeInstanceOf(RangeError);
   });
 
   it('throws an ApiError on a 429 and on a broken body', async () => {

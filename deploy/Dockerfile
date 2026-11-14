@@ -32,8 +32,10 @@ COPY packages packages
 # .env.example. None of them is a secret.
 ARG NEXT_PUBLIC_GAME_SOURCE=fixtures
 ARG NEXT_PUBLIC_SESSION_SOURCE=local
+ARG NEXT_PUBLIC_EVENTS_SOURCE=off
 ENV NEXT_PUBLIC_GAME_SOURCE=$NEXT_PUBLIC_GAME_SOURCE \
-    NEXT_PUBLIC_SESSION_SOURCE=$NEXT_PUBLIC_SESSION_SOURCE
+    NEXT_PUBLIC_SESSION_SOURCE=$NEXT_PUBLIC_SESSION_SOURCE \
+    NEXT_PUBLIC_EVENTS_SOURCE=$NEXT_PUBLIC_EVENTS_SOURCE
 # `public/` is optional in Next; the runner stage copies it, so make sure it exists.
 RUN mkdir -p apps/web/public && pnpm --filter web build
 
@@ -47,7 +49,8 @@ ENV NODE_ENV=production \
     PRO_DATA_DIR=/data/pro
 
 # A new named volume takes the owner of the image's directory, so creating /data for the app user
-# here is what makes it writable (the self-hosted store lives there, T4/T5).
+# here is what makes it writable. It holds the Pro entitlement file of the pre-store builds (and
+# the file store when STORE_URL is unset); sessions and the rest live in the postgres service.
 RUN mkdir -p /data && chown node:node /data
 
 # `.next/standalone` is the server plus the node_modules it needs. It leaves out `.next/static`

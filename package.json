@@ -17,6 +17,7 @@
     "e2e": "pnpm --filter web e2e",
     "tokens": "node scripts/tokens.mjs",
     "tokens:check": "node scripts/tokens.mjs --check",
+    "check:bundle": "node scripts/check-client-bundle.mjs",
     "data:refresh": "pnpm --filter @lifeguessr/data refresh"
   },
   "devDependencies": {

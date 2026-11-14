@@ -17,10 +17,12 @@ export function SummaryView({ summary, shareStatus, onShare, guessOwnHref, large
   const shareTextId = useId();
   const fmt = (n: number) => n.toLocaleString('en-US');
   return (
-    <div className="flex flex-col gap-lg">
-      <Card>
+    <div className="grid grid-cols-1 gap-xl lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start">
+      <Card className={cx('text-text', large && 'ring-4 ring-on-primary')}>
         <div className="flex flex-col gap-lg">
-          <h2 className={cx('font-bold leading-tight', large ? 'text-4xl' : 'text-2xl')}>{t.summary.heading}</h2>
+          <h2 className={cx('font-display font-extrabold leading-tight', large ? 'text-display' : 'text-4xl')}>
+            {t.summary.heading}
+          </h2>
           <ul aria-label={t.summary.gridLabel} className="flex flex-wrap gap-sm">
             {summary.tiles.map((tile, i) => (
               <li key={tile.cardId} className={cx(large ? 'text-display' : 'text-4xl', 'leading-none')}>
@@ -70,13 +72,12 @@ export function SummaryView({ summary, shareStatus, onShare, guessOwnHref, large
         </div>
       </Card>
 
-      <Card tone="muted">
+      <Card tone="arena" className="lg:rotate-1">
         <div className="flex flex-col gap-md">
-          <p className={cx('font-semibold', large ? 'text-3xl' : 'text-xl')}>
+          <p className={cx('font-display font-extrabold leading-tight', large ? 'text-4xl' : 'text-3xl')}>
             {t.summary.bridge(summary.guessedLow, summary.played)}
           </p>
-          <p className="text-sm text-text-muted">{t.summary.bridgeDetail(summary.inRange, summary.guessedHigh)}</p>
-          <a href={guessOwnHref} className={buttonClassName({ size: 'lg', fullWidth: true })}>
+          <a href={guessOwnHref} className={buttonClassName({ variant: 'dark', size: 'lg', fullWidth: true })}>
             {t.summary.cta}
           </a>
         </div>

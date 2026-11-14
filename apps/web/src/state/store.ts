@@ -113,12 +113,22 @@ const persistedFields = {
   committedMove: MoveSchema.nullable(),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
+/** No real household spends this much a month in one category; above it the saved data is broken. */
+export const MONTHLY_SPENDING_SANITY_CAP = 1_000_000;
+
+function hasAbsurdSpending(profile: AppState['profile']): boolean {
+  return Object.values(profile.spending).some((e) => !Number.isFinite(e.value) || e.value > MONTHLY_SPENDING_SANITY_CAP);
+}
+
 function mergePersisted(saved: unknown, current: AppState): AppState {
   if (!saved || typeof saved !== 'object') return current;
   const next = { ...current } as Record<string, unknown>;
   for (const [key, schema] of Object.entries(persistedFields)) {
     const parsed = (schema as z.ZodType).safeParse((saved as Record<string, unknown>)[key]);
-    if (parsed.success) next[key] = parsed.data;
+    if (!parsed.success) continue;
+    // A saved profile with an absurd monthly amount (left by the old runaway slider) is dropped.
+    if (key === 'profile' && hasAbsurdSpending(parsed.data as AppState['profile'])) continue;
+    next[key] = parsed.data;
   }
   return next as AppState;
 }
