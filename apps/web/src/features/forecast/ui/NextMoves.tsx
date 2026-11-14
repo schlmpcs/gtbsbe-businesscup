@@ -1,7 +1,7 @@
 // Next Moves (S10): the top 3 moves with their 10-year effect, commit / done, "Why?", and the
 // level 2 preview. Presentational: everything comes from the view-model.
 import { forecast as t } from '@/copy';
-import { Button, Card, formatMoney, Stack } from '@/ui-kit';
+import { Button, Card, cx, formatMoney, Stack, Sticker } from '@/ui-kit';
 import type { ExplanationVM, Loadable, MoveVM, NextMovesVM } from '../model/types';
 import { ErrorNote, moveDetail, moveTitle, Skeleton, SourceTag } from './shared';
 
@@ -20,7 +20,7 @@ export function NextMoves({ vm, explanations, onExplain, loading = false }: Next
   else if (vm.moves.data.length === 0) body = <p className="text-sm text-text-muted">{m.empty}</p>;
   else {
     body = (
-      <ol className="flex flex-col gap-md" data-testid="moves">
+      <ol className="grid items-start gap-lg md:grid-cols-2 lg:grid-cols-3" data-testid="moves">
         {vm.moves.data.map((move, i) => (
           <MoveItem
             key={move.id}
@@ -39,12 +39,12 @@ export function NextMoves({ vm, explanations, onExplain, loading = false }: Next
   }
 
   return (
-    <section aria-labelledby="moves-heading" className="flex flex-col gap-md">
+    <section aria-labelledby="moves-heading" className="flex flex-col gap-lg">
       <div>
-        <h2 id="moves-heading" className="text-2xl font-semibold leading-tight">
+        <h2 id="moves-heading" className="text-4xl font-extrabold leading-tight">
           {m.heading}
         </h2>
-        <p className="mt-xs text-sm text-text-muted">{m.intro}</p>
+        <p className="mt-xs text-text-muted">{m.intro}</p>
         {!loading && vm.doneCount > 0 && <p className="mt-xs text-sm text-positive">{m.doneCount(vm.doneCount)}</p>}
       </div>
       {body}
@@ -83,32 +83,29 @@ function MoveItem({
         aria-labelledby={headingId}
         data-move-id={move.id}
         data-committed={move.isCommitted ? 'true' : 'false'}
-        className={move.isCommitted ? 'border-2 border-primary' : undefined}
+        className={cx('h-full border-2', move.isCommitted ? 'border-positive' : 'border-transparent')}
       >
         <Stack gap="sm">
-          <div className="flex items-start gap-md">
-            <span
-              aria-hidden="true"
-              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-strong text-sm font-semibold"
-            >
-              {rank}
-            </span>
-            <div className="min-w-0 flex-1">
-              <h3 id={headingId} className="font-semibold leading-tight">
-                {title}
-              </h3>
-              {detail && <p className="mt-xs text-sm text-text-muted">{detail}</p>}
-            </div>
+          <div className="flex items-center gap-sm">
+            <Sticker tone={move.isCommitted ? 'positive' : 'ink'}>
+              <span aria-hidden="true">{m.rank(rank)}</span>
+            </Sticker>
+            <h3 id={headingId} className="min-w-0 flex-1 text-lg font-bold leading-tight">
+              {title}
+            </h3>
           </div>
 
           <div>
-            <p className="text-2xl font-semibold text-positive tabular-nums">{formatMoney(move.effect10y, { signed: true })}</p>
+            <p className="font-display text-5xl font-extrabold leading-tight text-positive tabular-nums">
+              {formatMoney(move.effect10y, { signed: true })}
+            </p>
             <p className="text-xs text-text-muted">{m.effectLabel}</p>
             <SourceTag source={move.source} className="mt-xs" />
           </div>
+          {detail && <p className="text-sm text-text-muted">{detail}</p>}
 
           {move.isCommitted && (
-            <p className="self-start rounded-full bg-primary px-md py-xs text-xs font-semibold text-on-primary" data-testid="committed-badge">
+            <p className="self-start rounded-full bg-positive-soft px-md py-xs text-xs font-bold text-positive" data-testid="committed-badge">
               {m.committed}
             </p>
           )}
@@ -119,11 +116,11 @@ function MoveItem({
                 {m.uncommit}
               </Button>
             ) : (
-              <Button size="sm" onClick={onCommit} disabled={actionsDisabled}>
+              <Button size="sm" variant={rank === 1 ? 'primary' : 'secondary'} onClick={onCommit} disabled={actionsDisabled}>
                 {m.commit}
               </Button>
             )}
-            <Button size="sm" variant="secondary" onClick={onDone} disabled={actionsDisabled}>
+            <Button size="sm" variant="ghost" onClick={onDone} disabled={actionsDisabled}>
               {m.markDone}
             </Button>
             {explanation?.status !== 'ready' && explanation?.status !== 'error' && (

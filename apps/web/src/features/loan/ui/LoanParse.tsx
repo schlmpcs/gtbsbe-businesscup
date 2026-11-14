@@ -69,7 +69,7 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
           }}
           className="flex flex-col gap-sm"
         >
-          <label htmlFor={inputId} className="text-sm font-medium">
+          <label htmlFor={inputId} className="sr-only">
             {t.parse.label}
           </label>
           <textarea
@@ -92,9 +92,7 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
           {parse.status === 'confirming' && parse.parsed && (
             <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-md border border-border bg-bg p-lg">
               <h3 className="text-base font-semibold">{t.parse.confirmTitle}</h3>
-              <p className="text-xs text-text-muted">{t.parse.confirmNote}</p>
               <ParsedLoan input={parse.parsed} inferred={parse.inferred} />
-              {parse.inferred.length > 0 && <p className="text-xs text-text-muted">{t.parse.inferredNote}</p>}
               <Row>
                 <Button onClick={parse.confirm}>{canAddOffer ? t.parse.confirmAdd : t.parse.confirmReplace}</Button>
                 <Button variant="ghost" onClick={parse.cancel}>

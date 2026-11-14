@@ -1,10 +1,12 @@
 # The runtime half: what runs on the team server. deploy/deploy.sh copies this file to
 # $LIFEGUESSR_DIR/compose.yaml (default ~/lifeguessr) on the server, builds the image there, then
-# starts it. The image is built by deploy.sh, never pulled.
+# starts it. The app image is built by deploy.sh, never pulled.
 #
 # No reverse proxy: Tailscale Funnel terminates HTTPS on the host and proxies `/` to
 # 127.0.0.1:3000, and the port is published on loopback only, so Funnel is the one way in.
 # Secrets and per-server values live in the server's .env beside this file, never in the repo.
+# Compose reads that .env for the ${…} values below; a required one that is missing stops
+# `docker compose` with the message after `:?` (remote.sh validates the file before building).
 name: lifeguessr
 
 x-logging: &logging
@@ -21,11 +23,21 @@ services:
     restart: unless-stopped
     logging: *logging
     env_file: .env
+    environment:
+      # Built from STORE_PASSWORD so the password lives in one place. It overrides any STORE_URL
+      # in .env: in production the store is always the postgres service below.
+      STORE_URL: "postgres://lifeguessr:${STORE_PASSWORD:?set STORE_PASSWORD in .env (openssl rand -hex 32), see deploy/README.md}@postgres:5432/lifeguessr"
     volumes:
+      # Holds the Pro entitlement file of the pre-store build (imported into Postgres on first use).
       - app-data:/data
     # Loopback only: Funnel is the one way in from outside.
     ports:
       - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Liveness only: /api/health answers 200 while the app serves requests, even when the store is
+    # down (see apps/web/app/api/health/route.ts). remote.sh checks the store separately on deploy.
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 30s
@@ -39,5 +51,45 @@ services:
     cap_drop:
       - ALL
 
+  # The store for sessions, Pro entitlements and (T5/T8) the game and events. Reachable only on
+  # this compose project's network: no `ports:`, so nothing outside the app can connect to it.
+  # Its data lives in the named volume `pgdata`, which `docker compose up` never recreates; only
+  # `docker compose down -v` or `docker volume rm` would delete it, and nothing here runs those.
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_USER: lifeguessr
+      POSTGRES_DB: lifeguessr
+      # Read only when the volume is first initialised. Changing it later needs ALTER ROLE as well
+      # (deploy/README.md → The store).
+      POSTGRES_PASSWORD: "${STORE_PASSWORD:?set STORE_PASSWORD in .env (openssl rand -hex 32), see deploy/README.md}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifeguessr -d lifeguessr -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    # Postgres needs more than Docker's default 64 MB of shared memory for some query plans.
+    shm_size: 128m
+    mem_limit: 512m
+    # Fast shutdown (the image's SIGINT) can take a moment to checkpoint; don't SIGKILL mid-way.
+    stop_grace_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    # The entrypoint starts as root to own the data directory, then drops to the postgres user.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+
 volumes:
   app-data:
+  pgdata:

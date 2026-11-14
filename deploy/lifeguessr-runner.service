@@ -1,0 +1,23 @@
+# systemd user unit for the self-hosted GitHub Actions runner (deploy/README.md).
+# Install as the runner user: ~/.config/systemd/user/lifeguessr-runner.service, then
+#   systemctl --user daemon-reload && systemctl --user enable --now lifeguessr-runner.service
+# (the user needs `loginctl enable-linger <user>` so it runs without a login session).
+[Unit]
+Description=GitHub Actions runner (LifeGuessr deploy)
+After=network-online.target
+
+[Service]
+ExecStart=%h/actions-runner/run.sh
+WorkingDirectory=%h/actions-runner
+# run.sh exits 0 on a terminal error (a bad registration, a wrong clock) and only restarts the
+# listener itself for transient ones, so `on-failure` restarts crashes and stops on a terminal
+# error. `Restart=always` would retry a hopeless error every few seconds.
+Restart=on-failure
+RestartSec=10
+StartLimitIntervalSec=300
+StartLimitBurst=5
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+
+[Install]
+WantedBy=default.target

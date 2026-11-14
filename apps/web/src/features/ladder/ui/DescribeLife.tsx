@@ -44,7 +44,7 @@ export function DescribeLife({ parse, rows }: DescribeLifeProps) {
             parse.submit();
           }}
         >
-          <label htmlFor={textId} className="text-sm font-medium">
+          <label htmlFor={textId} className="sr-only">
             {t.label}
           </label>
           <textarea
@@ -87,7 +87,6 @@ export function DescribeLife({ parse, rows }: DescribeLifeProps) {
         {parse.status === 'confirming' && (
           <section aria-label={t.confirmTitle} className="flex flex-col gap-md rounded-md bg-surface p-md">
             <h3 className="text-base font-semibold">{t.confirmTitle}</h3>
-            <p className="text-sm text-text-muted">{t.confirmNote}</p>
             <ul className="flex flex-col gap-sm">
               {rows.map((row) => (
                 <li

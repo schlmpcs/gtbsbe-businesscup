@@ -1,7 +1,7 @@
 'use client';
 
 import { afford as t } from '@/copy';
-import { Card, cx, ForecastChart, formatRate, Money, Stack, Stat } from '@/ui-kit';
+import { Art, Card, cx, ForecastChart, formatRate, Money, Scoreboard, Stack, Sticker } from '@/ui-kit';
 import type { AffordResultVM, AffordRulesVM, AffordVM, PayWithChoice, VMError } from '../model/types';
 import { Skeleton } from './controls';
 
@@ -26,6 +26,8 @@ function errorText(error: VMError): string {
   return error.kind === 'notImplemented' ? t.result.errors.notImplemented : t.result.errors.other;
 }
 
+const STICKER_TONE = { fits: 'positive', wait: 'primary', no: 'primary' } as const;
+
 /** Headline verdict plus the plain-language reason; never blames the purchase for a plan that already breaks a rule. */
 function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }) {
   const headline =
@@ -35,35 +37,66 @@ function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }
         ? t.result.verdicts.wait(data.waitMonths ?? 0)
         : t.result.verdicts.no;
   const reason = data.failsOn ? failsOnText(data.failsOn, rules) : null;
+  const body = 'text-lg text-text-muted';
 
   return (
-    <Stack gap="sm">
-      <p data-testid="afford-verdict" data-verdict={data.verdict} className={cx('text-3xl font-semibold leading-tight', VERDICT_TONE[data.verdict])}>
+    <Stack gap="md">
+      <p
+        data-testid="afford-verdict"
+        data-verdict={data.verdict}
+        className={cx('font-display text-4xl font-extrabold leading-display sm:text-display', VERDICT_TONE[data.verdict])}
+      >
         {headline}
       </p>
-      {data.verdict === 'fits' && <p className="text-sm">{t.result.fitsBody}</p>}
       {data.verdict === 'fits' && data.baselineFails && (
-        <p role="note" className="rounded-md bg-surface p-md text-sm">
+        <p role="note" className="rounded-lg bg-surface-strong p-md text-sm">
           {t.result.baseline.fits}
         </p>
       )}
 
       {data.verdict === 'wait' && (
         <>
-          {data.baselineFails ? <p className="text-sm">{t.result.baseline.wait}</p> : reason && <p className="text-sm">{reason}</p>}
-          {data.waitMonths !== null && <p className="text-sm">{t.result.waitBody(data.waitMonths)}</p>}
+          {data.baselineFails ? <p className={body}>{t.result.baseline.wait}</p> : reason && <p className={body}>{reason}</p>}
         </>
       )}
 
       {data.verdict === 'no' &&
         (data.baselineFails ? (
-          <p className="text-sm">
+          <p className={body}>
             {t.result.baseline.no} {reason}
           </p>
         ) : (
-          reason && <p className="text-sm">{reason}</p>
+          reason && <p className={body}>{reason}</p>
         ))}
     </Stack>
+  );
+}
+
+/** The green "cheapest way" strip at the bottom of the verdict tile. */
+function Cheapest({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWithChoice }) {
+  return (
+    <div className="flex flex-col gap-xs rounded-lg bg-positive-soft px-lg py-md">
+      <p className="flex flex-wrap gap-x-sm font-semibold text-positive">
+        <span>{t.result.cheapestTitle}</span>
+        <span aria-hidden="true">·</span>
+        <span>{t.result.cheapestWays[data.cheapestWay]}</span>
+      </p>
+      <p className="text-xs text-text-muted">{data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent}</p>
+    </div>
+  );
+}
+
+/** Collapsed: the rules behind the verdict (and the wait, and the cheapest way). */
+function HowWeDecide({ data }: { data: AffordResultVM }) {
+  return (
+    <details className="text-sm text-text-muted">
+      <summary className="cursor-pointer font-medium">{t.result.howTitle}</summary>
+      <div className="mt-sm flex flex-col gap-xs">
+        <p>{t.result.how}</p>
+        {data.verdict === 'wait' && data.waitMonths !== null && <p>{t.result.waitBody(data.waitMonths)}</p>}
+        <p>{t.result.cheapestHint}</p>
+      </div>
+    </details>
   );
 }
 
@@ -87,7 +120,7 @@ function Horizons({ data }: { data: AffordResultVM }) {
               <th scope="row" className="py-sm pr-sm text-left font-normal">{t.result.horizons[row.month]}</th>
               <td className="py-sm pr-sm text-right"><Money value={row.with.mid} compact /></td>
               <td className="py-sm pr-sm text-right"><Money value={row.without.mid} compact /></td>
-              <td className={cx('py-sm text-right font-medium', row.deltaMid < 0 ? 'text-negative' : 'text-text')}>
+              <td className={cx('py-sm text-right font-semibold', row.deltaMid < 0 ? 'text-negative' : 'text-text')}>
                 <Money value={row.deltaMid} compact signed />
               </td>
             </tr>
@@ -107,12 +140,13 @@ export type AffordResultPanelProps = {
   chosenWay: PayWithChoice;
 };
 
-/** Verdict, reason, with / without forecast, the 4 horizons and the cheapest way to pay. */
-export function AffordResultPanel({ result, rules, invalidFields, purchaseLabel, chosenWay }: AffordResultPanelProps) {
+/** The verdict tile (Figma S11, right): sticker, illustration, huge verdict, reason and the cheapest way. */
+export function AffordVerdictTile({ result, rules, invalidFields, chosenWay }: Omit<AffordResultPanelProps, 'purchaseLabel'>) {
   if (result === null) {
     return (
       <Card title={t.result.title} tone="muted">
-        <p className="text-sm text-text-muted">{invalidFields.length > 0 ? t.form.fixFields : t.form.empty}</p>
+        <Art name="afford" className="mb-lg w-full max-w-(--container-3xs)" />
+        <p className="text-lg text-text-muted">{invalidFields.length > 0 ? t.form.fixFields : t.form.empty}</p>
       </Card>
     );
   }
@@ -133,11 +167,37 @@ export function AffordResultPanel({ result, rules, invalidFields, purchaseLabel,
 
   const data = result.data;
   return (
-    <Stack gap="lg" aria-live="polite">
-      <Card title={t.result.title}>
+    <div className="relative pt-lg" aria-live="polite">
+      <Card as="section" aria-label={t.result.title} className="relative flex flex-col gap-lg" style={{ transform: 'rotate(1deg)' }}>
+        <Sticker tone={STICKER_TONE[data.verdict]} tilt={-5} className="absolute -top-lg right-xl px-lg py-sm text-base">
+          {t.result.sticker}
+        </Sticker>
+        <Art name="afford" className="w-1/2 max-w-(--container-3xs)" tilt={-2} />
         <Verdict data={data} rules={rules} />
+        <Cheapest data={data} chosenWay={chosenWay} />
+        <HowWeDecide data={data} />
       </Card>
+    </div>
+  );
+}
 
+/** The black score bar (net worth change at 4 horizons), the with / without chart and, collapsed, the table behind it. */
+export function AffordEffects({ result, purchaseLabel }: Pick<AffordResultPanelProps, 'result' | 'purchaseLabel'>) {
+  if (result?.status !== 'ready') return null;
+  const data = result.data;
+  return (
+    <Stack gap="lg">
+      {data.horizons.length > 0 && (
+        <Scoreboard
+            label={t.result.effectsLabel}
+            items={data.horizons.map((h, i) => ({
+              id: String(h.month),
+              value: <Money value={h.deltaMid} signed />,
+              label: t.result.effects[h.month],
+              tone: h.deltaMid > 0 ? 'positive' : i === 0 ? 'primary' : 'default',
+            }))}
+        />
+      )}
       <Card>
         <ForecastChart
           title={t.result.chartTitle(purchaseLabel)}
@@ -145,20 +205,25 @@ export function AffordResultPanel({ result, rules, invalidFields, purchaseLabel,
           compare={{ label: t.result.chartWithout, points: data.withoutPoints }}
           footnote={t.result.chartFootnote}
         />
+        {data.horizons.length > 0 && (
+          <details className="mt-md">
+            <summary className="cursor-pointer text-sm font-medium text-text-muted">{t.result.horizonsTitle}</summary>
+            <div className="mt-sm">
+              <Horizons data={data} />
+            </div>
+          </details>
+        )}
       </Card>
+    </Stack>
+  );
+}
 
-      <Card title={t.result.horizonsTitle}>
-        <Horizons data={data} />
-        <p className="mt-sm text-xs text-text-muted">{t.result.chartFootnote}</p>
-      </Card>
-
-      <Card>
-        <Stat
-          label={t.result.cheapestTitle}
-          value={t.result.cheapestWays[data.cheapestWay]}
-          hint={`${data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent} ${t.result.cheapestHint}`}
-        />
-      </Card>
+/** Verdict tile plus the effects, stacked (the screen places the two parts separately). */
+export function AffordResultPanel(props: AffordResultPanelProps) {
+  return (
+    <Stack gap="lg">
+      <AffordVerdictTile {...props} />
+      <AffordEffects result={props.result} purchaseLabel={props.purchaseLabel} />
     </Stack>
   );
 }

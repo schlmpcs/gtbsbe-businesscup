@@ -17,6 +17,22 @@ jobs:
     name: lint, typecheck, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # A throwaway Postgres for the store's integration tests (TEST_STORE_URL below). Same major
+    # version as deploy/compose.yaml. The password only exists inside this job.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: lifeguessr
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          POSTGRES_DB: lifeguessr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lifeguessr -d lifeguessr_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v7
 
@@ -31,17 +47,45 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # With TEST_STORE_URL set, the Postgres tests of apps/web/src/server/store and server/pro run
+      # instead of skipping (each in its own schema).
       - run: pnpm test
+        env:
+          TEST_STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:5432/lifeguessr_test
+      # Data pipeline (Python standard library, no network): parsers + out/areas.json is up to date.
+      - run: pnpm --filter @lifeguessr/data test:py
+      # Built as production runs the game (server routes). The fixture-mode build (the default) is
+      # covered by the e2e job, which builds the app itself.
       - run: pnpm build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_GAME_SOURCE: api
+      # No game answers in the browser chunks of that build: no catalog card and no fixture game
+      # client (scripts/check-client-bundle.mjs).
+      - run: pnpm check:bundle
 
   # The Playwright specs in apps/web/e2e (phone + desktop). `pnpm e2e` builds and starts the app
-  # itself. It runs on a GitHub-hosted runner, in parallel with `check`.
+  # itself. It runs on a GitHub-hosted runner, in parallel with `check`, against a real Postgres
+  # store with server sessions and funnel events on (NEXT_PUBLIC_SESSION_SOURCE=api,
+  # NEXT_PUBLIC_EVENTS_SOURCE=api), as production runs.
   e2e:
     name: e2e (Playwright)
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: lifeguessr
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          POSTGRES_DB: lifeguessr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lifeguessr -d lifeguessr"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -55,9 +99,24 @@ jobs:
       - run: pnpm e2e
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SESSION_SOURCE: api
+          NEXT_PUBLIC_EVENTS_SOURCE: api
+          STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:5432/lifeguessr
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
+
+  # deploy/deploy.sh run for real on this runner (DEPLOY_HOST=local), as the server's runner runs
+  # it: the image build, the app + postgres compose stack, the store backup, the health and store
+  # checks, a redeploy that must keep the database, a rollback, and a database outage. Nothing
+  # leaves the runner; see .github/scripts/deploy-smoke.sh.
+  deploy-smoke:
+    name: deploy dry run (compose stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - run: .github/scripts/deploy-smoke.sh

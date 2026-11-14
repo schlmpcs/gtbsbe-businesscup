@@ -32,7 +32,7 @@ vi.mock('@lifeguessr/engine', async (importOriginal) => {
   };
 });
 
-// The sample areas all have the fallback's 3% inflation; ZIP 99999 gets a rate of its own.
+// Known ZIPs keep their real area data (the demo profile's ZIP has its own CPI rate); ZIP 99999 gets a rate of its own.
 vi.mock('@/lib/areas', async (importOriginal) => {
   const areas = await importOriginal<typeof Areas>();
   return { ...areas, inflationForZip: (zip: string | null | undefined) => (zip === '99999' ? 0.045 : areas.inflationForZip(zip)) };
@@ -380,7 +380,8 @@ describe('useForecastBundle: when it asks', () => {
     const profile = cloneProfileDemo();
     const { rerender } = renderBundle(inputs(profile));
     await settle();
-    expect((route.calls[0] as { rates: unknown }).rates).toEqual({ inflationAnnual: 0.03 });
+    expect((route.calls[0] as { rates: unknown }).rates).toEqual(areaRates(profile));
+    expect(areaRates(profile).inflationAnnual).not.toBe(0.045);
     rerender(inputs({ ...profile, zip: '99999' }));
     await settle(FORECAST_DEBOUNCE_MS);
     expect(route.calls).toHaveLength(2);

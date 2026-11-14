@@ -13,6 +13,8 @@ const links: TodayLinks = {
   future: SCREEN_ROUTES.S10,
   afford: SCREEN_ROUTES.S11,
   loan: SCREEN_ROUTES.S12,
+  decide: SCREEN_ROUTES.S13,
+  checkin: SCREEN_ROUTES.S14,
   profile: SCREEN_ROUTES.S5,
   upload: SCREEN_ROUTES.S9,
 };

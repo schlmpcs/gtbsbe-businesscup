@@ -14,6 +14,19 @@
     line-height: var(--leading-normal);
   }
 
+  /* Headlines use the display face from the Figma screens (Bricolage Grotesque, extra bold). */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  h1 {
+    font-weight: var(--font-weight-extrabold);
+    letter-spacing: -0.02em;
+  }
+
   :focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;

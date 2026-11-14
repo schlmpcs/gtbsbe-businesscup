@@ -7,6 +7,7 @@
 // Spec: docs/ARCHITECTURE.md → Server routes; contract: ProCheckoutRequestSchema.
 import { ProCheckoutRequestSchema } from '@lifeguessr/types';
 import { json, readJsonBody } from '@/server/ai/http';
+import { recordServerEvent } from '@/server/events/http';
 import { publicBaseUrl } from '@/server/pro/config';
 import { guardProRequest, MAX_PRO_BODY_BYTES, proError } from '@/server/pro/http';
 import { getProStripe, stripeErrorFields } from '@/server/pro/stripe';
@@ -27,6 +28,7 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const url = await stripe.createCheckout({ plan: body.data.plan, anonId: gate.anonId, baseUrl });
+    await recordServerEvent(gate.anonId, { name: 'checkout_started', props: { plan: body.data.plan } });
     return json({ ok: true, url });
   } catch (err) {
     console.error('[pro] Stripe checkout.sessions.create failed', stripeErrorFields(err));

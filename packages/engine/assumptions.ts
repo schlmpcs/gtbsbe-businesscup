@@ -1,7 +1,7 @@
 // Every constant the engine uses, in one place (docs/ENGINEERING.md → Default assumptions).
 // Each carries a `source` or `assumption: true`; the UI lists them in a "How we calculate" panel.
 // Rates are decimals per year. `note` is developer documentation, not user-facing copy.
-import type { Money, Rate, Source } from '@lifeguessr/types';
+import type { CostCategory, Money, Rate, Source } from '@lifeguessr/types';
 
 export type Assumption<T> =
   | { value: T; source: Source; assumption?: false; note?: string }
@@ -262,6 +262,75 @@ export const movesAssumptions = {
 
 // ----- end Y3 ---------------------------------------------------------------------------------
 
+// ----- T9: month-end (monthEnd) ----------------------------------------------------------------
+
+/** Month-end: full months of statement history needed before there is a "usual" to drift from. */
+export const monthEndHistoryMonths = {
+  value: 3,
+  assumption: true,
+  note: 'ENGINEERING.md → Month-end: the average of the last 3 full months. Fewer months: no average, no drift flags.',
+} satisfies Assumption<number>;
+
+/**
+ * Month-end: categories paid in one lump a month (or close to it), projected as
+ * max(spent so far, usual) instead of extrapolated from the days elapsed, which would multiply a
+ * rent paid on the 1st by the days in the month. `car` mixes a fixed monthly insurance bill with
+ * variable gas, so it is floored at usual and not extrapolated either.
+ */
+export const monthEndBillCategories = {
+  value: ['rentUtilities', 'childcare', 'subscriptions', 'car'] as readonly CostCategory[],
+  assumption: true,
+  note: 'Usual = the 3-month average, or the profile value with less history. Every other category is extrapolated linearly.',
+} satisfies Assumption<readonly CostCategory[]>;
+
+/** Month-end: a drift is flagged when |projection − average| > max(std dev, this share × average, minSpread). */
+export const monthEndDriftSpreadShare = {
+  value: 0.1,
+  assumption: true,
+  note: 'ENGINEERING.md → Month-end: spread = max(std dev, 10% of average).',
+} satisfies Assumption<number>;
+
+/** Month-end: the smallest drift ever flagged, so a few dollars in a usually empty category is not "drift". */
+export const monthEndDriftMinSpread = {
+  value: 25 as Money,
+  assumption: true,
+  note: 'Without it a category averaging $0 would flag any charge at all.',
+} satisfies Assumption<Money>;
+
+/** The T9 assumptions, spread into `assumptions` below. */
+export const monthEndAssumptions = {
+  monthEndHistoryMonths,
+  monthEndBillCategories,
+  monthEndDriftSpreadShare,
+  monthEndDriftMinSpread,
+} as const;
+
+// ----- statements (T7): which charges count as one-offs -----------------------------------------
+// A one-off (a vet bill, a yearly membership) is kept out of the monthly category totals so it
+// doesn't inflate the averages that replace the estimates. Only a merchant that appears in one
+// month of a statement covering two or more months can be a one-off; rent, childcare and debt
+// payments never are. Then either the categorizer says the merchant is typically one-off or
+// yearly, or the charge is an outlier for its category.
+
+/** Smallest charge a "typically one-off or yearly" merchant hint applies to (coffee isn't a one-off). */
+export const oneOffHintMinAmount = {
+  value: 50 as Money,
+  assumption: true,
+  note: 'Below this, a charge is too small to distort a monthly average.',
+} satisfies Assumption<Money>;
+
+/** Smallest charge the outlier rule flags without a merchant hint. */
+export const oneOffOutlierMinAmount = {
+  value: 400 as Money,
+  assumption: true,
+} satisfies Assumption<Money>;
+
+/** The outlier rule: at least this many times the median charge of the same category in the statement. */
+export const oneOffOutlierMultiple = {
+  value: 5,
+  assumption: true,
+} satisfies Assumption<number>;
+
 // ----- Y15: AI forecast sanity envelope (anchors.ts) -------------------------------------------
 
 /** How far an AI forecast may stray from the rules forecast before it is rejected. */
@@ -321,6 +390,10 @@ export const assumptions = {
   weeksPerMonth,
   minForecastMonths,
   ...movesAssumptions,
+  ...monthEndAssumptions,
+  oneOffHintMinAmount,
+  oneOffOutlierMinAmount,
+  oneOffOutlierMultiple,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;

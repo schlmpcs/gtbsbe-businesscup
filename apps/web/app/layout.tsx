@@ -1,7 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { common } from '@/copy';
+import '@fontsource-variable/dm-sans';
+import '@fontsource/bricolage-grotesque/700.css';
+import '@fontsource/bricolage-grotesque/800.css';
 import './globals.css';
+import { SiteHeader } from './_components/SiteHeader';
 
 export const metadata: Metadata = {
   title: common.appName,
@@ -17,6 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en">
       <body className="min-h-dvh bg-bg text-text antialiased">
+        <SiteHeader />
         {children}
         <footer className="mx-auto w-full max-w-(--container-2xl) px-lg pb-xl text-xs text-text-muted">{common.disclaimer}</footer>
       </body>

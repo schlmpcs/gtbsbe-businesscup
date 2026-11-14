@@ -1,4 +1,4 @@
-// "What we keep" (S9): exactly what the app persists from a statement, from the view-model's
+// "What we keep" (S9): a one-line gist, with the ✓ kept / ✕ never lists collapsed under it: exactly what the app persists from a statement, from the view-model's
 // whatWeKeep (CLAUDE.md rule 6; docs/ARCHITECTURE.md → Privacy design). The "what leaves your
 // browser" line for statement labels appears only once the in-browser reader is wired
 // (`sendsLabels`). The forecast line is always there: S1 and S10 send the profile's numbers to the
@@ -13,34 +13,50 @@ export type WhatWeKeepProps = { keep: StatementUploadVM['whatWeKeep']; sendsLabe
 
 export function WhatWeKeep({ keep, sendsLabels }: WhatWeKeepProps) {
   const categories = keep.categories.map((c) => common.categories[c]);
+  const kept = [t.months(keep.months), t.totals(categories), keep.takeHomePay ? t.payFound : t.pay];
   return (
-    <Card title={t.title} tone="muted">
-      <Stack gap="md" className="text-sm">
-        {keep.months.length === 0 && <p>{t.none}</p>}
-        <div>
-          <p className="font-medium">{t.onlyThis}</p>
-          <ul className="mt-xs list-disc pl-xl">
-            <li>{t.months(keep.months)}</li>
-            <li>{t.totals(categories)}</li>
-            <li>{keep.takeHomePay ? t.payFound : t.pay}</li>
-          </ul>
-          <p className="mt-xs">{t.where}</p>
-          {keep.savedProfileToServer && <p className="mt-xs">{t.server}</p>}
-        </div>
-        <div>
-          <p className="font-medium">{t.neverTitle}</p>
-          <ul className="mt-xs list-disc pl-xl">
-            {t.never.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-        {sendsLabels && (
-          <p>
-            <span className="font-medium">{t.sentTitle}</span> {t.sent}
-          </p>
-        )}
-        <p>{t.forecastSent}</p>
+    <Card title={t.title}>
+      <Stack gap="sm" className="text-sm">
+        <p className="text-text-muted">{keep.months.length === 0 ? t.none : t.gist}</p>
+        <details className="text-xs">
+          <summary className="cursor-pointer font-medium text-text-muted">{t.details}</summary>
+          <Stack gap="md" className="mt-sm">
+            <div>
+              <p className="font-semibold">{t.onlyThis}</p>
+              <ul className="mt-xs flex flex-col gap-xs">
+                {kept.map((item) => (
+                  <li key={item} className="flex gap-sm">
+                    <span aria-hidden="true" className="shrink-0 font-bold text-positive">
+                      ✓
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-xs text-text-muted">{t.where}</p>
+              {keep.savedProfileToServer && <p className="mt-xs text-text-muted">{t.server}</p>}
+            </div>
+            <div>
+              <p className="font-semibold">{t.neverTitle}</p>
+              <ul className="mt-xs flex flex-col gap-xs">
+                {t.never.map((item) => (
+                  <li key={item} className="flex gap-sm">
+                    <span aria-hidden="true" className="shrink-0 font-bold text-primary">
+                      ✕
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {sendsLabels && (
+              <p className="rounded-md bg-bg p-md">
+                <span className="font-semibold">{t.sentTitle}</span> {t.sent}
+              </p>
+            )}
+            <p className="rounded-md bg-bg p-md">{t.forecastSent}</p>
+          </Stack>
+        </details>
       </Stack>
     </Card>
   );

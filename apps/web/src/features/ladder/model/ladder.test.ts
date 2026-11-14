@@ -3,8 +3,10 @@ import { cardToProfile, costOfLife } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createFixtureGameClient } from '@/features/game/model/client';
-import { areaByZip, cardById, cardsSample, cloneProfileDemo } from '@/fixtures';
+import { createFixtureGameClient } from '@/features/game/model/fixtureClient';
+import { getArea } from '@lifeguessr/data/areas';
+import { cloneProfileDemo } from '@/fixtures';
+import { cardById, cardsSample } from '@/fixtures/cards';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
 import { displayForecast, thisMonth } from '@/lib/model/profile';
 import { useAppStore, useGameStore } from '@/state';
@@ -27,7 +29,7 @@ describe('useGuessYourself (S5)', () => {
     const { cards } = await client.daily('2026-11-14');
     useGameStore.getState().startDay('2026-11-14', cards);
     useGameStore.getState().setGuess(cards[0]!.id, 1000);
-    useGameStore.getState().setReveal(cards[0]!.id, await client.guess(cards[0]!.id, 1000));
+    useGameStore.getState().setReveal(cards[0]!.id, (await client.guess(cards[0]!.id, 1000)).reveal);
 
     const { result } = renderHook(() => useGuessYourself());
     await waitForReady(result);
@@ -75,7 +77,7 @@ describe('useClosestLife (S6)', () => {
     expect(dist(candidates[0]!.monthly.mid)).toBeLessThanOrEqual(dist(candidates[1]!.monthly.mid));
     expect(result.current.nearestCardId).toBe(candidates[0]!.cardId);
     const card = cardById(candidates[0]!.cardId);
-    const cost = costOfLife(card, areaByZip(card.zip));
+    const cost = costOfLife(card, getArea(card.zip));
     expect(candidates[0]!.monthly).toEqual(cost.total);
     // Cost lines with sources, largest first, unique ids, summing to the mid.
     const { items } = candidates[0]!;
@@ -92,13 +94,25 @@ describe('useClosestLife (S6)', () => {
     const id = cardsSample[3]!.id;
     act(() => result.current.choose(id));
     const card = cardById(id);
-    expect(useAppStore.getState().profile).toEqual(cardToProfile(card, areaByZip(card.zip)));
+    expect(useAppStore.getState().profile).toEqual(cardToProfile(card, getArea(card.zip)));
     expect(useAppStore.getState().profileOrigin).toBe('closestLife');
     expect(result.current.chosenCardId).toBe(id);
   });
 });
 
 describe('useQuickSliders (S7)', () => {
+  it('dragging a slider to the end again and again never grows its range (no runaway)', async () => {
+    const { result } = renderHook(() => useQuickSliders());
+    await waitForReady(result);
+    for (let i = 0; i < 6; i++) {
+      const rent = result.current.sliders.find((s) => s.category === 'rentUtilities')!;
+      act(() => result.current.setSpending('rentUtilities', rent.max));
+    }
+    const rent = result.current.sliders.find((s) => s.category === 'rentUtilities')!;
+    expect(rent.value).toBe(6000);
+    expect(rent.max).toBe(6000);
+  });
+
   it('sliders patch spending as measured values and the month updates from the engine', async () => {
     const { result } = renderHook(() => useQuickSliders());
     await waitForReady(result);
@@ -113,6 +127,7 @@ describe('useQuickSliders (S7)', () => {
     expect(result.current.month.spending).toBeCloseTo(before - 200, 6);
     expect(result.current.in10y.mid).toBeGreaterThan(in10yBefore);
     expect(result.current.monthlyCost).toBeCloseTo(result.current.month.spending + result.current.month.debtPayments, 6);
+    expect(result.current.guessGap).toBe(result.current.selfGuess === null ? null : result.current.monthlyCost - result.current.selfGuess);
 
     act(() => result.current.setSavingsShare(0.123));
     expect(result.current.savings).toMatchObject({ value: 0.12, isEstimate: false });
@@ -244,7 +259,7 @@ describe('useStatementUpload (S9)', () => {
     expect(result.current.pending.map((m) => m.month)).toEqual(['2026-08', '2026-09', '2026-10']);
     expect(result.current.pending[0]!.total).toBe(530);
     expect(result.current.whatWeKeep).toMatchObject({ months: ['2026-08', '2026-09', '2026-10'], takeHomePay: true, savedProfileToServer: false });
-    expect(result.current.readFile).toBeNull(); // T6/T7 wires the CSV reader
+    expect(result.current.readFile).toBeTypeOf('function'); // the T6/T7 CSV reader
     expect(useAppStore.getState().statementMonths).toEqual([]); // nothing until apply
 
     act(() => result.current.apply());
@@ -263,6 +278,60 @@ describe('useStatementUpload (S9)', () => {
     act(() => result.current.submitTotals([{ month: 'Oct', totals: {}, oneOffs: [] } as unknown as CategoryTotals]));
     expect(result.current.status).toBe('error');
     expect(result.current.error).toEqual({ kind: 'badInput' });
+  });
+
+  const summary = {
+    transactions: 120, skippedPending: 2, skippedOther: 1, from: '2026-08-01', to: '2026-10-31',
+    convention: 'outflowNegative' as const, categorizedBy: 'rules' as const,
+  };
+  const file = new File(['Date,Description,Amount'], 'statement.csv', { type: 'text/csv' });
+
+  it('readFile: reading → review with what was read → apply clears it', async () => {
+    let resolve!: (v: { months: CategoryTotals[]; summary: typeof summary }) => void;
+    const readStatementFile = vi.fn(() => new Promise<{ months: CategoryTotals[]; summary: typeof summary }>((r) => { resolve = r; }));
+    const { result } = renderHook(() => useStatementUpload({ readStatementFile }));
+    await waitForReady(result);
+    act(() => result.current.readFile!(file));
+    expect(result.current.status).toBe('reading');
+    expect(readStatementFile).toHaveBeenCalledWith(file, expect.objectContaining({ anonId: expect.any(String), signal: expect.any(AbortSignal) }));
+    await act(async () => resolve({ months: [months[1]!, months[0]!], summary }));
+    expect(result.current.status).toBe('review');
+    expect(result.current.pending.map((m) => m.month)).toEqual(['2026-08', '2026-09']);
+    expect(result.current.lastRead).toEqual({
+      transactions: 120, skippedPending: 2, skippedOther: 1, from: '2026-08-01', to: '2026-10-31', categorizedBy: 'rules',
+    });
+    act(() => result.current.apply());
+    expect(result.current.status).toBe('applied');
+    expect(result.current.lastRead).toBeNull();
+    expect(useAppStore.getState().statementMonths.map((m) => m.month)).toEqual(['2026-08', '2026-09']);
+  });
+
+  it('readFile: a file that cannot be read becomes an "unreadable" error; a failed request a VMError', async () => {
+    const { StatementFileError } = await import('@/features/upload/model/readStatementFile');
+    const readStatementFile = vi.fn()
+      .mockRejectedValueOnce(new StatementFileError('noColumns', 'x'))
+      .mockRejectedValueOnce(new (await import('@/lib/api/http')).ApiError('POST → 429', 429));
+    const { result } = renderHook(() => useStatementUpload({ readStatementFile }));
+    await waitForReady(result);
+    await act(async () => result.current.readFile!(file));
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    expect(result.current.error).toEqual({ kind: 'unreadable', reason: 'noColumns' });
+    act(() => result.current.discard());
+    expect(result.current.status).toBe('idle');
+    await act(async () => result.current.readFile!(file));
+    await waitFor(() => expect(result.current.error).toEqual({ kind: 'rateLimited' }));
+  });
+
+  it('readFile: a newer file wins over one still being read', async () => {
+    const resolvers: ((v: { months: CategoryTotals[]; summary: typeof summary }) => void)[] = [];
+    const readStatementFile = vi.fn(() => new Promise<{ months: CategoryTotals[]; summary: typeof summary }>((r) => { resolvers.push(r); }));
+    const { result } = renderHook(() => useStatementUpload({ readStatementFile }));
+    await waitForReady(result);
+    act(() => result.current.readFile!(file));
+    act(() => result.current.readFile!(file));
+    await act(async () => resolvers[1]!({ months: [months[2]!], summary }));
+    await act(async () => resolvers[0]!({ months: [months[0]!], summary }));
+    expect(result.current.pending.map((m) => m.month)).toEqual(['2026-10']);
   });
 });
 
@@ -352,6 +421,6 @@ describe('debtsChanged / startingDebts', () => {
     expect(debtsChanged(null, [])).toBe(false);
     expect(startingDebts('no-such-card', cardsSample)).toBeNull();
     const withCar = cardsSample.find((c) => c.car)!;
-    expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, areaByZip(withCar.zip)).debts);
+    expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, getArea(withCar.zip)).debts);
   });
 });
