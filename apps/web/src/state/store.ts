@@ -17,7 +17,7 @@ import { cloneProfileDemo } from '@/fixtures';
 import { safeStateStorage } from '@/lib/safeStorage';
 import {
   addDebt, applyUserPatch, mergeStatementHistory, mergeStatementTotals, removeDebt, setField, setSpending,
-  skipField, updateDebt, type DebtInput, type ProfileField,
+  setSubscriptionsLine, skipField, updateDebt, type DebtInput, type ProfileField,
 } from './profileOps';
 
 /** demo = the sample profile (nothing entered yet); closestLife = built from a life card; user = edited. */
@@ -57,6 +57,11 @@ export type AppActions = {
   applyUserPatch: (patch: ProfilePatch) => void;
   /** S9 seam: statement category totals → measured spending (+ pay) and month history. */
   applyStatementTotals: (months: CategoryTotals[]) => void;
+  /**
+   * M5 seam: the subscription audit's monthly total becomes the subscriptions line (measured only when it
+   * comes from a statement, else an estimate) and the cancelSubscriptions move is offered (detected = true).
+   */
+  applySubscriptionsAudit: (monthly: Money, measuredFromStatement: boolean) => void;
   addToWishlist: (purchase: Purchase) => string;
   removeFromWishlist: (id: string) => void;
   commitMove: (move: Move) => void;
@@ -165,6 +170,12 @@ export const useAppStore = create<AppState>()(
             profileOrigin: 'user',
           };
         }),
+      applySubscriptionsAudit: (monthly, measuredFromStatement) =>
+        set((s) => ({
+          profile: setSubscriptionsLine(s.profile, monthly, measuredFromStatement),
+          profileOrigin: 'user',
+          subscriptionsDetected: true,
+        })),
       addToWishlist: (purchase) => {
         const id = newId();
         set((s) => ({ wishlist: [...s.wishlist, { id, purchase, addedAt: new Date().toISOString() }] }));

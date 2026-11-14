@@ -17,6 +17,14 @@ export function setSpending(p: Profile, category: CostCategory, value: Money): P
   return { ...p, spending: { ...p.spending, [category]: measured(value) } };
 }
 
+/**
+ * The subscription audit's monthly total as the subscriptions line (M5). Measured when it comes from
+ * a statement; an estimate while any ticked service (a catalogue price) is in it.
+ */
+export function setSubscriptionsLine(p: Profile, monthly: Money, measuredFromStatement: boolean): Profile {
+  return { ...p, spending: { ...p.spending, subscriptions: { value: monthly, isEstimate: !measuredFromStatement } } };
+}
+
 /** A balance-sheet field set by the user: measured. */
 export function setField(p: Profile, field: ProfileField, value: number): Profile {
   return { ...p, [field]: measured(value) };
