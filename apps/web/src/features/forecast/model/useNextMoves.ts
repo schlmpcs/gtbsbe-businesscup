@@ -1,9 +1,9 @@
 // Next Moves shared by S1 and S10: the engine's candidate moves, measured by the forecast bundle
 // (AI or rules) at the chosen horizon and ranked by the engine's rankCandidates, plus commit / done and
 // the horizon itself (one for the app, in the store).
-import { MOVE_LEVELS, moveCandidates, movesLevel, pointAt, rankCandidates, type MoveCandidate } from '@lifeguessr/engine';
+import { level2KindsFor, moveCandidates, movesLevel, pointAt, rankCandidates, type MoveCandidate } from '@lifeguessr/engine';
 import {
-  FORECAST_HORIZONS, type CostCategory, type ForecastSource, type HorizonYears, type Money, type Move, type MoveKind,
+  FORECAST_HORIZONS, type CostCategory, type ForecastSource, type HorizonYears, type Money, type Move,
   type Profile,
 } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
@@ -16,7 +16,6 @@ import type { ForecastAnswer, MoveTarget, MoveVM, NextMovesVM } from './types';
 import { answerDollars, forecastIsBusy } from './forecastAnswer';
 import { useForecastBundle } from './useForecastBundle';
 
-const LEVEL_2_KINDS = (Object.keys(MOVE_LEVELS) as MoveKind[]).filter((k) => MOVE_LEVELS[k] === 2);
 const NO_CANDIDATES: MoveCandidate[] = [];
 
 /** The change a move's patch makes, for display (no math: values are read from the patch). */
@@ -164,8 +163,11 @@ export function useNextMoves(profile: Profile): NextMovesVM {
     [ranked, committedMoveId, source, horizonYears],
   );
 
+  // negotiateRent is a level-2 kind only for renters (JF4).
+  const level2Kinds = useMemo(() => level2KindsFor(profile), [profile]);
+
   return {
-    moves, forecast, actionsDisabled, level: movesLevel(profile), level2Kinds: LEVEL_2_KINDS,
+    moves, forecast, actionsDisabled, level: movesLevel(profile), level2Kinds,
     doneCount: doneMoveIds.length, commit, uncommit, markDone,
     horizonYears, horizonReady, horizons: FORECAST_HORIZONS, setHorizonYears,
   };
