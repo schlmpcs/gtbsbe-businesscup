@@ -13,9 +13,6 @@ const stubs: [name: keyof typeof engine, task: string][] = [
   ['accountsToProfile', 'MP8'],
   ['profileToAccounts', 'MP8'],
   ['netWorthSummary', 'MP8'],
-  ['budgetRows', 'MP9'],
-  ['budgetRowsForYear', 'MP9'],
-  ['cashFlowSummary', 'MP9'],
 ];
 
 describe('planner stubs', () => {
