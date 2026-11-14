@@ -14,7 +14,7 @@ Requires Node 22.12+ and pnpm 10 (`corepack enable` picks up the pinned version)
 ```
 pnpm install
 pnpm dev            # apps/web on localhost:3000
-pnpm test           # Vitest (engine, types, data fixtures, web utils)
+pnpm test           # Vitest (engine, types, data fixtures, web utils, ui-kit components in jsdom)
 pnpm lint           # ESLint, incl. the UI import rule; checks tokens.css is up to date
 pnpm typecheck      # tsc in every package
 pnpm build          # Next.js production build
@@ -34,7 +34,7 @@ packages/data      @lifeguessr/data    public data pipeline (T2) and the canonic
 apps/web           web                 Next.js App Router app
   app/             routes (S3 and S4 are states of /play); app/api/* server routes
   src/features/<feature>/{model,ui}    view-model hooks and presentational components
-  src/ui-kit/      primitives + tokens.css (generated)
+  src/ui-kit/      primitives + tokens.css (generated); every primitive is on show at /kit
   src/copy/        all user-facing strings, one file per feature (import from @/copy)
   src/fixtures/    re-exports packages/data/fixtures
 tokens.json        design tokens (Figma variables export)
@@ -56,5 +56,6 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | Engine: `rankMoves` (level 1, top 3 by 10-year effect), `movesLevel` / `isLevelUnlocked` | Done (Y3) |
 | Engine: `canAfford` | Signature only (Y4) |
 | AI routes: `POST /api/ai/parse` (text → `ProfilePatch` / `Purchase` / `LoanInput`, zod-validated, user confirms) and `POST /api/ai/explain` (2 sentences, numbers checked against the input, template fallback); rate-limited; work without a key | Done (Y12) |
+| UI kit: Button, Card, Slider (linear + log), Stat, Gauge, Tabs, Sheet, ForecastChart, BarBreakdown, Field/NumberInput, EstimateTag, SourceNote, Money, Stack/Row; showcase at `/kit` | Done |
 | Screens S1–S15 | Placeholder pages |
 | Deploy (live URL) | Pending: Vercel access |
