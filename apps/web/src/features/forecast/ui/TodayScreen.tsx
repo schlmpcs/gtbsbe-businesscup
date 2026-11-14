@@ -78,7 +78,11 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
         )}
 
         <div className="grid items-start gap-xl lg:grid-cols-2">
-          <Card title={t.today.future.title(vm.horizonYears)} data-testid="at-horizon" style={tilt(-1)}>
+          <Card
+            title={vm.horizonReady ? t.today.future.title(vm.horizonYears) : t.today.future.titleNeutral}
+            data-testid="at-horizon"
+            style={tilt(-1)}
+          >
             {!ready || vm.forecastStatus === 'loading' ? (
               <Skeleton />
             ) : vm.forecastStatus === 'error' && vm.forecastError ? (

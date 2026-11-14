@@ -11,7 +11,7 @@ import { track } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
-import { useAppStore } from '@/state';
+import { useAppStore, useHydrated } from '@/state';
 import type { ForecastAnswer, MoveTarget, MoveVM, NextMovesVM } from './types';
 import { answerDollars, forecastIsBusy } from './forecastAnswer';
 import { useForecastBundle } from './useForecastBundle';
@@ -90,6 +90,8 @@ export function useNextMoves(profile: Profile): NextMovesVM {
   const uncommit = useAppStore((s) => s.uncommitMove);
   const markMoveDone = useAppStore((s) => s.markMoveDone);
   const horizonYears = useAppStore((s) => s.horizonYears);
+  // Before the saved state is loaded the store holds the default horizon, not the user's pick.
+  const horizonReady = useHydrated();
   const storeHorizonYears = useAppStore((s) => s.setHorizonYears);
 
   const candidates = useMemo(
@@ -165,6 +167,6 @@ export function useNextMoves(profile: Profile): NextMovesVM {
   return {
     moves, forecast, actionsDisabled, level: movesLevel(profile), level2Kinds: LEVEL_2_KINDS,
     doneCount: doneMoveIds.length, commit, uncommit, markDone,
-    horizonYears, horizons: FORECAST_HORIZONS, setHorizonYears,
+    horizonYears, horizonReady, horizons: FORECAST_HORIZONS, setHorizonYears,
   };
 }

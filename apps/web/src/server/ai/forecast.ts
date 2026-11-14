@@ -49,6 +49,8 @@ const MAX_ATTEMPTS = 2; // the first try plus one retry
 const MAX_OUTPUT_TOKENS = 8_192;
 /** Issues quoted back to the model in the retry; a wrong-unit answer produces dozens that say the same thing. */
 const MAX_ISSUES_IN_PROMPT = 20;
+/** The horizons each scenario's effect is checked at, longest first (one issue line per scenario). */
+const EFFECT_CHECK_YEARS = [...FORECAST_HORIZONS].reverse();
 
 // ----- wire shape ----------------------------------------------------------------------------
 
@@ -226,20 +228,21 @@ function checkAnswer(req: ForecastRequest, text: string, rules: ForecastBundle, 
   }
 
   // Each scenario's own effect at every horizon the picker offers (the server is never told which
-  // one is shown): the yearly envelope is too loose to see a move that does nothing.
+  // one is shown): the yearly envelope is too loose to see a move that does nothing. A scenario's
+  // failing years go in one line (10 years first, the effect a stored move keeps), so the prompt's
+  // issue cap counts scenarios: one bad scenario fails at up to four horizons.
   const base = candidates.get(BASE_FORECAST_ID);
   if (base) {
     for (const { id } of req.scenarios) {
       const scenario = candidates.get(id);
       if (!scenario) continue;
-      for (const years of FORECAST_HORIZONS) {
-        issues.push(...about(id, scenarioEffectIssues(
-          { base, scenario },
-          { base: rules.base, scenario: referenceOf(rules, id) },
-          undefined,
-          years,
-        )));
-      }
+      const failing = EFFECT_CHECK_YEARS.flatMap((years) => scenarioEffectIssues(
+        { base, scenario },
+        { base: rules.base, scenario: referenceOf(rules, id) },
+        undefined,
+        years,
+      ));
+      if (failing.length > 0) issues.push(`${describeId(id)}: ${failing.join('; ')}`);
     }
   }
   if (issues.length > 0) return { issues };

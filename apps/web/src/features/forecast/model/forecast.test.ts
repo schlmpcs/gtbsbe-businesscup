@@ -815,7 +815,7 @@ describe('the horizon (picked on S10, S1 follows)', () => {
     expect(route.calls).toHaveLength(1);
   });
 
-  it('an explanation belongs to the year it was asked at: hidden at another, back on return; the request names the year', async () => {
+  it('an explanation belongs to the year it was asked at: hidden at another, back on return, kept per year; the request names the year', async () => {
     const explain = vi.fn(async () => ({ text: 'Two sentences. About the move.', source: 'template' as const }));
     const { result } = renderHook(() => useFuture({ explain }));
     await waitForReady(result);
@@ -840,6 +840,13 @@ describe('the horizon (picked on S10, S1 follows)', () => {
     expect(explain).toHaveBeenCalledTimes(2);
     expect((explain.mock.calls[1] as unknown[])[0]).toEqual({ move: at3, horizon: { years: 3, effect: at3.effect } });
     expect(at3.effect).not.toBe(at10.effect);
+
+    // Asking at 3 years kept the 10-year sentence: both come back without a new request.
+    act(() => result.current.setHorizonYears(10));
+    expect(result.current.explanations[at10.id]?.status).toBe('ready');
+    act(() => result.current.setHorizonYears(3));
+    expect(result.current.explanations[at3.id]?.status).toBe('ready');
+    expect(explain).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -99,6 +99,7 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     forecastError: shown.error,
     source: shown.source,
     horizonYears,
+    horizonReady: nextMoves.horizonReady,
     atHorizon: shown.atHorizon,
     bandIsZero: shown.band.isZero,
     bandKind: shown.band.kind,

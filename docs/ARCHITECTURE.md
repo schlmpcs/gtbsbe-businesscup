@@ -67,7 +67,7 @@ lifeguessr/
 
 | ID | Screen | Route | Feature folder | Build |
 | --- | --- | --- | --- | --- |
-| S1 | Today (first visit: Play / Try with sample data, no numbers; then month-end card, You in 10 years, play) | `/` | forecast | Real (drift flags need ≥ 3 uploaded months; before that the card shows the projection only) |
+| S1 | Today (first visit: Play / Try with sample data, no numbers; then month-end card, You in N years (the year picked on S10), play) | `/` | forecast | Real (drift flags need ≥ 3 uploaded months; before that the card shows the projection only) |
 | S2 | Game: explore the home (house scene, tap rooms for clues) + guess | `/play` | game | Real (falls back to a static card if the scene isn't ready) |
 | S3 | Reveal | `/play` (state) | game | Real |
 | S4 | Streamer mode | `/play?stream=1` | game | Real |

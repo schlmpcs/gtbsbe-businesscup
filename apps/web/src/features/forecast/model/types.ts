@@ -72,6 +72,12 @@ export type NextMovesVM = {
   forecast: ForecastState;
   /** The year the numbers and the ranking are read at (default 10). */
   horizonYears: HorizonYears;
+  /**
+   * False until the saved state is loaded: `horizonYears` is then the default (10), not necessarily the
+   * user's pick, so screens show no year-specific title, intro or picker yet (no "10 years" flash for
+   * someone who picked 3).
+   */
+  horizonReady: boolean;
   /** The years the picker offers (FORECAST_HORIZONS). */
   horizons: readonly HorizonYears[];
   /** Pick the year: reads the same answer again (no request); counted when it changes. */
@@ -142,6 +148,8 @@ export type TodayVM = {
   source: ForecastSource | null;
   /** The year picked on S10 (store), which the number and the move gains are read at. */
   horizonYears: HorizonYears;
+  /** False until the saved state is loaded (see NextMovesVM.horizonReady): no year-specific title yet. */
+  horizonReady: boolean;
   /**
    * Net worth at `horizonYears`, today's dollars, with the range band (a zero point until `forecastStatus`
    * is 'ready').

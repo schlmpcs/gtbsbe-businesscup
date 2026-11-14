@@ -44,7 +44,7 @@ export function NextMoves({ vm, explanations, onExplain, loading = false }: Next
         <h2 id="moves-heading" className="text-4xl font-extrabold leading-tight">
           {m.heading}
         </h2>
-        <p className="mt-xs text-text-muted">{m.intro(vm.horizonYears)}</p>
+        <p className="mt-xs text-text-muted">{vm.horizonReady ? m.intro(vm.horizonYears) : m.introNeutral}</p>
         {!loading && vm.doneCount > 0 && <p className="mt-xs text-sm text-positive">{m.doneCount(vm.doneCount)}</p>}
       </div>
       {body}

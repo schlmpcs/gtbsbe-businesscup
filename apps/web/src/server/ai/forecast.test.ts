@@ -217,6 +217,29 @@ describe('forecastWithModel', () => {
     expect(sent(1)).not.toContain('10-year effect');
   });
 
+  it('puts a scenario that fails at 1 and 3 years in one issue line naming both years, so the cap counts scenarios', async () => {
+    const req = request();
+    const answer = goodAnswer(req);
+    const base = answer.find((f) => f.id === 'base')!;
+    // Years 1 and 3 move only a tenth of the way from the base to the rules scenario; 5 and 10 are right.
+    const toward = (from: number, to: number) => from + 0.1 * (to - from);
+    const bad = answer.map((f) => (f.id !== 'cut-eating' ? f : {
+      ...f,
+      anchors: f.anchors.map((a, i) => {
+        if (i !== 0 && i !== 2) return a;
+        const b = base.anchors[i]!;
+        return { ...a, low: toward(b.low, a.low), mid: toward(b.mid, a.mid), high: toward(b.high, a.high) };
+      }),
+    }));
+    create.mockResolvedValueOnce(forecastReply(bad)).mockResolvedValueOnce(goodReply(req));
+    expect((await forecastWithModel(req, client)).source).toBe('ai');
+
+    const lines = sent(1).split('\n').filter((l) => l.startsWith('- scenario "cut-eating":') && l.includes('-year effect'));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^- scenario "cut-eating": 3-year effect -?\$[\d,]+ .+; 1-year effect -?\$[\d,]+ .+$/);
+    expect(lines[0]).not.toMatch(/(5|10)-year effect/);
+  });
+
   it('falls back to rules when the short-horizon effect stays wrong', async () => {
     const req = request();
     const bad = forecastReply(shortEffectTooSmall(req));

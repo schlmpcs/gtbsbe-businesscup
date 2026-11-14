@@ -34,10 +34,10 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
         {/* Orange hero band, full width on every screen size. */}
         <div className={cx(FULL_BLEED_PRIMARY, 'py-2xl sm:py-3xl')}>
           <header className={cx(ON_ARENA, 'mb-xl')}>
-            <h1 className="text-sm font-bold uppercase tracking-wide">{f.title(vm.horizonYears)}</h1>
+            <h1 className="text-sm font-bold uppercase tracking-wide">{vm.horizonReady ? f.title(vm.horizonYears) : f.titleNeutral}</h1>
           </header>
 
-          <HorizonPicker vm={vm} />
+          {vm.horizonReady && <HorizonPicker vm={vm} />}
 
           {loading ? (
             <Card>

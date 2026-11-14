@@ -5,10 +5,11 @@ import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
+import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { common, forecast as t } from '@/copy';
 import { getArea } from '@lifeguessr/data/areas';
-import { useAppStore } from '@/state';
+import { APP_STORE_KEY, useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
 import { FORECAST_DEBOUNCE_MS } from './model/useForecastBundle';
@@ -60,7 +61,7 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
         month: '2026-11', asOfDay: null, takeHome: { value: 5200, isEstimate: false },
       },
     },
-    horizonYears: 10, atHorizon: { month: 120, low: 1, mid: 2, high: 3 }, bandIsZero: false, bandKind: 'inputs',
+    horizonYears: 10, horizonReady: true, atHorizon: { month: 120, low: 1, mid: 2, high: 3 }, bandIsZero: false, bandKind: 'inputs',
     forecastStatus: 'ready', forecastError: null, source: 'rules', isRefreshing: false, actionsDisabled: false, committedMove: null,
     markCommittedDone: () => {}, topMove: { status: 'ready', data: null },
     game: { date: null, played: 0, total: 0, finished: false, homes: [] },
@@ -550,5 +551,40 @@ describe('FutureScreen (S10)', () => {
     const first = (await screen.findAllByRole('article'))[0]!;
     expect(within(first).getByText(/^\+\$[\d,]+$/)).toBeInTheDocument();
     expect(within(first).getByText(t.moves.effectLabel(10))).toBeInTheDocument();
+  });
+});
+
+describe('Before the saved state loads (S1 and S10)', () => {
+  /** What the first render shows, before the persisted store has loaded (the server snapshot). */
+  const firstRender = (node: ReactNode) => {
+    const div = document.createElement('div');
+    div.innerHTML = renderToString(node);
+    return div;
+  };
+
+  it('names no year and shows no picker until the saved horizon is in, then shows the saved one (no 10-year flash)', async () => {
+    // A returning user who picked 3 years: saved, while the store in memory still holds the default.
+    useAppStore.getState().setHorizonYears(3);
+    const saved = localStorage.getItem(APP_STORE_KEY)!;
+    useAppStore.setState({ horizonYears: 10 });
+    localStorage.setItem(APP_STORE_KEY, saved);
+
+    const future = firstRender(<Future />);
+    expect(future.querySelector('h1')?.textContent).toBe(t.future.titleNeutral);
+    expect(future.querySelector('input[name="horizon"]')).toBeNull();
+    expect(future.textContent).toContain(t.moves.introNeutral);
+    expect(future.textContent).not.toMatch(/\d+ years?/);
+
+    const today = firstRender(<Today />);
+    expect(today.querySelector('[data-testid="at-horizon"]')?.textContent).toContain(t.today.future.titleNeutral);
+    expect(today.textContent).not.toMatch(/You in \d/);
+
+    await act(async () => {
+      await useAppStore.persist.rehydrate();
+    });
+    expect(useAppStore.getState().horizonYears).toBe(3);
+    render(<Future />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('You in 3 years');
+    expect(await screen.findByRole('radio', { name: '3 years' })).toBeChecked();
   });
 });

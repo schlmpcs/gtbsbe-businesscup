@@ -122,6 +122,8 @@ export const forecast = {
     },
     future: {
       title: youIn,
+      /** The card's title before the saved horizon is loaded (no year yet, so no wrong one flashes). */
+      titleNeutral: 'Your future',
       hint: 'In today’s dollars',
       cta: 'See your forecast',
     },
@@ -164,6 +166,8 @@ export const forecast = {
   /** S10 You in N years + Next Moves (N = the picked horizon: 1, 3, 5 or 10). */
   future: {
     title: youIn,
+    /** The title before the saved horizon is loaded (no year yet, so no wrong one flashes). */
+    titleNeutral: 'Your future',
     /** The picker's visible label (a legend); its options are `yearsPhrase(years)`. */
     horizonLabel: 'Look ahead',
     headline: netWorthAt,
@@ -188,6 +192,8 @@ export const forecast = {
     heading: 'Next moves',
     rank: (n: number) => `#${n}`,
     intro: (years: number) => `Ranked by ${years}-year gain, in today’s dollars.`,
+    /** The intro before the saved horizon is loaded. */
+    introNeutral: 'Ranked by gain, in today’s dollars.',
     /** `years` is the year the move's own gain is measured at (MoveVM.horizonYears), not the screen's. */
     effect: (amount: string, years: number) => `${amount} in ${yearsPhrase(years)}`,
     effectLabel: (years: number) => `Net worth gain in ${yearsPhrase(years)}`,
@@ -225,7 +231,7 @@ export const forecast = {
     introPending: 'Your forecast is loading; once it is in, this says who made its numbers. The simulation’s rates and rules:',
     /** The AI forecast: the model writes the numbers, code checks them against the simulation. */
     introAi:
-      'An AI model writes the 10-year numbers and code checks them against our month-by-month simulation; an answer that strays too far is replaced by the simulation’s, labeled. Everything else is our own rules. The simulation’s rates and rules:',
+      'An AI model writes the yearly numbers for the next 10 years and code checks them against our month-by-month simulation; an answer that strays too far is replaced by the simulation’s, labeled. Everything else is our own rules. The simulation’s rates and rules:',
     forecastTitle: 'Forecast',
     movesTitle: 'Next moves',
     assumption: 'our assumption',
