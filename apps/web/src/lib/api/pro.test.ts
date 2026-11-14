@@ -51,9 +51,23 @@ describe('createHttpProAdapter', () => {
     expect(requestOf(fetchMock, 1)).toMatchObject({ url: '/api/pro/demo-unlock', body: { code: 'JURY' } });
   });
 
+  it('demoCheckout posts only the plan and returns the new status', async () => {
+    const pro = { pro: true, source: 'demo_checkout', plan: 'monthly', since: '2026-11-14T12:00:00.000Z' };
+    const fetchMock = stubFetch({ body: { ok: true, status: pro } });
+    expect(await adapter().demoCheckout('monthly')).toEqual({ ok: true, value: pro });
+    expect(requestOf(fetchMock)).toMatchObject({ url: '/api/pro/demo-checkout', method: 'POST', anonId: ANON, body: { plan: 'monthly' } });
+    expect(Object.keys(requestOf(fetchMock).body)).toEqual(['plan']);
+  });
+
+  it('demoCheckout maps a switched-off checkout (503) to unavailable', async () => {
+    stubFetch({ status: 503, body: { ok: false, error: { code: 'unavailable' } } });
+    expect(await adapter().demoCheckout('yearly')).toEqual({ ok: false, error: { kind: 'unavailable' } });
+  });
+
   it('rejects requests that break the contract without sending them', async () => {
     const fetchMock = stubFetch();
     const a = adapter();
+    expect(await a.demoCheckout('weekly' as never)).toEqual({ ok: false, error: { kind: 'badRequest' } });
     expect(await a.confirm('cs_live_a1B2c3D4e5F6')).toEqual({ ok: false, error: { kind: 'badRequest' } });
     expect(await a.demoUnlock('   ')).toEqual({ ok: false, error: { kind: 'badRequest' } });
     expect(await a.startCheckout('weekly' as never)).toEqual({ ok: false, error: { kind: 'badRequest' } });

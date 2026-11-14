@@ -10,7 +10,7 @@ const m = (version: number, name: string, sql: string): Migration => ({ version,
 describe('the migration list', () => {
   it('is valid: unique, ascending versions, snake_case names, SQL in each', () => {
     expect(() => checkMigrationList(MIGRATIONS)).not.toThrow();
-    expect(MIGRATIONS.map((x) => x.version)).toEqual([1, 2, 3, 4]);
+    expect(MIGRATIONS.map((x) => x.version)).toEqual([1, 2, 3, 4, 5]);
   });
 
   it.each([

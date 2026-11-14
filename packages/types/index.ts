@@ -134,14 +134,15 @@ export type StatementCategorizeRequest = { items: StatementItem[] };
 export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed' };
 
 // ----- Pro (S15): the paywall demo -----------------------------------------------------------
-// No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo` = the promo code
-// shown on the Pro screen (so the jury can pass the paywall without paying). The server is the
-// authority on who is Pro; the browser only caches the last answer. Keyed by the anonymous id.
+// No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo_checkout` = the
+// simulated in-app checkout (no card, nothing charged); `demo` = the promo code shown on the Pro
+// screen (so the jury can pass the paywall without paying). The server is the authority on who is
+// Pro; the browser only caches the last answer. Keyed by the anonymous id.
 export type ProPlan = 'yearly' | 'monthly';
-export type ProSource = 'stripe_test' | 'demo';
+export type ProSource = 'stripe_test' | 'demo_checkout' | 'demo';
 export type ProStatus =
   | { pro: false }
-  | { pro: true; source: ProSource; plan?: ProPlan; since: string };  // plan: stripe_test only; since: ISO 8601 UTC
+  | { pro: true; source: ProSource; plan?: ProPlan; since: string };  // plan: stripe_test and demo_checkout only; since: ISO 8601 UTC
 export type ProErrorCode =
   | 'bad_request' | 'too_large' | 'rate_limited' | 'unavailable' | 'upstream_error'
   | 'not_paid'            // confirm: the Checkout Session is not complete and paid
@@ -182,6 +183,7 @@ export type ClientFunnelEvent =
 export type ServerFunnelEvent =
   | { name: 'checkout_started'; props: { plan: ProPlan } }
   | { name: 'pro_purchased'; props: { plan: ProPlan } }   // a test-mode Stripe Checkout, confirmed paid
+  | { name: 'pro_demo_purchased'; props: { plan: ProPlan } } // the simulated checkout; kept apart from pro_purchased on purpose
   | { name: 'pro_promo_redeemed' };                        // the jury promo code
 export type FunnelEvent = ClientFunnelEvent | ServerFunnelEvent;
 export type FunnelEventName = FunnelEvent['name'];

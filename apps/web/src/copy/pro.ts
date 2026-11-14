@@ -1,9 +1,13 @@
-// Strings for the Pro paywall (S15, a demo: Stripe test mode, no real money). Owner: Amir.
-// The screen title stays in mocks.screens.S15.
+// Strings for the Pro paywall (S15, a demo: simulated checkout or Stripe test mode, no real money).
+// Owner: Amir. The screen title stays in mocks.screens.S15.
 import type { ProPlan, ProSource } from '@lifeguessr/types';
 
 export const pro = {
-  demoBadge: 'Demo · Stripe test mode, no real charge',
+  /** Over the offer: which kind of demo checkout this is (see CheckoutMode). */
+  demoBadge: {
+    stripe: 'Demo · Stripe test mode, no real charge',
+    demo: 'Demo · simulated checkout, nothing is charged',
+  },
   headline: 'Keep playing your future.',
   loading: 'Checking your Pro status…',
 
@@ -39,6 +43,20 @@ export const pro = {
     testCardNote: 'Real cards are declined, never charged.',
   },
 
+  /** The simulated in-app checkout (checkoutMode 'demo'): no card is typed, sent or charged. */
+  demoCheckout: {
+    title: 'Your order',
+    orderLabel: 'Order',
+    orderItem: (planName: string) => `LifeGuessr Pro · ${planName}`,
+    payWithLabel: 'Pay with',
+    card: 'Visa •••• 4242 (demo card)',
+    /** The button reads "Pay $39.99 (demo)": `pay`, the price, then `demoTag`. */
+    pay: 'Pay',
+    demoTag: '(demo)',
+    busy: 'Unlocking Pro…',
+    note: 'Nothing is charged and no card details are sent.',
+  },
+
   promo: {
     title: 'Judges: skip checkout',
     label: 'Promo code',
@@ -54,7 +72,11 @@ export const pro = {
     successBody: 'Your wishlist is unlocked.',
     title: 'You already have Pro',
     sourceLabel: 'Unlocked with',
-    sources: { stripe_test: 'Stripe test checkout', demo: 'Demo promo code' } satisfies Record<ProSource, string>,
+    sources: {
+      stripe_test: 'Stripe test checkout',
+      demo_checkout: 'Demo checkout (simulated)',
+      demo: 'Demo promo code',
+    } satisfies Record<ProSource, string>,
     planLabel: 'Plan',
     sinceLabel: 'Since',
     continue: 'Go to Can I Afford It?',
