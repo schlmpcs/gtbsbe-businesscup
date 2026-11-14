@@ -6,7 +6,8 @@
 // Code does the math: every figure here comes from the payoff engine (comparePayoff, extraToFinishBy; issue #88).
 // The engine, the event sender and today's date come in through `options`, so the planner can be built and tested
 // before they are bound; with `options` null it answers null and Loan Lab stays as it is (wiring.ts).
-import { PAYOFF_TIMELINE_MAX_MONTHS, type ClientFunnelEvent, type Debt, type Money, type PayoffComparison, type PayoffMethod, type PayoffPlan } from '@lifeguessr/types';
+import { MAX_SIMULATION_MONTHS } from '@lifeguessr/engine';
+import type { ClientFunnelEvent, Debt, Money, PayoffComparison, PayoffMethod, PayoffPlan } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { runEngine } from '@/lib/model/errors';
 import { linearSliderVM } from '@/lib/model/slider';
@@ -78,7 +79,7 @@ function checkTarget(target: string | null, today: string | null): TargetCheck {
   const months = today === null ? null : monthsBetween(today, target);
   if (months === null) return { status: 'invalid' };
   if (months < 1) return { status: 'past' };
-  if (months > PAYOFF_TIMELINE_MAX_MONTHS) return { status: 'tooFar' };
+  if (months > MAX_SIMULATION_MONTHS) return { status: 'tooFar' };
   return { status: 'ok', months, date: addMonths(today!, months)! };
 }
 
@@ -91,7 +92,7 @@ function solveTarget(
   selected: PayoffPlan | null,
 ): PayoffTargetVM {
   if (!active || !engine) return { status: 'none' };
-  if (check.status === 'tooFar') return { status: 'tooFar', years: PAYOFF_TIMELINE_MAX_MONTHS / 12 };
+  if (check.status === 'tooFar') return { status: 'tooFar', years: MAX_SIMULATION_MONTHS / 12 };
   if (check.status !== 'ok') return { status: check.status };
   const solved = runEngine(() => engine.extraToFinishBy(debts, check.months, method));
   if (solved.status === 'error') return { status: 'error', error: solved.error };
@@ -151,7 +152,7 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   // A saved target counts months from the day it was saved; one that cannot be a target now is dropped.
   const storedMonths = stored?.targetMonths;
   const storedTarget =
-    storedMonths !== undefined && Number.isInteger(storedMonths) && storedMonths >= 1 && storedMonths <= PAYOFF_TIMELINE_MAX_MONTHS && today !== null
+    storedMonths !== undefined && Number.isInteger(storedMonths) && storedMonths >= 1 && storedMonths <= MAX_SIMULATION_MONTHS && today !== null
       ? (addMonths(today, storedMonths)?.month ?? null)
       : null;
   const targetDate: string | null = edits.target !== undefined ? edits.target : storedTarget;
@@ -282,7 +283,7 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   if (!options) return null;
   const sliderMax = Math.max(PAYOFF_EXTRA_SLIDER_FLOOR, Math.ceil(extra / PAYOFF_EXTRA_STEP) * PAYOFF_EXTRA_STEP);
   const min = today === null ? null : addMonths(today, 1);
-  const max = today === null ? null : addMonths(today, PAYOFF_TIMELINE_MAX_MONTHS);
+  const max = today === null ? null : addMonths(today, MAX_SIMULATION_MONTHS);
   return {
     status: ready ? 'ready' : 'loading',
     hidden,

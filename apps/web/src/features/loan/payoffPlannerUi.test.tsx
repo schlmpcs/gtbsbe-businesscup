@@ -3,7 +3,7 @@
 // behind the placeholder UI. Expected figures come from the canned plans in src/test/payoff.ts (November 2026 today).
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PAYOFF_TIMELINE_MAX_MONTHS } from '@lifeguessr/types';
+import { MAX_SIMULATION_MONTHS } from '@lifeguessr/engine';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { common, loan as t } from '@/copy';
 import { cloneProfileDemo } from '@/fixtures';
@@ -262,11 +262,11 @@ describe('the target date', () => {
   it('offers only months from next month to 100 years on, and explains a month in the past or too far', async () => {
     const { section } = await open({}, undefined);
     expect(month().min).toBe('2026-12');
-    expect(month().max).toBe(addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS)!.month);
+    expect(month().max).toBe(addMonths('2026-11', MAX_SIMULATION_MONTHS)!.month);
     fireEvent.change(month(), { target: { value: '2026-10' } });
     expect(within(section).getByText(t.planner.target.past)).toBeInTheDocument();
-    fireEvent.change(month(), { target: { value: addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS + 1)!.month } });
-    expect(within(section).getByText(t.planner.target.tooFar(PAYOFF_TIMELINE_MAX_MONTHS / 12))).toBeInTheDocument();
+    fireEvent.change(month(), { target: { value: addMonths('2026-11', MAX_SIMULATION_MONTHS + 1)!.month } });
+    expect(within(section).getByText(t.planner.target.tooFar(MAX_SIMULATION_MONTHS / 12))).toBeInTheDocument();
   });
 
   it('shows the month format as the box\'s placeholder, from the copy', async () => {

@@ -3,7 +3,8 @@
 // Every expected figure is worked out by hand from the demo profile (card $6,400 at 24.36%, auto $17,800 at 7.4%),
 // sample offer 1 ($28,000 at 6.9%), the canned plans in src/test/payoff.ts and "today = November 2026".
 import { payoffOrder } from '@lifeguessr/engine';
-import { PAYOFF_TIMELINE_MAX_MONTHS, type Debt, type PayoffComparison } from '@lifeguessr/types';
+import { MAX_SIMULATION_MONTHS } from '@lifeguessr/engine';
+import type { Debt, PayoffComparison } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo, loanOffersSample } from '@/fixtures';
@@ -531,15 +532,15 @@ describe('usePayoffPlanner: the target date', () => {
     const { options, extraToFinishBy } = plannerOptions({ engineOptions: { solve: { extra: 5, reachable: true } } });
     const { result } = await ready(options);
     // The limit is the contract's: the engine's longest timeline, counted from November 2026 (today).
-    const last = addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS)!.month;
-    const beyond = addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS + 1)!.month;
+    const last = addMonths('2026-11', MAX_SIMULATION_MONTHS)!.month;
+    const beyond = addMonths('2026-11', MAX_SIMULATION_MONTHS + 1)!.month;
     act(() => result.current.planner!.setTargetDate(beyond));
-    expect(result.current.planner!.target).toEqual({ status: 'tooFar', years: PAYOFF_TIMELINE_MAX_MONTHS / 12 });
+    expect(result.current.planner!.target).toEqual({ status: 'tooFar', years: MAX_SIMULATION_MONTHS / 12 });
     expect(extraToFinishBy).not.toHaveBeenCalled();
     act(() => result.current.planner!.setTargetDate(last));
     // The plan (40 months) finishes long before the last month the solver is asked about.
-    expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', months: PAYOFF_TIMELINE_MAX_MONTHS });
-    expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), PAYOFF_TIMELINE_MAX_MONTHS, 'avalanche');
+    expect(result.current.planner!.target).toMatchObject({ status: 'onTrack', months: MAX_SIMULATION_MONTHS });
+    expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), MAX_SIMULATION_MONTHS, 'avalanche');
     expect(result.current.planner!.targetBounds).toEqual({ min: '2026-12', max: last });
   });
 
@@ -717,7 +718,7 @@ describe('usePayoffPlanner: saved inputs', () => {
     const { result } = await ready(options);
     act(() => result.current.planner!.setTargetDate('2026-01'));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'avalanche', extra: 0 });
-    act(() => result.current.planner!.setTargetDate(addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS + 2)!.month));
+    act(() => result.current.planner!.setTargetDate(addMonths('2026-11', MAX_SIMULATION_MONTHS + 2)!.month));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'avalanche', extra: 0 });
     act(() => result.current.planner!.setTargetDate('soon'));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'avalanche', extra: 0 });
