@@ -53,6 +53,21 @@ test.describe('S23 Overpaying check', () => {
     await expectNoHorizontalScroll(page);
   });
 
+  test('says which household it compared against, and switches once the household is entered', async ({ page }) => {
+    await page.goto('/tools/overpaying');
+    await zipBox(page).fill('75206');
+    await amountBox(page, 'rent').fill('6000');
+    const note = page.getByTestId('household-note');
+    await expect(note).toHaveAttribute('data-household', 'default');
+    await expect(note).toContainText('2 bedrooms, 1 adult, no children');
+    await expect(note).toContainText('(default)');
+
+    await page.getByRole('group', { name: t.form.adults, exact: true }).locator('label').filter({ hasText: /^2$/ }).click();
+    await expect(note).toHaveAttribute('data-household', 'entered');
+    await expect(note).toContainText('Based on the household you entered');
+    await expect(note).toContainText('2 bedrooms, 2 adults, no children');
+  });
+
   test('the last inputs are kept in the browser and come back after a reload', async ({ page }) => {
     await page.goto('/tools/overpaying');
     await zipBox(page).fill('75206');

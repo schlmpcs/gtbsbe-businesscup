@@ -15,13 +15,31 @@ describe('useOwnProfile', () => {
     expect(result.current).toBeNull();
   });
 
-  it('is the person\'s profile once they have made or chosen one', () => {
+  it('is the person\'s profile once they have made one', () => {
     const { result, rerender } = renderHook(() => useOwnProfile());
     useAppStore.getState().setSpending('groceries', 640);
     rerender();
     expect(useAppStore.getState().profileOrigin).toBe('user');
     expect(result.current).toBe(useAppStore.getState().profile);
     expect(result.current?.spending.groceries.value).toBe(640);
+  });
+
+  it('is null for a profile built from someone else\'s life card (closestLife), like the sample', () => {
+    const { result, rerender } = renderHook(() => useOwnProfile());
+    useAppStore.getState().setProfile(cloneProfileDemo(), 'closestLife');
+    rerender();
+    expect(useAppStore.getState().profileOrigin).toBe('closestLife');
+    expect(result.current).toBeNull();
+  });
+
+  it('is the person\'s profile again once they edit a life card they chose', () => {
+    useAppStore.getState().setProfile(cloneProfileDemo(), 'closestLife');
+    const { result, rerender } = renderHook(() => useOwnProfile());
+    expect(result.current).toBeNull();
+    useAppStore.getState().setSpending('groceries', 700); // an edit makes the numbers the person's own (origin 'user')
+    rerender();
+    expect(useAppStore.getState().profileOrigin).toBe('user');
+    expect(result.current?.spending.groceries.value).toBe(700);
   });
 
   it('goes back to null when the sample household is restored', () => {

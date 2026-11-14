@@ -74,6 +74,14 @@ export type MetroPickerVM = {
 /** What is still missing before there is anything to compare. */
 export type OverpayingNeed = 'zip' | 'metro' | 'amount';
 
+// ----- the household ----------------------------------------------------------------------------
+
+/**
+ * The household the comparison is about. `default`: the person has not told us (2 bedrooms, 1 adult, no
+ * children is our assumption, and a profile carries no household); `entered`: they edited it.
+ */
+export type HouseholdVM = { source: 'default' | 'entered'; bedrooms: Bedrooms; adults: Adults; kids: number };
+
 // ----- the result -------------------------------------------------------------------------------
 
 /**
@@ -154,6 +162,8 @@ export type OverpayingVM = {
   limits: { kidsPerBand: number; bedrooms: number; adults: number };
   /** Which boxes still hold what the profile gave. Editing here never changes the profile. */
   prefill: PrefillVM;
+  /** The household the result is about, and whether it is our assumption or the person's. */
+  household: HouseholdVM;
   /** The ZIPs and metros we have data for (for the "not covered" notice). */
   coverageCounts: { zips: number; metros: number };
   coverage: CoverageVM;

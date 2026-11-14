@@ -10,7 +10,7 @@ import { useAppReady } from '@/state';
 import { computeOverpaying } from './compute';
 import { defaultOverpayingDeps } from './deps';
 import {
-  ADULTS_MAX, BEDROOMS_MAX, KIDS_PER_BAND_MAX, clampAdults, clampBedrooms, clampKidCount, initialDraft, sameZip, toToolState, type Draft,
+  ADULTS_MAX, BEDROOMS_MAX, KID_AGES, KIDS_PER_BAND_MAX, clampAdults, clampBedrooms, clampKidCount, initialDraft, sameZip, toToolState, type Draft,
 } from './inputs';
 import type {
   AreaTier, BenchmarkLine, KidAge, MetroPickerVM, Money, OverpayingOptions, OverpayingVM, PrefillVM,
@@ -56,10 +56,17 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
       edit((d) => ({ ...d, inputs: { ...d.inputs, zip }, ...(sameZip(d.inputs.zip, zip) ? {} : { metro: null, tier: null }) })),
     [edit],
   );
-  const setBedrooms = useCallback((n: number) => edit((d) => ({ ...d, inputs: { ...d.inputs, bedrooms: clampBedrooms(n) } })), [edit]);
-  const setAdults = useCallback((n: number) => edit((d) => ({ ...d, inputs: { ...d.inputs, adults: clampAdults(n) } })), [edit]);
+  const setBedrooms = useCallback(
+    (n: number) => edit((d) => ({ ...d, householdEntered: true, inputs: { ...d.inputs, bedrooms: clampBedrooms(n) } })),
+    [edit],
+  );
+  const setAdults = useCallback(
+    (n: number) => edit((d) => ({ ...d, householdEntered: true, inputs: { ...d.inputs, adults: clampAdults(n) } })),
+    [edit],
+  );
   const setKidCount = useCallback(
-    (age: KidAge, n: number) => edit((d) => ({ ...d, inputs: { ...d.inputs, kids: { ...d.inputs.kids, [age]: clampKidCount(n) } } })),
+    (age: KidAge, n: number) =>
+      edit((d) => ({ ...d, householdEntered: true, inputs: { ...d.inputs, kids: { ...d.inputs.kids, [age]: clampKidCount(n) } } })),
     [edit],
   );
   const setAmount = useCallback(
@@ -155,6 +162,12 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
     setAmount,
     limits: { kidsPerBand: KIDS_PER_BAND_MAX, bedrooms: BEDROOMS_MAX, adults: ADULTS_MAX },
     prefill,
+    household: {
+      source: current.householdEntered ? 'entered' : 'default',
+      bedrooms: current.inputs.bedrooms,
+      adults: current.inputs.adults,
+      kids: KID_AGES.reduce((sum, age) => sum + current.inputs.kids[age], 0),
+    },
     coverageCounts: { zips: deps.areas.zipCount, metros: metroOptions.length },
     coverage,
     metroPicker,

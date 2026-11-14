@@ -131,6 +131,61 @@ describe('useOverpaying: the cold path', () => {
   });
 });
 
+describe('useOverpaying: which household the result is about', () => {
+  const DEFAULT_HOUSEHOLD = { source: 'default', bedrooms: 2, adults: 1, kids: 0 };
+
+  it('is the default 2 bedrooms, 1 adult, no children until the person edits the household', async () => {
+    const { vm } = await setup(cloneProfileDemo()); // a profile carries no household
+    expect(vm().household).toEqual(DEFAULT_HOUSEHOLD);
+    act(() => vm().setAmount('rent', 3000)); // typing an amount or a ZIP confirms nothing about the household
+    act(() => vm().setZip('75216'));
+    expect(vm().household).toEqual(DEFAULT_HOUSEHOLD);
+  });
+
+  it('switches to "entered" at the first edit of bedrooms, adults or children, and stays', async () => {
+    for (const edit of [
+      (v: OverpayingVM) => v.setBedrooms(3),
+      (v: OverpayingVM) => v.setAdults(2),
+      (v: OverpayingVM) => v.setKidCount('infant', 1),
+    ]) {
+      const { vm, unmount } = await setup(null);
+      act(() => edit(vm()));
+      expect(vm().household.source).toBe('entered');
+      unmount();
+    }
+    const { vm } = await setup(null);
+    act(() => vm().setBedrooms(3));
+    act(() => vm().setBedrooms(2)); // back to the default value: the person still chose it
+    expect(vm().household).toEqual({ source: 'entered', bedrooms: 2, adults: 1, kids: 0 });
+  });
+
+  it('carries the household the person entered, with the number of children', async () => {
+    const { vm } = await setup(null);
+    act(() => {
+      vm().setBedrooms(3);
+      vm().setAdults(2);
+      vm().setKidCount('infant', 1);
+      vm().setKidCount('schoolAge', 2);
+    });
+    expect(vm().household).toEqual({ source: 'entered', bedrooms: 3, adults: 2, kids: 3 });
+  });
+
+  it('saved inputs count as entered only when the household in them is not the default', async () => {
+    const asDefault = await setup(null, { stored: { zip: '75206', bedrooms: 2, adults: 1, kids: [], rent: 1700 } });
+    expect(asDefault.vm().household.source).toBe('default');
+    asDefault.unmount();
+    for (const stored of [
+      { bedrooms: 3, adults: 1, kids: [] },
+      { bedrooms: 2, adults: 2, kids: [] },
+      { bedrooms: 2, adults: 1, kids: ['toddler' as const] },
+    ]) {
+      const r = await setup(null, { stored });
+      expect(r.vm().household.source, JSON.stringify(stored)).toBe('entered');
+      r.unmount();
+    }
+  });
+});
+
 describe('useOverpaying: a profile', () => {
   it('fills the ZIP and the matching lines from profile.demo.json, and checks with that profile', async () => {
     const profile = cloneProfileDemo();

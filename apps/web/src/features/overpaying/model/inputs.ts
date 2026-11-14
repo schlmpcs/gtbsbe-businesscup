@@ -63,8 +63,12 @@ export const clampKidCount = (n: number): number => clampWhole(n, 0, KIDS_PER_BA
 
 // ----- the form's state ----------------------------------------------------------------------------
 
-/** What the person has typed and chosen: the form's inputs plus the metro picker's choice. */
-export type Draft = { inputs: OverpayingInputsVM; metro: string | null; tier: AreaTier | null };
+/**
+ * What the person has typed and chosen: the form's inputs plus the metro picker's choice.
+ * `householdEntered`: they edited bedrooms, adults or children (or saved a household that is not the
+ * default), so the household is theirs and not our assumption.
+ */
+export type Draft = { inputs: OverpayingInputsVM; metro: string | null; tier: AreaTier | null; householdEntered: boolean };
 
 const noKids = (): Record<KidAge, number> => ({ infant: 0, toddler: 0, preschool: 0, schoolAge: 0 });
 const noAmounts = (): Record<BenchmarkLine, Money | null> => ({ rent: null, carInsurance: null, groceries: null, childcare: null });
@@ -106,6 +110,8 @@ export function initialDraft(profile: Profile | null, stored: OverpayingToolStat
         },
         metro: stored.metro ?? null,
         tier: stored.tier ?? null,
+        // The store cannot say whether the default was chosen or left alone, so only a household that differs from it counts.
+        householdEntered: stored.bedrooms !== DEFAULT_BEDROOMS || stored.adults !== DEFAULT_ADULTS || stored.kids.length > 0,
       },
       prefill: noPrefill(),
     };
@@ -127,7 +133,7 @@ export function initialDraft(profile: Profile | null, stored: OverpayingToolStat
       }
     }
   }
-  return { draft: { inputs, metro: null, tier: null }, prefill };
+  return { draft: { inputs, metro: null, tier: null, householdEntered: false }, prefill };
 }
 
 // ----- what leaves the form ----------------------------------------------------------------------------
@@ -148,7 +154,7 @@ export function toCheckInput(inputs: OverpayingInputsVM): OverpayingCheckInput {
  * The last inputs as the store keeps them (`tools.overpaying`). Its schema is strict: a ZIP is five digits
  * and an amount is above 0, so anything else is left out rather than saved and refused.
  */
-export function toToolState(draft: Draft): OverpayingToolState {
+export function toToolState(draft: Pick<Draft, 'inputs' | 'metro' | 'tier'>): OverpayingToolState {
   const { inputs } = draft;
   const zip = parseZip(inputs.zip);
   const state: OverpayingToolState = { bedrooms: inputs.bedrooms, adults: inputs.adults, kids: expandKids(inputs.kids) };

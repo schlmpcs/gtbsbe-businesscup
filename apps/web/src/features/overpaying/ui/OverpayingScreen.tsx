@@ -82,6 +82,26 @@ function Summary({ data, profileHref }: { data: OverpayingResultVM; profileHref:
   );
 }
 
+/** Which household the numbers are about: our assumption (with the estimate tag) until the person enters one. */
+function HouseholdNote({ household }: { household: OverpayingVM['household'] }) {
+  const what = t.result.household.describe(household.bedrooms, household.adults, household.kids);
+  return (
+    <p data-testid="household-note" data-household={household.source} className="flex flex-wrap items-center gap-x-sm gap-y-xs text-sm">
+      {household.source === 'default' ? (
+        <>
+          <span>{t.result.household.default(what)}</span>
+          <Tag variant="dashed" title={t.result.household.defaultWhy}>
+            {t.result.estimate}
+            <span className="sr-only">: {t.result.household.defaultWhy}</span>
+          </Tag>
+        </>
+      ) : (
+        <span>{t.result.household.entered(what)}</span>
+      )}
+    </p>
+  );
+}
+
 function Skipped({ data }: { data: OverpayingResultVM }) {
   if (data.skipped.length === 0) return null;
   return (
@@ -122,6 +142,7 @@ function Results({ vm }: { vm: OverpayingVM }) {
       <h2 id="overpaying-result-title" className="text-2xl font-bold leading-tight">
         {t.result.title}
       </h2>
+      <HouseholdNote household={vm.household} />
       <Summary data={data} profileHref={vm.profileHref} />
       {data.rows.length > 0 && (
         <ul className="flex flex-col gap-lg">

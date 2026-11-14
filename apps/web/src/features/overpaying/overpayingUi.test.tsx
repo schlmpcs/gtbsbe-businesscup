@@ -148,6 +148,39 @@ describe('with a profile of the person\'s own', () => {
   });
 });
 
+describe('which household the result is about', () => {
+  it('says it compared against the default household, with an estimate tag, until the person enters one', async () => {
+    await open({ profile: cloneProfileDemo() });
+    const note = await screen.findByTestId('household-note');
+    expect(note).toHaveTextContent('2 bedrooms, 1 adult, no children');
+    expect(note).toHaveTextContent('(default)');
+    expect(within(note).getByText(t.result.estimate)).toBeInTheDocument();
+    expect(note).not.toHaveTextContent(/you entered/i);
+  });
+
+  it('switches to "based on the household you entered" after an edit', async () => {
+    const user = await open({ profile: cloneProfileDemo() });
+    await screen.findByTestId('household-note');
+    const adults = screen.getByRole('group', { name: t.form.adults });
+    await user.click(within(adults).getByRole('radio', { name: '2' }));
+    const note = await screen.findByTestId('household-note');
+    expect(note).toHaveTextContent('Based on the household you entered');
+    expect(note).toHaveTextContent('2 bedrooms, 2 adults, no children');
+    expect(note).not.toHaveTextContent('(default)');
+    expect(within(note).queryByText(t.result.estimate)).toBeNull();
+  });
+
+  it('is on a cold result too, and says "1 child" and "studio" in plain words', async () => {
+    const user = await open();
+    await cold(user);
+    expect(await screen.findByTestId('household-note')).toHaveTextContent('(default)');
+    const bedrooms = screen.getByRole('group', { name: t.form.bedrooms });
+    await user.click(within(bedrooms).getByRole('radio', { name: t.form.bedroomOptions[0]! }));
+    await user.type(screen.getByRole('textbox', { name: t.form.kidAges.infant }), '1');
+    expect(screen.getByTestId('household-note')).toHaveTextContent('Based on the household you entered: studio, 1 adult, 1 child');
+  });
+});
+
 describe('a 10-year total that is not of every line above the range', () => {
   it('is not shown: no partial sum, and each line keeps its own effect', async () => {
     const result = sampleOverpayingResult();

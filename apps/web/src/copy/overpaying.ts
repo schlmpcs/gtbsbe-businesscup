@@ -88,6 +88,19 @@ export const overpaying = {
 
   result: {
     title: 'How your costs compare',
+    /** Which household the comparison is about (the default is our assumption until the person edits it). */
+    household: {
+      describe: (bedrooms: number, adults: number, kids: number) =>
+        [
+          bedrooms === 0 ? 'studio' : bedrooms >= 4 ? '4 or more bedrooms' : bedrooms === 1 ? '1 bedroom' : `${bedrooms} bedrooms`,
+          adults === 1 ? '1 adult' : `${adults} adults`,
+          kids === 0 ? 'no children' : kids === 1 ? '1 child' : `${kids} children`,
+        ].join(', '),
+      default: (what: string) => `Compared with ${what} (default).`,
+      defaultWhy: 'We have not asked about your household yet, so this is our assumption. Change it in the form to make it yours.',
+      entered: (what: string) => `Based on the household you entered: ${what}.`,
+    },
+
     summaryLabel: 'Summary',
     compared: 'Lines compared',
     above: 'Above the typical range',

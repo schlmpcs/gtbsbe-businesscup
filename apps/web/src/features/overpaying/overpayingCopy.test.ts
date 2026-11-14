@@ -59,6 +59,16 @@ describe('overpaying copy', () => {
     for (const file of named) expect(existsSync(fileURLToPath(new URL(`./${file}`, import.meta.url))), file).toBe(true);
   });
 
+  it('describes the household in plain words, and says whether it is the default or the person\'s own', () => {
+    const h = overpaying.result.household;
+    expect(h.describe(2, 1, 0)).toBe('2 bedrooms, 1 adult, no children');
+    expect(h.describe(0, 2, 1)).toBe('studio, 2 adults, 1 child');
+    expect(h.describe(1, 3, 2)).toBe('1 bedroom, 3 adults, 2 children');
+    expect(h.describe(4, 1, 0)).toBe('4 or more bedrooms, 1 adult, no children');
+    expect(h.default('2 bedrooms, 1 adult, no children')).toBe('Compared with 2 bedrooms, 1 adult, no children (default).');
+    expect(h.entered('3 bedrooms, 2 adults, no children')).toBe('Based on the household you entered: 3 bedrooms, 2 adults, no children.');
+  });
+
   it('says how the range is labelled when it is an estimate or approximate', () => {
     expect(overpaying.result.estimate).toBe('estimate');
     expect(overpaying.coverage.approximate).toBe('approximate, nearest metro');
