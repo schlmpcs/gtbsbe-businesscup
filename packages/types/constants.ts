@@ -4,7 +4,9 @@ import type {
   AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, HorizonYears,
   KidAge, MoveKind,
   ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
+  MissBucket, SubscriptionFinding, SubscriptionFlag,
 } from './index';
+import type { Cadence } from './subscriptions';
 
 export const COST_CATEGORIES = [
   'rentUtilities', 'car', 'childcare', 'groceries',
@@ -105,6 +107,32 @@ export const GOAL_MIN_YEARS=1;
 export const GOAL_MAX_YEARS=30;
 /** Independent tools; never inserted into the main funnel. */
 export const TOOL_IDS = ['subscriptions','overpaying','payoff'] as const;
+
+
+// ----- Subscription audit (M1) -----------------------------------------------------------------
+// The catalogue's own lists (cadences, categories) live with its schemas in ./subscriptions.
+
+/**
+ * The five buckets of a `subs_revealed` event, guess ÷ actual, lowest first: under 0.5, 0.5 to 0.8, 0.8 to 1.25,
+ * 1.25 to 2, over 2. Main declares the `MissBucket` union and writes the same members into the event schema; this
+ * is the list to iterate (the union is checked against it in tools.test.ts).
+ */
+export const MISS_BUCKETS = ['under0.5', '0.5to0.8', '0.8to1.25', '1.25to2', 'over2'] as const satisfies readonly MissBucket[];
+export const SUBSCRIPTION_FLAGS = ['priceUp', 'introEnded', 'overlap', 'seenOnce'] as const satisfies readonly SubscriptionFlag[];
+export const SUBSCRIPTION_CONFIDENCES = ['high', 'medium', 'low'] as const satisfies readonly SubscriptionFinding['confidence'][];
+export const SUBSCRIPTION_STATUSES = ['active', 'stopped'] as const satisfies readonly SubscriptionFinding['status'][];
+export const SUBSCRIPTION_ORIGINS = ['statement', 'tickList'] as const satisfies readonly SubscriptionFinding['origin'][];
+/** Months in one billing period of each cadence: `monthly` = amount ÷ this, `yearly` = amount × 12 ÷ this. */
+export const CADENCE_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 } as const satisfies Record<Cadence, number>;
+/**
+ * Most findings one SubscriptionAudit may hold. Below the 5,000 a `subs_flagged` or `subs_cancel_marked`
+ * event may count (EventsRequestSchema), so every audit that fits the schema can be counted.
+ */
+export const SUBSCRIPTION_FINDINGS_MAX = 500;
+/** Longest id of a finding the schema accepts. */
+export const MAX_ID_LENGTH = 100;
+/** Most services a person can have ticked in the subscription tool (the tick-list is about 40, with room for more). */
+export const SUBSCRIPTION_TICKS_MAX = 200;
 
 export { AVATAR_ROUND_BALANCE,AVATAR_ROUND_MONTHLY,AVATAR_RENT_SHARE_STEP,AVATAR_BOUNDS,AVATAR_TTL_DAYS,AVATAR_MIN_POOL,AVATAR_MIN_PICKS } from './avatar';
 

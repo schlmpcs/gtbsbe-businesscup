@@ -219,6 +219,10 @@ export const CategoryTotalsSchema = z.object({
   path: ['lastDay'],
 });
 
+/** A day inside a statement: 'YYYY-MM' and a day that month has. */
+export const ChargeDateSchema = z.object({ month: MonthSchema, day: z.number().int().min(1).max(31) })
+  .refine((d) => d.day <= daysInMonth(d.month), { message: 'day is past the end of the month', path: ['day'] });
+
 export const StatementClassSchema = z.enum(STATEMENT_CLASSES);
 
 export const StatementCategorizeRequestSchema = z.object({

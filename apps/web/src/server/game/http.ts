@@ -16,6 +16,8 @@ const perMinute = (limit: number): RateLimitRule => ({ limit, windowMs: 60_000 }
 export const GAME_RATE_LIMITS = {
   clue: { perAnonId: perMinute(40), perIp: perMinute(240) },
   guess: { perAnonId: perMinute(20), perIp: perMinute(120) },
+  /** A duel day has 5 hints (one per round), at most: the same budget as a clue. */
+  hint: { perAnonId: perMinute(40), perIp: perMinute(240) },
   share: { perIp: perMinute(30) },
   read: { perIp: perMinute(120) },
 } as const;
