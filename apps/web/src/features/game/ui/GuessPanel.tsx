@@ -40,13 +40,6 @@ export function GuessPanel({ guess, onGuessChange, onLockIn, submitting, error, 
             prefix="$"
             suffix={t.guess.inputSuffix}
             disabled={submitting}
-            // Select the number once the box has swapped in its plain text, so typing replaces the guess.
-            onFocus={(e) => {
-              const box = e.currentTarget;
-              requestAnimationFrame(() => {
-                if (document.activeElement === box) box.select();
-              });
-            }}
             onValueChange={(v) => {
               if (v !== null) onGuessChange(v);
             }}

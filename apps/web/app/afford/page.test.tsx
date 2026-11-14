@@ -34,6 +34,7 @@ const verdict = () => screen.getByTestId('afford-verdict');
 describe('/afford (S11)', () => {
   it('a $300 cash purchase fits, with the chart, horizons and cheapest way', async () => {
     const user = await renderReady();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(t.screens.S11); // no screen ID shown
     expect(screen.getByText(t.form.empty)).toBeTruthy();
     await user.type(screen.getByRole('textbox', { name: t.form.amount }), '300');
     await waitFor(() => expect(verdict().dataset.verdict).toBe('fits'));
