@@ -563,10 +563,12 @@ describe('usePayoffPlanner: events', () => {
     const { options, track } = plannerOptions();
     await ready(options);
     expect(track.mock.calls[0]![1]).toEqual({ once: 'tool:payoff' });
-    expect(track.mock.calls[1]![1]).toEqual({ once: 'payoff_planned:avalanche' });
+    expect(track.mock.calls[1]![1]).toEqual({ once: 'payoff_planned' });
   });
 
-  it('counts each method once: switching to snowball is a second plan, switching back is not a third', async () => {
+  // The issue: "payoff_planned {method} when a plan is first computed with at least one debt". One event, with
+  // the method of that first plan; trying the other method afterwards is not a new plan.
+  it('sends payoff_planned once, for the first plan: switching the method later sends nothing', async () => {
     const { options, track } = plannerOptions();
     const { result } = await ready(options);
     act(() => result.current.planner!.setMethod('snowball'));
@@ -575,6 +577,14 @@ describe('usePayoffPlanner: events', () => {
     expect(track.mock.calls.map((c) => c[0])).toEqual([
       { name: 'tool_opened', props: { tool: 'payoff' } },
       { name: 'payoff_planned', props: { method: 'avalanche' } },
+    ]);
+  });
+
+  it('names the saved method when the first plan is the saved one', async () => {
+    const { options, track } = plannerOptions({ stored: { method: 'snowball', extra: 0 } });
+    await ready(options);
+    expect(track.mock.calls.map((c) => c[0])).toEqual([
+      { name: 'tool_opened', props: { tool: 'payoff' } },
       { name: 'payoff_planned', props: { method: 'snowball' } },
     ]);
   });

@@ -252,11 +252,12 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
     opened.current = true;
     track({ name: 'tool_opened', props: { tool: 'payoff' } }, { once: 'tool:payoff' });
   }, [shown, track]);
-  const planned = useRef(new Set<PayoffChoice>());
+  // One `payoff_planned` per page load, with the method of the first plan shown; trying the other method later is not a new plan.
+  const planned = useRef(false);
   useEffect(() => {
-    if (!shown || !track || planned.current.has(method)) return;
-    planned.current.add(method);
-    track({ name: 'payoff_planned', props: { method } }, { once: `payoff_planned:${method}` });
+    if (!shown || !track || planned.current) return;
+    planned.current = true;
+    track({ name: 'payoff_planned', props: { method } }, { once: 'payoff_planned' });
   }, [shown, track, method]);
 
   if (!options) return null;
