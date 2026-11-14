@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  # A full run by hand, including the deploy dry run (Deploy itself only follows pushes to main).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,10 +14,17 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Every job except `deploy-smoke` runs on the team server's CI runners (label `lifeguessr-ci`; setup
+# in deploy/README.md, "CI runners"): three runners as their own user, with their own rootless
+# Docker, capped at 12 CPU threads and 16 GB so the live app keeps its share. Each runner sets
+# E2E_PORT (3101..3103) so parallel Playwright jobs never share a port, and every Postgres service
+# publishes a random 127.0.0.1 port (read back from `job.services.postgres.ports['5432']`).
+# GitHub-hosted minutes are only spent by `deploy-smoke`, and only when deploy files change.
+
 jobs:
   check:
     name: lint, typecheck, test, build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, lifeguessr-ci]
     timeout-minutes: 20
     # A throwaway Postgres for the store's integration tests (TEST_STORE_URL below). Same major
     # version as deploy/compose.yaml. The password only exists inside this job.
@@ -27,7 +36,7 @@ jobs:
           POSTGRES_PASSWORD: ci-only-not-a-secret
           POSTGRES_DB: lifeguessr_test
         ports:
-          - 5432:5432
+          - 5432
         options: >-
           --health-cmd "pg_isready -U lifeguessr -d lifeguessr_test"
           --health-interval 2s
@@ -36,13 +45,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # pnpm version comes from "packageManager" in package.json (pnpm@10.34.9).
+      # pnpm version comes from "packageManager" in package.json (pnpm@10.34.9). No `cache: pnpm`
+      # below: the runner's pnpm store stays on the server between jobs. `dest` is per job: the
+      # default (~/setup-pnpm) is shared by the three runners, which share one home, and parallel
+      # installs into it break each other.
       - uses: pnpm/action-setup@v6
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: pnpm
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -51,7 +64,7 @@ jobs:
       # instead of skipping (each in its own schema).
       - run: pnpm test
         env:
-          TEST_STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:5432/lifeguessr_test
+          TEST_STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:${{ job.services.postgres.ports['5432'] }}/lifeguessr_test
       # Data pipeline (Python standard library, no network): parsers + out/areas.json is up to date.
       - run: pnpm --filter @lifeguessr/data test:py
       # Built as production builds it (deploy/Dockerfile defaults): the duel at /play against the
@@ -78,7 +91,7 @@ jobs:
   # runner in parallel with `check`. The production build is `e2e-production` below.
   e2e:
     name: e2e on the fixture build (Playwright)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, lifeguessr-ci]
     timeout-minutes: 25
     services:
       postgres:
@@ -88,7 +101,7 @@ jobs:
           POSTGRES_PASSWORD: ci-only-not-a-secret
           POSTGRES_DB: lifeguessr
         ports:
-          - 5432:5432
+          - 5432
         options: >-
           --health-cmd "pg_isready -U lifeguessr -d lifeguessr"
           --health-interval 2s
@@ -97,21 +110,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Both projects (Pixel 7, Desktop Chrome) run on Chromium.
-      - run: pnpm --filter web exec playwright install --with-deps chromium
-      - run: pnpm e2e
+      # Both projects (Pixel 7, Desktop Chrome) run on Chromium. No `--with-deps`: it needs sudo, and
+      # the server already has Chromium's libraries. The browser stays cached between jobs.
+      - run: pnpm --filter web exec playwright install chromium
+      # Four browser workers per job: three e2e jobs share the runners' 12 threads with their builds.
+      - run: pnpm e2e --workers=4
         env:
           NEXT_TELEMETRY_DISABLED: 1
           AVATARS_ENABLED: 'true'
           NEXT_PUBLIC_AVATARS_ENABLED: 'true'
           NEXT_PUBLIC_SESSION_SOURCE: api
           NEXT_PUBLIC_EVENTS_SOURCE: api
-          STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:5432/lifeguessr
+          STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:${{ job.services.postgres.ports['5432'] }}/lifeguessr
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -130,7 +146,7 @@ jobs:
   # card, and the HTTP duel client present.
   e2e-production:
     name: e2e on the production build (Playwright) + bundle check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, lifeguessr-ci]
     timeout-minutes: 25
     services:
       postgres:
@@ -140,7 +156,7 @@ jobs:
           POSTGRES_PASSWORD: ci-only-not-a-secret
           POSTGRES_DB: lifeguessr
         ports:
-          - 5432:5432
+          - 5432
         options: >-
           --health-cmd "pg_isready -U lifeguessr -d lifeguessr"
           --health-interval 2s
@@ -153,18 +169,21 @@ jobs:
       NEXT_PUBLIC_DUEL_SOURCE: api
       NEXT_PUBLIC_SESSION_SOURCE: api
       NEXT_PUBLIC_EVENTS_SOURCE: api
-      STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:5432/lifeguessr
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm --filter web exec playwright install chromium
       # `pnpm e2e` builds the app with the env above and starts it.
-      - run: pnpm e2e demo-path.spec.ts duel-api.spec.ts smoke.spec.ts
+      - run: pnpm e2e --workers=4 demo-path.spec.ts duel-api.spec.ts smoke.spec.ts
+        env:
+          # Step level: a job's `env` cannot read the `job` context that holds the service's port.
+          STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:${{ job.services.postgres.ports['5432'] }}/lifeguessr
       - run: pnpm check:bundle
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -181,7 +200,7 @@ jobs:
   # Then the bundle check, for this build's flags.
   e2e-rollback:
     name: e2e on the rollback build, GAME_MODE=slider (Playwright) + bundle check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, lifeguessr-ci]
     timeout-minutes: 25
     services:
       postgres:
@@ -191,7 +210,7 @@ jobs:
           POSTGRES_PASSWORD: ci-only-not-a-secret
           POSTGRES_DB: lifeguessr
         ports:
-          - 5432:5432
+          - 5432
         options: >-
           --health-cmd "pg_isready -U lifeguessr -d lifeguessr"
           --health-interval 2s
@@ -204,17 +223,20 @@ jobs:
       NEXT_PUBLIC_DUEL_SOURCE: api
       NEXT_PUBLIC_SESSION_SOURCE: api
       NEXT_PUBLIC_EVENTS_SOURCE: api
-      STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:5432/lifeguessr
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web exec playwright install --with-deps chromium
-      - run: pnpm e2e play.spec.ts smoke.spec.ts overpaying.spec.ts
+      - run: pnpm --filter web exec playwright install chromium
+      - run: pnpm e2e --workers=4 play.spec.ts smoke.spec.ts overpaying.spec.ts
+        env:
+          # Step level: a job's `env` cannot read the `job` context that holds the service's port.
+          STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:${{ job.services.postgres.ports['5432'] }}/lifeguessr
       - run: pnpm check:bundle
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -229,10 +251,47 @@ jobs:
   # backup, the health and store checks, the duel played on the real image (five duels, a hint, a
   # pick, its share card), a redeploy that must keep the database and the pick, a rollback, and a
   # database outage. Nothing leaves the runner; see .github/scripts/deploy-smoke.sh.
+  #
+  # It stays on a GitHub-hosted runner: it brings up a real stack on 127.0.0.1:3000, which on the
+  # team server is the live app. To save hosted minutes it runs only when `changes` (below) sees a
+  # file that can change the image or the deploy: deploy/, the deploy workflows and scripts,
+  # .dockerignore, the package manifests and lockfile, next.config.ts, the health route and the
+  # store (its migrations run at deploy). A manual run (workflow_dispatch) always includes it.
   deploy-smoke:
     name: deploy dry run (compose stack)
+    needs: changes
+    if: needs.changes.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - run: .github/scripts/deploy-smoke.sh
+
+  # Decides whether `deploy-smoke` runs (see above). It runs on the team server, so it costs no
+  # hosted minutes; a diff it cannot compute (a first push, a rewritten base) counts as a change.
+  changes:
+    name: deploy files changed?
+    runs-on: [self-hosted, linux, lifeguessr-ci]
+    timeout-minutes: 5
+    outputs:
+      deploy: ${{ steps.diff.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          pattern='^(deploy/|\.github/scripts/deploy-smoke\.sh$|\.github/workflows/(ci|deploy)\.yml$|\.dockerignore$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|apps/web/package\.json$|apps/web/next\.config\.ts$|apps/web/app/api/health/|apps/web/src/server/store/)'
+          if ! files=$(git diff --name-only "$BASE" "$GITHUB_SHA" 2>/dev/null); then
+            echo "no diff against ${BASE:-<none>}; running the dry run"
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          elif matched=$(grep -E "$pattern" <<<"$files"); then
+            printf 'deploy files changed:\n%s\n' "$matched"
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no deploy files changed; skipping the dry run"
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
