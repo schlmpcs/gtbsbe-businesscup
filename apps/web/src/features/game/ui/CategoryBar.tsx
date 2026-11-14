@@ -23,30 +23,24 @@ export type CategoryBarProps = {
 
 /**
  * One stacked bar of a life's monthly costs (segment width = the view-model's `scale`, shared by
- * both cards so the costlier life fills the track), and a legend with each amount.
+ * both cards so the costlier life fills the track), and a compact legend with each amount.
  */
 export function CategoryBar({ label, categories, className }: CategoryBarProps) {
   return (
-    <div className={cx('flex flex-col gap-sm', className)}>
-      <div aria-hidden="true" className="flex h-md w-full overflow-hidden rounded-full bg-surface-strong">
+    <div className={cx('flex flex-col gap-md', className)}>
+      <div aria-hidden="true" className="flex h-md w-full gap-xs overflow-hidden rounded-full">
         {categories.map((c) => (
-          <span key={c.category} className={cx('h-full', CATEGORY_COLOR[c.category])} style={{ width: `${c.scale * 100}%` }} />
+          <span key={c.category} className={cx('h-full rounded-full', CATEGORY_COLOR[c.category])} style={{ width: `${c.scale * 100}%` }} />
         ))}
       </div>
-      <ul aria-label={label} className="flex flex-col gap-xs text-sm">
+      <ul aria-label={label} className="flex flex-wrap gap-x-lg gap-y-xs text-sm">
         {categories.map((c) => (
-          <li key={c.category} className="grid grid-cols-1 items-start gap-x-sm sm:grid-cols-[minmax(0,1fr)_auto]">
-            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-xs">
-              <span aria-hidden="true" className={cx('size-sm rounded-full', CATEGORY_COLOR[c.category])} />
-              <span className="flex min-w-0 flex-col items-start gap-xs">
-                <span className="break-words">{common.categories[c.category]}</span>
-                {c.isEstimate && <EstimateTag />}
-              </span>
-            </span>
-            <span className="flex shrink-0 items-baseline gap-xs justify-self-end font-semibold tabular-nums">
-              <Money value={c.amount} />
-              <span className="text-text-muted">{t.card.perMonth}</span>
-            </span>
+          <li key={c.category} className="inline-flex min-w-0 flex-wrap items-center gap-xs">
+            <span aria-hidden="true" className={cx('size-sm shrink-0 rounded-full', CATEGORY_COLOR[c.category])} />
+            <span className="text-text-muted">{common.categories[c.category]}</span>
+            <Money value={c.amount} className="font-bold text-text" />
+            <span className="sr-only">{t.card.perMonth}</span>
+            {c.isEstimate && <EstimateTag />}
           </li>
         ))}
       </ul>
