@@ -4,6 +4,8 @@
 import type {
   AreaData, ClueId, ClueReveal, CostCategory, GuessResult, KidAge, LifeCard, Money, Rate, SceneLayout, SceneProp, Source,
 } from '@lifeguessr/types';
+import type { DuelLetter, DuelRound } from '@lifeguessr/types';
+import type { DuelCopyStatus, DuelShareStatus, DuelTileColor } from '@/copy/duel';
 import type { GameSource } from '@/lib/config';
 import type { SliderVM, VMError } from '@/lib/model/types';
 
@@ -201,4 +203,124 @@ export type PlayVM = {
   /** Share the summary text (Web Share API, else copy to the clipboard). No-op outside the summary. */
   share: () => void;
   shareStatus: ShareStatus;
+};
+
+// ----- Duel game (S2 Duel round, S3 Reveal, S3 Day result): useDuel() in ./useDuel.ts --------
+
+export type { DuelLetter, DuelRound } from '@lifeguessr/types';
+export type { DuelCopyStatus, DuelShareStatus, DuelTileColor } from '@/copy/duel';
+
+/**
+ * How a duel card looks: `round` = open for a pick; `picked` = the pick is on its way; after the
+ * reveal `winner` = the costlier life, `other` = the cheaper one.
+ */
+export type DuelCardState = 'round' | 'picked' | 'winner' | 'other';
+
+/** One cost category on a revealed duel card (monthly). */
+export type DuelCategoryVM = {
+  category: CostCategory;
+  amount: Money;
+  /** Bar length: amount / the larger of the two totals (0–1), so both cards share one scale. */
+  scale: Rate;
+  isEstimate: boolean;
+  sources: Source[];
+};
+
+export type DuelCardVM = {
+  letter: DuelLetter;
+  metro: string;
+  household: string;
+  caption: string;
+  /** The 4 fact chips. */
+  facts: string[];
+  /** The hint's extra fact, once the hint is open. */
+  hintFact: string | null;
+  /** House sprite id for SpriteImage. */
+  art: string;
+  composite: true;
+  state: DuelCardState;
+  /** The player tapped this card (after the reveal). */
+  pickedByYou: boolean;
+  /** Monthly total, after the reveal only. */
+  total: Money | null;
+  /** Category bars, largest first; empty before the reveal. */
+  categories: DuelCategoryVM[];
+};
+
+export type DuelHintVM = {
+  used: boolean;
+  status: 'idle' | 'opening' | 'error';
+  /** Share of the round's points the hint takes away (0 at the floor). */
+  cost: Rate;
+  /** Points a right pick scores now / after one more hint. */
+  pointsNow: number;
+  pointsWithHint: number;
+};
+
+export type DuelRevealVM = {
+  round: DuelRound;
+  choice: DuelLetter;
+  correct: boolean;
+  points: number;
+  /** Null when both lives cost the same. */
+  costlier: DuelLetter | null;
+  /** How much more the costlier life costs a month. */
+  difference: Money;
+  totals: Record<DuelLetter, Money>;
+  /** The deciding category: what the costlier life (or A, on a tie) spends on it vs the other. */
+  decidedBy: { category: CostCategory; amount: Money; otherAmount: Money; otherLetter: DuelLetter };
+  lesson: string;
+  /** Null = not enough picks yet. */
+  crowd: { letter: DuelLetter; share: Rate; total: number } | null;
+  /** Every source behind both breakdowns, by category. */
+  sources: { category: CostCategory; sources: Source[] }[];
+  isLastRound: boolean;
+};
+
+export type DuelDotVM = { round: DuelRound; state: 'current' | 'upcoming' | DuelTileColor };
+
+export type DuelSummaryVM = {
+  right: number;
+  rounds: number;
+  totalPoints: number;
+  maxPoints: number;
+  tiles: { round: DuelRound; color: DuelTileColor }[];
+  /** The category behind most missed rounds (null when none was missed). */
+  blindSpot: CostCategory | null;
+  /** Absolute link a friend opens to play the same five: /duel?c={resultId}. */
+  challengeUrl: string;
+  shareText: string;
+  /** Time left until the next set (New York midnight). */
+  nextIn: { hours: number; minutes: number };
+};
+
+export type DuelPhase = 'round' | 'reveal' | 'summary';
+
+/** useDuel(): everything the duel screen renders. */
+export type DuelVM = {
+  status: 'loading' | 'ready' | 'error';
+  error: VMError | null;
+  retry: () => void;
+  source: GameSource;
+  date: string | null;
+  phase: DuelPhase;
+  round: DuelRound | null;
+  totalRounds: number;
+  dots: DuelDotVM[];
+  /** The current round's two cards (also during its reveal); null on the summary. */
+  cards: [DuelCardVM, DuelCardVM] | null;
+  hint: DuelHintVM | null;
+  pickError: VMError | null;
+  reveal: DuelRevealVM | null;
+  summary: DuelSummaryVM | null;
+  /** Opened from a friend's challenge link (/duel?c=…). */
+  challenged: boolean;
+  pick: (letter: DuelLetter) => void;
+  openHint: () => void;
+  /** Next round, or the day result after round 5. */
+  next: () => void;
+  copyChallenge: () => void;
+  copyStatus: DuelCopyStatus;
+  share: () => void;
+  shareStatus: DuelShareStatus;
 };

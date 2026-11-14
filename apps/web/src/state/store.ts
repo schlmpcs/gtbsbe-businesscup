@@ -50,6 +50,12 @@ export type AppData = {
    * is not part of the Profile and never reaches the forecast request.
    */
   horizonYears: HorizonYears;
+  /**
+   * The user asked to look around with the sample life ("Try with sample data", /future?sample=1).
+   * The profile is then the demo fixture (profile.demo.json). It counts as active only while the
+   * profile is still the demo one (`isSampleActive`): any edit makes the life the user's own.
+   */
+  isSample: boolean;
 };
 
 export type AppActions = {
@@ -79,6 +85,13 @@ export type AppActions = {
   /** The user did a move: its patch enters the profile and it joins doneMoveIds. */
   markMoveDone: (move: Move) => void;
   setHorizonYears: (years: HorizonYears) => void;
+  /**
+   * Look around with the sample life: the demo fixture becomes the profile, flagged `isSample`. Only
+   * when the user has no profile of their own (origin 'demo'); returns whether it was loaded.
+   */
+  loadSample: () => boolean;
+  /** Stop showing the sample life as such ("Use mine"); the profile is left as it is. */
+  clearSample: () => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -100,7 +113,13 @@ export function initialAppData(): AppData {
     wishlist: [],
     committedMove: null,
     horizonYears: 10,
+    isSample: false,
   };
+}
+
+/** The sample life is on screen: loaded on request and not yet replaced by the user's own numbers. */
+export function isSampleActive(s: Pick<AppData, 'isSample' | 'profileOrigin'>): boolean {
+  return s.isSample && s.profileOrigin === 'demo';
 }
 
 function newId(): string {
@@ -133,6 +152,7 @@ const persistedFields = {
   wishlist: z.array(WishlistItemSchema),
   committedMove: MoveSchema.nullable(),
   horizonYears: HorizonYearsSchema,
+  isSample: z.boolean(),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -210,6 +230,12 @@ export const useAppStore = create<AppState>()(
           return { profile, committedMove: null };
         }),
       setHorizonYears: (years) => set({ horizonYears: HorizonYearsSchema.parse(years) }),
+      loadSample: () => {
+        if (get().profileOrigin !== 'demo') return false;
+        set({ profile: cloneProfileDemo(), profileOrigin: 'demo', committedMove: null, isSample: true });
+        return true;
+      },
+      clearSample: () => set({ isSample: false }),
       setGoal: goal => set({goal:GoalSchema.parse(goal)}),
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
@@ -233,6 +259,7 @@ export const useAppStore = create<AppState>()(
         wishlist: s.wishlist,
         committedMove: s.committedMove,
         horizonYears: s.horizonYears,
+        isSample: s.isSample,
       }),
       merge: mergePersisted,
     },

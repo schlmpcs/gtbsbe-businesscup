@@ -22,7 +22,9 @@ export function DemoCheckoutBlock({ plan, busy, disabled, error, onPay }: Props)
   const noteId = useId();
   const price = <Money value={plan.amount} cents />;
   return (
-    <Card title={copy.demoCheckout.title} headingLevel={3} className="w-full max-w-md text-left text-ink">
+    // Not `max-w-md`: in this theme a bare size name reads the spacing token (--spacing-md, 12px),
+    // which squeezed the whole card into a sliver. The container size is spelled out.
+    <Card title={copy.demoCheckout.title} headingLevel={3} className="w-full max-w-(--container-md) text-left text-ink">
       <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-lg gap-y-sm text-sm">
         <dt className="text-ink/60">{copy.demoCheckout.orderLabel}</dt>
         <dd className="flex flex-wrap items-baseline justify-between gap-x-md">
@@ -34,7 +36,10 @@ export function DemoCheckoutBlock({ plan, busy, disabled, error, onPay }: Props)
         <dt className="text-ink/60">{copy.demoCheckout.payWithLabel}</dt>
         <dd className="font-mono">{copy.demoCheckout.card}</dd>
       </dl>
-      <p id={noteId} className="mt-md text-xs text-text-muted">
+      {/* This card is white inside the orange band, whose ON_ARENA rule turns every `.text-text-muted`
+          and `.text-negative` below it white. So the note and the error use colours that rule does not
+          match: ink at 60% (like the labels above) and the negative token itself. */}
+      <p id={noteId} className="mt-md text-xs text-ink/60">
         {copy.demoCheckout.note}
       </p>
       <Button
@@ -56,7 +61,7 @@ export function DemoCheckoutBlock({ plan, busy, disabled, error, onPay }: Props)
         )}
       </Button>
       {error && (
-        <p role="alert" className="mt-md text-sm font-semibold text-negative">
+        <p role="alert" className="mt-md text-sm font-semibold text-(--color-negative)">
           {errorText(error)}
         </p>
       )}

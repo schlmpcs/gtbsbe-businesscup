@@ -1,7 +1,8 @@
 // Value lists for the unions in ./index.ts (runtime iteration, zod enums). Each `satisfies` line
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
 import type {
-  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, EventsErrorCode, FunnelEventName, HorizonYears, KidAge, MoveKind,
+  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, HorizonYears,
+  KidAge, MoveKind,
   ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
 } from './index';
 
@@ -20,6 +21,11 @@ export const MOVE_KINDS = [
 
 /** The horizons the forecast screen's picker offers, shortest first (the default is the last). */
 export const FORECAST_HORIZONS = [1, 3, 5, 10] as const satisfies readonly HorizonYears[];
+
+// ----- Duel game (S2/S3) -----------------------------------------------------------------------
+
+export const DUEL_LETTERS = ['A', 'B'] as const satisfies readonly DuelLetter[];
+export const DUEL_ROUNDS = [1, 2, 3, 4, 5] as const satisfies readonly DuelRound[];
 
 // ----- statements (T6/T7) ---------------------------------------------------------------------
 
@@ -66,7 +72,8 @@ export const CLIENT_EVENT_NAMES = [
   'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared',
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
-  'paywall_viewed', 'goal_set', 'goal_verdict_shown', 'goal_cleared', 'forecast_horizon_changed',
+  'paywall_viewed', 'sample_loaded',
+  'goal_set', 'goal_verdict_shown', 'goal_cleared', 'forecast_horizon_changed',
   'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked',
   'renewals_exported', 'overpaying_checked', 'payoff_planned',
 ] as const satisfies readonly ClientFunnelEvent['name'][];

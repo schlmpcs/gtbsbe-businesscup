@@ -11,7 +11,7 @@ export { GoalSchema } from './goal';
 // likely LLM/user mistake and it would silently break every forecast.
 import { z } from 'zod';
 import {
-  AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
+  AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, DUEL_LETTERS, DUEL_ROUNDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
   FUNNEL_EVENT_NAMES, KID_AGES, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
   SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
 } from './constants';
@@ -334,6 +334,55 @@ export const SessionErrorResponseSchema = z.object({
   error: z.object({ code: SessionErrorCodeSchema, retryAfterSeconds: z.number().optional() }).loose(),
 });
 
+// ----- Duel game (S2/S3): GET /api/daily (duel mode), POST /api/daily/pick, /api/daily/hint ----
+
+export const DuelLetterSchema = z.enum(DUEL_LETTERS);
+export const DuelRoundSchema = z.literal(DUEL_ROUNDS);
+/** 'YYYY-MM-DD' (the America/New_York date of the set). */
+export const DateSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'expected YYYY-MM-DD');
+
+export const PublicDuelCardSchema = z.object({
+  letter: DuelLetterSchema,
+  household: z.string().min(1),
+  metro: z.string().min(1),
+  caption: z.string(),
+  facts: z.array(z.string().min(1)).max(6),
+  art: z.string().min(1),
+  composite: z.literal(true),
+});
+
+export const PublicDuelSchema = z.object({
+  date: DateSchema,
+  round: DuelRoundSchema,
+  kind: z.enum(['life', 'habit']),
+  cards: z.tuple([PublicDuelCardSchema, PublicDuelCardSchema]),
+});
+
+export const CategoryLineSchema = z.object({
+  category: CostCategorySchema,
+  amount: NonNegativeMoneySchema,
+  sources: z.array(SourceSchema),
+  isEstimate: z.boolean(),
+});
+
+export const DuelHintSchema = z.object({ A: z.string().min(1), B: z.string().min(1) });
+
+export const PickResultSchema = z.object({
+  resultId: z.string().min(1),
+  correct: z.boolean(),
+  points: z.number().int().min(0),
+  totals: z.object({ A: NonNegativeMoneySchema, B: NonNegativeMoneySchema }),
+  breakdown: z.object({ A: z.array(CategoryLineSchema), B: z.array(CategoryLineSchema) }),
+  decidedBy: z.object({ category: CostCategorySchema, A: NonNegativeMoneySchema, B: NonNegativeMoneySchema }),
+  lesson: z.string().min(1),
+  crowd: z.object({ pickedA: z.number().int().min(0), total: z.number().int().min(0) }).nullable(),
+});
+
+export const DuelPickRequestSchema = z.strictObject({
+  anonId: AnonIdSchema, date: DateSchema, round: DuelRoundSchema, choice: DuelLetterSchema,
+});
+export const DuelHintRequestSchema = z.strictObject({ anonId: AnonIdSchema, date: DateSchema, round: DuelRoundSchema });
+
 // ----- Funnel events (T8): POST /api/events, GET /api/events/funnel --------------------------
 
 const eventId = z.uuid();
@@ -364,6 +413,7 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   withProps('afford_checked', { verdict: z.enum(['fits', 'wait', 'no']) }),
   withProps('loan_compared', { offers: z.number().int().min(1).max(3) }),
   bare('paywall_viewed'),
+  bare('sample_loaded'),
   withProps('forecast_horizon_changed', { years: HorizonYearsSchema }),
   withProps('goal_set', {years:z.number().int().min(1).max(30)}),
   withProps('goal_verdict_shown', {verdict:z.enum(['onTrack','withinRange','behind'])}),

@@ -31,6 +31,8 @@ import {
 
 export type TodayLinks = {
   play: string;
+  /** "Try with sample data": S10 with the sample life loaded. */
+  sample: string;
   future: string;
   afford: string;
   loan: string;
@@ -50,6 +52,7 @@ export type TodayScreenProps = {
 };
 
 export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
+  if (vm.firstVisit) return <FirstVisit links={links} screens={screens} Link={Link} />;
   const ready = vm.status === 'ready';
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl">
@@ -65,7 +68,7 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
 
         <PlayCard vm={vm} href={links.play} Link={Link} />
 
-        {ready && vm.isDemoProfile && (
+        {ready && vm.isDemoProfile && !vm.isSample && (
           <Card tone="muted" data-testid="sample-note" className="flex flex-wrap items-center justify-between gap-md">
             <p className="text-sm">{t.sampleProfile}</p>
             <Link href={links.profile} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
@@ -137,29 +140,85 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
           </ul>
         </section>
 
-        <nav aria-label={t.today.allScreens}>
-          <details>
-            <summary className="min-h-11 cursor-pointer text-sm font-semibold uppercase tracking-wide text-text-muted">
-              {t.today.allScreens}
-            </summary>
-            <ul className="mt-sm flex flex-wrap gap-xs">
-              {screens.map(({ id, href }) => (
-                <li key={id}>
-                  <Link
-                    href={href}
-                    data-screen={id}
-                    className="inline-flex items-baseline gap-xs rounded-full border border-border bg-surface px-md py-xs text-xs hover:bg-surface-strong"
-                  >
-                    <span className="font-mono text-text-muted">{id}</span>
-                    <span>{screenTitles[id]}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </details>
-        </nav>
+        <AllScreens screens={screens} Link={Link} />
       </Stack>
     </main>
+  );
+}
+
+/** First visit: what the app is and the two ways in. No user numbers. */
+function FirstVisit({ links, screens, Link }: Omit<TodayScreenProps, 'vm'>) {
+  const f = t.today.firstVisit;
+  return (
+    <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl" data-testid="today-first-visit">
+      <Stack gap="3xl">
+        <section className="flex flex-col items-center gap-lg text-center">
+          <div aria-hidden="true" className="grid w-full max-w-(--container-md) grid-cols-[1fr_auto_1fr] items-center gap-md">
+            <div style={tilt(-3)} className="rounded-xl bg-surface p-sm shadow-md">
+              <Art name="brooklyn" imgClassName="aspect-square" />
+            </div>
+            <span className="rounded-full bg-ink px-md py-sm font-display text-xl font-extrabold text-on-primary">{f.vs}</span>
+            <div style={tilt(3)} className="rounded-xl bg-surface p-sm shadow-md">
+              <Art name="boise" imgClassName="aspect-square" />
+            </div>
+          </div>
+          <h1 className="font-display text-display leading-display font-extrabold sm:text-8xl sm:leading-display">{f.title}</h1>
+          <p className="max-w-(--container-lg) text-lg text-text-muted">{f.body}</p>
+          <div className="flex w-full flex-col items-center gap-sm sm:w-auto sm:flex-row">
+            <Link href={links.play} className={cx(buttonClassName({ variant: 'dark', size: 'lg' }), 'w-full sm:w-auto sm:min-w-sm')}>
+              {f.play}
+              <span aria-hidden="true">→</span>
+            </Link>
+            <Link href={links.sample} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}>
+              {f.sample}
+            </Link>
+          </div>
+          <p className="text-sm text-text-muted">{f.note}</p>
+        </section>
+
+        <section aria-label={f.stepsLabel}>
+          <ol className="grid gap-lg sm:grid-cols-3">
+            {f.steps.map((step, i) => (
+              <li key={step} className="flex items-center gap-md rounded-xl bg-surface p-lg shadow-md">
+                <span className="flex size-2xl shrink-0 items-center justify-center rounded-full bg-primary font-display text-xl font-extrabold text-on-primary">
+                  {i + 1}
+                </span>
+                <span className="font-semibold">{step}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <AllScreens screens={screens} Link={Link} />
+      </Stack>
+    </main>
+  );
+}
+
+/** Every screen, for the compact "All screens" list (judges can reach each one). */
+function AllScreens({ screens, Link }: Pick<TodayScreenProps, 'screens' | 'Link'>) {
+  return (
+    <nav aria-label={t.today.allScreens}>
+      <details>
+        <summary className="min-h-11 cursor-pointer text-sm font-semibold uppercase tracking-wide text-text-muted">
+          {t.today.allScreens}
+        </summary>
+        <ul className="mt-sm flex flex-wrap gap-xs">
+          {screens.map(({ id, href }) => (
+            <li key={id}>
+              <Link
+                href={href}
+                data-screen={id}
+                className="inline-flex items-baseline gap-xs rounded-full border border-border bg-surface px-md py-xs text-xs hover:bg-surface-strong"
+              >
+                <span className="font-mono text-text-muted">{id}</span>
+                <span>{screenTitles[id]}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </nav>
   );
 }
 

@@ -14,6 +14,7 @@ import { howWeCalculate } from './howWeCalculate';
 import type { FutureVM, MoveVM } from './types';
 import { useMoveExplain, type ExplainFn } from './useMoveExplain';
 import { useNextMoves } from './useNextMoves';
+import { useSampleRequest } from './useSampleRequest';
 
 const NO_MOVES: MoveVM[] = [];
 const NO_POINTS: ForecastPoint[] = [];
@@ -23,7 +24,9 @@ const TODAY_EMPTY: ForecastPoint = { month: 0, low: 0, mid: 0, high: 0 };
 const throughYear = (points: readonly ForecastPoint[], years: HorizonYears): ForecastPoint[] =>
   points.filter((p) => p.month <= 12 * years);
 
-export function useFuture(opts: { explain?: ExplainFn } = {}): FutureVM {
+/** `sample`: the page was opened as /future?sample=1 ("Try with sample data"): load the sample life. */
+export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}): FutureVM {
+  useSampleRequest(opts.sample ?? false);
   const profile = useAppStore((s) => s.profile);
   const committedMove = useAppStore((s) => s.committedMove);
   const [todaysDollars, setTodaysDollars] = useState(true);

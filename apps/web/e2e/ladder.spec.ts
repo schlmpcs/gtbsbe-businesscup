@@ -157,6 +157,18 @@ test('S9: upload the sample statement, review its months, and use them', async (
   expect(saved?.state.profile.takeHomePay.isEstimate).toBe(false);
 });
 
+test('S9: "Try with sample statement" reads the sample through the same path as an upload', async ({ page }) => {
+  await page.goto('/me/upload');
+  await expect(page.getByText(/connect your bank/i)).toHaveCount(0); // not built: hidden
+  const sent = page.waitForRequest((r) => r.url().endsWith('/api/statement/categorize') && r.method() === 'POST');
+  await page.getByRole('button', { name: ladder.upload.trySample }).click();
+  const body = (await sent).postDataJSON() as { items: { label: string }[] };
+  expect(body.items).toHaveLength(170);
+  expect(JSON.stringify(body)).not.toMatch(/Tom Becker|Maria Lopez|Daniel Kim|PRIYA SHAH|Jake Morris/i);
+  await expect(page.getByTestId('statement-read')).toContainText('Read 170 transactions from Jul 1, 2026 to Nov 12, 2026.');
+  await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).toContainText(ladder.upload.detectedPay('$4,800'));
+});
+
 test('S9: a file without transaction columns gets a clear error', async ({ page }) => {
   await page.goto('/me/upload');
   await page.getByLabel(ladder.upload.pickerLabel).setInputFiles({
