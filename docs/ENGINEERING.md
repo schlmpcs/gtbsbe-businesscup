@@ -19,7 +19,7 @@
 
 ## Git workflow
 
-- Trunk-based: small PRs to `main`, merged within about 30 minutes. CI (lint + test) must be green. Vercel previews every PR.
+- Trunk-based: small PRs to `main`, merged within about 30 minutes. CI (lint + test) must be green. There are no per-PR preview deploys. A push to `main` that passes CI is deployed to the team server automatically (`ARCHITECTURE.md`, Deployment; `deploy/README.md`).
 - Commit prefix with the task ID: `Y2: forecast range band`, `T6: CSV column detection`.
 - Give a heads-up in chat before touching the other person's folder or `packages/types`.
 
