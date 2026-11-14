@@ -12,6 +12,7 @@ import {
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
+import { ScenarioSchema, type Scenario } from '@lifeguessr/types';
 import { ToolsStateSchema, type ToolsState } from '@lifeguessr/types';
 import { CheckinRecordSchema, type CheckinRecord } from '@lifeguessr/types';
 import { restoreTools } from './tools';
@@ -28,6 +29,12 @@ import {
 export type ProfileOrigin = 'demo' | 'closestLife' | 'user';
 
 export type WishlistItem = { id: string; purchase: Purchase; addedAt: string /* ISO timestamp */ };
+
+/** A saved What if? choice: the two scenarios (a Pro feature). `presetId` when it came from a preset. */
+export type SavedWhatIf = { id: string; A: Scenario; B: Scenario; presetId: string | null; savedAt: string /* ISO timestamp */ };
+
+/** Most saved What if? choices kept (oldest dropped first). */
+export const WHAT_IFS_MAX = 20;
 
 export type AppData = {
   goal: Goal | null;
@@ -56,6 +63,8 @@ export type AppData = {
    * contract has no field for them. Cleared when the life changes (closest life, sample, reset).
    */
   checkins: CheckinRecord[];
+  /** Saved What if? choices, newest last. */
+  whatIfs: SavedWhatIf[];
 };
 
 /** Most check-ins kept (10 years of months); older ones are dropped first. */
@@ -97,6 +106,9 @@ export type AppActions = {
   /** S14: save a check-in (stamped now); a month already saved is replaced. */
   saveCheckin: (record: CheckinRecord) => void;
   clearCheckins: () => void;
+  /** Save a What if? choice (the caller checks Pro); returns its id. */
+  saveWhatIf: (choice: Omit<SavedWhatIf, 'id' | 'savedAt'>) => string;
+  removeWhatIf: (id: string) => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -119,6 +131,7 @@ export function initialAppData(): AppData {
     committedMove: null,
     isSample: false,
     checkins: [],
+    whatIfs: [],
   };
 }
 
@@ -144,6 +157,10 @@ const MoveSchema = z.object({
 
 const WishlistItemSchema = z.object({ id: z.string().min(1), purchase: PurchaseSchema, addedAt: z.string() });
 
+const SavedWhatIfSchema = z.object({
+  id: z.string().min(1), A: ScenarioSchema, B: ScenarioSchema, presetId: z.string().nullable(), savedAt: z.string(),
+});
+
 /** Saved state is validated field by field; a field that fails keeps its default. */
 const persistedFields = {
   goal: GoalSchema.nullable(),
@@ -158,6 +175,7 @@ const persistedFields = {
   committedMove: MoveSchema.nullable(),
   isSample: z.boolean(),
   checkins: z.array(CheckinRecordSchema).max(CHECKINS_MAX),
+  whatIfs: z.array(SavedWhatIfSchema).max(WHAT_IFS_MAX),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -240,6 +258,12 @@ export const useAppStore = create<AppState>()(
         return true;
       },
       clearSample: () => set({ isSample: false }),
+      saveWhatIf: (choice) => {
+        const id = newId();
+        set((s) => ({ whatIfs: [...s.whatIfs, { ...choice, id, savedAt: new Date().toISOString() }].slice(-WHAT_IFS_MAX) }));
+        return id;
+      },
+      removeWhatIf: (id) => set((s) => ({ whatIfs: s.whatIfs.filter((w) => w.id !== id) })),
       setGoal: goal => set({goal:GoalSchema.parse(goal)}),
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
@@ -273,6 +297,7 @@ export const useAppStore = create<AppState>()(
         committedMove: s.committedMove,
         isSample: s.isSample,
         checkins: s.checkins,
+        whatIfs: s.whatIfs,
       }),
       merge: mergePersisted,
     },

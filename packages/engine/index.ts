@@ -44,3 +44,7 @@ export {
   simulateMonth, checkinRecord, checkinStart, checkinSummary, profileWithBalances, seedOf, CHECKIN_CATEGORIES,
   type CheckinOptions,
 } from './checkin';
+export {
+  applyScenario, compareFutures, takeHomeFromGrossRaise,
+  type CompareOptions, type ScenarioPlan, type WhatIfOptions,
+} from './whatIf';

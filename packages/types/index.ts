@@ -286,3 +286,4 @@ export * from './payoff';
 export * from './overpaying';
 export * from './subscriptions';
 export * from './checkin';
+export * from './whatIf';

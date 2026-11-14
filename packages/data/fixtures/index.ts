@@ -10,15 +10,19 @@
 // The sample life cards are not here: they live in '@lifeguessr/data/fixtures/cards' (see the note
 // in cards.ts), so importing this barrel never puts game answers in a browser bundle.
 import {
-  AreaDataSchema, CategoryTotalsSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema, sourced,
-  type AreaData, type CategoryTotals, type LoanInput, type Money, type Profile, type Sourced,
+  AreaDataSchema, AreaTierSchema, CategoryTotalsSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema,
+  SCENARIO_MAX_CHANGES, ScenarioChangeSchema, SourceSchema, sourced,
+  type AreaData, type CategoryTotals, type LoanInput, type Money, type Profile, type Scenario, type ScenarioChange,
+  type Source, type Sourced,
 } from '@lifeguessr/types';
 import { z } from 'zod';
+import { areaForMetro } from '../areas';
 import areaDataJson from './areaData.sample.json';
 import leaseScenarioJson from './leaseScenario.sample.json';
 import loanOffersJson from './loanOffers.sample.json';
 import profileJson from './profile.demo.json';
 import statementTotalsJson from './statementTotals.sample.json';
+import whatIfPresetsJson from './whatIfPresets.sample.json';
 
 const deepFreeze = <T>(value: T): T => {
   if (value && typeof value === 'object') {
@@ -103,4 +107,55 @@ export function areaByZip(zip: string): AreaData {
 /** A mutable deep copy of the demo profile (the exported one is frozen). */
 export function cloneProfileDemo(): Profile {
   return ProfileSchema.parse(profileJson); // zod builds new objects/arrays on every parse
+}
+
+// ----- What if? presets (two choices, two futures) -------------------------------------------
+
+/** A preset change: a ScenarioChange, or a move to another tier of the user's own metro. */
+export type WhatIfPresetChange = ScenarioChange | { kind: 'moveTier'; tier: AreaData['tier'] };
+export type WhatIfPresetSide = { label: string; art: string; changes: WhatIfPresetChange[] };
+export type WhatIfPreset = {
+  id: string;
+  A: WhatIfPresetSide;
+  B: WhatIfPresetSide;
+  /** Where the preset's own numbers (loan terms, ZIPs) come from; estimates are labeled. */
+  source: Source;
+  isEstimate: boolean;
+};
+
+const WhatIfPresetSideSchema = z.object({
+  label: z.string().min(1).max(80),
+  art: z.string().regex(/^[a-z0-9-]+$/),
+  changes: z.array(z.union([
+    ScenarioChangeSchema,
+    z.object({ kind: z.literal('moveTier'), tier: AreaTierSchema }),
+  ])).max(SCENARIO_MAX_CHANGES),
+});
+
+export const WhatIfPresetSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/),
+  A: WhatIfPresetSideSchema,
+  B: WhatIfPresetSideSchema,
+  source: SourceSchema,
+  isEstimate: z.boolean(),
+});
+
+/** The five What if? presets (whatIfPresets.sample.json): each is two scenarios, A and B. */
+export const whatIfPresets: readonly WhatIfPreset[] = deepFreeze(WhatIfPresetSchema.array().parse(whatIfPresetsJson));
+
+/**
+ * A preset side as a Scenario for the engine: `moveTier` becomes a move to that tier's ZIP in
+ * `home`'s metro (left out when home is already that ZIP or the metro lacks the tier).
+ */
+export function resolveWhatIfPreset(side: WhatIfPresetSide, home: Pick<AreaData, 'metro' | 'zip'>): Scenario {
+  const changes: ScenarioChange[] = [];
+  for (const c of side.changes) {
+    if (c.kind !== 'moveTier') {
+      changes.push(c);
+      continue;
+    }
+    const zip = areaForMetro(home.metro, c.tier)?.zip;
+    if (zip && zip !== home.zip) changes.push({ kind: 'move', zip });
+  }
+  return { label: side.label, changes };
 }

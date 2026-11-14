@@ -405,6 +405,22 @@ export const checkinMonthNoise = {
 } satisfies Assumption<Record<CostCategory, number>>;
 
 /** All assumptions by name, for the "How we calculate" panel. */
+// ----- What if? (two choices, two futures) ----------------------------------------------------
+
+/** Share of a gross yearly raise that reaches take-home pay (federal + FICA + typical state, marginal). */
+export const raiseTakeHomeShare = {
+  value: 0.7,
+  assumption: true,
+  note: 'Placeholder marginal take-home share for a raise (about 22% federal + 7.65% FICA, before state tax).',
+} satisfies Assumption<number>;
+
+/** Months a child spends in each childcare age band before moving to the next (infant 0–12, toddler 12–36, preschool 36–60). */
+export const kidAgeBandMonths = {
+  value: { infant: 12, toddler: 24, preschool: 24 },
+  assumption: true,
+  note: 'Age bands of the DOL NDCP childcare prices: infant < 1, toddler 1–2, preschool 3–4, school age 5+.',
+} satisfies Assumption<{ infant: number; toddler: number; preschool: number }>;
+
 export const assumptions = {
   inflationAnnualFallback,
   incomeGrowthAnnual,
@@ -431,6 +447,8 @@ export const assumptions = {
   oneOffOutlierMinAmount,
   oneOffOutlierMultiple,
   checkinMonthNoise,
+  raiseTakeHomeShare,
+  kidAgeBandMonths,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;

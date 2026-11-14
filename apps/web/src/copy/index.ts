@@ -34,3 +34,4 @@ export type ScreenId = keyof typeof screenTitles;
 export { goal } from './goal';
 export { previewA } from './previewA';
 export { previewB } from './previewB';
+export { whatIf } from './whatIf';
