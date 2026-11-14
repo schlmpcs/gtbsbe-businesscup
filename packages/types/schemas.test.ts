@@ -1,3 +1,4 @@
+import type { CheckinRecordSchema, CheckinRecord } from './checkin';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
@@ -59,6 +60,8 @@ describe('schemas match the contracts', () => {
     expectTypeOf<z.infer<typeof StatementCategorizeResponseSchema>>().toExtend<StatementCategorizeResponse>();
     expectTypeOf<z.infer<typeof SessionStateSchema>>().toExtend<SessionState>();
     expectTypeOf<SessionState>().toExtend<z.input<typeof SessionStateSchema>>();
+    expectTypeOf<z.infer<typeof CheckinRecordSchema>>().toExtend<CheckinRecord>();
+    expectTypeOf<CheckinRecord>().toExtend<z.input<typeof CheckinRecordSchema>>();
   });
 
   it('value lists cover every union member', () => {

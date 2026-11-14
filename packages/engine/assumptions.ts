@@ -379,6 +379,31 @@ export const aiForecastSanity = {
 
 // ----- end Y15 --------------------------------------------------------------------------------
 
+// ----- S14 monthly check-in: the simulated month ----------------------------------------------
+
+/**
+ * Check-in: the largest share by which a simulated month moves each category off the plan (the
+ * profile's monthly value); each month draws a seeded uniform value in [−share, +share] per category.
+ * Rationale: lump bills barely move from one month to the next (rent is fixed, utilities swing with
+ * the weather, childcare and streaming are flat fees), so ±2–5%; car costs mix a fixed insurance bill
+ * with fuel and repairs, ±12%; groceries are steady but not fixed, ±8%; eating out and "other" are
+ * the most discretionary, ±15%. `debtPayments` is informational (payments come from the debts), so 0.
+ */
+export const checkinMonthNoise = {
+  value: {
+    rentUtilities: 0.03,
+    childcare: 0.02,
+    subscriptions: 0.05,
+    car: 0.12,
+    groceries: 0.08,
+    eatingOut: 0.15,
+    other: 0.15,
+    debtPayments: 0,
+  } as Record<CostCategory, number>,
+  assumption: true,
+  note: 'Bounded noise for the "Fast-forward 1 month (simulated)" check-in; never presented as real spending.',
+} satisfies Assumption<Record<CostCategory, number>>;
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
@@ -405,6 +430,7 @@ export const assumptions = {
   oneOffHintMinAmount,
   oneOffOutlierMinAmount,
   oneOffOutlierMultiple,
+  checkinMonthNoise,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;
