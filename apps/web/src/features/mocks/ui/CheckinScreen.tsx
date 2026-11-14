@@ -66,7 +66,7 @@ function ValueCheck({ vm }: { vm: CheckinVM }) {
 }
 
 /** Two labelled bars (the 3-month average and this month) and the difference as a pill. */
-function CompareCard({ compare, inProgress }: { compare: CheckinCompareVM; inProgress: boolean }) {
+function CompareCard({ compare, inProgress, note }: { compare: CheckinCompareVM; inProgress: boolean; note: string }) {
   const max = Math.max(compare.average, compare.projected, 1);
   const bars = [
     { id: 'usual', label: t.compareUsual, value: compare.average, fill: 'bg-border' },
@@ -77,7 +77,7 @@ function CompareCard({ compare, inProgress }: { compare: CheckinCompareVM; inPro
     compare.direction === 'even' ? t.comparePill.even : compare.direction === 'over' ? t.comparePill.over(amount) : t.comparePill.under(amount);
   return (
     <Card title={t.compareTitle} data-testid="checkin-compare">
-      <div className="flex flex-col gap-md">
+      <div role="group" aria-label={inProgress ? t.scoreLabel : t.scoreLabelDone} className="flex flex-col gap-md">
         {bars.map((b) => (
           <div key={b.id} className="flex flex-col gap-xs">
             <div className="flex items-baseline justify-between gap-md">
@@ -97,6 +97,7 @@ function CompareCard({ compare, inProgress }: { compare: CheckinCompareVM; inPro
         >
           {pill}
         </span>
+        <p className="text-xs text-text-muted">{note}</p>
       </div>
     </Card>
   );
@@ -113,18 +114,18 @@ function Drifts({ compare }: { compare: CheckinCompareVM }) {
       <h2 id={driftId} className="font-display text-3xl font-extrabold sm:text-4xl">
         {t.driftTitle}
       </h2>
-      <ul className="grid grid-cols-1 gap-lg sm:grid-cols-2 lg:grid-cols-4" data-testid="checkin-drifts">
+      <ul className="grid grid-cols-2 gap-md sm:gap-lg lg:grid-cols-4" data-testid="checkin-drifts">
         {tiles.map((d) => (
           <li key={d.category}>
             <Card className="flex h-full flex-col gap-xs">
-              <span className="text-lg font-semibold">{t.categories[d.category] ?? d.category}</span>
+              <span className="text-base font-semibold sm:text-lg">{t.categories[d.category] ?? d.category}</span>
               {d.delta === null ? (
-                <span className="font-display text-2xl font-extrabold leading-tight text-text-muted">{t.onTrack}</span>
+                <span className="font-display text-xl font-extrabold leading-tight text-text-muted sm:text-2xl">{t.onTrack}</span>
               ) : (
                 <>
                   <span
                     className={cx(
-                      'font-display text-4xl font-extrabold leading-tight tabular-nums',
+                      'font-display text-3xl font-extrabold leading-tight tabular-nums sm:text-4xl',
                       d.delta > 0 ? 'text-primary' : 'text-positive',
                     )}
                   >
@@ -198,7 +199,7 @@ function Progress({ progress }: { progress: MoveProgressVM }) {
 function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: string; Link: LinkComponent }) {
   const m = t.move;
   const seeAll = (
-    <Link href={movesHref} className={cx(buttonClassName({ variant: 'ghost', size: 'sm' }), 'self-start')}>
+    <Link href={movesHref} className={cx(buttonClassName({ variant: 'ghost', size: 'sm' }), 'min-h-11 self-start')}>
       {m.seeAll}
     </Link>
   );
@@ -290,6 +291,7 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
                 </div>
                 <Button
                   size="sm"
+                  className="min-h-11"
                   onClick={() => move.commit(s.id)}
                   disabled={move.actionsDisabled}
                   aria-label={`${m.commit}: ${moveTitle(s)}`}
@@ -326,7 +328,7 @@ function PreviewLine({ vm, Link }: { vm: CheckinVM; Link: LinkComponent }) {
       {sample && <span>{t.sampleNote}</span>}
       <span>{note}</span>
       {!vm.pro.isPro && (
-        <Link href={vm.pro.href} className="font-semibold text-primary underline-offset-2 hover:underline">
+        <Link href={vm.pro.href} className="inline-flex min-h-11 items-center font-semibold text-primary underline-offset-2 hover:underline">
           {mocks.preview.cta}
         </Link>
       )}
@@ -371,13 +373,16 @@ export function CheckinScreen({ vm, Link }: { vm: CheckinVM; Link: LinkComponent
             </div>
           )}
 
-          <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+          <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <div className="flex min-w-0 flex-col gap-xl">
-              {vm.compare && <CompareCard compare={vm.compare} inProgress={month.inProgress} />}
+              {vm.compare ? (
+                <CompareCard compare={vm.compare} inProgress={month.inProgress} note={t.valueNote[month.source]} />
+              ) : (
+                <ValueCheck vm={vm} />
+              )}
               <MoveCard move={vm.move} movesHref={vm.movesHref} Link={Link} />
             </div>
-            <ValueCheck vm={vm} />
-            <div className="flex flex-col items-center justify-center">
+            <div className="hidden flex-col items-center justify-center lg:flex">
               <Art name="house-crane" className="w-2/3 max-w-(--container-3xs) lg:w-full" />
               {vm.move.answer === 'done' && (
                 <Sticker tone="positive" tilt={-6} className="-mt-lg text-sm">

@@ -124,9 +124,16 @@ function Results({ vm }: { vm: OverpayingVM }) {
     // A bad ZIP or amount already says so beside its box; a ZIP we do not cover is said by the coverage notice.
     const message = vm.invalidFields.length > 0 || vm.needs === 'metro' || vm.needs === null ? null : t.needs[vm.needs];
     return message ? (
-      <p data-testid="needs" className="rounded-lg bg-surface p-lg text-sm text-text-muted">
-        {message}
-      </p>
+      <div className="flex flex-col items-start gap-md rounded-lg bg-surface p-lg">
+        <p data-testid="needs" className="text-base text-text-muted">
+          {message}
+        </p>
+        {vm.tryExample && (
+          <button type="button" onClick={vm.tryExample} className={buttonClassName({ variant: 'secondary' })} data-testid="overpaying-example">
+            {t.needs.example}
+          </button>
+        )}
+      </div>
     ) : null;
   }
   if (result.status !== 'ready') {

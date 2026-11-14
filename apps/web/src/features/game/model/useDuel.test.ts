@@ -230,6 +230,36 @@ describe('useDuel on fixtures', () => {
     expect(third.result.current.phase).toBe('round');
   });
 
+  it('says "already played" only for a day that was finished when the page loaded', async () => {
+    client = createFixtureDuelClient({ persist: true });
+    const first = await renderDuel();
+    expect(first.result.current.playedEarlier).toBe(false);
+    for (let i = 0; i < 5; i++) {
+      await pickAndWait(first, RIGHT[i]!);
+      act(() => first.result.current.next());
+    }
+    expect(first.result.current.phase).toBe('summary');
+    expect(first.result.current.playedEarlier).toBe(false); // finished just now
+    first.unmount();
+
+    client = createFixtureDuelClient({ persist: true }); // reload after finishing
+    const again = await renderDuel();
+    expect(again.result.current.phase).toBe('summary');
+    expect(again.result.current.playedEarlier).toBe(true);
+    expect(again.result.current.summary).toMatchObject({ right: 5, totalPoints: 5000 });
+  });
+
+  it('the reveal lists every source once for the visible "Prices from" line', async () => {
+    const hook = await renderDuel();
+    await pickAndWait(hook, RIGHT[0]!);
+    const { allSources, sources } = hook.result.current.reveal!;
+    expect(allSources.length).toBeGreaterThan(0);
+    const keys = allSources.map((s) => `${s.name}|${s.year}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const { sources: list } of sources) for (const s of list) expect(keys).toContain(`${s.name}|${s.year}`);
+    for (const s of allSources) expect(s).toMatchObject({ name: expect.any(String), year: expect.any(Number) });
+  });
+
   it('shows an error with a retry when the source fails, and a pick error without losing the round', async () => {
     let fail = true;
     const real = createFixtureDuelClient({ persist: false });
@@ -769,7 +799,7 @@ describe('useDuel: challenge links (/duel?c=…)', () => {
     }
     const user = userEvent.setup();
     render(createElement(Duel, { id: FRIEND_ID }));
-    expect(await screen.findByText('Your friend got 4/5 · 3,900 points')).toHaveAttribute('role', 'status');
+    expect(await screen.findByText('A friend scored 4/5 (3,900 points). Beat it: tap the life that costs more.')).toHaveAttribute('role', 'status');
     expect(screen.queryByText(t.challenge.generic)).toBeNull();
 
     for (let round = 1; round <= 5; round++) {
@@ -780,7 +810,7 @@ describe('useDuel: challenge links (/duel?c=…)', () => {
     expect(versus).toHaveTextContent(/^You vs your friendYou \d\/5 · Friend 4\/5/);
     expect(screen.getByRole('list', { name: t.challenge.friendGridLabel })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: t.summary.gridLabel })).toBeInTheDocument();
-    expect(screen.queryByText('Your friend got 4/5 · 3,900 points')).toBeNull(); // the line is for before and during play
+    expect(screen.queryByText('A friend scored 4/5 (3,900 points). Beat it: tap the life that costs more.')).toBeNull(); // the line is for before and during play
   });
 
   describe('against the real routes (memory store): a friend finishes, a stranger opens the link', () => {

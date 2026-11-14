@@ -66,6 +66,8 @@ export type LoanLabVM = {
   status: 'loading' | 'ready';
   /** Up to MAX_OFFERS offers, in the order entered. */
   offers: LoanOfferVM[];
+  /** Still the illustrative sample offers (fixture): nothing added, edited or removed yet. The screen labels them. */
+  offersAreExamples: boolean;
   canAddOffer: boolean;
   addOffer: (input?: LoanInput) => string | null;
   updateOffer: (id: string, patch: Partial<LoanInput>) => void;

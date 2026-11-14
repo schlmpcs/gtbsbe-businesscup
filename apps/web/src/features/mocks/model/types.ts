@@ -69,6 +69,8 @@ export type DecideVM = {
     isEstimate: Record<LeaseField, boolean>;
     invalidFields: LeaseField[];
   };
+  /** Some lease term is still the illustrative sample (the screen labels the comparison as an example). */
+  leaseIsExample: boolean;
   setLease: (patch: Partial<LeaseForm>) => void;
   /** Back to the illustrative lease terms. */
   resetLease: () => void;

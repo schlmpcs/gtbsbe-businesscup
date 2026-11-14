@@ -60,6 +60,8 @@ export const overpaying = {
   needs: {
     zip: 'Enter your ZIP code to see how your costs compare.',
     amount: 'Enter at least one monthly cost to compare.',
+    /** The button beside the message: fills the demo household's ZIP and two bills. */
+    example: 'Try an example',
   },
 
   coverage: {

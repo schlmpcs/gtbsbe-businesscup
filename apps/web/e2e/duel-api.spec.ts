@@ -124,10 +124,12 @@ test('a full duel day against the server: hint, five picks, a reload mid-day res
   // The day's points are the sum the server scored, round by round.
   await expect(page.getByText(`${t.summary.pointsLabel}: ${t.summary.points(total.toLocaleString('en-US'))}`, { exact: true })).toBeVisible();
   await expect(page.getByText(/^Next five in \d+h \d+m$/)).toBeVisible();
+  await expect(page.locator('main a[href="/me/guess"]')).toHaveCount(1);
 
-  // A reload keeps today's result.
+  // A reload keeps today's result (from the server) and says the day is done.
   await page.reload();
   await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
+  await expect(page.getByText(/^You’ve played today’s five\. New duels in \d+h \d+m\.$/)).toBeVisible();
 
   // Another browser with the same anonymous id (another device restoring it) gets the same day
   // from the server, and a repeated pick there answers the stored result instead of a second score.

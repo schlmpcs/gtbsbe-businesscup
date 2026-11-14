@@ -87,8 +87,13 @@ export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payo
             {t.screens.S12}
           </h1>
           <p className="max-w-prose text-lg text-text-muted sm:text-xl">{t.intro}</p>
+          {vm.status === 'ready' && vm.offersAreExamples && (
+            <p data-testid="loan-example-note" className="max-w-prose text-sm font-semibold text-primary">
+              {t.exampleNote}
+            </p>
+          )}
         </div>
-        <Art name="coins" className="mx-auto w-1/2 max-w-(--container-3xs) sm:w-(--container-3xs)" />
+        <Art name="coins" className="mx-auto hidden w-1/2 max-w-(--container-3xs) sm:block sm:w-(--container-3xs)" />
       </header>
 
       <div className="mt-2xl">
@@ -97,6 +102,8 @@ export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payo
         ) : (
           <Stack gap="2xl">
             <Stack gap="xl">
+              {/* The answer first: on a phone the three offer cards would push it below the fold. */}
+              {vm.offers.length > 0 && <LoanVerdict offers={vm.offers} />}
               <OfferCompare
                 offers={vm.offers}
                 selectedOfferId={vm.selectedOfferId}
@@ -108,7 +115,6 @@ export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payo
                   canAddOffer: vm.canAddOffer,
                 }}
               />
-              {vm.offers.length > 0 && <LoanVerdict offers={vm.offers} />}
             </Stack>
             <div className="grid grid-cols-1 items-stretch gap-xl lg:grid-cols-[2fr_3fr]">
               <LeftOver leftOver={vm.leftOver} selectedName={selectedName} />

@@ -11,6 +11,28 @@ export function ResultView({ result, names }: { result: TogetherResultVM; names:
   const short = month.surplus < 0;
   return (
     <Stack gap="xl" data-testid="together-result">
+      {/* The answer people came for first: who pays what. */}
+      <Card title={t.result.splitTitle} headingLevel={2} data-testid="together-split">
+        <Stack gap="lg">
+          <p className="text-sm text-text-muted">{t.result.splitLead}</p>
+          <p className="font-display text-3xl font-extrabold leading-tight" data-testid="together-split-line">
+            {t.result.splitLine(a, formatMoney(split.p1), b, formatMoney(split.p2))}
+          </p>
+          <p className="text-sm">
+            {split.basis === 'even' ? t.result.splitEvenBasis : t.result.splitShare(a, formatRate(split.p1Share, 0))}
+          </p>
+          <div className="grid gap-lg sm:grid-cols-2">
+            <Stat label={t.result.sharedTotal} value={<Money value={split.total} />} isEstimate={split.isEstimate} />
+            <Stat label={t.result.evenTitle} value={t.result.evenLine(formatMoney(split.evenEach))} />
+          </div>
+          {split.basis === 'income' && Math.round(split.p1VsEven) !== 0 && (
+            <p className="text-sm" data-testid="together-vs-even">
+              {t.result.vsEven(a, formatMoney(Math.abs(split.p1VsEven)), split.p1VsEven > 0)}
+            </p>
+          )}
+        </Stack>
+      </Card>
+
       <Card title={t.result.monthTitle} headingLevel={2} data-testid="together-month">
         <Stack gap="lg">
           <div className="grid gap-lg sm:grid-cols-3">
@@ -32,27 +54,6 @@ export function ResultView({ result, names }: { result: TogetherResultVM; names:
               ))}
             </ul>
           </div>
-        </Stack>
-      </Card>
-
-      <Card title={t.result.splitTitle} headingLevel={2} data-testid="together-split">
-        <Stack gap="lg">
-          <p className="text-sm text-text-muted">{t.result.splitLead}</p>
-          <p className="font-display text-3xl font-extrabold leading-tight" data-testid="together-split-line">
-            {t.result.splitLine(a, formatMoney(split.p1), b, formatMoney(split.p2))}
-          </p>
-          <p className="text-sm">
-            {split.basis === 'even' ? t.result.splitEvenBasis : t.result.splitShare(a, formatRate(split.p1Share, 0))}
-          </p>
-          <div className="grid gap-lg sm:grid-cols-2">
-            <Stat label={t.result.sharedTotal} value={<Money value={split.total} />} isEstimate={split.isEstimate} />
-            <Stat label={t.result.evenTitle} value={t.result.evenLine(formatMoney(split.evenEach))} />
-          </div>
-          {split.basis === 'income' && Math.round(split.p1VsEven) !== 0 && (
-            <p className="text-sm" data-testid="together-vs-even">
-              {t.result.vsEven(a, formatMoney(Math.abs(split.p1VsEven)), split.p1VsEven > 0)}
-            </p>
-          )}
         </Stack>
       </Card>
 
@@ -97,7 +98,6 @@ export function ResultView({ result, names }: { result: TogetherResultVM; names:
         )}
       </Card>
 
-      <p className="text-xs text-text-muted">{t.result.disclaimer}</p>
     </Stack>
   );
 }

@@ -39,11 +39,15 @@ export function BillsScreen({ vm, Link }: BillsScreenProps) {
             <Link href={vm.uploadHref} className={buttonClassName({ variant: 'primary', size: 'lg' })}>
               {t.empty.upload}
             </Link>
+            {vm.trySample && (
+              <Button variant="ghost" size="lg" onClick={vm.trySample} data-testid="bills-try-sample">
+                {t.empty.sample}
+              </Button>
+            )}
           </Card>
         ) : (
           <Ready vm={vm} />
         )}
-        <p className="text-xs text-text-muted">{t.note}</p>
       </Stack>
     </main>
   );
@@ -62,7 +66,7 @@ function Ready({ vm }: { vm: Extract<BillsVM, { status: 'ready' }> }) {
                 {t.month.total} · {t.month.count(month.charges.length)}
               </p>
               <p className="flex items-center gap-sm font-display text-4xl font-extrabold tabular-nums">
-                {formatMoney(month.total, { cents: true })}
+                {formatMoney(month.total)}
                 {month.totalIsEstimate && <EstimateTag />}
               </p>
             </div>

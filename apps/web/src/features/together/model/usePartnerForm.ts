@@ -2,9 +2,10 @@
 // one, else quick inputs. Returns the form view-model and `build()`, the partner + goal to send.
 import { cardAprDefault, householdMonth } from '@lifeguessr/engine';
 import { GoalSchema, TogetherNicknameSchema, type Goal, type TogetherPartner } from '@lifeguessr/types';
+import { togetherPartnerSample } from '@/fixtures';
 import { useMemo, useState } from 'react';
 import { useAppStore } from '@/state';
-import { profilePartner, quickPartner } from './compute';
+import { profilePartner, quickOfPartner, quickPartner } from './compute';
 import type { PartnerFormVM, PartnerSource, QuickInputs } from './types';
 
 export const EMPTY_QUICK: QuickInputs = {
@@ -18,13 +19,23 @@ export type PartnerFormState = {
   build: () => { partner: TogetherPartner; goal: Goal | null } | null;
 };
 
-export function usePartnerForm(initialGoal: Goal | null = null, initialNickname = ''): PartnerFormState {
+/**
+ * `example`: whose numbers "Use example numbers" fills in: the demo profile (partner 1 on /together)
+ * or the sample partner fixture (partner 2 on the link), so the two example partners differ.
+ */
+export function usePartnerForm(
+  initialGoal: Goal | null = null,
+  initialNickname = '',
+  example: 'demo' | 'sample' = 'demo',
+): PartnerFormState {
   const profile = useAppStore((s) => s.profile);
   const origin = useAppStore((s) => s.profileOrigin);
   const hasProfile = origin === 'user';
   const [nickname, setNickname] = useState(initialNickname);
   const [chosen, setSource] = useState<PartnerSource | null>(null);
   const [quick, setQuickState] = useState<QuickInputs>(EMPTY_QUICK);
+  // The take-home pay error waits until the person has typed in the box (or asked for the example).
+  const [payTouched, setPayTouched] = useState(false);
   const [goal, setGoalState] = useState<{ target: number | null; years: number | null }>({
     target: initialGoal?.target ?? null,
     years: initialGoal?.years ?? null,
@@ -53,6 +64,7 @@ export function usePartnerForm(initialGoal: Goal | null = null, initialNickname 
       : goalValue === 'invalid'
         ? 'goal'
         : null;
+  const problemShown = problem === 'takeHomePay' && !payTouched ? null : problem;
 
   const vm: PartnerFormVM = {
     nickname,
@@ -62,11 +74,22 @@ export function usePartnerForm(initialGoal: Goal | null = null, initialNickname 
     setSource: (s) => setSource(s === 'profile' && !hasProfile ? 'quick' : s),
     profileSummary,
     quick,
-    setQuick: (field, value) => setQuickState((q) => ({ ...q, [field]: value })),
+    setQuick: (field, value) => {
+      if (field === 'takeHomePay') setPayTouched(true);
+      setQuickState((q) => ({ ...q, [field]: value }));
+    },
+    fillExample: hasProfile
+      ? null
+      : () => {
+          setSource('quick');
+          setPayTouched(true);
+          setQuickState(quickOfPartner(example === 'sample' ? (togetherPartnerSample as TogetherPartner) : profilePartner(profile, '')));
+        },
     defaultApr: { value: cardAprDefault.value, sourceName: cardAprDefault.source.name, year: cardAprDefault.source.year },
     goal,
     setGoal: (field, value) => setGoalState((g) => ({ ...g, [field]: value })),
     problem,
+    problemShown,
   };
 
   const build = () => {

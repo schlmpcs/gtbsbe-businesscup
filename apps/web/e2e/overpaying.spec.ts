@@ -32,6 +32,15 @@ const amountBox = (page: Page, line: keyof typeof t.lines) => page.getByRole('te
 const rowOf = (page: Page, line: keyof typeof t.lines) => page.locator(`[data-testid="benchmark-row"][data-line="${line}"]`);
 
 test.describe('S23 Overpaying check', () => {
+  test('cold: "Try an example" fills a covered ZIP and two bills and shows the rows', async ({ page }) => {
+    await page.goto('/tools/overpaying');
+    await page.getByTestId('overpaying-example').click();
+    await expect(zipBox(page)).toHaveValue('75206');
+    await expect(rowOf(page, 'rent')).toBeVisible();
+    await expect(rowOf(page, 'groceries')).toBeVisible();
+    await expect(page.getByTestId('overpaying-example')).toHaveCount(0);
+  });
+
   test('cold: a covered ZIP and a rent give a verdict with its source', async ({ page }) => {
     await page.goto('/tools/overpaying');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.screens.S23);

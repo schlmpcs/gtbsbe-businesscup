@@ -79,7 +79,7 @@ function EditToggle({ open, name, controls, onToggle }: { open: boolean; name: s
       aria-controls={open ? controls : undefined}
       aria-label={open ? t.edit.closeLabel(name) : t.edit.openLabel(name)}
       onClick={onToggle}
-      className="ml-auto rounded-md px-sm py-xs text-sm font-semibold text-primary transition-colors hover:bg-primary-soft"
+      className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-sm py-xs text-sm font-semibold text-primary transition-colors hover:bg-primary-soft"
     >
       {open ? t.edit.close : t.edit.open}
     </button>

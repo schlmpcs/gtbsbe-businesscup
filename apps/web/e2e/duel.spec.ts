@@ -54,6 +54,13 @@ test('tap card A → the reveal shows both monthly totals → next round', async
   }
   await expect(page.getByText(t.reveal.decidedHeading)).toBeVisible();
   await expect(page.getByText(t.reveal.crowdNone)).toBeVisible();
+  // Who won by how much: both totals and your pick under the headline; sources named and linked.
+  await expect(page.getByText(/^Life A \$[\d,]+ vs Life B \$[\d,]+ a month · you picked A$/)).toBeVisible();
+  const sourcesLine = page.getByTestId('duel-sources-line');
+  await expect(sourcesLine).toContainText(t.reveal.pricesFrom);
+  await expect(sourcesLine.getByRole('link').first()).toHaveAttribute('href', /^https:\/\//);
+  await page.getByText(/^See all \d+ sources and how we count$/).click();
+  await expect(page.getByText(/^Source:/).first()).toBeVisible();
   await expectNoSideScroll(page);
 
   await page.getByRole('button', { name: t.reveal.next }).click();
@@ -63,6 +70,8 @@ test('tap card A → the reveal shows both monthly totals → next round', async
 
 test('a hint, then the rest of the day, ends on the day result with the bridge to S5', async ({ page }) => {
   await page.goto('/duel');
+  // What the hint costs, in points, before it is opened.
+  await expect(page.getByText(t.hint.trade('1,000', '900'))).toBeVisible();
   await page.getByRole('button', { name: t.hint.offer('10%') }).click();
   await expect(page.getByText(t.hint.used('900'))).toBeVisible();
 
@@ -77,11 +86,37 @@ test('a hint, then the rest of the day, ends on the day result with the bridge t
   await expect(page.getByText(t.summary.blindSpotHeading)).toBeVisible();
   await expect(page.getByText(/^Next five in \d+h \d+m$/)).toBeVisible();
   await expect(page.getByRole('link', { name: t.summary.cta })).toHaveAttribute('href', '/me/guess');
+  // One primary action in the game: the only link in the day result is the bridge to S5.
+  await expect(page.getByTestId('duel-guess-own').getByRole('link')).toHaveCount(1);
+  await expect(page.locator('main a[href="/me/guess"]')).toHaveCount(1);
+  await expect(page.getByText(/^You’ve played today’s five/)).toHaveCount(0); // finished just now
   await expectNoSideScroll(page);
 
-  // A reload keeps today's result.
+  // A reload keeps today's result and says the day is done, with the same single bridge to S5.
   await page.reload();
   await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
+  await expect(page.getByText(/^You’ve played today’s five\. New duels in \d+h \d+m\.$/)).toBeVisible();
+  await expect(page.getByRole('link', { name: t.summary.cta })).toHaveAttribute('href', '/me/guess');
+  await expect(page.locator('main a[href="/me/guess"]')).toHaveCount(1);
+});
+
+test('Share without the Web Share API copies the result to the clipboard', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', 'clipboard permissions are Chromium-only in Playwright');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.addInitScript(() => Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }));
+  await page.goto('/duel');
+  for (let round = 1; round <= 5; round++) {
+    await pickA(page).click();
+    await page.getByRole('button', { name: round === 5 ? t.reveal.finish : t.reveal.next }).click();
+  }
+  await page.getByRole('button', { name: t.summary.share }).click();
+  await expect(page.getByText(t.summary.shareStatus.copied)).toBeVisible();
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  expect(text).toMatch(/^LifeGuessr · Which life costs more\? \d{4}-\d{2}-\d{2}\n[🟩🟨⬛]{5}\n\d\/5 · [\d,]+ points\n.+\/duel\?c=/u);
+
+  await page.getByRole('button', { name: /^Challenge a friend · beat my \d\/5$/ }).click();
+  await expect(page.getByText(t.summary.copyStatus.copied)).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/duel\?c=fixture-duel-/);
 });
 
 test('/play is the duel: one pick shows on S1 Today as rounds, not homes, with no streamer link', async ({ page }) => {

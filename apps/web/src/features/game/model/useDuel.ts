@@ -144,6 +144,8 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
 
   const total = day?.duels.length ?? DUEL_ROUND_COUNT;
   const allPicked = day !== null && day.duels.every((d) => progress.picks[d.round]);
+  // The day was already finished when it loaded (day.progress is what the source held then).
+  const finishedOnLoad = day !== null && day.duels.every((d) => day.progress.picks[d.round]);
   const viewIndex = Math.min(index, total);
   const duel = day && viewIndex < total ? day.duels[viewIndex]! : null;
   const round: DuelRound | null = duel?.round ?? null;
@@ -334,6 +336,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
     challenged: challengeId !== null,
     challenge,
     newDay: status === 'ready' && newDay,
+    playedEarlier: status === 'ready' && phase === 'summary' && finishedOnLoad,
     pick,
     openHint,
     next,

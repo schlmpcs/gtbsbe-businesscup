@@ -24,7 +24,7 @@ export function BillList({ bills, onDueDay }: BillListProps) {
             </span>
             <span className="flex flex-wrap items-center gap-xs text-sm text-text-muted">
               <span className="tabular-nums">
-                {formatMoney(b.amount, { cents: true })} {t.list.perCadence[b.cadence]}
+                {formatMoney(b.amount)} {t.list.perCadence[b.cadence]}
               </span>
               {b.amountIsEstimate && <EstimateTag />}
               {b.dueDayIsEstimate ? (

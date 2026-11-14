@@ -29,7 +29,7 @@ export function PurchaseExamples({ setLabel, setAmount }: Pick<AffordVM, 'setLab
               setLabel(ex.label);
               setAmount(ex.amount);
             }}
-            className="rounded-full bg-bg px-md py-xs text-sm font-semibold leading-normal text-text-muted transition-colors hover:bg-primary-soft hover:text-primary"
+            className="inline-flex min-h-11 items-center rounded-full bg-bg px-md py-xs text-sm font-semibold leading-normal text-text-muted transition-colors hover:bg-primary-soft hover:text-primary"
           >
             {t.form.example(ex.label, formatMoney(ex.amount))}
           </button>

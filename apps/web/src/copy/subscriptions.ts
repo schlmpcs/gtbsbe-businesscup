@@ -122,6 +122,7 @@ export const subscriptions = {
     dismiss: 'Dismiss',
     replace: 'Use another statement',
     byHand: 'No statement? Tick them by hand',
+    sample: 'Try the sample statement',
   },
 
   findings: {

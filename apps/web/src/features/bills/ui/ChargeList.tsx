@@ -27,7 +27,7 @@ export function ChargeList({ charges, total, totalIsEstimate, empty, testId }: C
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-xs font-semibold tabular-nums">
-              {formatMoney(c.bill.amount, { cents: true })}
+              {formatMoney(c.bill.amount)}
               {c.bill.amountIsEstimate && <EstimateTag />}
             </span>
           </li>
@@ -36,7 +36,7 @@ export function ChargeList({ charges, total, totalIsEstimate, empty, testId }: C
       <p className="flex items-center justify-between gap-md border-t border-border pt-sm font-bold">
         <span>{t.soon.total}</span>
         <span className="flex items-center gap-xs tabular-nums">
-          {formatMoney(total, { cents: true })}
+          {formatMoney(total)}
           {totalIsEstimate && <EstimateTag />}
         </span>
       </p>

@@ -128,6 +128,7 @@ export function useDecide(opts: { now?: Date } = {}): DecideVM {
     horizonYear: year + HORIZON_YEARS,
     todaysDollars: true,
     lease: { form, isEstimate, invalidFields: invalid },
+    leaseIsExample: leaseIsEstimate,
     setLease,
     resetLease,
     result,

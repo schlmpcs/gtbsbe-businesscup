@@ -75,9 +75,16 @@ export function UploadStep({ statement, onByHand }: UploadStepProps) {
           </div>
         )}
 
+        {statement.status === 'idle' && (
+          <Row>
+            <Button variant="secondary" className="min-h-11" onClick={statement.trySample} data-testid="subs-try-sample">
+              {t.statement.sample}
+            </Button>
+          </Row>
+        )}
         {onByHand && statement.status !== 'done' && (
           <Row>
-            <Button size="sm" variant="ghost" onClick={onByHand}>
+            <Button size="sm" variant="ghost" className="min-h-11" onClick={onByHand}>
               {t.statement.byHand}
             </Button>
           </Row>

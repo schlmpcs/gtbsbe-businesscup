@@ -173,6 +173,8 @@ export type OverpayingVM = {
   invalidFields: OverpayingField[];
   /** What the person still has to give us; null once there is something to compare. */
   needs: OverpayingNeed | null;
+  /** Fill the form with the demo household's ZIP and two bills, so a first look has a result (null once one can show). */
+  tryExample: (() => void) | null;
   /** null until there is something to compare. */
   result: Loadable<OverpayingResultVM> | null;
   /** Where the streamer notice sends people back to: the game (streamerGameHref in lib/screens). */

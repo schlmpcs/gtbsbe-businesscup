@@ -51,7 +51,18 @@ describe('useBills', () => {
   it('is empty with nothing of the user’s yet, and points to the statement upload', async () => {
     const { result } = renderHook(() => useBills({ now: NOW }));
     await waitForReady(result);
-    expect(result.current).toEqual({ status: 'empty', uploadHref: '/me/upload' });
+    expect(result.current).toEqual({ status: 'empty', uploadHref: '/me/upload', trySample: expect.any(Function) });
+  });
+
+  it('the empty state can show the sample life’s bills instead', async () => {
+    const { result } = renderHook(() => useBills({ now: NOW }));
+    await waitForReady(result);
+    const vm = result.current;
+    if (vm.status !== 'empty' || !vm.trySample) throw new Error('expected the empty state with a sample');
+    act(() => vm.trySample!());
+    expect(result.current.status).toBe('ready');
+    if (result.current.status !== 'ready') return;
+    expect(result.current.bills.some((b) => b.kind === 'rent')).toBe(true);
   });
 
   it('shows only the statement’s subscriptions while the profile is still the starting one', async () => {

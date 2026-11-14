@@ -105,6 +105,8 @@ export type StatementVM = {
   asOf: ChargeDate | null;
   /** Read a CSV on this device and look for recurring charges. Needs the network (the categorizer). */
   upload: (file: File) => void;
+  /** Read the sample statement (a made-up export, fixture) the same way, for a first look without a CSV. */
+  trySample: () => void;
   dismissError: () => void;
 };
 

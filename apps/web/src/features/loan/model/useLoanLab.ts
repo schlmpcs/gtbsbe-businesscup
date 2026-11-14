@@ -40,6 +40,8 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
   );
   const [selectedId, setSelectedId] = useState<string | null>(() => offers[0]?.id ?? null);
   const [extraPayment, setExtra] = useState<Money>(0);
+  // Still the illustrative offers until the person adds, edits or removes one.
+  const [touched, setTouched] = useState(opts.initialOffers !== undefined);
 
   const offerVMs: LoanOfferVM[] = useMemo(() => {
     const checked = offers.map((o) => ({ offer: o, invalid: invalidFieldsOf(o.input) }));
@@ -128,6 +130,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
       const id = newOfferId();
       setOffers((os) => (os.length >= MAX_OFFERS ? os : [...os, { id, input: { ...base } }]));
       setSelectedId(id);
+      setTouched(true);
       return id;
     },
     [offers],
@@ -135,12 +138,14 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
 
   const updateOffer = useCallback((id: string, patch: Partial<LoanInput>) => {
     setOffers((os) => os.map((o) => (o.id === id ? { ...o, input: { ...o.input, ...patch } } : o)));
+    setTouched(true);
   }, []);
 
   const removeOffer = useCallback(
     (id: string) => {
       const rest = offers.filter((o) => o.id !== id);
       setOffers(rest);
+      setTouched(true);
       if (selectedId === id) setSelectedId(rest[0]?.id ?? null);
     },
     [offers, selectedId],
@@ -158,6 +163,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
   return {
     status: ready ? 'ready' : 'loading',
     offers: offerVMs,
+    offersAreExamples: !touched,
     canAddOffer: offers.length < MAX_OFFERS,
     addOffer,
     updateOffer,

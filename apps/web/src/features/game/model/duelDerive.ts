@@ -100,6 +100,15 @@ function sourcesOf(result: PickResult): DuelRevealVM['sources'] {
   return [...out].map(([category, sources]) => ({ category, sources }));
 }
 
+/** Every source once (same name and year = one), in the order the categories list them. */
+export function uniqueSources(byCategory: DuelRevealVM['sources']): Source[] {
+  const list: Source[] = [];
+  for (const { sources } of byCategory) {
+    for (const s of sources) if (!list.some((x) => x.name === s.name && x.year === s.year)) list.push(s);
+  }
+  return list;
+}
+
 /**
  * The reveal's crowd line from the server's counts: the letter most players picked (A on an exact
  * tie) and its share, already rounded to the whole percent the line shows, so the UI only formats
@@ -127,6 +136,7 @@ export function buildDuelReveal(round: DuelRound, pick: { choice: DuelLetter; re
   const { costlier, amount } = duelDifference(result.totals);
   const top = costlier ?? 'A';
   const crowd = result.crowd ? buildDuelCrowd(result.crowd) : null;
+  const sources = sourcesOf(result);
   return {
     round,
     choice,
@@ -143,7 +153,8 @@ export function buildDuelReveal(round: DuelRound, pick: { choice: DuelLetter; re
     },
     lesson: result.lesson,
     crowd,
-    sources: sourcesOf(result),
+    sources,
+    allSources: uniqueSources(sources),
     isLastRound: round === DUEL_ROUND_COUNT,
   };
 }

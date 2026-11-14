@@ -112,9 +112,9 @@ describe('DuelChallengeLine', () => {
     return screen.queryByRole('status');
   };
 
-  it('says whose score to beat: "Your friend got 4/5 · 3,900 points"', () => {
+  it('says whose score to beat: "A friend scored 4/5 (3,900 points)"', () => {
     const friend = score(4, 3_900, ['yellow', 'green', 'green', 'green', 'ink']);
-    expect(line({ status: 'ready', data: { kind: 'friend', friend, comparison: null } })).toHaveTextContent('Your friend got 4/5 · 3,900 points');
+    expect(line({ status: 'ready', data: { kind: 'friend', friend, comparison: null } })).toHaveTextContent('A friend scored 4/5 (3,900 points). Beat it: tap the life that costs more.');
   });
 
   it('says the challenge was for another day, and shows today’s five', () => {
@@ -181,5 +181,26 @@ describe('the day result of a challenge', () => {
     expect(screen.getAllByRole('list', { name: t.summary.gridLabel })).toHaveLength(1);
     expect(screen.queryByRole('list', { name: t.challenge.friendGridLabel })).toBeNull();
     expect(screen.getByText(t.summary.legend)).toBeInTheDocument();
+  });
+});
+
+describe('the day result’s one main action', () => {
+  it('has exactly one link, to guess your own month, placed before the share buttons', () => {
+    render(
+      <DuelSummary
+        summary={YOURS} copyStatus="idle" shareStatus="idle" onCopyChallenge={() => {}} onShare={() => {}} onGuessOwn={() => {}}
+        guessOwnHref="/me/guess"
+      />,
+    );
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAccessibleName(t.summary.cta);
+    expect(links[0]).toHaveAttribute('href', '/me/guess');
+    const share = screen.getByRole('button', { name: t.summary.share });
+    const copy = screen.getByRole('button', { name: t.summary.copyChallenge(3, 5) });
+    // DOM order = reading order on a phone: the bridge comes right after the score, sharing after it.
+    expect(links[0].compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(links[0].compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('heading', { name: t.summary.ctaLead })).toBeInTheDocument();
   });
 });

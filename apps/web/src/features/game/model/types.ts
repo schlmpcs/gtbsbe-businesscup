@@ -277,6 +277,8 @@ export type DuelRevealVM = {
   crowd: { letter: DuelLetter; share: Rate; total: number } | null;
   /** Every source behind both breakdowns, by category. */
   sources: { category: CostCategory; sources: Source[] }[];
+  /** The same sources once each (by name and year), in first-seen order: the reveal's visible "Prices from" line. */
+  allSources: Source[];
   isLastRound: boolean;
 };
 
@@ -360,6 +362,11 @@ export type DuelVM = {
    * the new day's five: say so. Cleared by the next pick or hint.
    */
   newDay: boolean;
+  /**
+   * The day result of a day this player had already finished when the page loaded (a reload, a
+   * second visit): the screen says "you've played today's five" instead of acting like a fresh finish.
+   */
+  playedEarlier: boolean;
   pick: (letter: DuelLetter) => void;
   openHint: () => void;
   /** Next round, or the day result after round 5. */

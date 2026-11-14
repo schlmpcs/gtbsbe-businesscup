@@ -49,6 +49,11 @@ export const mocks = {
     sentenceSubject: { keep: 'Keeping the Camry', keepOwn: 'Keeping your car', lease: 'Leasing the RAV4', leaseOwn: 'Leasing a new car' },
     detailsTitle: 'Loan left and monthly savings',
     editDisclosure: 'Change the lease terms',
+    /** Under the title while the lease is still the illustrative sample: say it is an example, and how to make it theirs. */
+    example: {
+      demo: 'An example: the sample profile’s 2021 Camry vs a typical RAV4 lease. Put in your own offer under “Change the lease terms”.',
+      own: 'Your car vs an example lease offer. Put in a real offer under “Change the lease terms”.',
+    },
     better: 'Better path',
     /** Labels of the engine purchases (never shown as results). */
     purchaseLabels: { lease: 'Lease payment', signing: 'Due at signing' },

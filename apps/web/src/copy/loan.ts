@@ -10,6 +10,8 @@ export const loan = {
   },
 
   intro: 'Compare up to 3 offers. See the real cost before you sign.',
+  /** Shown while the cards still hold the illustrative offers. */
+  exampleNote: 'These are example offers. Tap Edit on a card to put in a real one.',
   loading: 'Loading your plan…',
 
   /** Offers are lettered: Offer A, Offer B, Offer C (n starts at 1). */

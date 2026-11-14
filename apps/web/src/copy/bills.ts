@@ -77,8 +77,8 @@ export const bills = {
     title: 'No bills yet',
     body: 'Upload a bank statement and we will find your rent, loan payments and subscriptions. It is read in your browser.',
     upload: 'Upload a statement',
+    sample: 'Try it with sample data',
   },
-  note: 'Educational simulation, not financial advice.',
   /** S1 Home: one line about the next bill. */
   today: {
     nextBill: (label: string, amount: string, inDays: number) =>

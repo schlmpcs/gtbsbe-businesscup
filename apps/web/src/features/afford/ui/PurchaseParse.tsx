@@ -86,7 +86,7 @@ export function PurchaseParse({ parse }: { parse: ParseConfirmVM<Purchase> }) {
           if (shown) parse.cancel();
           setOpen(!shown);
         }}
-        className="self-start text-sm font-semibold text-primary underline-offset-2 hover:underline"
+        className="min-h-11 self-start text-sm font-semibold text-primary underline-offset-2 hover:underline"
       >
         {shown ? t.parse.close : t.parse.open}
       </button>

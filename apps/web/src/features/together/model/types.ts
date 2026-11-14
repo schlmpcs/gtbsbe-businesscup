@@ -50,6 +50,10 @@ export type PartnerFormVM = {
   setGoal: (field: 'target' | 'years', value: number | null) => void;
   /** What is missing or wrong, if anything; the submit button is off while it is set. */
   problem: 'takeHomePay' | 'nickname' | 'goal' | null;
+  /** The problem to show next to its field: as `problem`, but a blank take-home pay is not an error until they typed there. */
+  problemShown: 'takeHomePay' | 'nickname' | 'goal' | null;
+  /** Fill the quick inputs with example numbers (null when this browser has the person's own profile). */
+  fillExample: (() => void) | null;
 };
 
 /** One partner's month, as both partners see it (only totals, never categories or debts one by one). */

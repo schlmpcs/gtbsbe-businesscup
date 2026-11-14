@@ -29,7 +29,7 @@ export const duel = {
   challenge: {
     /** The link names no day we can read (unknown id, unfinished day, the server didn't answer). */
     generic: 'A friend challenged you. Beat their score on today’s five.',
-    friendScore: (right: number, total: number, points: string) => `Your friend got ${right}/${total} · ${points} points`,
+    friendScore: (right: number, total: number, points: string) => `A friend scored ${right}/${total} (${points} points). Beat it: tap the life that costs more.`,
     /** The link is from another day: its five duels are gone, so there is nothing to compare. */
     earlier: (date: string) => `This challenge was for ${date}. Here are today’s five.`,
     heading: 'You vs your friend',
@@ -70,7 +70,10 @@ export const duel = {
   vs: 'VS',
 
   hint: {
-    offer: (cost: string) => `Hint: one more fact each · −${cost}`,
+    /** The button's text and name: what it shows and what it costs. */
+    offer: (cost: string) => `Hint: neighborhoods · −${cost}`,
+    /** Under the button: the cost in points, both numbers already formatted. */
+    trade: (now: string, withHint: string) => `A right pick scores ${now} points, or ${withHint} with the hint.`,
     used: (points: string) => `Hint used · now worth ${points}`,
     opening: 'Opening the hint…',
     error: 'The hint didn’t open. Tap to try again.',
@@ -83,6 +86,8 @@ export const duel = {
     right: (points: string) => `Right! +${points} points`,
     wrong: 'Not this time · 0 points',
     headline: (letter: DuelLetter, amount: string) => `${letter} costs ${amount} more a month.`,
+    /** Under the headline: both monthly totals and the player's pick. Amounts arrive formatted. */
+    totals: (a: string, b: string, choice: DuelLetter) => `Life A ${a} vs Life B ${b} a month · you picked ${choice}`,
     same: 'They cost the same each month.',
     totalLabel: (letter: DuelLetter) => `Life ${letter} a month`,
     breakdownLabel: (letter: DuelLetter) => `Life ${letter}: monthly costs by category`,
@@ -102,6 +107,10 @@ export const duel = {
     crowdHow: `Every pick stored for this round today, one per player, yours included. The share shows once ${DUEL_CROWD_MIN_PICKS} players have picked.`,
     perMonth: '/ month',
     sources: 'Sources →',
+    /** The visible line under the band: the first sources by name, then how many more. */
+    pricesFrom: 'Prices from',
+    moreSources: (n: number) => `+ ${n} more`,
+    allSources: (n: number) => `See all ${n} sources and how we count`,
     sourceShort: (name: string, year: number) => `${name}, ${year}`,
     next: 'Next round →',
     finish: 'See my day →',
@@ -120,7 +129,7 @@ export const duel = {
     legend: 'Green right · Yellow right with a hint · Black missed',
     blindSpotHeading: 'Your blind spot',
     noBlindSpot: 'No blind spot today: every round right.',
-    copyChallenge: (right: number, total: number) => `Copy challenge link · Beat my ${right}/${total}`,
+    copyChallenge: (right: number, total: number) => `Challenge a friend · beat my ${right}/${total}`,
     copyStatus: {
       idle: '',
       copied: 'Challenge link copied. Send it to a friend.',
@@ -128,6 +137,10 @@ export const duel = {
     } satisfies Record<DuelCopyStatus, string>,
     challengeLinkLabel: 'Challenge link',
     share: 'Share',
+    /** Above the share buttons: the secondary actions under the main CTA. */
+    shareHeading: 'Or send today’s five to a friend',
+    /** Reloaded after finishing: today's five are done, here is the result again. */
+    playedEarlier: (hours: number, minutes: number) => `You’ve played today’s five. New duels in ${hours}h ${minutes}m.`,
     shareStatus: {
       idle: '',
       sharing: 'Opening share…',
@@ -138,6 +151,8 @@ export const duel = {
     cta: 'Price my own month →',
     ctaEyebrow: 'Now you’re up',
     ctaLead: 'What does your month cost?',
+    /** Under the lead: what the next step is and how long it takes. */
+    ctaBody: 'Guess what your own month costs, then build your plan in 4 short steps. No sign-up.',
     nextIn: (hours: number, minutes: number) => `Next five in ${hours}h ${minutes}m`,
   },
 

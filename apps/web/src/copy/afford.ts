@@ -63,7 +63,7 @@ export const afford = {
     /** `amount` is already formatted. */
     example: (label: string, amount: string) => `${label} ${amount}`,
     fixFields: 'Fix the highlighted fields.',
-    empty: 'Enter a price to check.',
+    empty: 'Tap an example or type a price. You get yes, wait or no, checked against your next 10 years.',
   },
 
   parse: {

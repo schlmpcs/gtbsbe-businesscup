@@ -7,7 +7,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { duel as t } from '@/copy/duel';
 import { buildDuelCrowd, buildDuelReveal } from './model/duelDerive';
-import { DuelReveal, DuelRevealBand } from './ui/DuelReveal';
+import { DuelReveal, DuelRevealBand, DuelRevealHeader } from './ui/DuelReveal';
 
 const source = { name: 'HUD Fair Market Rents', year: 2025, url: 'https://www.huduser.gov/portal/datasets/fmr.html' };
 
@@ -80,5 +80,39 @@ describe('the reveal’s crowd line', () => {
     expect(screen.getByText(t.reveal.crowdHow)).toBeInTheDocument();
     expect(t.reveal.crowdHow).toMatch(/yours included/);
     expect(t.reveal.crowdHow).toContain('20 players');
+  });
+});
+
+describe('the reveal’s sources and totals', () => {
+  const bls = { name: 'BLS Consumer Expenditure Survey', year: 2023, url: 'https://www.bls.gov/cex/' };
+  const usda = { name: 'USDA Food Plans', year: 2024, url: 'https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-reports' };
+  function multi(): PickResult {
+    const r = result(null);
+    return {
+      ...r,
+      breakdown: {
+        A: [...r.breakdown.A, { category: 'groceries', amount: 600, sources: [usda, bls], isEstimate: true }],
+        B: [...r.breakdown.B, { category: 'groceries', amount: 400, sources: [usda], isEstimate: true }],
+      },
+    };
+  }
+
+  it('keeps each source once, in first-seen order', () => {
+    const reveal = buildDuelReveal(1, { choice: 'B', result: multi() });
+    expect(reveal.allSources).toEqual([source, usda, bls]);
+  });
+
+  it('names the first two sources with links, counts the rest, and opens every source in one tap', () => {
+    render(<DuelReveal reveal={buildDuelReveal(1, { choice: 'B', result: multi() })} />);
+    const line = screen.getByTestId('duel-sources-line');
+    expect(line).toHaveTextContent(`${t.reveal.pricesFrom} ${source.name}, 2025 · ${usda.name}, 2024 ${t.reveal.moreSources(1)}`);
+    expect(screen.getByRole('link', { name: source.name })).toHaveAttribute('href', source.url);
+    expect(screen.getByText(t.reveal.allSources(3))).toBeInTheDocument();
+  });
+
+  it('the header says who won, both monthly totals and your pick', () => {
+    render(<DuelRevealHeader reveal={buildDuelReveal(1, { choice: 'B', result: multi() })} totalRounds={5} />);
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('A costs $1,100 more a month.');
+    expect(screen.getByText('Life A $5,200 vs Life B $4,100 a month · you picked B')).toBeInTheDocument();
   });
 });

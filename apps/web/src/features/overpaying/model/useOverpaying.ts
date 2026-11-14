@@ -5,6 +5,7 @@
 // profile: the inputs live here and, when `onStore` is given, in the store's `tools.overpaying`.
 import type { Profile } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { profileDemo } from '@/fixtures';
 import { SCREEN_ROUTES, streamerGameHref } from '@/lib/screens';
 import { useAppReady } from '@/state';
 import { computeOverpaying } from './compute';
@@ -84,6 +85,21 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
     [edit, metroOptions],
   );
   const setTier = useCallback((tier: AreaTier) => edit((d) => ({ ...d, tier })), [edit]);
+  // "Try an example": the demo profile's ZIP, rent + utilities and groceries (the same household the game's demo uses).
+  const tryExample = useCallback(
+    () =>
+      edit((d) => ({
+        ...d,
+        metro: null,
+        tier: null,
+        inputs: {
+          ...d.inputs,
+          zip: profileDemo.zip ?? d.inputs.zip,
+          amounts: { ...d.inputs.amounts, rent: profileDemo.spending.rentUtilities.value, groceries: profileDemo.spending.groceries.value },
+        },
+      })),
+    [edit],
+  );
 
   // ----- the last inputs: kept after the person's own changes only (prefill alone is not "typed") -----
   const onStoreRef = useRef(onStore);
@@ -173,6 +189,7 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
     metroPicker,
     invalidFields: computed?.invalidFields ?? [],
     needs: computed?.needs ?? null,
+    tryExample: computed?.needs === 'zip' || computed?.needs === 'amount' ? tryExample : null,
     result: computed?.result ?? null,
     playHref: streamerGameHref(),
     profileHref: SCREEN_ROUTES.S8,

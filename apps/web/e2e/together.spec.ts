@@ -79,6 +79,15 @@ test('two partners plan together through a link, without signing up', async ({ p
   expect(errors1, errors1.join('\n')).toEqual([]);
 });
 
+test('"Use example numbers" fills the form so a first look needs no typing', async ({ page }) => {
+  await page.goto('/together');
+  await expect(page.getByTestId('together-create')).toBeDisabled();
+  await expect(page.getByText(t.form.problems.takeHomePay)).toHaveCount(0); // no error before they typed
+  await page.getByTestId('together-example').click();
+  await expect(box(page, t.form.takeHomePay)).not.toHaveValue('');
+  await expect(page.getByTestId('together-create')).toBeEnabled();
+});
+
 test('an unknown plan link says so', async ({ page }) => {
   await page.goto('/together/AAAAAAAAAAAAAAAAAAAAAA');
   await expect(page.getByTestId('together-not-found')).toHaveText(t.plan.notFound);

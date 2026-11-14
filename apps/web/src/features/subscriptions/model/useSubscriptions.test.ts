@@ -23,7 +23,7 @@ const track = vi.fn<NonNullable<SubscriptionsDeps['track']>>();
 const downloadRenewals = vi.fn<NonNullable<SubscriptionsDeps['downloadRenewals']>>(() => 'downloaded');
 const trackTool = vi.fn<NonNullable<SubscriptionsDeps['trackTool']>>();
 
-type Options = Partial<Pick<SubscriptionsDeps, 'catalogue' | 'categorize' | 'importedStatement'>> & { initial?: SubscriptionsToolState };
+type Options = Partial<Pick<SubscriptionsDeps, 'catalogue' | 'categorize' | 'importedStatement' | 'fetchSample'>> & { initial?: SubscriptionsToolState };
 
 function renderTool(opts: Options = {}) {
   const view = renderHook(() => {
@@ -33,6 +33,7 @@ function renderTool(opts: Options = {}) {
       catalogue: opts.catalogue ?? testCatalogue, store, track, trackTool, downloadRenewals,
       categorize: opts.categorize ?? fakeCategorize(),
       importedStatement: opts.importedStatement,
+      fetchSample: opts.fetchSample,
     });
     // The screen mounts this only while something is marked (SubscriptionsTool); here it is always there.
     const cancel = useCancelResult(profile, vm.plan.candidate, { track });
@@ -489,6 +490,28 @@ describe('statement path', () => {
     await ready(tool);
     await uploaded(tool, csvFile(['2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99']));
     expect(tool.result.current.vm.statement).toMatchObject({ monthsCovered: 2, isShort: false });
+  });
+
+  it('"Try the sample statement" reads the sample fixture like a picked file', async () => {
+    const fetchSample = vi.fn(() => Promise.resolve(sampleStatementFile()));
+    const viaSample = renderTool({ fetchSample });
+    await ready(viaSample);
+    act(() => viaSample.result.current.vm.statement.trySample());
+    await waitFor(() => expect(viaSample.result.current.vm.statement.status).toBe('done'));
+    expect(fetchSample).toHaveBeenCalledTimes(1);
+    const viaFile = renderTool();
+    await ready(viaFile);
+    await uploaded(viaFile);
+    expect(viaSample.result.current.vm.findings.monthly).toBe(viaFile.result.current.vm.findings.monthly);
+    expect(viaSample.result.current.vm.findings.found).toBeGreaterThan(0);
+    expect(viaSample.result.current.vm.step).toBe('findings');
+  });
+
+  it('a failed sample download is an error the person can dismiss', async () => {
+    const tool = renderTool({ fetchSample: () => Promise.reject(new ApiError('Network error', 0)) });
+    await ready(tool);
+    act(() => tool.result.current.vm.statement.trySample());
+    await waitFor(() => expect(tool.result.current.vm.statement.status).toBe('error'));
   });
 
   it('a statement with nothing recurring: no findings, totals 0, no factor for a guess', async () => {

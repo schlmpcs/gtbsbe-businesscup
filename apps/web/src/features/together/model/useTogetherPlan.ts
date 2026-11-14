@@ -32,7 +32,7 @@ export function useTogetherPlan(id: string, client?: TogetherClient): TogetherPl
   const [submitError, setSubmitError] = useState<VMError | null>(null);
   const [copied, setCopied] = useState(false);
   const plan = state.status === 'ready' ? state.plan : null;
-  const form = usePartnerForm();
+  const form = usePartnerForm(null, '', 'sample');
 
   useEffect(() => {
     let live = true;

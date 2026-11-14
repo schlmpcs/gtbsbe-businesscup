@@ -51,7 +51,8 @@ export type MonthVM = {
 
 export type BillsVM =
   | { status: 'loading' }
-  | { status: 'empty'; uploadHref: string }
+  /** `trySample`: show the sample life's bills instead (null once the profile is the person's own). */
+  | { status: 'empty'; uploadHref: string; trySample: (() => void) | null }
   | {
       status: 'ready';
       today: DayVM;

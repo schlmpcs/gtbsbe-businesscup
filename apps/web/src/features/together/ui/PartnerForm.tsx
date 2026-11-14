@@ -3,7 +3,7 @@
 // "Your numbers": the profile from this app (when the person made one) or quick inputs, a nickname
 // and an optional shared goal. Presentational: everything comes from the PartnerFormVM.
 import { together as t } from '@/copy';
-import { Card, Choice, Field, NumberInput, Stack, cx, formatMoney, formatRate, useFieldControl } from '@/ui-kit';
+import { Button, Card, Choice, Field, NumberInput, Stack, cx, formatMoney, formatRate, useFieldControl } from '@/ui-kit';
 import type { PartnerFormVM, QuickField } from '../model/types';
 
 function TextInput({ value, onValueChange, maxLength }: { value: string; onValueChange: (v: string) => void; maxLength: number }) {
@@ -47,7 +47,7 @@ export function PartnerForm({ vm, goalKeepHint = false }: { vm: PartnerFormVM; g
   return (
     <Card title={t.form.title} headingLevel={2} data-testid="together-form">
       <Stack gap="xl">
-        <Field label={t.form.nickname} hint={t.form.nicknameHint} error={vm.problem === 'nickname' ? t.form.problems.nickname : undefined}>
+        <Field label={t.form.nickname} hint={t.form.nicknameHint} error={vm.problemShown === 'nickname' ? t.form.problems.nickname : undefined}>
           <TextInput value={vm.nickname} onValueChange={vm.setNickname} maxLength={40} />
         </Field>
 
@@ -70,7 +70,15 @@ export function PartnerForm({ vm, goalKeepHint = false }: { vm: PartnerFormVM; g
           </p>
         ) : (
           <Stack gap="lg">
-            <MoneyField vm={vm} field="takeHomePay" label={t.form.takeHomePay} hint={t.form.takeHomePayHint} error={vm.problem === 'takeHomePay' ? t.form.problems.takeHomePay : undefined} />
+            {vm.fillExample && (
+              <div className="flex flex-wrap items-center gap-sm rounded-lg bg-surface-strong p-md">
+                <Button variant="secondary" onClick={vm.fillExample} data-testid="together-example">
+                  {t.form.example}
+                </Button>
+                <span className="text-sm text-text-muted">{t.form.exampleHint}</span>
+              </div>
+            )}
+            <MoneyField vm={vm} field="takeHomePay" label={t.form.takeHomePay} hint={t.form.takeHomePayHint} error={vm.problemShown === 'takeHomePay' ? t.form.problems.takeHomePay : undefined} />
             <p className="text-sm text-text-muted">{t.form.sharedHint}</p>
             <div className="grid gap-lg sm:grid-cols-2">
               {SPENDING.map((s) => (
@@ -100,7 +108,7 @@ export function PartnerForm({ vm, goalKeepHint = false }: { vm: PartnerFormVM; g
         <Stack gap="md" as="fieldset" className="min-w-0 border-0 p-0">
           <legend className="mb-sm text-sm font-semibold">{t.form.goalTitle}</legend>
           <div className="grid gap-lg sm:grid-cols-2">
-            <Field label={t.form.goalTarget} error={vm.problem === 'goal' ? t.form.problems.goal : undefined} hint={goalKeepHint ? t.form.goalKeepHint : undefined}>
+            <Field label={t.form.goalTarget} error={vm.problemShown === 'goal' ? t.form.problems.goal : undefined} hint={goalKeepHint ? t.form.goalKeepHint : undefined}>
               <NumberInput value={vm.goal.target} onValueChange={(v) => vm.setGoal('target', v)} prefix="$" maxFractionDigits={0} max={100_000_000} />
             </Field>
             <Field label={t.form.goalYears}>

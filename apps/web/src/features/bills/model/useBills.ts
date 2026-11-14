@@ -76,6 +76,12 @@ export function useBills(opts: { now?: Date } = {}): BillsVM {
   const savedPaydays = useAppStore((s) => s.bills.paydays);
   const setBillDueDay = useAppStore((s) => s.setBillDueDay);
   const storePaydays = useAppStore((s) => s.setPaydays);
+  const loadSample = useAppStore((s) => s.loadSample);
+  const isDemoProfile = useAppStore((s) => s.profileOrigin) === 'demo';
+  // The sample life's rent and loans (the same "Try with sample data" the other screens offer); only while the profile is still the demo.
+  const trySample = useCallback(() => {
+    loadSample();
+  }, [loadSample]);
   const [offset, setOffset] = useState(0);
   const [exportOutcome, setExportOutcome] = useState<ExportOutcomeVM | null>(null);
   const nowMs = opts.now?.getTime();
@@ -134,7 +140,7 @@ export function useBills(opts: { now?: Date } = {}): BillsVM {
   const setPaydays = useCallback((days: number[]) => storePaydays(days.length > 0 ? days : null), [storePaydays]);
 
   if (!ready) return { status: 'loading' };
-  if (empty) return { status: 'empty', uploadHref: UPLOAD_HREF };
+  if (empty) return { status: 'empty', uploadHref: UPLOAD_HREF, trySample: isDemoProfile ? trySample : null };
   return {
     status: 'ready',
     today: dayVM(today),

@@ -54,6 +54,9 @@ test('fresh browser: the empty state links to the statement upload', async ({ pa
   await expect(page.getByRole('heading', { level: 1, name: t.title })).toBeVisible();
   await expect(page.getByTestId('bills-empty')).toBeVisible();
   await expect(page.getByRole('link', { name: t.empty.upload })).toHaveAttribute('href', '/me/upload');
+  // Or the sample life's bills, without a statement.
+  await page.getByTestId('bills-try-sample').click();
+  await expect(page.getByTestId('bills-month-total')).toContainText('$');
 });
 
 test('the month on one screen: grid, next 7 days, due-day edit, calendar export', async ({ page }) => {

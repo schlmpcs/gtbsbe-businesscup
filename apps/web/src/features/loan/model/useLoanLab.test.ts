@@ -20,6 +20,7 @@ describe('useLoanLab (S12)', () => {
     expect(result.current.offers[0]!.result!.monthly).toBeCloseTo(863.28, 2); // ENGINEERING.md known value
     const minCost = Math.min(...expected.map((r) => r.totalCost));
     expect(result.current.offers.filter((o) => o.isLowestCost).map((o) => o.result!.totalCost)).toEqual([minCost]);
+    expect(result.current.offersAreExamples).toBe(true);
     expect(result.current.canAddOffer).toBe(false);
     expect(result.current.addOffer()).toBeNull();
     expect(result.current.offers).toHaveLength(MAX_OFFERS);
@@ -109,5 +110,13 @@ describe('useLoanLab (S12)', () => {
     expect(plan.steps.filter((s) => s.isNew).map((s) => s.balance)).toEqual([principal]);
     expect(plan.payoffMonth).toBe(expected.payoffMonth);
     expect(plan.totalInterest).toBeCloseTo(expected.totalInterest, 6);
+  });
+
+  it('stops calling the offers examples once the person edits one', async () => {
+    const { result } = renderHook(() => useLoanLab());
+    await waitForReady(result);
+    expect(result.current.offersAreExamples).toBe(true);
+    act(() => result.current.updateOffer(result.current.offers[0]!.id, { apr: 0.05 }));
+    expect(result.current.offersAreExamples).toBe(false);
   });
 });

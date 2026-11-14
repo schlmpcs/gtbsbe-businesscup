@@ -24,8 +24,11 @@ function PathTile({
   tone,
   horizonYear,
   footnote,
+  isEstimate = false,
 }: {
   title: string;
+  /** Some number on this card is an example or our estimate: one tag for the card, not one per row. */
+  isEstimate?: boolean;
   art: ArtName;
   rows: { label: string; value: ReactNode }[];
   /** This path's own net worth at 10 years (today's dollars). */
@@ -50,7 +53,10 @@ function PathTile({
       )}
       <Art name={art} className="mx-auto w-3/4 max-w-(--container-3xs)" />
       <div className="flex flex-col gap-md">
-        <h2 className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">{title}</h2>
+        <h2 className="flex flex-wrap items-center gap-sm font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+          {title}
+          {isEstimate && <EstimateTag />}
+        </h2>
         <dl className="flex flex-col gap-xs text-sm">
           {rows.map((r) => (
             <div key={r.label} className="flex flex-wrap items-baseline justify-between gap-x-md">
@@ -87,12 +93,6 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
   const demo = vm.isDemoProfile;
   const { keep } = r;
   const f = vm.lease.form;
-  const est = (field: LeaseField, value: ReactNode) => (
-    <span className="inline-flex flex-wrap items-center justify-end gap-xs">
-      {value}
-      {vm.lease.isEstimate[field] && <EstimateTag />}
-    </span>
-  );
   return (
     <div className="grid grid-cols-1 gap-xl lg:grid-cols-2">
       <PathTile
@@ -101,6 +101,7 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
         tone={r.better === 'keep' ? 'better' : 'worse'}
         level={r.keep.in10y.mid}
         horizonYear={vm.horizonYear}
+        isEstimate={keep.runningIsEstimate}
         rows={[
           {
             label: t.keep.loanLeft,
@@ -110,15 +111,7 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
                 : t.keep.noLoan,
           },
           { label: t.keep.payment, value: t.perMonth(formatMoney(keep.loanPayment)) },
-          {
-            label: t.keep.running,
-            value: (
-              <span className="inline-flex flex-wrap items-center justify-end gap-xs">
-                {t.perMonth(formatMoney(keep.running))}
-                {keep.runningIsEstimate && <EstimateTag />}
-              </span>
-            ),
-          },
+          { label: t.keep.running, value: t.perMonth(formatMoney(keep.running)) },
         ]}
       />
       <PathTile
@@ -128,10 +121,11 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
         level={r.lease.in10y.mid}
         horizonYear={vm.horizonYear}
         footnote={{ title: t.lease.assumptionTitle, body: t.lease.assumption(r.lease.signings) }}
+        isEstimate={vm.leaseIsExample}
         rows={[
-          { label: t.lease.lease, value: est('monthly', t.lease.leaseValue(formatMoney(f.monthly ?? 0), t.months(f.termMonths ?? 0))) },
-          { label: t.lease.dueAtSigning, value: est('dueAtSigning', <Money value={f.dueAtSigning ?? 0} />) },
-          { label: t.lease.running, value: est('running', t.perMonth(formatMoney(f.running ?? 0))) },
+          { label: t.lease.lease, value: t.lease.leaseValue(formatMoney(f.monthly ?? 0), t.months(f.termMonths ?? 0)) },
+          { label: t.lease.dueAtSigning, value: <Money value={f.dueAtSigning ?? 0} /> },
+          { label: t.lease.running, value: t.perMonth(formatMoney(f.running ?? 0)) },
         ]}
       />
     </div>
@@ -153,7 +147,6 @@ function Sentence({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
         <Tag data-testid="decide-forecast-source" data-source={r.forecastSource}>
           {forecast.source[r.forecastSource]}
         </Tag>
-        {r.isEstimate && <EstimateTag />}
       </p>
     </Card>
   );
@@ -254,25 +247,31 @@ export function DecideScreen({ vm, Link }: { vm: DecideVM; Link: LinkComponent }
         <h1 className="font-display text-4xl font-extrabold leading-display sm:text-display lg:text-[length:calc(var(--text-display)*1.4)]">
           {vm.isDemoProfile ? t.title : t.titleOwn}
         </h1>
+        {vm.leaseIsExample && (
+          <p data-testid="decide-example" className="max-w-prose text-base text-text-muted">
+            {vm.isDemoProfile ? t.example.demo : t.example.own}
+          </p>
+        )}
       </header>
 
       {vm.status === 'loading' ? (
         <Loading />
       ) : (
         <>
+          {r?.status === 'ready' && <Sentence vm={vm} r={r.data} />}
+          {r?.status === 'error' && <ErrorNote error={r.error} />}
+          {/* Right under the answer, so the example lease is one tap from being the person's own offer. */}
+          <Disclosure title={t.editDisclosure} testId="lease-edit-disclosure">
+            <LeaseEditor vm={vm} />
+          </Disclosure>
           {r?.status === 'ready' && (
             <>
-              <Sentence vm={vm} r={r.data} />
               <Paths vm={vm} r={r.data} />
               <Disclosure title={t.detailsTitle} testId="decide-details-disclosure">
                 <Result vm={vm} r={r.data} />
               </Disclosure>
             </>
           )}
-          {r?.status === 'error' && <ErrorNote error={r.error} />}
-          <Disclosure title={t.editDisclosure} testId="lease-edit-disclosure">
-            <LeaseEditor vm={vm} />
-          </Disclosure>
         </>
       )}
 

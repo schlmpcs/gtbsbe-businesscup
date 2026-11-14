@@ -44,7 +44,6 @@ describe('TogetherPlanScreen', () => {
     expect(screen.getByText(t.result.rulesTag)).toBeInTheDocument();
     expect(screen.getByTestId('together-goal')).toHaveTextContent('$100,000 in 10 years');
     expect(screen.getByTestId('together-link')).toHaveValue('http://localhost/together/AAAAAAAAAAAAAAAAAAAAAA');
-    expect(screen.getByText(t.result.disclaimer)).toBeInTheDocument();
   });
 
   it('tells partner 1 it is waiting, and says when a plan is gone', () => {

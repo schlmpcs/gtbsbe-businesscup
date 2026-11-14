@@ -47,6 +47,33 @@ export function quickPartner(q: QuickInputs, nickname: string): TogetherPartner 
   };
 }
 
+/**
+ * The quick inputs that describe a partner, for "Use example numbers": the shared bills as they are,
+ * every other spending line (but debt payments) summed into "everything else", debts summed into one balance at the
+ * balance-weighted APR with their payments added up. Rounded to whole dollars, as the form takes them.
+ */
+export function quickOfPartner(partner: TogetherPartner): QuickInputs {
+  const s = partner.spending;
+  // Debt payments come from the debts themselves, never from a spending line.
+  const notOther = new Set<string>(['rentUtilities', 'groceries', 'childcare', 'debtPayments']);
+  const other = COST_CATEGORIES.filter((c) => !notOther.has(c)).reduce((sum, c) => sum + s[c].value, 0);
+  const balance = partner.debts.reduce((sum, d) => sum + d.balance, 0);
+  const apr = balance > 0 ? partner.debts.reduce((sum, d) => sum + d.apr * d.balance, 0) / balance : null;
+  const payment = partner.debts.reduce((sum, d) => sum + d.minPayment.value, 0);
+  return {
+    takeHomePay: Math.round(partner.takeHomePay.value),
+    rentUtilities: Math.round(s.rentUtilities.value),
+    groceries: Math.round(s.groceries.value),
+    childcare: Math.round(s.childcare.value),
+    otherSpending: Math.round(other),
+    cash: Math.round(partner.cash.value),
+    retirement: Math.round(partner.retirement.value),
+    debtBalance: balance > 0 ? Math.round(balance) : null,
+    debtApr: apr,
+    debtPayment: balance > 0 ? Math.round(payment) : null,
+  };
+}
+
 /** A partner from the profile the person made in this app (only the plan's fields leave the browser). */
 export const profilePartner = (p: Profile, nickname: string): TogetherPartner => partnerOfProfile(p, nickname);
 

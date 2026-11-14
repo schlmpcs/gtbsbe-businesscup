@@ -42,7 +42,7 @@ function HintRow({ hint, onOpen }: { hint: DuelHintVM; onOpen: () => void }) {
     );
   }
   return (
-    <div className="flex flex-col items-center gap-md sm:flex-row">
+    <div className="flex flex-col items-center gap-sm text-center">
       <button
         type="button"
         onClick={onOpen}
@@ -51,7 +51,7 @@ function HintRow({ hint, onOpen }: { hint: DuelHintVM; onOpen: () => void }) {
       >
         {hint.status === 'opening' ? t.hint.opening : hint.status === 'error' ? t.hint.error : t.hint.offer(formatRate(hint.cost, 0))}
       </button>
-      <p className="text-sm font-medium text-text-muted">{t.hint.worth(fmt(hint.pointsNow))}</p>
+      <p className="text-sm font-medium text-text-muted">{t.hint.trade(fmt(hint.pointsNow), fmt(hint.pointsWithHint))}</p>
     </div>
   );
 }
@@ -105,6 +105,11 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
           </h1>
           {roundPhase && <p className="text-base text-text-muted sm:text-lg">{t.subtitle}</p>}
           {vm.challenged && ready && vm.phase !== 'summary' && <DuelChallengeLine challenge={vm.challenge} />}
+          {vm.playedEarlier && vm.summary && (
+            <p role="status" className="rounded-full bg-primary-soft px-lg py-xs text-sm font-semibold text-primary">
+              {t.summary.playedEarlier(vm.summary.nextIn.hours, vm.summary.nextIn.minutes)}
+            </p>
+          )}
           {vm.newDay && (
             <p role="status" className="rounded-full bg-primary-soft px-lg py-xs text-sm font-semibold text-primary">{t.newDay}</p>
           )}
@@ -122,6 +127,7 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
 
           {reveal && <DuelRevealHeader reveal={reveal} totalRounds={vm.totalRounds} />}
           {reveal && <DuelRevealBand reveal={reveal} onNext={vm.next} />}
+          {reveal && <DuelReveal reveal={reveal} />}
 
           {ready && vm.phase !== 'summary' && vm.cards && (
             <div className="relative mx-auto grid w-full max-w-(--container-6xl) grid-cols-1 items-stretch md:grid-cols-2 md:gap-2xl lg:gap-[calc(var(--spacing-3xl)*1.25)]">
@@ -141,8 +147,6 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
               {vm.hint && <HintRow hint={vm.hint} onOpen={vm.openHint} />}
             </div>
           )}
-
-          {reveal && <DuelReveal reveal={reveal} />}
 
           {ready && vm.phase === 'summary' && vm.summary && (
             <DuelSummary

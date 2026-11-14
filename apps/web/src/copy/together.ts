@@ -25,6 +25,8 @@ export const together = {
     sourceQuick: 'Quick inputs',
     profileSummary: (pay: string, spending: string, debts: number) =>
       `Take-home ${pay}/mo, spending ${spending}/mo, ${debts} ${debts === 1 ? 'debt' : 'debts'}. Only these totals, your categories and your debts’ balances, rates and payments go into the plan.`,
+    example: 'Use example numbers',
+    exampleHint: 'Just looking? Fill in an example household, then change any number.',
     takeHomePay: 'Take-home pay',
     takeHomePayHint: 'Per month, after tax.',
     rentUtilities: 'Rent + utilities you pay',
@@ -54,6 +56,8 @@ export const together = {
 
   start: {
     cta: 'Plan together',
+    /** Under the button while it is off because take-home pay is blank. */
+    needPay: 'Add your take-home pay (or use the example numbers) to continue.',
     creating: 'Creating your link…',
   },
 
@@ -111,7 +115,6 @@ export const together = {
     goalProjected: 'Projected',
     goalGap: 'Gap to the target',
     error: 'We could not calculate this plan. Check the numbers.',
-    disclaimer: 'Educational simulation, not financial advice.',
   },
 
   errors: {

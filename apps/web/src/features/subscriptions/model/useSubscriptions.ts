@@ -33,6 +33,7 @@ import {
 } from './audit';
 import { GUESS_PRESETS, SURVEY } from './constants';
 import type { StatementRead } from '@/features/upload/model/lastStatementRead';
+import { fetchSampleStatement } from '@/features/upload/model/sampleStatement';
 import { readStatementForAudit, toStatementError } from './readForAudit';
 import { emptyToolState, type SubscriptionsStore, type SubscriptionsToolState } from './state';
 import type {
@@ -58,6 +59,8 @@ export type SubscriptionsDeps = {
    * tool has no findings yet, it is audited on open and the tool starts on "What we found". Default: none.
    */
   importedStatement?: () => StatementRead | null;
+  /** Downloads the sample statement fixture as a File (features/upload `fetchSampleStatement`). */
+  fetchSample?: typeof fetchSampleStatement;
 };
 
 const STEP_ORDER: readonly SubscriptionsStep[] = ['statement', 'findings', 'guess', 'ticks', 'reveal', 'plan'];
@@ -81,6 +84,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const trackTool = deps.trackTool ?? defaultTrackTool;
   const categorize = deps.categorize ?? categorizeStatement;
   const downloadRenewals = deps.downloadRenewals ?? downloadRenewalsCalendar;
+  const fetchSample = deps.fetchSample ?? fetchSampleStatement;
 
   const ready = useAppReady();
   const profileOrigin = useAppStore((s) => s.profileOrigin);
@@ -330,6 +334,11 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     [categorize, auditStatement, emit, setChosen],
   );
   const dismissError = useCallback(() => setUpload({ status: 'idle', error: null }), []);
+  // "Try the sample statement": the made-up statement fixture, read exactly like a file the person picks.
+  const trySample = useCallback(() => {
+    setUpload({ status: 'reading', error: null });
+    fetchSample().then(uploadStatement, (err: unknown) => setUpload({ status: 'error', error: toStatementError(err) }));
+  }, [fetchSample, uploadStatement]);
 
   const monthsCovered = state.audit?.monthsCovered ?? 0;
   const statement: StatementVM = {
@@ -340,6 +349,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     isShort: hasAudit && monthsCovered < subsMinCharges.value,
     asOf: state.audit?.asOf ?? null,
     upload: uploadStatement,
+    trySample,
     dismissError,
   };
 

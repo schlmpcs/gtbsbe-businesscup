@@ -34,6 +34,18 @@ function rowsOf(vm: OverpayingVM) {
 }
 
 describe('useOverpaying on the real overpayingCheck (areaData.sample.json)', () => {
+  it('"Try an example" fills the demo household’s ZIP, rent and groceries and shows a result', async () => {
+    const { vm } = await setup(null);
+    expect(vm().needs).toBe('zip');
+    expect(vm().tryExample).not.toBeNull();
+    act(() => vm().tryExample!());
+    const demo = cloneProfileDemo();
+    expect(vm().inputs.zip).toBe(demo.zip);
+    expect(vm().inputs.amounts).toMatchObject({ rent: demo.spending.rentUtilities.value, groceries: demo.spending.groceries.value });
+    expect(rowsOf(vm()).rows.map((r) => r.line)).toEqual(['rent', 'groceries']);
+    expect(vm().tryExample).toBeNull();
+  });
+
   it('each position, the gap per year and the total, without a profile', async () => {
     const { vm } = await setup(null);
     act(() => {

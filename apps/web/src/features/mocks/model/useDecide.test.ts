@@ -50,6 +50,7 @@ describe('useDecide (S13)', () => {
     expect(vm).toMatchObject({ isDemoProfile: true, horizonYear: 2036, todaysDollars: true });
     expect(vm.lease.form).toEqual({ ...leaseScenarioSample });
     expect(Object.values(vm.lease.isEstimate)).toEqual([true, true, true, true]);
+    expect(vm.leaseIsExample).toBe(true);
     expect(vm.result?.status).toBe('ready');
     if (vm.result?.status !== 'ready') return;
     const r = vm.result.data;
@@ -89,7 +90,16 @@ describe('useDecide (S13)', () => {
     expect(result.current.result).toBeNull();
     act(() => result.current.resetLease());
     expect(result.current.lease.form).toEqual({ ...leaseScenarioSample });
+    expect(result.current.leaseIsExample).toBe(true);
     expect(result.current.result?.status).toBe('ready');
+  });
+
+  it('stops calling the lease an example once every term is typed', async () => {
+    const { result } = await ready();
+    act(() => result.current.setLease({ monthly: 400, termMonths: 36, dueAtSigning: 2000 }));
+    expect(result.current.leaseIsExample).toBe(true);
+    act(() => result.current.setLease({ running: 250 }));
+    expect(result.current.leaseIsExample).toBe(false);
   });
 
   it('runs on the user’s own profile once they have one', async () => {

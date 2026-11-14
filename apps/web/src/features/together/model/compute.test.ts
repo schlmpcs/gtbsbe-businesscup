@@ -1,8 +1,8 @@
-import { cardAprDefault, cardMinPaymentFor, combineProfiles, forecast, profileOfPartner } from '@lifeguessr/engine';
+import { cardAprDefault, cardMinPaymentFor, combineProfiles, forecast, householdMonth, profileOfPartner } from '@lifeguessr/engine';
 import { TogetherPartnerSchema, type TogetherPartner, type TogetherPlan } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
 import { cloneProfileDemo, togetherPartnerSample } from '@/fixtures';
-import { profilePartner, quickPartner, togetherResult } from './compute';
+import { profilePartner, quickOfPartner, quickPartner, togetherResult } from './compute';
 import { EMPTY_QUICK } from './usePartnerForm';
 
 const p2 = (): TogetherPartner => structuredClone(togetherPartnerSample) as TogetherPartner;
@@ -65,5 +65,25 @@ describe('togetherResult', () => {
     expect(togetherResult(plan()).goal).toBeNull();
     const g = togetherResult(plan({ target: 1, years: 5 })).goal;
     expect(g).toMatchObject({ target: 1, years: 5, verdict: 'onTrack' });
+  });
+});
+
+describe('quickOfPartner (Use example numbers)', () => {
+  it('fills the quick form so the household month matches the example partner’s', () => {
+    for (const example of [p2(), profilePartner(cloneProfileDemo(), '')]) {
+      const q = quickOfPartner(example);
+      expect(q.takeHomePay).toBe(Math.round(example.takeHomePay.value));
+      expect(q.rentUtilities).toBe(Math.round(example.spending.rentUtilities.value));
+      const want = householdMonth(profileOfPartner(example));
+      const got = householdMonth(profileOfPartner(quickPartner(q, '')));
+      expect(got.takeHome).toBeCloseTo(want.takeHome, -1);
+      expect(got.spending).toBeCloseTo(want.spending, -1);
+      expect(got.debtPayments).toBeCloseTo(want.debtPayments, -1);
+    }
+  });
+
+  it('leaves the debt boxes blank for a partner with no debts', () => {
+    const q = quickOfPartner({ ...p2(), debts: [] });
+    expect(q).toMatchObject({ debtBalance: null, debtApr: null, debtPayment: null });
   });
 });
