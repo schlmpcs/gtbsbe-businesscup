@@ -145,6 +145,8 @@ function initialDraftFromProfile(profile: Profile | null, stored: OverpayingTool
       prefill.zip = true;
     }
     for (const line of BENCHMARK_LINES) {
+      // JF4: an owner's housing line is owner costs, not rent: it is not compared with HUD rent.
+      if (line === 'rent' && profile.home) continue;
       const category = PROFILE_CATEGORY[line];
       const spending = category ? profile.spending[category] : undefined;
       if (spending && spending.value > 0) {
