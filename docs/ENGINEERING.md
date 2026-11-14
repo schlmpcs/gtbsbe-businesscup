@@ -264,6 +264,19 @@ The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/st
 - Money in sorted as `pay` → `detectedPay`; as a cost category → a refund off that category (never below 0); as `transfer` (money from people, interest, own accounts) → left out.
 - One-off: a merchant (label without digits and masks) seen in only one month of a statement covering 2+ months, not rent/utilities, childcare or debt payments, and either flagged by the categorizer with an amount ≥ `oneOffHintMinAmount`, or ≥ `oneOffOutlierMinAmount` and ≥ `oneOffOutlierMultiple` × that category's median charge. One-offs are listed in `oneOffs` and left out of `totals`; the browser drops their labels when the months are applied.
 
+### What if? Two choices, two futures (`/what-if`, `packages/engine/whatIf.ts`)
+
+A `Scenario` is a list of `ScenarioChange`s (`packages/types/whatIf.ts`). `applyScenario` turns it into the changed `Profile` plus `ScheduledPurchase`s (which have `startMonth` and an optional `endMonth`); `compareFutures(profile, A, B, { areaOf, homeArea, rates, goal, years })` runs both through the rules `forecast()` in today's dollars. Always labeled "Rules forecast"; the AI forecaster is not used here.
+
+- purchase / loan: as in Can I Afford It? (cash and card are paid off from the surplus, loans amortize); a later start is priced in that month's dollars. Each gets its `canAfford` verdict.
+- move (to one of our 60 ZIPs): rent = profile rent × new / old area rent at the bedroom count closest to the profile's rent; childcare and groceries scale by the areas' price ratios; car running costs change by the insurance difference + `monthlyGallons` × the gas price difference. Moved fields become estimates; income stays.
+- kid: childcare per age band (`kidAgeBandMonths`: infant 12 months, toddler 24, preschool 24, then school age) from the area the scenario ends in, `kidGroceryFactor` × groceries per adult and `otherPerKidMonthly`, from `inMonths` on.
+- income: take-home + `monthlyDelta`; a yearly gross raise is converted with `raiseTakeHomeShare` (`takeHomeFromGrossRaise`). rent: new rent + utilities. payDebt: cash pays down the first debt of that kind, capped at cash and the balance.
+- `decidedBy`: every change is tagged with a term (a cost category or `income`); a term's effect = end value with only that term's adjustments − the plan as it is. `decidedBy` is the term whose effect differs most between A and B in the winner's favor (null on a tie).
+- Limits: spending, rent, move and income changes apply from month 0 (the forecast has no time-varying profile); purchases, loans and kids honor `inMonths`. Both futures use the home area's inflation, so they share one deflator.
+
+Free text: `/api/ai/parse` with `kind: 'scenario'` (and an optional `homeZip`) returns one `ScenarioChange`. The model only extracts fields; places map in code to our ZIPs (a metro's mid-priced ZIP, or a tier of the home metro for "downtown" / "the suburbs"); a city we have no data for is `incomplete` with `missing: ['move.zip']`. With no API key, or when the model fails or does not validate, the rules reader (`server/ai/scenarioRules.ts`) reads the sentence (`parsedBy: 'rules'`). The user confirms before the change enters A or B.
+
 ## AI usage rules
 
 - Allowed: parse free text into typed JSON (`life`, `purchase`, `loan`), categorize merchant labels, tag one-off or yearly charges, write card captions, give 2-sentence explanations of an engine result, and produce the 10-year forecast under the checks in **AI forecast** above.
