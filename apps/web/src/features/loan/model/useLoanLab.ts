@@ -9,7 +9,7 @@ import { runEngine } from '@/lib/model/errors';
 import { areaRates, debtLoadGauge } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
-import { useAppReady, useAppStore } from '@/state';
+import { useAppReady, useProfile } from '@/state';
 import { NEW_LOAN_DEBT_ID, payoffDebts } from './payoffDebts';
 import type { LoanLabVM, LoanOfferVM, PayoffPlanVM } from './types';
 
@@ -34,7 +34,7 @@ function invalidFieldsOf(input: LoanInput): string[] {
 
 export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly LoanInput[] } = {}): LoanLabVM {
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const [offers, setOffers] = useState<Offer[]>(() =>
     (opts.initialOffers ?? loanOffersSample).slice(0, MAX_OFFERS).map((o) => ({ id: newOfferId(), input: { ...o } })),
   );

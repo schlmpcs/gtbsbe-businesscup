@@ -14,6 +14,10 @@ describe('maskLabel', () => {
     ['Cash App*Bob Jones*Oakland', 'Cash App [name]'],
     ['CHASE QUICKPAY SENT TO MARIA LOPEZ', 'Zelle to [name]'],
     ['APPLE CASH SENT MONEY TO Sam Lee', 'Apple Cash to [name]'],
+    ['Pay Anyone to John Smith', 'Pay Anyone to [name]'],
+    ['Pay Anyone - Received from Grace Kim', 'Pay Anyone from [name]'],
+    ['Pay Friends - Sent to Sarah Nguyen', 'Pay Friends to [name]'],
+    ['PAY FRIENDS RECEIVED FROM ANA LOPEZ', 'Pay Friends from [name]'],
   ])('masks the person in a person-to-person line: %s', (raw, masked) => {
     expect(maskLabel(raw)).toBe(masked);
   });
@@ -64,6 +68,7 @@ describe('maskLabel', () => {
   it('is idempotent (the server masks again)', () => {
     const raws = [
       'Zelle payment to Tom Becker JPM99K1L2M3N',
+      'Pay Friends - Sent to Sarah Nguyen',
       'Online Transfer to SAV ...4821 transaction#: 45446467599',
       'ACME CORP DES:PAYROLL ID:XXXXX12345 INDN:JOHN A DOE CO ID:1234567890 PPD',
       'AMAZON MKTPL*2B7XY1QZ0 Amzn.com/bill WA',

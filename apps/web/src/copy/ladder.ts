@@ -49,12 +49,11 @@ export const ladder = {
   shell: {
     intro: {
       S5: 'Rent, car, food, everything. Just guess.',
-      S6: 'We start from its numbers. You fine-tune next.',
-      S7: 'Drag to match a normal month. Tagged amounts are our estimates.',
+      S6: 'We start from its numbers. Next, your statement makes them yours.',
+      S7: 'No statement at hand? Drag to match a normal month. Tagged amounts are our estimates.',
       S8: 'Six taps. Skip anything; we’ll use estimates and tag them.',
-      S9: 'Swap our estimates for your real numbers. Or skip; estimates are fine.',
+      S9: 'Drop a bank statement (CSV) and we sort your month into categories. Nothing to type.',
     },
-    optional: 'Optional',
     back: '← Back',
     stepsLabel: 'Steps to your forecast',
     rungs: {
@@ -62,30 +61,33 @@ export const ladder = {
       S6: 'Closest life',
       S7: 'Your month',
       S8: 'Pay & savings',
-      S9: 'Make it exact',
+      S9: 'Your spending',
     },
     done: 'done',
     notYet: 'not yet',
     current: 'this step',
     stepsDone: (done: number, total: number) => `${done} of ${total} steps done`,
-    /** S9 only: one short line above the CTA (net worth in 10 years, today's dollars). */
+    /** The last step only: one short line above the CTA (net worth in 10 years, today's dollars). */
     in10yLabel: 'You in 10 years:',
-    /** The one orange CTA of each rung (S5–S8 lead to the next rung, S9 to the forecast). */
+    /** The one orange CTA of each rung: the next step, and on the last step the forecast. */
     cta: {
       S5: 'Next: closest life →',
-      S6: 'Start from this life →',
+      S6: 'Next: your spending →',
       S7: 'Next: pay & savings →',
-      S8: 'Next →',
-      S9: 'See me in 10 years →',
+      S8: 'See me in 10 years →',
+      S9: 'Next: pay & savings →',
+      last: 'See me in 10 years →',
     },
     /**
-     * The text link on the left of the CTA. `step`: S5–S7, go to the next step. S8/S9: go straight
-     * to the forecast, keeping the estimates.
+     * The text link on the left of the CTA. `step`: go to the next step. `byHand` (S9): set the
+     * month by hand instead (S7); `statement` (S7): back to importing one. `last`: straight to
+     * the forecast, keeping the estimates.
      */
     skip: {
       step: 'Skip this step',
-      S8: 'Skip, use estimates',
-      S9: 'Skip, use my estimates',
+      byHand: 'No statement? Set it by hand',
+      statement: '← Import a statement instead',
+      last: 'Skip, use estimates',
     },
     loading: 'Loading your numbers…',
   },

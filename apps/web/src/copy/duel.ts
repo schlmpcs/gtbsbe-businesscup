@@ -116,6 +116,20 @@ export const duel = {
     header: (date: string) => `LifeGuessr · Which life costs more? ${date}`,
     tiles: { green: '🟩', yellow: '🟨', ink: '⬛' } satisfies Record<DuelTileColor, string>,
     score: (right: number, total: number, points: string) => `${right}/${total} · ${points} points`,
+    /** The PNG's file name when the share sheet gets the image (GET /api/share, 9:16). */
+    fileName: (date: string) => `lifeguessr-duel-${date}.png`,
+  },
+
+  /**
+   * The duel's share card PNG (GET /api/share, 9:16 and 1:1). Its title, score, points and legend
+   * reuse `title` and `summary` above, so the image says exactly what the day result says.
+   */
+  shareCard: {
+    brand: 'LifeGuessr',
+    daily: (date: string) => `Daily duel · ${date}`,
+    /** Only on a day still being played: the card shows the rounds picked so far. */
+    played: (played: number, total: number) => `${played} of ${total} rounds played so far`,
+    cta: 'Guess which life costs more. Five new duels daily.',
   },
 
   // ----- what the source (server or fixture client) writes onto the public cards -----

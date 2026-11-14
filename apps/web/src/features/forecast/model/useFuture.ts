@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
 import { estimatedFields } from '@/lib/model/profile';
-import { useAppStore } from '@/state';
+import { useAppStore, useProfile } from '@/state';
 import { answerDollars, committedScenario, shownForecast } from './forecastAnswer';
 import { howWeCalculate } from './howWeCalculate';
 import type { FutureVM, MoveVM } from './types';
@@ -27,7 +27,7 @@ const throughYear = (points: readonly ForecastPoint[], years: HorizonYears): For
 /** `sample`: the page was opened as /future?sample=1 ("Try with sample data"): load the sample life. */
 export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}): FutureVM {
   useSampleRequest(opts.sample ?? false);
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const committedMove = useAppStore((s) => s.committedMove);
   const [todaysDollars, setTodaysDollars] = useState(true);
   const [compareOn, setCompareOn] = useState(false);

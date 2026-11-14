@@ -18,7 +18,7 @@ import { StatementUpload } from './ui/StatementUpload';
 
 const progress: LadderProgressVM = {
   status: 'ready',
-  rungs: (['S5', 'S6', 'S7', 'S8', 'S9'] as const).map((screen, i) => ({ screen, href: `/x/${screen}`, done: i < 2 })),
+  rungs: (['S5', 'S6', 'S9', 'S8'] as const).map((screen, i) => ({ screen, href: `/x/${screen}`, done: i < 2 })),
   doneCount: 2,
   in10y: { month: 120, low: 40_000, mid: 60_000, high: 90_000 },
   bandWidth: 50_000,
@@ -27,6 +27,7 @@ const progress: LadderProgressVM = {
   estimates: { left: 6, total: 14 },
   in10ySource: 'rules',
   futureHref: '/future',
+  byHandHref: '/me/sliders',
 };
 
 const zeros = (over: Partial<Record<CostCategory, number>> = {}) =>
@@ -54,13 +55,19 @@ describe('LadderShell (via any rung)', () => {
   it('shows the step pills with the current one marked', () => {
     render(<StatementUpload vm={uploadVM()} progress={progress} />);
     const steps = screen.getByRole('navigation', { name: ladder.shell.stepsLabel });
-    expect(within(steps).getAllByRole('link')).toHaveLength(5);
+    expect(within(steps).getAllByRole('link')).toHaveLength(4);
     expect(within(steps).getByRole('link', { current: 'step' })).toHaveAttribute('href', '/x/S9');
-    expect(screen.getByText(ladder.shell.stepsDone(2, 5))).toBeInTheDocument();
+    expect(screen.getByText(ladder.shell.stepsDone(2, 4))).toBeInTheDocument();
   });
 
-  it('S9: one short 10-year line above the CTA, tagged as an estimate; no technical wording', () => {
-    render(<StatementUpload vm={uploadVM()} progress={progress} />);
+  it('the last step: one short 10-year line above the CTA to the forecast, tagged as an estimate; no technical wording', () => {
+    const { unmount } = render(<StatementUpload vm={uploadVM()} progress={progress} />);
+    expect(screen.queryByTestId('ladder-in10y')).toBeNull(); // S9 is not the last step
+    unmount();
+    // The shell is the same on every rung: here S9 stands in for the last step.
+    const last = { ...progress, rungs: progress.rungs.filter((r) => r.screen !== 'S8') };
+    render(<StatementUpload vm={uploadVM()} progress={last} />);
+    expect(screen.getByRole('link', { name: ladder.shell.cta.last })).toHaveAttribute('href', '/future');
     const line = screen.getByTestId('ladder-in10y');
     expect(line).toHaveTextContent(`${ladder.shell.in10yLabel}$60,000${common.estimateTag}`);
     expect(screen.queryByText(forecast.source.rulesPreview)).toBeNull();
@@ -149,11 +156,13 @@ describe('StatementUpload (S9)', () => {
     expect(screen.getByRole('button', { name: ladder.upload.trySample })).toBeDisabled();
   });
 
-  it('footer: skip to the forecast on the left, the one orange CTA to the forecast on the right', () => {
+  it('footer: set it by hand on the left, the one orange CTA to pay & savings on the right', () => {
     render(<StatementUpload vm={uploadVM()} progress={progress} />);
-    expect(screen.getByRole('link', { name: ladder.shell.skip.S9 })).toHaveAttribute('href', '/future');
-    expect(screen.getByRole('link', { name: ladder.shell.cta.S9 })).toHaveAttribute('href', '/future');
-    expect(screen.getByRole('link', { name: ladder.shell.back })).toHaveAttribute('href', '/x/S8');
+    expect(screen.getByRole('link', { name: ladder.shell.skip.byHand })).toHaveAttribute('href', '/me/sliders');
+    expect(screen.getByRole('link', { name: ladder.shell.cta.S9 })).toHaveAttribute('href', '/x/S8');
+    expect(screen.getByRole('link', { name: ladder.shell.back })).toHaveAttribute('href', '/x/S6');
+    // The spending step is the third pill.
+    expect(screen.getByRole('link', { current: 'step' })).toHaveTextContent(`3${ladder.shell.rungs.S9}`);
   });
 
   it('with a reader: the picker hands the file over', async () => {

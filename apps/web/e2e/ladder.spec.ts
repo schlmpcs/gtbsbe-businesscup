@@ -33,7 +33,7 @@ async function savedProfile(page: Page) {
   });
 }
 
-test('closest life → sliders → balance sheet with a new debt → make it exact → /future', async ({ page }) => {
+test('closest life → your spending (by hand) → balance sheet with a new debt → /future', async ({ page }) => {
   // Against a deployment with a model key the last step may wait up to 25 s for the forecast on top of the
   // steps before it: three times the default timeout.
   test.slow();
@@ -51,9 +51,14 @@ test('closest life → sliders → balance sheet with a new debt → make it exa
   await expect(rung(page, 'S6')).toHaveAttribute('data-done', 'true');
   expect((await savedProfile(page))?.profileOrigin).toBe('closestLife');
 
-  // S7: through the "Next" CTA; move a slider and watch the month change.
+  // Your spending: the CTA leads to the statement import (S9); without one, set it by hand (S7).
   await page.getByRole('link', { name: ladder.shell.cta.S6 }).click();
+  await expect(page).toHaveURL(/\/me\/upload$/);
+  await expect(rung(page, 'S9')).toHaveAttribute('aria-current', 'step');
+  await expect(page.getByTestId('ladder-in10y')).toHaveCount(0);
+  await page.getByRole('link', { name: ladder.shell.skip.byHand }).click();
   await expect(page).toHaveURL(/\/me\/sliders$/);
+  await expect(rung(page, 'S9')).toHaveAttribute('aria-current', 'step');
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
   const costBefore = await monthCost.textContent();
@@ -62,7 +67,7 @@ test('closest life → sliders → balance sheet with a new debt → make it exa
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
   await expect(eatingOut).not.toHaveAttribute('aria-valuetext', valueBefore ?? '');
   await expect(monthCost).not.toHaveText(costBefore ?? '');
-  await expect(rung(page, 'S7')).toHaveAttribute('data-done', 'true');
+  await expect(rung(page, 'S9')).toHaveAttribute('data-done', 'true');
   // The free-text box duplicates the sliders: one text link until opened.
   const describe = page.getByRole('button', { name: ladder.sliders.describe.open });
   await expect(describe).toHaveAttribute('aria-expanded', 'false');
@@ -93,9 +98,7 @@ test('closest life → sliders → balance sheet with a new debt → make it exa
   expect(loan?.apr).toBeCloseTo(0.05, 10);
   expect(loan?.minPayment.isEstimate).toBe(true);
 
-  // S9 (optional): through the CTA; its one 10-year line is the engine's number, tagged as an estimate.
-  await page.getByRole('link', { name: ladder.shell.cta.S8 }).click();
-  await expect(page).toHaveURL(/\/me\/upload$/);
+  // S8 is the last step: its one 10-year line is the engine's number, tagged as an estimate.
   const line = page.getByTestId('ladder-in10y');
   await expect(line).toContainText(ladder.shell.in10yLabel);
   await expect(line.getByText(common.estimateTag)).toBeVisible();
@@ -106,7 +109,7 @@ test('closest life → sliders → balance sheet with a new debt → make it exa
   // S10: the CTA leads to the forecast of the profile built above. S10 shows the same number only while its
   // own answer is the rules forecast (always so in CI, where there is no model key); with the model's answer
   // it shows another number, labeled as the AI's.
-  await page.getByRole('link', { name: ladder.shell.cta.S9 }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.last }).click();
   await expect(page).toHaveURL(/\/future$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.future.title(10));
   const headlineSource = page.getByTestId('at-horizon').getByTestId('forecast-source');

@@ -2,7 +2,7 @@
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
 import type {
   AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, HorizonYears,
-  KidAge, MoveKind,
+  KidAge, LifeEventKind, LifeEventPreset, MoveKind,
   ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
   MissBucket, SubscriptionFinding, SubscriptionFlag,
 } from './index';
@@ -20,6 +20,17 @@ export const MOVE_KINDS = [
   'payCardFirst', 'cutCategory', 'cancelSubscriptions',
   'retirementMatch', 'hsa', 'refinance', 'negotiateRent', 'reshopInsurance',
 ] as const satisfies readonly MoveKind[];
+
+// ----- Future life events (S10) ----------------------------------------------------------------
+
+export const LIFE_EVENT_KINDS = ['pay', 'spending', 'oneOff'] as const satisfies readonly LifeEventKind[];
+export const LIFE_EVENT_PRESETS = ['raise', 'kid', 'move', 'bigPurchase'] as const satisfies readonly LifeEventPreset[];
+/** Most future events one profile may hold. */
+export const MAX_LIFE_EVENTS = 12;
+/** How far ahead an event may be dated, in years (beyond the 10-year forecast, for longer horizons). */
+export const LIFE_EVENT_MAX_YEARS_AHEAD = 30;
+/** Longest client-made event id. */
+export const LIFE_EVENT_ID_MAX_LENGTH = 64;
 
 /** The horizons the forecast screen's picker offers, shortest first (the default is the last). */
 export const FORECAST_HORIZONS = [1, 3, 5, 10] as const satisfies readonly HorizonYears[];
@@ -75,7 +86,7 @@ export const CLIENT_EVENT_NAMES = [
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
   'paywall_viewed', 'avatar_preview_viewed', 'avatar_stats_viewed', 'sample_loaded',
-  'goal_set', 'goal_verdict_shown', 'goal_cleared', 'forecast_horizon_changed',
+  'goal_set', 'goal_verdict_shown', 'goal_cleared', 'forecast_horizon_changed', 'life_event_added',
   'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked',
   'renewals_exported', 'overpaying_checked', 'payoff_planned',
   'duel_picked', 'hint_opened', 'challenge_copied', 'own_guess_started',
@@ -137,3 +148,10 @@ export const SUBSCRIPTION_TICKS_MAX = 200;
 export { AVATAR_ROUND_BALANCE,AVATAR_ROUND_MONTHLY,AVATAR_RENT_SHARE_STEP,AVATAR_BOUNDS,AVATAR_TTL_DAYS,AVATAR_MIN_POOL,AVATAR_MIN_PICKS } from './avatar';
 
 /** Exact integer mask capacity shared by JavaScript arithmetic and Postgres bigint queries. */
+
+// ----- Daily spending log (/spend) -------------------------------------------------------------
+
+/** Categories a logged purchase can go in: every CostCategory but the informational debtPayments. */
+export const SPEND_ITEM_CATEGORIES = [
+  'rentUtilities', 'car', 'childcare', 'groceries', 'eatingOut', 'subscriptions', 'other',
+] as const satisfies readonly Exclude<CostCategory, 'debtPayments'>[];

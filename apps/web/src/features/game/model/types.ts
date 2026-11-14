@@ -290,6 +290,11 @@ export type DuelSummaryVM = {
   /** Absolute link a friend opens to play the same five: /duel?c={resultId}. */
   challengeUrl: string;
   shareText: string;
+  /**
+   * The day's share card PNG (GET /api/share): 9:16 for stories, 1:1 for feeds. Null when the duel
+   * plays on fixtures, where the server has no picks to draw it from.
+   */
+  shareImage: { story: string; square: string } | null;
   /** Time left until the next set (New York midnight). */
   nextIn: { hours: number; minutes: number };
 };

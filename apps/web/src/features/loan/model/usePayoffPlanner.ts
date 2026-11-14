@@ -13,7 +13,7 @@ import { runEngine } from '@/lib/model/errors';
 import { linearSliderVM } from '@/lib/model/slider';
 import type { Loadable } from '@/lib/model/types';
 import { SCREEN_ROUTES } from '@/lib/screens';
-import { useAppReady, useAppStore } from '@/state';
+import { useAppReady, useProfile } from '@/state';
 import { hasNonFinite } from './finite';
 import { addMonths, monthsBetween, type PayoffDate } from './payoffDates';
 import { NEW_LOAN_DEBT_ID, PAYOFF_PAID_OFF_EPSILON, payoffDebts } from './payoffDebts';
@@ -133,7 +133,7 @@ function useTargetSolve(
 
 export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferId'>, options: PayoffPlannerOptions | null): PayoffPlannerVM | null {
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const engine = options?.engine;
   const track = options?.track;
   const stored = options?.stored;

@@ -1,9 +1,10 @@
 // rulesBundle() and forecastFacts() (Y15). Fixtures only.
 import { describe, expect, it } from 'vitest';
-import type { ProfilePatch } from '@lifeguessr/types';
+import type { LifeEvent, Profile, ProfilePatch } from '@lifeguessr/types';
 import { ForecastBundleSchema, ForecastSchema } from '@lifeguessr/types';
 import { areaByZip, cloneProfileDemo, profileDemo } from '@lifeguessr/data/fixtures';
 import { forecastFacts, rulesBundle } from './bundle';
+import { addMonths } from './events';
 import { applyPatch, forecast } from './forecast';
 import { inflationAnnualOf } from './simulate';
 
@@ -94,5 +95,59 @@ describe('forecastFacts', () => {
     facts.spending.eatingOut.value = 999_999;
     facts.debts[0]!.balance = 999_999;
     expect(p).toEqual(cloneProfileDemo());
+  });
+});
+
+describe('forecastFacts: life events', () => {
+  const events: LifeEvent[] = [
+    { id: 'ev-raise', kind: 'pay', month: '2027-02', preset: 'raise', takeHomePay: { value: 5_200, isEstimate: false } },
+    { id: 'ev-kid', kind: 'spending', month: '2028-03', preset: 'kid', category: 'childcare', monthly: { value: 1_100, isEstimate: true } },
+    { id: 'ev-car', kind: 'oneOff', month: '2027-06', preset: 'bigPurchase', amount: 9_000, direction: 'cost' },
+  ];
+  const withEvents = (asOf: string, evs: LifeEvent[] = events): Profile => ({ ...cloneProfileDemo(), events: evs, asOf });
+
+  it('gives each event as kind, startsInMonths and its values; no id, month, preset or asOf', () => {
+    const facts = forecastFacts(withEvents('2026-11'));
+    expect(facts.events).toEqual([
+      { kind: 'pay', startsInMonths: 3, takeHomePay: { value: 5_200, isEstimate: false } },
+      { kind: 'spending', startsInMonths: 16, category: 'childcare', monthly: { value: 1_100, isEstimate: true } },
+      { kind: 'oneOff', startsInMonths: 7, amount: 9_000, direction: 'cost' },
+    ]);
+    expect(facts).not.toHaveProperty('asOf');
+    for (const e of facts.events!) {
+      for (const key of ['id', 'month', 'preset']) expect(e).not.toHaveProperty(key);
+    }
+  });
+
+  it('never passes on a field outside the contract (no free text)', () => {
+    const sneaky = { ...events[0]!, label: 'Promotion at Acme' } as unknown as LifeEvent;
+    expect(JSON.stringify(forecastFacts(withEvents('2026-11', [sneaky])))).not.toContain('Acme');
+  });
+
+  it('has no events key without events, and drops a lone asOf', () => {
+    expect(forecastFacts({ ...cloneProfileDemo(), events: [], asOf: '2026-11' })).toEqual(forecastFacts(profileDemo));
+    expect(forecastFacts({ ...cloneProfileDemo(), asOf: '2026-11' })).not.toHaveProperty('asOf');
+    expect(forecastFacts(profileDemo)).not.toHaveProperty('events');
+  });
+
+  it('changes when the month rolls over (each event is a month closer), and only then', () => {
+    const nov = forecastFacts(withEvents('2026-11'));
+    const dec = forecastFacts(withEvents('2026-12'));
+    expect(dec).not.toEqual(nov);
+    expect(dec.events!.map((e) => e.startsInMonths)).toEqual([2, 15, 6]);
+    expect(forecastFacts(withEvents('2026-11'))).toEqual(nov);
+    // a profile one month later with every event one month later is the same situation
+    const later = events.map((e) => ({ ...e, month: addMonths(e.month, 1) }));
+    expect(forecastFacts(withEvents('2026-12', later))).toEqual(nov);
+  });
+
+  it('refuses events without asOf (RangeError)', () => {
+    expect(() => forecastFacts({ ...cloneProfileDemo(), events })).toThrow(RangeError);
+  });
+
+  it('the rules bundle follows the events', () => {
+    const p = withEvents('2026-11');
+    expect(rulesBundle(p, [], rates).base).toEqual(forecast(p, 10, { rates }));
+    expect(rulesBundle(p, [], rates).base.in10y.mid).not.toBe(rulesBundle(profileDemo, [], rates).base.in10y.mid);
   });
 });

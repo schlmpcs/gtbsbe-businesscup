@@ -1,7 +1,7 @@
 'use client';
 
-import { afford as t, forecast } from '@/copy';
-import { Art, Card, cx, ForecastChart, formatRate, Money, Stack, Sticker, Tag } from '@/ui-kit';
+import { afford as t, forecast, workTime as wt } from '@/copy';
+import { Art, Card, cx, EstimateTag, ForecastChart, formatRate, Money, Stack, Sticker, Tag } from '@/ui-kit';
 import type { ReactNode } from 'react';
 import type { AffordResultVM, AffordRulesVM, AffordVM, PayWithChoice, VMError } from '../model/types';
 import { Skeleton } from './controls';
@@ -49,6 +49,7 @@ function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }
       <p data-testid="afford-verdict" data-verdict={data.verdict} className={cx(VERDICT_SIZE, VERDICT_TONE[data.verdict])}>
         {headline}
       </p>
+      <WorkTime data={data} />
       {data.verdict === 'fits' && data.baselineFails && (
         <p role="note" className="rounded-lg bg-bg p-md text-sm">
           {t.result.baseline.fits}
@@ -70,6 +71,18 @@ function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }
           reason && <p className={body}>{reason}</p>
         ))}
     </Stack>
+  );
+}
+
+/** The price in work time ("= 3 days of your work"), from take-home pay; tagged when pay is an estimate. */
+function WorkTime({ data }: { data: AffordResultVM }) {
+  const w = data.workTime;
+  if (!w) return null;
+  return (
+    <p data-testid="afford-work-time" className="flex flex-wrap items-center gap-sm text-xl font-bold">
+      <span>{wt.ofYourWork(w.unit, w.amount, w.per)}</span>
+      {w.isEstimate && <EstimateTag />}
+    </p>
   );
 }
 
@@ -125,6 +138,7 @@ function HowWeDecide({ data }: { data: AffordResultVM }) {
         <p>{t.result.how}</p>
         {data.verdict === 'wait' && data.waitMonths !== null && <p>{t.result.waitBody(data.waitMonths)}</p>}
         <p>{t.result.cheapestHint}</p>
+        {data.workTime && <p>{wt.hint(data.workTime.hoursPerWeek)}</p>}
       </div>
     </details>
   );

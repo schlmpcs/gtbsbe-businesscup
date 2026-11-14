@@ -23,6 +23,8 @@ import {
   FORECAST_HORIZONS, HorizonYearsSchema, type ExplainRequest, type HorizonYears, type Money,
   DuelHintRequestSchema, DuelPickRequestSchema, type DuelHintSchema, PickResultSchema, PublicDuelSchema,
   type DuelHint, type DuelHintRequest, type DuelPickRequest, type PickResult, type PublicDuel,
+  type LIFE_EVENT_KINDS, type LIFE_EVENT_PRESETS, LifeEventSchema, MAX_LIFE_EVENTS, YearMonthSchema,
+  type LifeEvent, type LifeEventKind, type LifeEventPreset,
 } from './index';
 
 // These assertions are checked by `pnpm typecheck` (tsc covers test files): a contract change
@@ -37,6 +39,8 @@ describe('schemas match the contracts', () => {
     expectTypeOf<Profile>().toExtend<z.input<typeof ProfileSchema>>();
     expectTypeOf<z.infer<typeof ProfilePatchSchema>>().toExtend<ProfilePatch>();
     expectTypeOf<ProfilePatch>().toExtend<z.input<typeof ProfilePatchSchema>>();
+    expectTypeOf<z.infer<typeof LifeEventSchema>>().toExtend<LifeEvent>();
+    expectTypeOf<LifeEvent>().toExtend<z.input<typeof LifeEventSchema>>();
     expectTypeOf<z.infer<typeof LoanInputSchema>>().toExtend<LoanInput>();
     expectTypeOf<LoanInput>().toExtend<z.input<typeof LoanInputSchema>>();
     expectTypeOf<z.infer<typeof PurchaseSchema>>().toExtend<Purchase>();
@@ -69,6 +73,9 @@ describe('schemas match the contracts', () => {
     expectTypeOf<AreaData['tier']>().toEqualTypeOf<(typeof AREA_TIERS)[number]>();
     expectTypeOf<Debt['kind']>().toEqualTypeOf<(typeof DEBT_KINDS)[number]>();
     expectTypeOf<MoveKind>().toEqualTypeOf<(typeof MOVE_KINDS)[number]>();
+    expectTypeOf<LifeEventKind>().toEqualTypeOf<(typeof LIFE_EVENT_KINDS)[number]>();
+    expectTypeOf<LifeEvent['kind']>().toEqualTypeOf<LifeEventKind>();
+    expectTypeOf<LifeEventPreset>().toEqualTypeOf<(typeof LIFE_EVENT_PRESETS)[number]>();
     expectTypeOf<ProPlan>().toEqualTypeOf<(typeof PRO_PLANS)[number]>();
     expectTypeOf<ProSource>().toEqualTypeOf<(typeof PRO_SOURCES)[number]>();
     expectTypeOf<ProErrorCode>().toEqualTypeOf<(typeof PRO_ERROR_CODES)[number]>();
@@ -79,6 +86,61 @@ describe('schemas match the contracts', () => {
     expect(new Set(STATEMENT_CLASSES).size).toBe(STATEMENT_CLASSES.length);
     expectTypeOf<ForecastBundle['source']>().toEqualTypeOf<ForecastSource>();
     expectTypeOf<z.infer<typeof ForecastBundleSchema>['source']>().toEqualTypeOf<ForecastSource>();
+  });
+});
+
+describe('life events', () => {
+  const spending = Object.fromEntries(COST_CATEGORIES.map((c) => [c, { value: 100, isEstimate: false }]));
+  const base = {
+    age: { value: 30, isEstimate: false }, takeHomePay: { value: 4_000, isEstimate: false }, spending,
+    cash: { value: 0, isEstimate: true }, retirement: { value: 0, isEstimate: true },
+    retirementShare: { value: 0, isEstimate: true }, debts: [], doneMoveIds: [],
+  };
+  const raise: LifeEvent = { id: 'ev-1', kind: 'pay', month: '2027-01', preset: 'raise', takeHomePay: { value: 5_000, isEstimate: false } };
+  const kid: LifeEvent = { id: 'ev-2', kind: 'spending', month: '2028-03', preset: 'kid', category: 'childcare', monthly: { value: 1_200, isEstimate: true } };
+  const wedding: LifeEvent = { id: 'ev-3', kind: 'oneOff', month: '2027-06', amount: 20_000, direction: 'cost' };
+  const ok = (e: unknown) => LifeEventSchema.safeParse(e).success;
+
+  it('accepts each kind, with and without a preset, and $0 for pay and spending', () => {
+    for (const e of [raise, kid, wedding]) expect(ok(e)).toBe(true);
+    const { preset: _p, ...plain } = raise;
+    expect(ok(plain)).toBe(true);
+    expect(ok({ ...raise, takeHomePay: { value: 0, isEstimate: false } })).toBe(true);
+    expect(ok({ ...kid, monthly: { value: 0, isEstimate: false } })).toBe(true);
+    expect(ok({ ...wedding, direction: 'income' })).toBe(true);
+  });
+
+  it('rejects a bad month, a negative pay, a non-positive one-off and a debtPayments category', () => {
+    for (const month of ['2027-13', '2027-1', '27-01', '2027-00', '2027-01-15', '']) expect(ok({ ...raise, month })).toBe(false);
+    expect(ok({ ...raise, takeHomePay: { value: -1, isEstimate: false } })).toBe(false);
+    expect(ok({ ...kid, monthly: { value: -5, isEstimate: false } })).toBe(false);
+    expect(ok({ ...wedding, amount: 0 })).toBe(false);
+    expect(ok({ ...wedding, amount: -100 })).toBe(false);
+    expect(ok({ ...wedding, direction: 'gift' })).toBe(false);
+    expect(ok({ ...kid, category: 'debtPayments' })).toBe(false);
+    expect(ok({ ...raise, preset: 'lottery' })).toBe(false);
+    expect(ok({ ...raise, id: '' })).toBe(false);
+    expect(ok({ ...raise, id: 'x'.repeat(65) })).toBe(false);
+    expect(ok({ ...raise, kind: 'debt' })).toBe(false);
+  });
+
+  it('rejects free text: an event takes no label or note', () => {
+    expect(ok({ ...raise, label: 'Promotion at Acme' })).toBe(false);
+    expect(ok({ ...wedding, note: 'my wedding' })).toBe(false);
+  });
+
+  it('a profile holds at most MAX_LIFE_EVENTS events and an optional asOf month', () => {
+    expect(MAX_LIFE_EVENTS).toBe(12);
+    const twelve = Array.from({ length: MAX_LIFE_EVENTS }, (_, i) => ({ ...raise, id: `ev-${i}` }));
+    expect(ProfileSchema.safeParse({ ...base, events: twelve, asOf: '2026-11' }).success).toBe(true);
+    expect(ProfileSchema.safeParse({ ...base, events: [...twelve, { ...raise, id: 'ev-13' }], asOf: '2026-11' }).success).toBe(false);
+    expect(ProfileSchema.safeParse({ ...base, asOf: '2026-13' }).success).toBe(false);
+    expect(ProfileSchema.safeParse({ ...base, events: [{ ...raise, label: 'x' }] }).success).toBe(false);
+    const parsed = ProfileSchema.parse({ ...base, events: [raise, kid, wedding], asOf: '2026-11' });
+    expect(parsed.events).toEqual([raise, kid, wedding]);
+    expect(parsed.asOf).toBe('2026-11');
+    expect(ProfileSchema.parse(base)).not.toHaveProperty('events'); // absent stays absent
+    expect(YearMonthSchema.safeParse('2026-11').success).toBe(true);
   });
 });
 
@@ -419,6 +481,28 @@ describe('Forecast horizon contracts', () => {
     expect(CLIENT_EVENT_NAMES).toContain('forecast_horizon_changed');
     expect(FUNNEL_EVENT_NAMES).toContain('forecast_horizon_changed');
     expect(FUNNEL_STEPS).not.toContain('forecast_horizon_changed' as never);
+  });
+});
+
+describe('life_event_added funnel event', () => {
+  const id = '6b1d4c55-0b7e-4a4e-9a51-0c4b1f2f9d10';
+  const accepts = (props: unknown) => ClientEventEnvelopeSchema.safeParse({ id, name: 'life_event_added', props }).success;
+
+  it('carries the kind and, for a shortcut, its preset: nothing else', () => {
+    expectTypeOf<Extract<ClientFunnelEvent, { name: 'life_event_added' }>['props']>().toEqualTypeOf<{
+      kind: LifeEventKind; preset?: LifeEventPreset;
+    }>();
+    expect(accepts({ kind: 'spending', preset: 'kid' })).toBe(true);
+    expect(accepts({ kind: 'oneOff' })).toBe(true);
+    expect(accepts({ kind: 'debt' })).toBe(false);
+    expect(accepts({ kind: 'pay', preset: 'lottery' })).toBe(false);
+    expect(accepts({ kind: 'pay', amount: 6000 })).toBe(false); // no amounts, no text
+    expect(accepts(undefined)).toBe(false);
+  });
+
+  it('is a client event and not a funnel step', () => {
+    expect(CLIENT_EVENT_NAMES).toContain('life_event_added');
+    expect(FUNNEL_STEPS).not.toContain('life_event_added' as never);
   });
 });
 

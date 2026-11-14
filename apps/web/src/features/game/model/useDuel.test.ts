@@ -188,7 +188,8 @@ describe('useDuel on fixtures', () => {
     act(() => { hook.result.current.copyChallenge(); hook.result.current.guessOwn(); hook.result.current.guessOwn(); });
     act(() => hook.result.current.share());
     await waitFor(() => expect(hook.result.current.shareStatus).toBe('shared'));
-    expect(share).toHaveBeenCalledWith(hook.result.current.summary!.shareText);
+    expect(share).toHaveBeenCalledWith(hook.result.current.summary!.shareText, null); // fixtures: no image
+    expect(hook.result.current.summary!.shareImage).toBeNull();
     const events = await tracked();
     expect(events.filter((e) => e.name === 'challenge_copied')).toHaveLength(1);
     expect(events.filter((e) => e.name === 'own_guess_started')).toHaveLength(1);
@@ -460,6 +461,99 @@ describe('useDuel on the HTTP client against the real duel routes (memory store)
     const again = await renderDuel();
     expect(again.result.current).toMatchObject({ round: 3, phase: 'round' });
     expect(again.result.current.dots.map((d) => d.state)).toEqual(['yellow', 'ink', 'current', 'upcoming', 'upcoming']);
+  });
+});
+
+describe('useDuel share: the share card PNG where the platform shares files, else the text', () => {
+  // The fixture duel's answers, but reporting itself as the API source, so the summary points at
+  // the server's share card like an API build does.
+  const apiClient = (): DuelClient => {
+    const real = createFixtureDuelClient({ persist: false });
+    return { source: 'api', daily: (d) => real.daily(d), pick: (r, c, d) => real.pick(r, c, d), hint: (r, d) => real.hint(r, d) };
+  };
+  const pngReply = () => new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { headers: { 'content-type': 'image/png' } });
+
+  let share: ReturnType<typeof vi.fn>;
+  let canShare: ReturnType<typeof vi.fn>;
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    share = vi.fn(async () => {});
+    canShare = vi.fn(() => true);
+    fetchMock = vi.fn(async () => pngReply());
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    Object.defineProperty(navigator, 'canShare', { value: canShare, configurable: true });
+    vi.stubGlobal('fetch', fetchMock);
+    return () => {
+      delete (navigator as { share?: unknown }).share;
+      delete (navigator as { canShare?: unknown }).canShare;
+      vi.unstubAllGlobals();
+    };
+  });
+
+  /** Plays all five, lands on the day result, and lets the share card download settle. */
+  async function finishedDay(extra: UseDuelOptions = {}) {
+    const hook = await renderDuel(extra);
+    for (let i = 0; i < 5; i++) {
+      await pickAndWait(hook, RIGHT[i]!);
+      act(() => hook.result.current.next());
+    }
+    expect(hook.result.current.phase).toBe('summary');
+    // The download and the blob read resolve over a few ticks; the hook keeps the file to itself,
+    // so give it a handful of macrotasks before anyone taps Share.
+    await act(async () => {
+      for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    return hook;
+  }
+
+  async function shareAndWait(hook: Hook) {
+    act(() => hook.result.current.share());
+    await waitFor(() => expect(hook.result.current.shareStatus).not.toBe('sharing'));
+  }
+
+  it('downloads the 9:16 card when the day result shows, and shares it with the text', async () => {
+    client = apiClient();
+    const hook = await finishedDay();
+    const summary = hook.result.current.summary!;
+    const id = encodeURIComponent(summary.challengeUrl.split('?c=')[1]!);
+    expect(summary.shareImage).toEqual({ story: `/api/share?resultId=${id}&format=9x16`, square: `/api/share?resultId=${id}&format=1x1` });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(summary.shareImage!.story);
+
+    await shareAndWait(hook);
+    expect(hook.result.current.shareStatus).toBe('shared');
+    expect(share).toHaveBeenCalledTimes(1);
+    const data = share.mock.calls[0]![0] as ShareData;
+    expect(data.text).toBe(summary.shareText);
+    expect(data.files).toHaveLength(1);
+    expect(data.files![0]).toMatchObject({ name: `lifeguessr-duel-${TODAY}.png`, type: 'image/png' });
+    expect(await tracked()).toContainEqual({ name: 'result_shared', props: { via: 'share' } });
+  });
+
+  it('shares the text when the browser can’t share files', async () => {
+    client = apiClient();
+    canShare.mockImplementation((data?: ShareData) => !data?.files);
+    const hook = await finishedDay();
+    await shareAndWait(hook);
+    expect(hook.result.current.shareStatus).toBe('shared');
+    expect(share).toHaveBeenCalledWith({ text: hook.result.current.summary!.shareText });
+    expect(await tracked()).toContainEqual({ name: 'result_shared', props: { via: 'share' } });
+  });
+
+  it('shares the text when the card couldn’t be downloaded', async () => {
+    client = apiClient();
+    fetchMock.mockImplementation(async () => new Response('{}', { status: 503, headers: { 'content-type': 'application/json' } }));
+    const hook = await finishedDay();
+    await shareAndWait(hook);
+    expect(share).toHaveBeenCalledWith({ text: hook.result.current.summary!.shareText });
+  });
+
+  it('on fixtures there is no server card: nothing is downloaded and the text is shared', async () => {
+    const hook = await finishedDay();
+    expect(hook.result.current.summary!.shareImage).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await shareAndWait(hook);
+    expect(share).toHaveBeenCalledWith({ text: hook.result.current.summary!.shareText });
   });
 });
 

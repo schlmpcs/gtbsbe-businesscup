@@ -6,6 +6,8 @@ import {
   type Source,
 } from '@lifeguessr/types';
 import { duel as t } from '@/copy/duel';
+import type { GameSource } from '@/lib/config';
+import { shareImageUrls } from './derive';
 import type { DuelProgress } from './duelClient';
 import type {
   DuelCardVM, DuelCategoryVM, DuelDotVM, DuelHintVM, DuelRevealVM, DuelSummaryVM, DuelTileColor,
@@ -13,6 +15,7 @@ import type {
 
 const other = (letter: DuelLetter): DuelLetter => (letter === 'A' ? 'B' : 'A');
 
+/**
 /**
  * The letter a scored result belongs to: the costlier life when the pick was right, the other one
  * when it was wrong. A source answers a repeated pick of a round with the FIRST pick's result, even
@@ -25,8 +28,12 @@ export function choiceOf(result: PickResult): DuelLetter | null {
   return result.correct ? costlier : other(costlier);
 }
 
-/** Green = right, yellow = right with a hint (fewer than full points), ink = missed. */
-export function duelTileColor(result: PickResult): DuelTileColor {
+/**
+ * Green = right, yellow = right with a hint (fewer than full points), ink = missed. It reads only
+ * `correct` and `points`, so the server's share card (server/game/shareCard.tsx) can color a
+ * stored pick with the same rule the day result uses, and the two grids never disagree.
+ */
+export function duelTileColor(result: Pick<PickResult, 'correct' | 'points'>): DuelTileColor {
   if (!result.correct) return 'ink';
   return result.points < duelRoundPoints(0) ? 'yellow' : 'green';
 }
@@ -156,6 +163,7 @@ export function buildDuelSummary(
   picks: DuelProgress['picks'],
   origin: string,
   now: Date,
+  source: GameSource,
 ): DuelSummaryVM | null {
   const played = DUEL_ROUNDS.map((round) => ({ round, pick: picks[round] }));
   if (played.some((p) => !p.pick)) return null;
@@ -180,6 +188,8 @@ export function buildDuelSummary(
     blindSpot: duelBlindSpot(missed),
     challengeUrl,
     shareText,
+    // Only the server has the picks to draw the image from; a fixture duel's id means nothing there.
+    shareImage: shareImageUrls(source, resultId),
     nextIn: nextNewYorkMidnight(now),
   };
 }

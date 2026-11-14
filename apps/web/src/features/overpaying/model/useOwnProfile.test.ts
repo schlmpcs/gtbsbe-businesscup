@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import { useAppStore } from '@/state';
+import { currentMonth } from '@/state/profile';
 import { resetClientState } from '@/test/clientState';
 import { useOwnProfile } from './useOwnProfile';
 
@@ -20,7 +21,7 @@ describe('useOwnProfile', () => {
     useAppStore.getState().setSpending('groceries', 640);
     rerender();
     expect(useAppStore.getState().profileOrigin).toBe('user');
-    expect(result.current).toBe(useAppStore.getState().profile);
+    expect(result.current).toEqual({ ...useAppStore.getState().profile, asOf: currentMonth() }); // stamped for the engine
     expect(result.current?.spending.groceries.value).toBe(640);
   });
 

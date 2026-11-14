@@ -1,16 +1,22 @@
 // View-model types for the forecast feature (S1, S10). Tasks: Y7 (model) / Y10 (ui).
 // ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
 // Hooks: useToday (S1) in ./useToday.ts, useFuture (S10) in ./useFuture.ts.
-import type { MoveCandidate } from '@lifeguessr/engine';
+import type { CushionBand, MoveCandidate } from '@lifeguessr/engine';
 import type {
-  Goal, GoalStatus, GoalVerdict, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, HorizonYears, Money, Move, MoveKind, Profile, Rate, Source,
+  Goal, GoalStatus, GoalVerdict, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, HorizonYears,
+  LifeEventKind, LifeEventPreset, Money, Move, MoveKind, Profile, Rate, Source, YearMonth,
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
-import type { ProfileOrigin } from '@/state';
+import type { FoldedNote, LifeEventCategory, ProfileOrigin } from '@/state';
+import type { SpendSummaryVM } from '@/features/spend/model/types';
+import type { NextBillVM } from '@/features/bills/model/types';
 
 export type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
-export type { ProfileOrigin } from '@/state';
-export type { CostCategory, ForecastPoint, ForecastSource, HorizonYears, Money, MoveKind, Source } from '@lifeguessr/types';
+export type { FoldedNote, LifeEventCategory, ProfileOrigin } from '@/state';
+export type { SpendSummaryVM } from '@/features/spend/model/types';
+export type {
+  CostCategory, ForecastPoint, ForecastSource, HorizonYears, LifeEventKind, LifeEventPreset, Money, MoveKind, Source, YearMonth,
+} from '@lifeguessr/types';
 
 /**
  * What the range band is made of: 'inputs' = the numbers we estimated (rules forecast),
@@ -183,6 +189,8 @@ export type TodayVM = {
   goal: { target: Money; years: number; verdict: GoalVerdict } | null;
   /** At least one input the forecast reads is an estimate (the "Make it exact" nudge). */
   hasEstimates: boolean;
+  /** Emergency cushion: months cash covers with zero income (engine emergencyCushion). */
+  cushion: Loadable<CushionVM>;
   /** Daily game call to action. */
   game: {
     /** Which game /play is: the duel (rounds; the default) or the slider (homes). Picks the copy. */
@@ -197,6 +205,25 @@ export type TodayVM = {
      */
     homes: TodayHomeVM[];
   };
+  /** The daily log's month so far (spent, usual, projected month end, safe to spend today). */
+  daily?: Loadable<SpendSummaryVM>;
+  /** The next bill due (bills calendar), or null when no bill is known. Optional: absent means none. */
+  nextBill?: NextBillVM;
+};
+
+/**
+ * The Home cushion card (engine emergencyCushion). Months are unrounded; null = no spending to cover.
+ * `bands` = the guideline edges in months (assumption cushionBandMonths), for the meter.
+ */
+export type CushionVM = {
+  monthsEssential: number | null;
+  monthsFull: number | null;
+  band: CushionBand;
+  bands: { thin: number; okay: number; solid: number };
+  /** The next band up and the extra cash it takes (null at 6+ or with nothing to cover). */
+  next: { months: number; extraCash: Money } | null;
+  /** Cash or an essential input is an estimate. */
+  isEstimate: boolean;
 };
 
 /** S10 You in N years (the picked horizon) + Next Moves. */
@@ -283,4 +310,101 @@ export type GoalVM = {
   moveLabels: {id:string;kind:MoveKind;category?:CostCategory}[];
   inputError: boolean;
   presets: {targets:Money[];years:number[]};
+};
+
+// ----- S10 "Coming up": future life events (useLifeEvents) -----------------------------------
+
+/**
+ * What the event form edits. `category` is read only for a spending event and `direction` only for a
+ * one-off; the others are kept so switching the kind back and forth loses nothing. `month` is '' and
+ * `amount` null while empty. `preset` = the shortcut it came from (it only picks the label).
+ */
+export type LifeEventDraft = {
+  kind: LifeEventKind;
+  preset?: LifeEventPreset;
+  month: YearMonth | '';
+  amount: Money | null;
+  category: LifeEventCategory;
+  direction: 'cost' | 'income';
+  /**
+   * Our estimate of the amount (the kid shortcut's childcare prefill, or an estimated event being edited).
+   * The saved value is an estimate only while `amount` is still exactly this; a typed amount is the person's.
+   */
+  estimatedAmount?: Money;
+};
+
+/** Why a draft cannot be saved, per field (absent = fine). */
+export type LifeEventErrors = {
+  month?: 'missing' | 'past' | 'tooFar';
+  amount?: 'missing' | 'negative' | 'zero' | 'tooLarge';
+  /** The store refused the event: the list is full (MAX_LIFE_EVENTS), or it could not be saved (e.g. it was removed meanwhile). */
+  event?: 'full' | 'refused';
+};
+
+/** One planned event as the list shows it. */
+export type LifeEventVM = {
+  id: string;
+  kind: LifeEventKind;
+  preset?: LifeEventPreset;
+  /** Its name in the list (from the shortcut, else kind and category or direction). */
+  label: string;
+  month: YearMonth;
+  /** The new monthly pay or cost (pay, spending), or the one-off amount; today's dollars. */
+  amount: Money;
+  /** The amount is our estimate (the kid shortcut's childcare figure). */
+  isEstimate: boolean;
+  category?: LifeEventCategory;
+  direction?: 'cost' | 'income';
+  /** The event as a draft, to edit it. */
+  draft: LifeEventDraft;
+};
+
+/** Where the kid shortcut's childcare figure comes from: the area's, or the median of our areas. */
+export type KidChildcareVM =
+  | { basis: 'area'; infantMonthly: Money; source: Source }
+  | { basis: 'median'; infantMonthly: Money; source: Source; areaCount: number };
+
+/** A shortcut button and the draft it opens, prefilled. */
+export type LifeEventShortcutVM = {
+  preset: LifeEventPreset;
+  draft: LifeEventDraft;
+  /** The kid shortcut only: the childcare figure added to today's childcare, and its source. */
+  childcare?: KidChildcareVM;
+};
+
+/** A started event folded into today's numbers, with its line of text. */
+export type FoldedNoteVM = FoldedNote & { text: string };
+
+/** S10 "Coming up". */
+export type LifeEventsVM = {
+  status: 'loading' | 'ready';
+  /** Planned events, by month (same month: in the order added). */
+  events: LifeEventVM[];
+  /** raise (today's take-home), kid (area infant childcare + today's), move (today's rent), big purchase (empty). */
+  shortcuts: LifeEventShortcutVM[];
+  /** "Something else": a blank monthly cost change. */
+  custom: LifeEventDraft;
+  /** The months an event may start in: next month to LIFE_EVENT_MAX_YEARS_AHEAD years ahead. */
+  monthRange: { min: YearMonth; max: YearMonth };
+  /** The years `monthRange.max` is ahead (LIFE_EVENT_MAX_YEARS_AHEAD), for the error text. */
+  maxYearsAhead: number;
+  /** Largest amount accepted per kind (sanity caps, as on the balance sheet). */
+  amountMax: Record<LifeEventKind, Money>;
+  /** The categories a monthly cost change may set (every one but debt payments: debts are modelled as debts). */
+  categories: readonly LifeEventCategory[];
+  /** Fewer than `maxEvents` events: the shortcuts can add one. */
+  canAdd: boolean;
+  maxEvents: number;
+  /** Whether the draft's amount would be saved as an estimate (it is still our prefill). */
+  isEstimate: (draft: LifeEventDraft) => boolean;
+  /** Errors in a draft, or null when it can be saved. */
+  validate: (draft: LifeEventDraft) => LifeEventErrors | null;
+  /** Add the draft as a new event; returns its errors (nothing added) or null (added). */
+  add: (draft: LifeEventDraft) => LifeEventErrors | null;
+  /** Save the draft over event `id`; returns its errors (nothing saved) or null (saved). */
+  update: (id: string, draft: LifeEventDraft) => LifeEventErrors | null;
+  remove: (id: string) => void;
+  /** Events that started since S10 last showed them (shown once). */
+  foldedNotes: FoldedNoteVM[];
+  dismissFolded: () => void;
 };

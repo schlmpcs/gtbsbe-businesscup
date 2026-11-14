@@ -8,7 +8,7 @@ import { gameMode, type GameMode } from '@/lib/config';
 import { track } from '@/lib/events';
 import { thisMonth } from '@/lib/model/profile';
 import { logScale, logSliderVM, snap } from '@/lib/model/slider';
-import { useAppReady, useAppStore, useGameStore, type ProfileOrigin } from '@/state';
+import { useAppReady, useAppStore, useProfile, useGameStore, type ProfileOrigin } from '@/state';
 import type { GuessYourselfVM, SelfGuessComparisonVM } from './types';
 
 const scale = logScale(GUESS_MIN, GUESS_MAX);
@@ -41,7 +41,7 @@ export function useGuessYourself(opts: { mode?: GameMode } = {}): GuessYourselfV
   const ready = useAppReady();
   const savedGuess = useAppStore((s) => s.selfGuess);
   const setSelfGuess = useAppStore((s) => s.setSelfGuess);
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const profileOrigin = useAppStore((s) => s.profileOrigin);
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);

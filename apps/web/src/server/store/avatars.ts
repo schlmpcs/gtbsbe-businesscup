@@ -1,6 +1,6 @@
 import { randomBytes, createHash } from 'node:crypto';
 import { findArea } from '@lifeguessr/data/areas';
-import { coarsenAvatar } from '@lifeguessr/engine';
+import { coarsenAvatar, withoutEvents } from '@lifeguessr/engine';
 import {
   AvatarPublicSchema,
   AVATAR_MIN_POOL,
@@ -92,8 +92,9 @@ export function createAvatarStore(
   const preview = async (anonId: string) => {
     const { profile } = await sessions.load(anonId);
     if (!profile) throw new AvatarError('no_session');
+    // Today's values only: the server never stamps `asOf` or applies life events.
     const result = coarsenAvatar(
-      profile,
+      withoutEvents(profile),
       findArea(profile.zip),
       'selfReported',
     );

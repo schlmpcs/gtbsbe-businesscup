@@ -5,7 +5,7 @@ import { DEBT_KINDS } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { track } from '@/lib/events';
 import { debtLoadGauge, netWorthToday, thisMonth } from '@/lib/model/profile';
-import { useAppReady, useAppStore, type DebtInput } from '@/state';
+import { useAppReady, useAppStore, useProfile, type DebtInput } from '@/state';
 import { BALANCE_FIELD_BOUNDS, DEBT_BOUNDS, DEBT_LOAD_GAUGE_MAX } from './constants';
 import type { BalanceFieldKey, BalanceSheetVM, DebtRowVM, InputBounds } from './types';
 
@@ -37,7 +37,7 @@ export function clampDebt(input: DebtInput): DebtInput | null {
 
 export function useBalanceSheet(): BalanceSheetVM {
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const setFieldAction = useAppStore((s) => s.setField);
   const skipField = useAppStore((s) => s.skipField);
   const addDebtAction = useAppStore((s) => s.addDebt);

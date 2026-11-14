@@ -13,7 +13,7 @@ export { GoalSchema } from './goal';
 import { z } from 'zod';
 import {
   AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, DUEL_LETTERS, DUEL_ROUNDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
-  FUNNEL_EVENT_NAMES, KID_AGES, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
+  FUNNEL_EVENT_NAMES, KID_AGES, LIFE_EVENT_ID_MAX_LENGTH, LIFE_EVENT_KINDS, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
   SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
 } from './constants';
 
@@ -31,6 +31,8 @@ export const ShareSchema = z.number().min(0).max(1);
 export const ChangeRateSchema = z.number().min(-1).max(1);
 /** 'YYYY-MM' */
 export const MonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'expected YYYY-MM');
+/** A calendar month, 'YYYY-MM' (the `YearMonth` contract). */
+export const YearMonthSchema = MonthSchema;
 /** 5-digit US ZIP code */
 export const ZipSchema = z.string().regex(/^\d{5}$/, 'expected a 5-digit ZIP code');
 
@@ -112,6 +114,30 @@ export const DebtSchema = z.object({
 /** Profile.spending: every category is required (monthly). */
 export const SpendingSchema = z.record(CostCategorySchema, estimate(NonNegativeMoneySchema));
 
+// Strict on purpose: an event carries kinds, categories and numbers only, so a typed label (free
+// text) is rejected rather than silently dropped (CLAUDE.md rule 6). Whether `month` is in the
+// future is the client's to check (it knows today's month); the engine clamps a past one to now.
+const lifeEventBase = {
+  id: z.string().min(1).max(LIFE_EVENT_ID_MAX_LENGTH),
+  month: YearMonthSchema,
+  preset: z.enum(LIFE_EVENT_PRESETS).optional(),
+};
+export const LifeEventSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ ...lifeEventBase, kind: z.literal('pay'), takeHomePay: estimate(NonNegativeMoneySchema) }),
+  z.strictObject({
+    ...lifeEventBase,
+    kind: z.literal('spending'),
+    category: CostCategorySchema.exclude(['debtPayments']),   // debts are modelled as debts
+    monthly: estimate(NonNegativeMoneySchema),
+  }),
+  z.strictObject({
+    ...lifeEventBase,
+    kind: z.literal('oneOff'),
+    amount: z.number().positive(),
+    direction: z.enum(['cost', 'income']),
+  }),
+]);
+
 export const ProfileSchema = z.object({
   household: AvatarFactsSchema.optional(),
   age: estimate(z.number().int().min(16).max(110)),
@@ -124,6 +150,8 @@ export const ProfileSchema = z.object({
   zip: ZipSchema.optional(),
   committedMoveId: z.string().min(1).optional(),
   doneMoveIds: z.array(z.string().min(1)),
+  events: z.array(LifeEventSchema).max(MAX_LIFE_EVENTS).optional(),
+  asOf: YearMonthSchema.optional(),
 });
 
 export const ProfilePatchSchema = z.object({
@@ -217,6 +245,28 @@ export const CategoryTotalsSchema = z.object({
 }).refine((m) => m.lastDay === undefined || m.lastDay <= daysInMonth(m.month), {
   message: 'lastDay is past the end of the month',
   path: ['lastDay'],
+});
+
+// ----- daily spending log ---------------------------------------------------------------------
+
+/** 'YYYY-MM-DD', a real calendar day. */
+export const CalendarDaySchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'expected YYYY-MM-DD')
+  .refine((d) => Number(d.slice(8)) <= daysInMonth(d.slice(0, 7)), { message: 'day is past the end of the month' });
+/** Largest single purchase the daily log accepts (dollars): a typo guard, not a judgment. */
+export const DAILY_ENTRY_MAX_AMOUNT = 100_000;
+/** Longest label kept for a daily entry (characters). */
+export const DAILY_ENTRY_LABEL_MAX = 60;
+
+/** One purchase as a parser returns it (the local keyword parser or /api/ai/parse kind 'spend'). */
+export const SpendItemSchema = z.object({
+  category: CostCategorySchema,
+  amount: z.number().positive().max(DAILY_ENTRY_MAX_AMOUNT),   // one purchase, dollars
+  label: z.string().trim().min(1).max(DAILY_ENTRY_LABEL_MAX).optional(),
+});
+
+export const DailyEntrySchema = SpendItemSchema.extend({
+  id: z.string().min(1).max(64),
+  date: CalendarDaySchema,
 });
 
 /** A day inside a statement: 'YYYY-MM' and a day that month has. */
@@ -427,6 +477,7 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   bare('avatar_stats_viewed'),
   bare('sample_loaded'),
   withProps('forecast_horizon_changed', { years: HorizonYearsSchema }),
+  withProps('life_event_added', { kind: z.enum(LIFE_EVENT_KINDS), preset: z.enum(LIFE_EVENT_PRESETS).optional() }),
   withProps('goal_set', {years:z.number().int().min(1).max(30)}),
   withProps('goal_verdict_shown', {verdict:z.enum(['onTrack','withinRange','behind'])}),
   bare('goal_cleared'),

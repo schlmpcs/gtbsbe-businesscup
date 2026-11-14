@@ -1,23 +1,27 @@
 // @vitest-environment jsdom
 // S1 and S10 screens wired to their real view-model hooks on the demo profile (fixtures).
-import { inflationAnnualOf, rankMoves } from '@lifeguessr/engine';
+import { addMonths, inflationAnnualOf, rankMoves } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { common, forecast as t, goal as goalCopy, tools } from '@/copy';
+import { common, cushion as cushionCopy, forecast as t, goal as goalCopy, lifeEvents as le, tools } from '@/copy';
 import { getArea } from '@lifeguessr/data/areas';
 import { APP_STORE_KEY, useAppStore } from '@/state';
+import { currentMonth } from '@/state/profile';
+import { formatMoney, formatMonthYear } from '@/ui-kit';
 import { resetClientState } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
 import { FORECAST_DEBOUNCE_MS } from './model/useForecastBundle';
 import type { FutureVM, MoveVM, TodayVM } from './model/types';
 import type { ExplainFn } from './model/useMoveExplain';
 import { useFuture } from './model/useFuture';
+import { useLifeEvents } from './model/useLifeEvents';
 import { useToday } from './model/useToday';
 import { FutureScreen } from './ui/FutureScreen';
+import { LifeEventsCard } from './ui/LifeEventsCard';
 import { TodayScreen, type TodayLinks } from './ui/TodayScreen';
 
 let route: ReturnType<typeof mockForecastRoute>;
@@ -65,6 +69,13 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
     forecastStatus: 'ready', forecastError: null, source: 'rules', isRefreshing: false, actionsDisabled: false, committedMove: null,
     markCommittedDone: () => {}, commit: () => {}, uncommit: () => {}, topMove: { status: 'ready', data: null },
     goal: null, hasEstimates: false,
+    cushion: {
+      status: 'ready',
+      data: {
+        monthsEssential: 2.37, monthsFull: 1.8, band: '1to3', bands: { thin: 1, okay: 3, solid: 6 },
+        next: { months: 3, extraCash: 2150 }, isEstimate: false,
+      },
+    },
     game: { kind: 'duel', date: null, played: 0, total: 5, finished: false, homes: [] },
     ...over,
   };
@@ -144,6 +155,36 @@ describe('TodayScreen (S1)', () => {
     const goal = screen.getByTestId('today-goal');
     expect(goal).toHaveTextContent(goalCopy.verdictLabel.withinRange);
     expect(goal).toHaveTextContent(t.today.home.goalLine('$250,000', 10));
+  });
+
+  it('shows the cushion card: months of essentials, a meter, the next step, and the estimate tag', () => {
+    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    const card = screen.getByTestId('cushion');
+    expect(within(card).getByRole('heading', { name: cushionCopy.title })).toBeInTheDocument();
+    expect(within(card).getByTestId('cushion-months')).toHaveTextContent(cushionCopy.months('2.3')); // 2.37 rounds down
+    const meter = within(card).getByRole('meter', { name: cushionCopy.meterLabel });
+    expect(meter).toHaveAttribute('aria-valuenow', '2.37');
+    expect(meter).toHaveAttribute('aria-valuetext', `${cushionCopy.months('2.3')}, ${cushionCopy.bands['1to3']}`);
+    expect(within(card).getByTestId('cushion-next')).toHaveTextContent(cushionCopy.next('$2,150', 3));
+    expect(within(card).getByText(cushionCopy.full('1.8'))).toBeInTheDocument();
+    expect(within(card).queryByText(common.estimateTag)).not.toBeInTheDocument();
+
+    const estimated = todayVm({
+      cushion: {
+        status: 'ready',
+        data: { monthsEssential: 7, monthsFull: 5, band: '6plus', bands: { thin: 1, okay: 3, solid: 6 }, next: null, isEstimate: true },
+      },
+    });
+    rerender(<TodayScreen vm={estimated} links={links} screens={[]} Link={A} />);
+    expect(within(screen.getByTestId('cushion')).getByTestId('cushion-next')).toHaveTextContent(cushionCopy.top);
+    expect(within(screen.getByTestId('cushion')).getByText(common.estimateTag)).toBeInTheDocument();
+  });
+
+  it('cushion on the demo profile comes from the engine (cash 3,800 over 3,385.92 of essentials)', async () => {
+    render(<Today />);
+    const card = await screen.findByTestId('cushion');
+    await waitFor(() => expect(within(card).getByTestId('cushion-months')).toHaveTextContent(cushionCopy.months('1.1')));
+    expect(within(card).getByTestId('cushion-next')).toHaveTextContent(cushionCopy.next('$6,358', 3));
   });
 
   it('shows a skeleton, never a number, while the forecast loads', () => {
@@ -667,3 +708,151 @@ describe('Before the saved state loads (S1 and S10)', () => {
     expect(screen.getByRole('radio', { name: '3 years' })).toBeEnabled();
   });
 });
+
+describe('S10 “Coming up” (life events)', () => {
+  function FutureWithEvents() {
+    const vm = useFuture();
+    const events = useLifeEvents();
+    return <FutureScreen vm={vm} links={{ makeExact: '/me/upload' }} Link={A} events={<LifeEventsCard vm={events} />} />;
+  }
+
+  /** The headline number (the first amount in the block; the second is today's). */
+  const headlineAmount = () => within(screen.getByTestId('at-horizon')).getAllByText(/^−?\$[\d,]+$/)[0]!.textContent;
+
+  it('shows the card under the forecast: four shortcuts, something else, and today’s dollars', async () => {
+    render(<FutureWithEvents />);
+    const card = await screen.findByRole('region', { name: le.title });
+    expect(within(card).getByText(le.empty)).toBeInTheDocument();
+    for (const name of Object.values(le.shortcuts)) expect(within(card).getByRole('button', { name })).toBeEnabled();
+    expect(within(card).getByRole('button', { name: le.custom })).toBeEnabled();
+    expect(within(card).getByText(le.todaysDollars)).toBeInTheDocument();
+    // Under the forecast chart, above the moves.
+    const chart = screen.getByRole('figure', { name: t.future.chartTitle(10) });
+    expect(chart.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.compareDocumentPosition(screen.getByTestId('moves')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('adding a kid from the shortcut lists it as an estimate and lowers the headline', async () => {
+    const user = userEvent.setup();
+    render(<FutureWithEvents />);
+    const card = await screen.findByRole('region', { name: le.title });
+    await waitFor(() => expect(headlineAmount()).toMatch(/\$/));
+    const before = headlineAmount();
+
+    await user.click(within(card).getByRole('button', { name: le.shortcuts.kid }));
+    const form = within(card).getByRole('form', { name: le.form.addTitle(le.shortcuts.kid) });
+    const infant = getArea('75206').childcareMonthly!.infant; // the demo profile's ZIP, no childcare today
+    expect(within(form).getByLabelText(le.form.amount.spending('childcare'))).toHaveValue(infant.toLocaleString('en-US', { maximumFractionDigits: 2 }));
+    expect(within(form).getByText(le.form.kidHint.area)).toBeInTheDocument();
+    expect(within(form).getByText(/National Database of Childcare Prices/)).toBeInTheDocument();
+    await user.click(within(form).getByRole('button', { name: le.form.add }));
+
+    const rows = within(card).getAllByTestId('life-event');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent(le.label({ kind: 'spending', preset: 'kid' }));
+    expect(within(rows[0]!).getByText(common.estimateTag)).toBeInTheDocument();
+    expect(useAppStore.getState().profile.events).toHaveLength(1);
+    await waitFor(() => expect(headlineAmount()).not.toBe(before));
+    const toNumber = (s: string | null) => Number(s!.replace(/[^\d−-]/g, '').replace('−', '-'));
+    expect(toNumber(headlineAmount())).toBeLessThan(toNumber(before));
+  });
+
+  it('says what is wrong with a draft, then edits and removes an event', async () => {
+    const user = userEvent.setup();
+    render(<FutureWithEvents />);
+    const card = await screen.findByRole('region', { name: le.title });
+
+    await user.click(within(card).getByRole('button', { name: le.shortcuts.bigPurchase }));
+    let form = within(card).getByRole('form', { name: le.form.addTitle(le.shortcuts.bigPurchase) });
+    fireEvent.change(within(form).getByLabelText(le.form.oneOffMonth), { target: { value: currentMonth() } });
+    await user.click(within(form).getByRole('button', { name: le.form.add }));
+    expect(within(form).getByText(le.errors.month.past)).toBeInTheDocument();
+    expect(within(form).getByText(le.errors.amount.missing)).toBeInTheDocument();
+    expect(useAppStore.getState().profile.events).toBeUndefined();
+
+    const month = addMonths(currentMonth(), 14);
+    fireEvent.change(within(form).getByLabelText(le.form.oneOffMonth), { target: { value: month } });
+    await user.type(within(form).getByLabelText(le.form.amount.oneOff), '25000');
+    await user.click(within(form).getByRole('button', { name: le.form.add }));
+    let row = within(card).getByTestId('life-event');
+    expect(row).toHaveTextContent(le.detail({ kind: 'oneOff', direction: 'cost' }, formatMoney(25_000), formatMonthYear(month)));
+
+    const name = le.label({ kind: 'oneOff', preset: 'bigPurchase' });
+    await user.click(within(row).getByRole('button', { name: le.editLabel(name, formatMonthYear(month)) }));
+    form = within(card).getByRole('form', { name: le.form.editTitle(name) });
+    const amount = within(form).getByLabelText(le.form.amount.oneOff);
+    await user.clear(amount);
+    await user.type(amount, '18000');
+    await user.click(within(form).getByRole('button', { name: le.form.save }));
+    row = within(card).getByTestId('life-event');
+    expect(row).toHaveTextContent(formatMoney(18_000));
+
+    await user.click(within(row).getByRole('button', { name: le.removeLabel(name, formatMonthYear(month)) }));
+    expect(within(card).queryByTestId('life-event')).not.toBeInTheDocument();
+    expect(useAppStore.getState().profile.events).toEqual([]);
+  });
+
+  it('the month box shows its format for browsers without a month picker, and the error names it', async () => {
+    const user = userEvent.setup();
+    render(<FutureWithEvents />);
+    const card = await screen.findByRole('region', { name: le.title });
+    await user.click(within(card).getByRole('button', { name: le.shortcuts.raise }));
+    const form = within(card).getByRole('form', { name: le.form.addTitle(le.shortcuts.raise) });
+    const month = within(form).getByLabelText(le.form.month);
+    expect(month).toHaveAttribute('placeholder', 'YYYY-MM');
+    expect(month).toHaveAttribute('pattern', '\\d{4}-\\d{2}');
+    fireEvent.change(month, { target: { value: '' } });
+    await user.click(within(form).getByRole('button', { name: le.form.add }));
+    expect(within(form).getByText(le.errors.month.missing)).toBeInTheDocument();
+    expect(le.errors.month.missing).toContain('(YYYY-MM)');
+  });
+
+  it('shows why an event could not be saved when the store refuses it', async () => {
+    const user = userEvent.setup();
+    render(<FutureWithEvents />);
+    const card = await screen.findByRole('region', { name: le.title });
+    await user.click(within(card).getByRole('button', { name: le.shortcuts.raise }));
+    const form = within(card).getByRole('form', { name: le.form.addTitle(le.shortcuts.raise) });
+    // The list fills up while the form is open (another tab, or a double tap).
+    act(() => {
+      for (let i = 0; i < 12; i++) {
+        useAppStore.getState().addLifeEvent({ id: `ev-${i}`, kind: 'oneOff', month: addMonths(currentMonth(), 2), amount: 100, direction: 'cost' });
+      }
+    });
+    await user.click(within(form).getByRole('button', { name: le.form.add }));
+    expect(within(form).getByRole('alert')).toHaveTextContent(le.errors.event.full(12));
+    expect(useAppStore.getState().profile.events).toHaveLength(12);
+  });
+
+  it('“Something else” picks the kind, the category or the direction', async () => {
+    const user = userEvent.setup();
+    render(<FutureWithEvents />);
+    const card = await screen.findByRole('region', { name: le.title });
+    await user.click(within(card).getByRole('button', { name: le.custom }));
+    const form = within(card).getByRole('form', { name: le.form.addTitle(le.custom) });
+    await user.selectOptions(within(form).getByLabelText(le.form.category), 'car');
+    await user.type(within(form).getByLabelText(le.form.amount.spending('car')), '0');
+    await user.click(within(form).getByRole('button', { name: le.form.add }));
+    expect(useAppStore.getState().profile.events).toMatchObject([{ kind: 'spending', category: 'car', monthly: { value: 0, isEstimate: false } }]);
+
+    await user.click(within(card).getByRole('button', { name: le.custom }));
+    const again = within(card).getByRole('form', { name: le.form.addTitle(le.custom) });
+    await user.click(within(again).getByRole('radio', { name: le.form.kinds.oneOff }));
+    await user.click(within(again).getByRole('radio', { name: le.form.directions.income }));
+    await user.type(within(again).getByLabelText(le.form.amount.oneOff), '4000');
+    await user.click(within(again).getByRole('button', { name: le.form.add }));
+    expect(useAppStore.getState().profile.events![1]).toMatchObject({ kind: 'oneOff', amount: 4_000, direction: 'income' });
+  });
+
+  it('shows the note for an event that started, once', async () => {
+    const user = userEvent.setup();
+    useAppStore.setState((s) => ({
+      profile: { ...s.profile, events: [{ id: 'ev', kind: 'pay', month: currentMonth(), preset: 'raise', takeHomePay: { value: 6_000, isEstimate: false } }] },
+    }));
+    render(<FutureWithEvents />);
+    const note = await screen.findByText(le.folded({ kind: 'pay', preset: 'raise' }, formatMonthYear(currentMonth())));
+    await user.click(within(screen.getByTestId('folded-notes')).getByRole('button', { name: le.foldedDismiss }));
+    expect(note).not.toBeInTheDocument();
+  });
+});
+

@@ -7,6 +7,7 @@
 import { DUEL_ROUND_COUNT } from '@lifeguessr/engine';
 import { DUEL_ROUNDS, type DuelLetter, type DuelRound } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { duel as t } from '@/copy/duel';
 import { ApiError } from '@/lib/api/http';
 import { usEasternDate } from '@/lib/dates';
 import { track, useTrackOnce } from '@/lib/events';
@@ -15,7 +16,7 @@ import type { VMError } from '@/lib/model/types';
 import { readStorage, writeStorage } from '@/lib/safeStorage';
 import { createDuelClient, type DuelClient, type DuelDay, type DuelProgress } from './duelClient';
 import { buildDuelCards, buildDuelDots, buildDuelHint, buildDuelReveal, buildDuelSummary, choiceOf } from './duelDerive';
-import { shareOrCopy, type ShareOutcome } from './share';
+import { loadShareImage, shareImageOrText, type ShareOutcome } from './share';
 import type { DuelCopyStatus, DuelShareStatus, DuelVM } from './types';
 
 /** Which round is on screen, per day (the picks themselves live with the source). */
@@ -28,8 +29,11 @@ export type UseDuelOptions = {
   challenged?: boolean;
   /** Clock override (tests). */
   now?: () => Date;
-  /** Share implementation override (tests). Default: Web Share API, else clipboard. */
-  share?: (text: string) => Promise<ShareOutcome>;
+  /**
+   * Share implementation override (tests). Default: the share card PNG with the text where the
+   * platform shares files, else the text with the Web Share API, else the clipboard.
+   */
+  share?: (text: string, image: File | null) => Promise<ShareOutcome>;
   /** Clipboard override (tests). Resolves true when the text was copied. */
   copy?: (text: string) => Promise<boolean>;
   /** Origin for the challenge link (tests). Default: window.location.origin. */
@@ -209,8 +213,8 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
 
   const origin = opts.origin ?? (typeof window === 'undefined' ? '' : window.location.origin);
   const summary = useMemo(
-    () => (phase === 'summary' && date ? buildDuelSummary(date, progress.picks, origin, now ?? clock()) : null),
-    [phase, date, progress.picks, origin, now, clock],
+    () => (phase === 'summary' && date ? buildDuelSummary(date, progress.picks, origin, now ?? clock(), client.source) : null),
+    [phase, date, progress.picks, origin, now, clock, client.source],
   );
 
   const copyImpl = opts.copy ?? copyToClipboard;
@@ -228,12 +232,30 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
     );
   }, [challengeUrl, copyImpl, date]);
 
-  const shareImpl = opts.share ?? shareOrCopy;
+  // The share card is fetched as soon as the day result shows, not when Share is pressed. Browsers
+  // only open the share sheet during the tap's user activation, and Safari in particular drops it
+  // across a network round-trip, so by the time the player taps, the file has to be in hand. If it
+  // isn't (still loading, offline, an error), Share sends the text as before.
+  const imageUrl = summary?.shareImage?.story ?? null;
+  const [shareImage, setShareImage] = useState<{ url: string; file: File | null } | null>(null);
+  useEffect(() => {
+    if (!imageUrl || !date) return;
+    let cancelled = false;
+    loadShareImage(imageUrl, t.share.fileName(date)).then((file) => {
+      if (!cancelled) setShareImage({ url: imageUrl, file });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUrl, date]);
+  const imageFile = shareImage && shareImage.url === imageUrl ? shareImage.file : null;
+
+  const shareImpl = opts.share ?? shareImageOrText;
   const shareText = summary?.shareText ?? null;
   const share = useCallback(() => {
     if (!shareText || shareStatus === 'sharing') return;
     setShareStatus('sharing');
-    shareImpl(shareText).then(
+    shareImpl(shareText, imageFile).then(
       (outcome) => {
         if (outcome === 'shared' || outcome === 'copied') track({ name: 'result_shared', props: { via: outcome === 'shared' ? 'share' : 'copy' } });
         if (mounted.current) setShareStatus(outcome === 'cancelled' ? 'idle' : outcome);
@@ -242,7 +264,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
         if (mounted.current) setShareStatus('failed');
       },
     );
-  }, [shareImpl, shareText, shareStatus]);
+  }, [shareImpl, shareText, imageFile, shareStatus]);
 
 
   // ----- view-model -----
