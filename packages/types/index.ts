@@ -1,3 +1,4 @@
+import type { TOOL_IDS } from './constants';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
 // Change only together (Amir + Aibek): update this file, the zod schemas in ./schemas.ts,
 // the fixtures in packages/data/fixtures and both consumers in the same PR.
@@ -174,7 +175,16 @@ export type SessionErrorCode =
 // fixed list. Props hold only small enums, flags and counts: never text, amounts, ids or anything
 // a person typed, so an event cannot carry personal data. Stored under the hash of the anonymous id.
 // `home` is the 1-based position of a home in today's set.
+export type ToolId = (typeof TOOL_IDS)[number];
+export type MissBucket = 'under0.5'|'0.5to0.8'|'0.8to1.25'|'1.25to2'|'over2';
 export type ClientFunnelEvent =
+  | { name: 'tool_opened'; props: { tool: ToolId } }
+  | { name: 'subs_started'; props: { path: 'tickList'|'statement' } }
+  | { name: 'subs_revealed'; props: { miss: MissBucket } }
+  | { name: 'subs_flagged'|'subs_cancel_marked'; props: { count: number } }
+  | { name: 'renewals_exported' }
+  | { name: 'overpaying_checked'; props: { lines: number; above: number } }
+  | { name: 'payoff_planned'; props: { method: 'avalanche'|'snowball' } }
   | { name: 'play_started' }
   | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
   | { name: 'home_guessed'; props: { home: number; cluesOpened: number } }
@@ -215,6 +225,7 @@ export type FunnelReport = {
   users: number;                                  // distinct anonymous ids with any event
   steps: FunnelStep[];                            // FUNNEL_STEPS, in order
   events: Record<FunnelEventName, number>;        // distinct anonymous ids per event
+  tools: { opened: Record<ToolId, number>; completed: Record<ToolId, number>; rates: Record<ToolId, number | null> };
   game: {
     players: number; finished: number; finishRate: number | null;
     guesses: number; cluesPerHome: number | null; blindGuessRate: number | null;  // blind = no clue opened
@@ -224,6 +235,7 @@ export type FunnelReport = {
 
 export * from './constants';
 export * from './schemas';
+export * from './tools';
 export * from './payoff';
 export * from './overpaying';
 export * from './subscriptions';

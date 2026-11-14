@@ -357,6 +357,14 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   withProps('afford_checked', { verdict: z.enum(['fits', 'wait', 'no']) }),
   withProps('loan_compared', { offers: z.number().int().min(1).max(3) }),
   bare('paywall_viewed'),
+  withProps('tool_opened', { tool: z.enum(['subscriptions','overpaying','payoff']) }),
+  withProps('subs_started', { path: z.enum(['tickList','statement']) }),
+  withProps('subs_revealed', { miss: z.enum(['under0.5','0.5to0.8','0.8to1.25','1.25to2','over2']) }),
+  withProps('subs_flagged', { count: z.number().int().min(0).max(5000) }),
+  withProps('subs_cancel_marked', { count: z.number().int().min(0).max(5000) }),
+  bare('renewals_exported'),
+  withProps('overpaying_checked', { lines: z.number().int().min(0).max(4), above: z.number().int().min(0).max(4) }),
+  withProps('payoff_planned', { method: z.enum(['avalanche','snowball']) }),
 ]);
 
 /** POST /api/events: 1–EVENTS_BATCH_MAX events for one anonymous id. */
@@ -394,6 +402,9 @@ export const FunnelReportSchema = z.object({
   users: userCount,
   steps: z.array(FunnelStepSchema),
   events: z.record(FunnelEventNameSchema, userCount),
+  tools: z.object({ opened: z.record(z.enum(['subscriptions','overpaying','payoff']), userCount),
+    completed: z.record(z.enum(['subscriptions','overpaying','payoff']), userCount),
+    rates: z.record(z.enum(['subscriptions','overpaying','payoff']), share) }),
   game: z.object({
     players: userCount,
     finished: userCount,
