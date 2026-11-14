@@ -5,17 +5,23 @@
   "type": "module",
   "exports": {
     ".": "./index.ts",
+    "./areas": "./areas.ts",
+    "./cards": "./cards.ts",
     "./fixtures": "./fixtures/index.ts",
     "./fixtures/node": "./fixtures/node.ts",
     "./fixtures/*.json": "./fixtures/*.json",
     "./fixtures/*.csv": "./fixtures/*.csv"
   },
   "scripts": {
-    "refresh": "node -e \"console.log('data:refresh: T2 (HUD / Census / BLS / childcare pipeline) is not implemented yet.')\"",
+    "refresh": "node ../../scripts/python.mjs scripts/refresh.py",
+    "refresh:offline": "node ../../scripts/python.mjs scripts/refresh.py --offline",
+    "import:ndcp": "node ../../scripts/python.mjs scripts/import-ndcp.py",
+    "test:py": "node ../../scripts/python.mjs scripts/test_refresh.py",
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
-    "@lifeguessr/types": "workspace:*"
+    "@lifeguessr/types": "workspace:*",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
