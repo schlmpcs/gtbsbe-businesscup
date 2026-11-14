@@ -10,10 +10,12 @@ import type { FindingVM, FindingsVM, StatementVM } from '../model/types';
 export type FindingsListProps = {
   findings: FindingsVM;
   statement: StatementVM;
+  /** There is something counted to make a plan from. */
+  canPlan: boolean;
   onPlan: () => void;
 };
 
-export function FindingsList({ findings, statement, onPlan }: FindingsListProps) {
+export function FindingsList({ findings, statement, canPlan, onPlan }: FindingsListProps) {
   const none = findings.active.length + findings.toConfirm.length + findings.stopped.length === 0;
   return (
     <Card title={t.findings.title}>
@@ -48,11 +50,14 @@ export function FindingsList({ findings, statement, onPlan }: FindingsListProps)
           </Row>
         )}
 
-        <Row gap="sm">
-          <Button size="lg" onClick={onPlan}>
-            {t.findings.next}
-          </Button>
-        </Row>
+        <Stack gap="xs">
+          <Row gap="sm">
+            <Button size="lg" disabled={!canPlan} onClick={onPlan}>
+              {t.findings.next}
+            </Button>
+          </Row>
+          {!canPlan && !none && <p className="text-xs text-text-muted">{t.findings.planWaits}</p>}
+        </Stack>
       </Stack>
     </Card>
   );

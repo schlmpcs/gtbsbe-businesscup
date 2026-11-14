@@ -35,7 +35,12 @@ export function SubscriptionsScreen({ vm }: { vm: SubscriptionsVM }) {
             {vm.step === 'statement' && <UploadStep statement={vm.statement} />}
             {vm.step === 'findings' && (
               <Stack gap="xl">
-                <FindingsList findings={vm.findings} statement={vm.statement} onPlan={() => vm.goTo('plan')} />
+                <FindingsList
+                  findings={vm.findings}
+                  statement={vm.statement}
+                  canPlan={vm.steps.some((s) => s.id === 'plan' && s.available)}
+                  onPlan={() => vm.goTo('plan')}
+                />
                 <UploadStep statement={vm.statement} />
               </Stack>
             )}

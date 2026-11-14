@@ -168,6 +168,31 @@ describe('SubscriptionsScreen: the statement, the findings and the plan', () => 
     expect(within(findings).getByText(/\$4\.99 a month/)).toBeInTheDocument();
   });
 
+  it('with nothing counted there is no cancel plan to make: the button is off and the screen says why', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: new RegExp(t.stepper.steps.statement) }));
+    await user.upload(screen.getByLabelText(t.statement.pickerLabel), csvFile(['2026-10-07,SOME SHOP,-12.00', '2026-11-08,OTHER PLACE,-9.00']));
+    const findings = (await screen.findByRole('heading', { name: t.findings.title })).closest('section')!;
+    expect(within(findings).getByText(t.findings.none)).toBeInTheDocument();
+    expect(within(findings).getByRole('button', { name: t.findings.next })).toBeDisabled();
+  });
+
+  it('a charge still to confirm is not counted either: the plan button waits for a yes', async () => {
+    const user = userEvent.setup();
+    const categorize = fakeCategorize((items) => [...new Set(items.map((i) => i.label))].map((label) => ({ label, class: 'subscriptions' as const })));
+    render(<Tool categorize={categorize} />);
+    await user.click(await screen.findByRole('button', { name: new RegExp(t.stepper.steps.statement) }));
+    await user.upload(screen.getByLabelText(t.statement.pickerLabel), csvFile(['2026-10-05,MYSTERY APP,-4.99', '2026-11-05,MYSTERY APP,-4.99']));
+    const findings = (await screen.findByRole('heading', { name: t.findings.title })).closest('section')!;
+    const next = within(findings).getByRole('button', { name: t.findings.next });
+    expect(next).toBeDisabled();
+    expect(within(findings).getByText(t.findings.planWaits)).toBeInTheDocument();
+    await user.click(within(findings).getByRole('button', { name: `${t.findings.yes}: MYSTERY APP` }));
+    expect(within(findings).getByRole('button', { name: t.findings.next })).toBeEnabled();
+    expect(within(findings).queryByText(t.findings.planWaits)).not.toBeInTheDocument();
+  });
+
   it('a short statement says why most findings are only possible subscriptions', async () => {
     const user = userEvent.setup();
     render(<Tool />);

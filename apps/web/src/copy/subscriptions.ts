@@ -160,6 +160,7 @@ export const subscriptions = {
     restore: 'Show them again',
     markToCancel: 'Mark to cancel',
     next: 'Make a cancel plan',
+    planWaits: 'Nothing is counted yet. Answer the charges above, or tick a service, and the plan opens.',
   },
 
   plan: {
