@@ -1,6 +1,6 @@
 // View-model types for the 2-minute tour. ui/ may import only this file, @/ui-kit/** and @/copy.
 
-export type TourStepId = 'play' | 'sample' | 'upload' | 'afford' | 'loan' | 'pro';
+export type TourStepId = 'play' | 'sample' | 'whatIf' | 'upload' | 'afford' | 'loan' | 'pro';
 
 /** One stop of the tour: copy comes from `id`, `href` is a real route. */
 export type TourStepVM = { id: TourStepId; href: string };

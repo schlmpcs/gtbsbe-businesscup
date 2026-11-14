@@ -34,8 +34,8 @@ function A({ href, children, onClick, ...rest }: { href: string; children?: Reac
 
 describe('tour model', () => {
   it('links every stop to a built screen, never a /preview route', () => {
-    const routes = new Set<string>(Object.values(SCREEN_ROUTES));
-    expect(TOUR_STEPS.map((s) => s.id)).toEqual(['play', 'sample', 'upload', 'afford', 'loan', 'pro']);
+    const routes = new Set<string>([...Object.values(SCREEN_ROUTES), '/what-if']);
+    expect(TOUR_STEPS.map((s) => s.id)).toEqual(['play', 'sample', 'whatIf', 'upload', 'afford', 'loan', 'pro']);
     for (const step of TOUR_STEPS) {
       expect(routes.has(step.href.split('?')[0]!)).toBe(true);
       expect(step.href).not.toMatch(/preview/);
@@ -73,9 +73,9 @@ describe('TourSheet', () => {
     );
     const list = screen.getByRole('list', { name: t.stepsLabel });
     const items = within(list).getAllByRole('listitem');
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(7);
     expect(within(items[0]!).getByRole('link', { name: t.steps.play.title })).toHaveAttribute('href', '/play');
-    expect(within(items[5]!).getByRole('link', { name: t.steps.pro.title })).toHaveAttribute('href', '/pro');
+    expect(within(items[6]!).getByRole('link', { name: t.steps.pro.title })).toHaveAttribute('href', '/pro');
     expect(screen.getByTestId('tour-promo')).toHaveTextContent(t.steps.pro.code('JURY-DEMO'));
     expect(screen.getByText(t.preview)).toBeInTheDocument();
     await userEvent.setup().click(within(items[1]!).getByRole('link'));

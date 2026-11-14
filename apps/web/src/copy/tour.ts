@@ -19,6 +19,10 @@ export const tour = {
       title: 'Read a bank statement',
       body: 'Tap “Try with sample statement”: parsed in your browser, only category totals are kept.',
     },
+    whatIf: {
+      title: 'What if? Two choices, two futures',
+      body: 'Pick a $35k car or a $22k one, Austin or Chicago, a baby now or later, and see both 10-year lines.',
+    },
     afford: {
       title: 'Can I afford it?',
       body: 'Check a purchase against your month and your net worth over the next 10 years.',

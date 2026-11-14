@@ -33,7 +33,7 @@ test('the 2-minute tour opens from the header, shows the promo code, and its lin
   await page.getByTestId('tour-open').click();
   const dialog = page.getByRole('dialog', { name: tour.title });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('list', { name: tour.stepsLabel }).getByRole('listitem')).toHaveCount(6);
+  await expect(dialog.getByRole('list', { name: tour.stepsLabel }).getByRole('listitem')).toHaveCount(7);
   await expect(dialog.getByTestId('tour-promo')).toContainText('Judges: promo code ');
   await expect(dialog.getByText(tour.preview)).toBeVisible();
   await expect(dialog.locator('a[href*="preview"]')).toHaveCount(0);

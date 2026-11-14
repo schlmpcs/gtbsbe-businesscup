@@ -7,6 +7,8 @@ import { useToday } from '@/features/forecast/model/useToday';
 import { useSampleLife } from '@/features/forecast/model/useYourNumber';
 import { useTourOpen } from '@/features/tour/model/useTour';
 import { TodayScreen, type TodayLinks } from '@/features/forecast/ui/TodayScreen';
+import { useTwoFuturesHero } from '@/features/what-if/model/useTwoFuturesHero';
+import { TwoFuturesHero } from '@/features/what-if/ui/TwoFuturesHero';
 import { SCREEN_IDS, SCREEN_ROUTES } from '@/lib/screens';
 
 const screens = SCREEN_IDS.map((id) => ({ id, href: SCREEN_ROUTES[id] }));
@@ -27,5 +29,17 @@ export default function TodayPage() {
   const vm = useToday();
   const sample = useSampleLife();
   const { show: openTour } = useTourOpen();
-  return <TodayScreen vm={vm} sample={sample} onTour={openTour} links={links} screens={screens} Link={Link} />;
+  const firstVisit = vm.firstVisit;
+  // Under the sample life on a first visit: the What if? presets, played on the sample life.
+  const hero = useTwoFuturesHero({ autoplay: firstVisit });
+  return (
+    <>
+      <TodayScreen vm={vm} sample={sample} onTour={openTour} links={links} screens={screens} Link={Link} />
+      {firstVisit && (
+        <div className="mx-auto w-full max-w-(--container-5xl) px-lg pb-2xl">
+          <TwoFuturesHero vm={hero} />
+        </div>
+      )}
+    </>
+  );
 }

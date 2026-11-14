@@ -10,6 +10,8 @@ import { useNumberHero } from '@/features/forecast/model/useYourNumber';
 import { FutureScreen } from '@/features/forecast/ui/FutureScreen';
 import { GoalCard } from '@/features/forecast/ui/GoalCard';
 import { SCREEN_ROUTES } from '@/lib/screens';
+import { whatIf } from '@/copy';
+import { Card, buttonClassName } from '@/ui-kit';
 
 const links = { today: SCREEN_ROUTES.S1, makeExact: SCREEN_ROUTES.S9 };
 
@@ -18,5 +20,16 @@ export default function FuturePage({ searchParams }: { searchParams: Promise<{ s
   const vm = useFuture({ sample: sample === '1' });
   const hero = useNumberHero();
   const goal = useGoal();
-  return <FutureScreen vm={vm} hero={hero} goal={<GoalCard vm={goal} />} links={links} Link={Link} />;
+  const goalAndWhatIf = (
+    <>
+      <GoalCard vm={goal} />
+      <Card title={whatIf.entry.title}>
+        <p className="mb-md text-text-muted">{whatIf.entry.body}</p>
+        <Link href="/what-if" className={buttonClassName({ variant: 'primary' })}>
+          {whatIf.entry.cta}
+        </Link>
+      </Card>
+    </>
+  );
+  return <FutureScreen vm={vm} hero={hero} goal={goalAndWhatIf} links={links} Link={Link} />;
 }

@@ -169,6 +169,12 @@ export const whatIf = {
   },
   tryAnother: 'Try another what-if',
 
+  /** The entry card on S10, under your number. */
+  entry: {
+    title: 'What if…?',
+    body: 'A car, a move, a baby, a raise: compare two choices and see where each leaves your number in 10 years.',
+    cta: 'Compare two futures',
+  },
   hero: {
     title: 'Two choices. Two futures.',
     lead: 'Every choice bends your 10-year line. See how far.',

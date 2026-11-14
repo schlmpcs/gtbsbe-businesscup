@@ -17,6 +17,7 @@ export const common = {
       { href: '/', label: 'Today' },
       { href: '/play', label: 'Play' },
       { href: '/future', label: 'My future' },
+      { href: '/what-if', label: 'What if?' },
       { href: '/afford', label: 'Can I afford it?' },
       { href: '/loan', label: 'Loan Lab' },
     ],

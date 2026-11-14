@@ -9,6 +9,7 @@ import type { TourOpenVM, TourStepVM, TourVM } from './types';
 export const TOUR_STEPS: readonly TourStepVM[] = [
   { id: 'play', href: SCREEN_ROUTES.S2 },
   { id: 'sample', href: `${SCREEN_ROUTES.S10}?sample=1` },
+  { id: 'whatIf', href: '/what-if' },
   { id: 'upload', href: SCREEN_ROUTES.S9 },
   { id: 'afford', href: SCREEN_ROUTES.S11 },
   { id: 'loan', href: SCREEN_ROUTES.S12 },
