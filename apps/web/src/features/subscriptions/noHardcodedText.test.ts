@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const dir = fileURLToPath(new URL('.', import.meta.url));
+const dir = fileURLToPath(new URL('./ui/', import.meta.url));
 const files = readdirSync(dir).filter((f) => f.endsWith('.tsx'));
 
 /** The code of a file without its comments (a comment may say what it likes). */
