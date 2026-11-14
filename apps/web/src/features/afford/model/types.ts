@@ -1,7 +1,7 @@
 // View-model types for the afford feature (S11). Tasks: Y7 (model) / Y11 (ui).
 // ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
 // Hook: useAfford() in ./useAfford.ts.
-import type { AffordResult, ForecastPoint, Money, Purchase, Rate } from '@lifeguessr/types';
+import type { AffordResult, ForecastPoint, Money, Purchase, Rate, Source } from '@lifeguessr/types';
 import type { Loadable, ParseConfirmVM } from '@/lib/model/types';
 import type { WishlistItem } from '@/state';
 
@@ -18,8 +18,25 @@ export type AffordFormVM = {
   amount: Money | null;
   recurring: Purchase['recurring'];
   payWith: PayWithChoice;
-  /** Used when payWith is 'loan'; the loan amount is the purchase amount. */
-  loan: { apr: Rate | null; termMonths: number | null; downPayment: Money; fees: Money };
+  /**
+   * Used when payWith is 'loan'; the loan amount is the purchase amount. `typical`: the fields still on the
+   * typical value for the loan's kind (not typed yet; absent = none). In `AffordVM.form` those fields hold it.
+   */
+  loan: {
+    apr: Rate | null;
+    termMonths: number | null;
+    downPayment: Money;
+    fees: Money;
+    typical?: { apr: boolean; termMonths: boolean };
+  };
+};
+
+/** The loan terms on screen that are typical values, not the user's (shown with an estimate tag and the source). */
+export type LoanEstimateVM = {
+  kind: 'auto' | 'personal';
+  apr: boolean;
+  termMonths: boolean;
+  source: Source;
 };
 
 /** Net worth with vs without the purchase at one horizon (nominal dollars, from canAfford). */
@@ -57,7 +74,10 @@ export type AffordRulesVM = {
 export type AffordVM = {
   status: 'loading' | 'ready';
   rules: AffordRulesVM;
+  /** The form as shown: loan fields not typed yet hold the typical value for the loan's kind. */
   form: AffordFormVM;
+  /** Paying with a loan and some of its terms are typical values: which, and their source. Null otherwise. */
+  loanEstimate: LoanEstimateVM | null;
   setLabel: (label: string) => void;
   setAmount: (amount: Money | null) => void;
   setRecurring: (recurring: Purchase['recurring']) => void;

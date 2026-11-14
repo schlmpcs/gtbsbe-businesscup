@@ -35,6 +35,13 @@ export const afford = {
     downPayment: 'Down payment',
     fees: 'Fees',
     feesHint: 'Added to the loan.',
+    /** Pay-with hint while some loan terms are typical values (JF9). */
+    loanTypicalHint: 'Typical terms are filled in. Type the ones from your offer to replace them.',
+    /** Under a loan field still on the typical value, by loan kind. */
+    loanTypical: {
+      auto: 'Typical for a car loan. Not an offer.',
+      personal: 'Typical for a personal loan. Not an offer.',
+    } as Record<'auto' | 'personal', string>,
     errors: {
       amount: 'Enter a price above $0.',
       label: 'Keep the name under 120 characters.',
