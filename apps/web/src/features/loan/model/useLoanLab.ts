@@ -15,6 +15,8 @@ export const MAX_OFFERS = 3;
 /** Extra-payment slider: $0 to max(EXTRA_MAX_FLOOR, the selected offer's monthly payment), $25 steps. */
 export const EXTRA_MAX_FLOOR: Money = 500;
 export const EXTRA_STEP: Money = 25;
+/** End of the debt-load dial: well past the red threshold (0.36) so both zones read clearly. */
+export const DEBT_LOAD_GAUGE_MAX = 0.6;
 
 type Offer = { id: string; input: LoanInput };
 
@@ -135,6 +137,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
       before,
       after: selected?.debtLoadAfter ?? null,
       isEstimate: profile.takeHomePay.isEstimate || profile.debts.some((d) => d.minPayment.isEstimate),
+      max: DEBT_LOAD_GAUGE_MAX,
     },
     extra,
     setExtraPayment: setExtra,

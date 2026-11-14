@@ -31,6 +31,8 @@ describe('usePlay (S2–S4) on fixtures', () => {
     expect(card.clues.map((c) => c.status)).toEqual(['closed', 'closed', 'closed', 'closed', 'closed']);
     expect(card.multiplier).toBe(1);
     expect(card.nextMultiplier).toBeCloseTo(0.9);
+    expect(card.clueCost).toBe(0.1);
+    expect(card.clues.every((c) => c.facts.length === 0)).toBe(true);
     expect(card.guess).toMatchObject({ value: GUESS_DEFAULT, min: GUESS_MIN, max: GUESS_MAX });
     expect(card.guess.position).toBeCloseTo(0.5, 2);
   });
@@ -41,6 +43,9 @@ describe('usePlay (S2–S4) on fixtures', () => {
     await waitFor(() => expect(result.current.card!.clues.find((c) => c.id === 'kitchen')!.status).toBe('open'));
     expect(result.current.card!.openedCount).toBe(1);
     expect(result.current.card!.multiplier).toBeCloseTo(0.9);
+    expect(result.current.card!.clues.find((c) => c.id === 'kitchen')!.facts).toEqual([
+      { kind: 'eatingOut', perWeek: expect.any(Number) },
+    ]);
 
     act(() => result.current.setGuess(4321));
     expect(result.current.card!.guess.value).toBe(4320); // snapped to $10
@@ -55,7 +60,11 @@ describe('usePlay (S2–S4) on fixtures', () => {
     expect(reveal.cluesOpened).toEqual(['kitchen']);
     expect(reveal.total.low).toBeLessThanOrEqual(reveal.total.mid);
     expect(reveal.items[0]!.amount).toBeGreaterThanOrEqual(reveal.items.at(-1)!.amount);
-    expect(reveal.surprise?.category).toBe(reveal.items[0]!.category);
+    expect(reveal.surprise?.category).toBe(reveal.categories[0]!.category);
+    expect(reveal.categories[0]!.amount).toBeGreaterThanOrEqual(reveal.categories.at(-1)!.amount);
+    expect(reveal.maxPoints).toBe(1000);
+    expect(reveal.scale.guess).toBe(1); // guessed the slider max
+    expect(reveal.cardFacts.map((f) => f.kind)).toContain('eatingOut');
     expect(reveal.shareImage).toBeNull(); // fixture mode has no share route
     expect(result.current.card!.guessed).toBe(true);
   });
@@ -78,6 +87,26 @@ describe('usePlay (S2–S4) on fixtures', () => {
     expect(s.shareText.split('\n')[1]).toMatch(/^[🟩🟨🟥]{5}$/u);
     expect(s.mostSurprising).not.toBeNull();
     expect(result.current.card).toBeNull();
+  });
+
+  it('shares the summary text and reports the outcome', async () => {
+    const share = vi.fn().mockResolvedValueOnce('copied').mockResolvedValueOnce('cancelled');
+    const { result } = renderHook(() => usePlay({ client, share }));
+    await waitForReady(result);
+    act(() => result.current.share()); // not on the summary yet: ignored
+    expect(share).not.toHaveBeenCalled();
+    for (let i = 0; i < 5; i++) {
+      act(() => result.current.submitGuess());
+      await waitFor(() => expect(result.current.phase).toBe('reveal'));
+      act(() => result.current.next());
+    }
+    expect(result.current.shareStatus).toBe('idle');
+    act(() => result.current.share());
+    expect(result.current.shareStatus).toBe('sharing');
+    await waitFor(() => expect(result.current.shareStatus).toBe('copied'));
+    expect(share).toHaveBeenCalledWith(result.current.summary!.shareText);
+    act(() => result.current.share());
+    await waitFor(() => expect(result.current.shareStatus).toBe('idle')); // closed the sheet
   });
 
   it('keeps progress in the persisted game store', async () => {
