@@ -5,17 +5,17 @@
 | Area | Owner |
 | --- | --- |
 | `packages/types` | Both. Change only together. |
-| `packages/engine/*` except `loan/` and `month.ts` | You |
-| `packages/engine/loan/`, `packages/engine/month.ts`, `packages/engine/scene.ts` | Teammate |
-| `apps/web/src/ui-kit/HouseScene/` | Teammate |
-| `apps/web/public/scene/` (sprite kit) | Designer |
-| `packages/data` (incl. life cards) | Teammate |
+| `packages/engine/*` except `loan/` and `month.ts` | Amir |
+| `packages/engine/loan/`, `packages/engine/month.ts`, `packages/engine/scene.ts` | Aibek |
+| `apps/web/src/ui-kit/HouseScene/` | Aibek |
+| `apps/web/public/scene/` (sprite kit) | Kiko |
+| `packages/data` (incl. life cards) | Aibek |
 | `packages/data/fixtures` | Both. Change only together. |
-| `apps/web/app/api/{daily,daily/clue,daily/guess,leaderboard,share,events,session,statement}` | Teammate |
-| `apps/web/app/api/ai/*` | You |
-| `apps/web/src/features/{upload,mocks}` | Teammate |
-| Everything else in `apps/web` | You |
-| CI, deploy, Playwright | Teammate |
+| `apps/web/app/api/{daily,daily/clue,daily/guess,leaderboard,share,events,session,statement}` | Aibek |
+| `apps/web/app/api/ai/*` | Amir |
+| `apps/web/src/features/{upload,mocks}` | Aibek |
+| Everything else in `apps/web` | Amir |
+| CI, deploy, Playwright | Aibek |
 
 ## Git workflow
 
@@ -54,7 +54,7 @@ All monthly. `t` = month index starting at 0. Defaults live in `assumptions.ts` 
 | `clueCost`, `clueFloor` | 0.10 per opened clue, floor 0.50 | Game tuning, not finance; tune after playtests |
 | `avgMealPrice`, `monthlyGallons`, `kidGroceryFactor` | from BLS CE / national averages | Source-tagged or assumption |
 
-### Loan amortization (Teammate, T3)
+### Loan amortization (Aibek, T3)
 
 ```
 P = amount − downPayment + fees          (fees are rolled into the loan)
@@ -70,7 +70,7 @@ debtLoad = Σ monthly debt payments / takeHomePay
 
 Test against a known value: $28,000 at 6.9% (`apr: 0.069`) for 36 months gives $863.28/month (863.279…; checked). Hard-code it in the test.
 
-### Forecast (You, Y2)
+### Forecast (Amir, Y2)
 
 ```
 net worth N_t = cash_t + retirement_t − Σ debt balances_t
@@ -93,7 +93,7 @@ Always simulate at least 120 months so `in10y` exists. The band shows **uncertai
 
 The golden test: `profile.demo.json` + `areaData.sample.json` (fixtures, never the live `areas.json`, so a data refresh can't break it) produces a snapshot that must not change unless an assumption changes on purpose.
 
-### Cost of a life card (You, Y1)
+### Cost of a life card (Amir, Y1)
 
 ```
 rentUtilities = rentByBedrooms[bedrooms]          (HUD FMR is already gross rent: rent + utilities. Don't add utilities.)
@@ -111,7 +111,7 @@ The rent range applies ZCTA-level ratios to the card's own bedroom FMR, so a 3-b
 
 `cardToProfile` (Closest Life) copies these items into `Profile.spending`. The car loan becomes an `auto` debt, and `spending.car` keeps only insurance + fuel.
 
-### Guess scoring (You, Y1)
+### Guess scoring (Amir, Y1)
 
 ```
 if guess ≤ 0                → points = 0
@@ -127,7 +127,7 @@ The server counts `cluesOpened` from its own log of `/api/daily/clue` calls, nev
 
 Measuring from the nearest edge, not from the mid, keeps the score continuous: a guess just outside the range scores ~1000, not ~800. Log error makes a 10% miss on $3K and on $9K score the same. Keep the in-range band at the middle half, so a perfect score still needs a good guess.
 
-### House scene (Teammate, T12)
+### House scene (Aibek, T12)
 
 `sceneOf(card, area)` is the only place scene content comes from, so the picture can never contradict the numbers.
 
@@ -145,7 +145,7 @@ Measuring from the nearest edge, not from the mid, keeps the score continuous: a
 - `<HouseScene>` renders the layout, the decor and closed rooms. A tap zooms into the room, calls `/api/daily/clue`, and then shows that room's props and facts. It works with labeled placeholder rectangles before the sprite kit lands.
 - Tests: a snapshot of `sceneOf` for every fixture card, plus a consistency test that every clue maps to a `CostBreakdown` item.
 
-### Next Moves (You, Y3)
+### Next Moves (Amir, Y3)
 
 Generate candidate moves for the current level. Apply each move's `patch` with `applyPatch` to a copy of the profile, and compute `effect10y = forecast(withMove).in10y.mid − forecast(base).in10y.mid`. Sort in descending order and return the top 3.
 
@@ -156,7 +156,7 @@ Level 1 candidates:
 
 Level 2 unlocks once a level 1 move is in `doneMoveIds`, or is `committedMoveId` and has been checked in on. It adds: retirementMatch, hsa, refinance, negotiateRent (local rent data), reshopInsurance. These need inputs the profile doesn't have yet (employer match, insurance quote), so they stay in the mock path for the hackathon.
 
-### Can I Afford It? (You, Y4)
+### Can I Afford It? (Amir, Y4)
 
 Run `forecast` with and without the purchase over the next 12 months. A month **passes** when all three hold:
 
@@ -173,7 +173,7 @@ Without rules 2 and 3, paying by card or loan never lowers cash, so everything w
 
 `cheapestWay` compares `'cash' | 'card' | 'loan'` by 10-year effect.
 
-### Month-end (Teammate, T9)
+### Month-end (Aibek, T9)
 
 ```
 projection (per category) = current month total so far / day × days in month   (oneOffs excluded)

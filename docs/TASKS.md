@@ -1,6 +1,6 @@
 # TASKS.md — split and status
 
-Split: **You ~19 h (~57%)**, **Teammate ~14.5 h (~43%) + T12** (the house scene, sized at Hour 0), **Designer** on Figma and the sprite kit. Every task can start on fixtures. "Depends on" names the real piece that later replaces a fixture. Update the checkboxes as you go.
+Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) + T12 (the house scene, sized at Hour 0), **Kiko** (UI/UX) on Figma, tokens and the sprite kit. Each task is a GitHub issue. Every task can start on fixtures. "Depends on" names the real piece that later replaces a fixture. Update the checkboxes as you go.
 
 ## Hour 0 (together)
 
@@ -11,7 +11,7 @@ Split: **You ~19 h (~57%)**, **Teammate ~14.5 h (~43%) + T12** (the house scene,
 - [ ] Agree which Figma frames come first (S1, S2 house scene, S3, S10, S12)
 - [ ] Agree the sprite id list for the house kit (layouts, props per clue, decor) with the designer, and size T12
 
-## You
+## Amir (ML/AI + SWE)
 
 | Done | ID | Task | Hours | Depends on | Done when |
 | --- | --- | --- | --- | --- | --- |
@@ -27,7 +27,7 @@ Split: **You ~19 h (~57%)**, **Teammate ~14.5 h (~43%) + T12** (the house scene,
 | [ ] | Y12 | `/api/ai/parse` + `/api/ai/explain` | 1 | Contracts | Typed JSON or clear error; no numbers; parsed values confirmed by the user |
 | [ ] | Y14 | Figma skin pass | 2 | Figma frames | Screens match Figma; no model or engine file changed |
 
-## Teammate
+## Aibek (backend)
 
 | Done | ID | Task | Hours | Depends on | Done when |
 | --- | --- | --- | --- | --- | --- |
@@ -44,17 +44,19 @@ Split: **You ~19 h (~57%)**, **Teammate ~14.5 h (~43%) + T12** (the house scene,
 | [ ] | T11 | Mockups S13–S15 (was Y13) | 1 | Y7 | Clickable on fixtures |
 | [ ] | T12 | House scene: `sceneOf` in `scene.ts` + `<HouseScene>` (layout, closed rooms, tap → zoom → clue) | Sized at Hour 0 | Contracts; D1 for art (placeholder rectangles first) | Playable on a phone with placeholders by Sync 2; consistency test green |
 
-## Designer
+## Kiko (UI/UX, Figma only)
 
 | Done | ID | Task | Depends on | Done when |
 | --- | --- | --- | --- | --- |
 | [ ] | D1 | House sprite kit: 5 layouts, props per clue state (car bands, kid ages, takeout piles, coats, tier signs), decor set; SVGs named by sprite id | Sprite id list (Hour 0) | Kit in `apps/web/public/scene/` by Sync 2; scene skinned by h17 |
+| [ ] | D2 | Figma frames S1–S15, named by screen ID; S1, S2 (house scene), S3, S10, S12 first | Screen list (ARCHITECTURE.md) | Priority frames by h12, the rest by h17, ready for the Y14 skin pass |
+| [ ] | D3 | Design tokens: Figma variables → `tokens.json` (colors incl. chart palette, type scale, spacing, radius, shadows) | — | `pnpm tokens` generates `tokens.css`; ui-kit restyle can start by Sync 2 |
 
-After T8–T12, Teammate owns integration and bugs and pairs on Y14.
+After T8–T12, Aibek owns integration and bugs and pairs on Y14.
 
 ## Timeline
 
-| Hours | You | Teammate | Sync |
+| Hours | Amir | Aibek | Sync |
 | --- | --- | --- | --- |
 | 0–1 | Contracts + fixtures | Contracts + T1 | Live URL, types merged |
 | 1–6 | Y1, Y2, start Y7 | T2, T3 | **Sync 1 (h6):** engine + real data |
@@ -64,6 +66,6 @@ After T8–T12, Teammate owns integration and bugs and pairs on Y14.
 | 20–22 | Demo data, rehearsal | Performance, README | One rehearsal |
 | 22–24 | Deck, rehearse | Final deploy, backup recording | Submit: deck PDF, live link, repo |
 
-**Slack warning:** your 1–17 windows are full to the hour, with no slack. If you are behind at Sync 1, hand the S12 Loan Lab UI (half of Y11) to Teammate, who already owns the loan engine.
+**Slack warning:** Amir's 1–17 windows are full to the hour, with no slack. If Amir is behind at Sync 1, hand the S12 Loan Lab UI (half of Y11) to Aibek, who already owns the loan engine.
 
-**T12 has to fit in Teammate's spare time:** about 2 h before h17 by the hours above, plus whatever dropping per-card images saves from T10. If T12 is bigger than that once sized at Hour 0, cut from the cut order (creator packs, then leaderboard) before touching the demo path. If the scene isn't playable at Sync 2, ship the static card and keep T12 behind a flag.
+**T12 has to fit in Aibek's spare time:** about 2 h before h17 by the hours above, plus whatever dropping per-card images saves from T10. If T12 is bigger than that once sized at Hour 0, cut from the cut order (creator packs, then leaderboard) before touching the demo path. If the scene isn't playable at Sync 2, ship the static card and keep T12 behind a flag.

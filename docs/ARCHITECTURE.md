@@ -31,24 +31,24 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 lifeguessr/
   packages/
     types/            shared contracts                          [both]
-    engine/           pure TS + Vitest                          [You; loan/, month.ts, scene.ts = Teammate]
+    engine/           pure TS + Vitest                          [Amir; loan/, month.ts, scene.ts = Aibek]
       cost.ts score.ts scene.ts forecast.ts moves.ts afford.ts month.ts loan/ assumptions.ts
-    data/             fetch scripts, normalized JSON, cards     [Teammate]
+    data/             fetch scripts, normalized JSON, cards     [Aibek]
       fixtures/       canonical fixtures (engine tests + web)   [both]
   apps/web/
-    app/              routes (S3, S4 are states of /play)       [You]
+    app/              routes (S3, S4 are states of /play)       [Amir]
     app/api/
-      daily/ daily/clue/ daily/guess/ leaderboard/ share/       [Teammate]
-      events/ session/ statement/                               [Teammate]
-      ai/parse/ ai/explain/                                     [You]
-    src/ui-kit/       primitives + tokens.css                   [You; HouseScene/ = Teammate]
-    public/scene/     sprite kit (SVG layouts + props, from Figma)  [Designer]
+      daily/ daily/clue/ daily/guess/ leaderboard/ share/       [Aibek]
+      events/ session/ statement/                               [Aibek]
+      ai/parse/ ai/explain/                                     [Amir]
+    src/ui-kit/       primitives + tokens.css                   [Amir; HouseScene/ = Aibek]
+    public/scene/     sprite kit (SVG layouts + props, from Figma)  [Kiko]
     src/features/
-      game/ ladder/ forecast/ afford/ loan/                     [You]   (model/ + ui/)
-      upload/ mocks/                                            [Teammate]
+      game/ ladder/ forecast/ afford/ loan/                     [Amir]   (model/ + ui/)
+      upload/ mocks/                                            [Aibek]
     src/fixtures/     re-exports packages/data/fixtures         [both]
-    src/copy.ts       all user-facing strings                   [You]
-  tokens.json                                                   [You]
+    src/copy.ts       all user-facing strings                   [Amir]
+  tokens.json       Figma variables export                      [Kiko exports; Amir runs pnpm tokens]
   docs/
 ```
 
@@ -185,18 +185,18 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 
 | Function | Owner | Signature |
 | --- | --- | --- |
-| `costOfLife` | You | `(card: LifeCard, area: AreaData) => CostBreakdown` |
-| `cardToProfile` | You | `(card: LifeCard, area: AreaData) => Profile` (Closest Life; car loan becomes an `auto` debt, all fields `isEstimate: true`) |
-| `scoreGuess` | You | `(guess: Money, cost: CostBreakdown, cluesOpened: number) => GuessResult` |
-| `sceneOf` | Teammate | `(card: LifeCard, area: AreaData) => { public: PublicCard; clues: Record<ClueId, ClueReveal> }` (deterministic; the only place scene props come from) |
-| `forecast` | You | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` |
-| `applyPatch` | You | `(p: Profile, patch: ProfilePatch) => Profile` |
-| `rankMoves` | You | `(p: Profile) => Move[]` |
-| `canAfford` | You | `(p: Profile, x: Purchase) => AffordResult` |
-| `monthEnd` | Teammate | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
-| `loan` | Teammate | `(p: Profile, l: LoanInput) => LoanResult` |
-| `compareLoans` | Teammate | `(p: Profile, ls: LoanInput[]) => LoanResult[]` |
-| `payoffOrder` | Teammate | `(debts: Debt[], extra: Money, method: 'avalanche' \| 'snowball') => { order: string[] /* debt ids */; payoffMonth: number \| null; totalInterest: Money }` |
+| `costOfLife` | Amir | `(card: LifeCard, area: AreaData) => CostBreakdown` |
+| `cardToProfile` | Amir | `(card: LifeCard, area: AreaData) => Profile` (Closest Life; car loan becomes an `auto` debt, all fields `isEstimate: true`) |
+| `scoreGuess` | Amir | `(guess: Money, cost: CostBreakdown, cluesOpened: number) => GuessResult` |
+| `sceneOf` | Aibek | `(card: LifeCard, area: AreaData) => { public: PublicCard; clues: Record<ClueId, ClueReveal> }` (deterministic; the only place scene props come from) |
+| `forecast` | Amir | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` |
+| `applyPatch` | Amir | `(p: Profile, patch: ProfilePatch) => Profile` |
+| `rankMoves` | Amir | `(p: Profile) => Move[]` |
+| `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
+| `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
+| `loan` | Aibek | `(p: Profile, l: LoanInput) => LoanResult` |
+| `compareLoans` | Aibek | `(p: Profile, ls: LoanInput[]) => LoanResult[]` |
+| `payoffOrder` | Aibek | `(debts: Debt[], extra: Money, method: 'avalanche' \| 'snowball') => { order: string[] /* debt ids */; payoffMonth: number \| null; totalInterest: Money }` |
 
 All assumptions (inflation, returns, thresholds) live in `packages/engine/assumptions.ts` with a `Source` or an `assumption: true` flag. The UI shows them in a "How we calculate" panel.
 
@@ -206,16 +206,16 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 
 | Route | Owner | In → out |
 | --- | --- | --- |
-| `GET /api/daily` | Teammate | → today's 5 `PublicCard`s, no answers (seed = calendar date in `America/New_York`, so the set rolls over at US midnight, not mid-evening) |
-| `POST /api/daily/clue` | Teammate | `{ anonId, cardId, clue }` → `ClueReveal`; the server records the opened clue |
-| `POST /api/daily/guess` | Teammate | `{ anonId, cardId, guess }` → `GuessReveal`. The server scores with `costOfLife` + `scoreGuess` using the clues it recorded; one guess per card per anonId per day. |
-| `GET /api/leaderboard` | Teammate | query `date` (+ own `anonId` in a header) → `{ rank, todayStats }`, summed from stored guesses. The client never sends a score. |
-| `GET /api/share` | Teammate | query `resultId, format` → PNG (9:16 or 1:1) from a stored result, so share cards can't be faked |
-| `POST /api/session` | Teammate | `{ anonId, profile?, wishlist? }` → saved state. `anonId` = `crypto.randomUUID()`. |
-| `POST /api/statement/categorize` | Teammate | `{ items: StatementItem[] }` → `CategoryTotals[]` (one per month) |
-| `POST /api/events` | Teammate | `{ anonId, name, props? }` → ok |
-| `POST /api/ai/parse` | You | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
-| `POST /api/ai/explain` | You | `{ move? , loanResult? }` → `{ text }` (2 sentences, no new numbers) |
+| `GET /api/daily` | Aibek | → today's 5 `PublicCard`s, no answers (seed = calendar date in `America/New_York`, so the set rolls over at US midnight, not mid-evening) |
+| `POST /api/daily/clue` | Aibek | `{ anonId, cardId, clue }` → `ClueReveal`; the server records the opened clue |
+| `POST /api/daily/guess` | Aibek | `{ anonId, cardId, guess }` → `GuessReveal`. The server scores with `costOfLife` + `scoreGuess` using the clues it recorded; one guess per card per anonId per day. |
+| `GET /api/leaderboard` | Aibek | query `date` (+ own `anonId` in a header) → `{ rank, todayStats }`, summed from stored guesses. The client never sends a score. |
+| `GET /api/share` | Aibek | query `resultId, format` → PNG (9:16 or 1:1) from a stored result, so share cards can't be faked |
+| `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → saved state. `anonId` = `crypto.randomUUID()`. |
+| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` → `CategoryTotals[]` (one per month) |
+| `POST /api/events` | Aibek | `{ anonId, name, props? }` → ok |
+| `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
+| `POST /api/ai/explain` | Amir | `{ move? , loanResult? }` → `{ text }` (2 sentences, no new numbers) |
 
 ## Data flow
 

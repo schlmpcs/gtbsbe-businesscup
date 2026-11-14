@@ -17,7 +17,7 @@ Full business context: `docs/PRODUCT.md`.
 - Web only, runs in the browser, **no sign-up or login** to use it end to end.
 - Judges read the repo. **40% of the score is "does it work, not faked or hardcoded".**
 - Submission: a live production link, a public GitHub repo, and a pitch deck of 10 slides or fewer.
-- Two developers: **You (owner, ~57%)** and **Teammate (SWE, ~43%)**. Folder ownership is in `docs/ENGINEERING.md`; the task split is in `docs/TASKS.md`.
+- Team: **Amir** (owner; ML/AI + SWE, ~57% of the code), **Aibek** (backend, ~43%), **Kiko** (UI/UX: Figma frames, design tokens, house sprite kit; no code). Folder ownership is in `docs/ENGINEERING.md`; the task split is in `docs/TASKS.md`; work is tracked as GitHub issues (labels `owner:*`, `area:*`; milestones Hour 0 → Submit).
 - The UI is being designed in Figma in parallel. Placeholder screens come first, then Figma frames get mapped onto them screen by screen.
 
 ## Golden rules for code
