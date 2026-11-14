@@ -245,7 +245,7 @@ The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/st
 - Allowed: parse free text into typed JSON (`life`, `purchase`, `loan`), categorize merchant labels, tag one-off or yearly charges, write card captions, and give 2-sentence explanations of an engine result.
 - Not allowed: computing or inventing any number that is shown as a result, or giving advice about specific lenders, securities or tax.
 - Numbers parsed from user text are inputs, not results. Show them to the user to confirm before they enter the profile.
-- Labels sent for categorizing have personal names masked. Use the provider's no-training / zero-retention option.
+- Labels sent for categorizing have account numbers masked, and personal names on payment-app and transfer lines (other lines: #19). The provider does not train on API data; zero data retention is not enabled, so no copy may claim it.
 - Always: a zod schema on the output, one retry on validation failure, then a manual-form fallback. Log prompts and responses in development only.
 
 ## Testing
