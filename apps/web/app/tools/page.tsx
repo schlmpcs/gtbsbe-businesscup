@@ -8,6 +8,8 @@ const hrefs = {
   loan: SCREEN_ROUTES.S12,
   decide: SCREEN_ROUTES.S13,
   checkin: SCREEN_ROUTES.S14,
+  subscriptions: SCREEN_ROUTES.S21,
+  overpaying: SCREEN_ROUTES.S23,
   exact: SCREEN_ROUTES.S9,
 };
 

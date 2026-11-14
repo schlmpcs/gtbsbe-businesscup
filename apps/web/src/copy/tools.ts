@@ -11,6 +11,8 @@ export const tools = {
       loan: { question: 'Which loan costs less?', line: 'Compare up to 3 offers, total cost included.' },
       decide: { question: 'Keep the car or lease?', line: 'Two paths, one decision, ten years out.' },
       checkin: { question: 'Am I on track this month?', line: 'Your month against your usual one.' },
+      subscriptions: { question: 'What am I still paying for?', line: 'Find the subscriptions you forgot.' },
+      overpaying: { question: 'Am I overpaying?', line: 'Your bills against people near you.' },
       exact: { question: 'Are my numbers right?', line: 'Swap our estimates for your statement.' },
     },
   },
