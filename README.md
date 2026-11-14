@@ -54,5 +54,6 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | Engine: `forecast` (range band, today's dollars, purchases), `applyPatch`, `simulate` | Done (Y2) |
 | Engine: `costOfLife`, `cardToProfile`, `scoreGuess` | Done (Y1) |
 | Engine: `rankMoves`, `canAfford` | Signatures only (Y3, Y4) |
+| AI routes: `POST /api/ai/parse` (text → `ProfilePatch` / `Purchase` / `LoanInput`, zod-validated, user confirms) and `POST /api/ai/explain` (2 sentences, numbers checked against the input, template fallback); rate-limited; work without a key | Done (Y12) |
 | Screens S1–S15 | Placeholder pages |
 | Deploy (live URL) | Pending: Vercel access |
