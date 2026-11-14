@@ -53,6 +53,7 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | Engine: `loan`, `compareLoans`, `payoffOrder`, `monthEnd`, `sceneOf` | Working stubs until T3, T9, T12 |
 | Engine: `forecast` (range band, today's dollars, purchases), `applyPatch`, `simulate` | Done (Y2) |
 | Engine: `costOfLife`, `cardToProfile`, `scoreGuess` | Done (Y1) |
-| Engine: `rankMoves`, `canAfford` | Signatures only (Y3, Y4) |
+| Engine: `rankMoves` (level 1, top 3 by 10-year effect), `movesLevel` / `isLevelUnlocked` | Done (Y3) |
+| Engine: `canAfford` | Signature only (Y4) |
 | Screens S1–S15 | Placeholder pages |
 | Deploy (live URL) | Pending: Vercel access |
