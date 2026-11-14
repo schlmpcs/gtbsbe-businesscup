@@ -54,9 +54,10 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | Engine: `forecast` (range band, today's dollars, purchases), `applyPatch`, `simulate` | Done (Y2) |
 | Engine: `costOfLife`, `cardToProfile`, `scoreGuess` | Done (Y1) |
 | Engine: `rankMoves` (level 1, top 3 by 10-year effect), `movesLevel` / `isLevelUnlocked` | Done (Y3) |
-| Engine: `canAfford` | Signature only (Y4) |
+| Engine: `canAfford` (fits / wait / no over the next 12 months: cash cushion, debt load, card paid off within 12 months; `baselineFails`; with / without forecasts; `cheapestWay`) | Done (Y4) |
 | AI routes: `POST /api/ai/parse` (text → `ProfilePatch` / `Purchase` / `LoanInput`, zod-validated, user confirms) and `POST /api/ai/explain` (2 sentences, numbers checked against the input, template fallback); rate-limited; work without a key | Done (Y12) |
 | UI kit: Button, Card, Slider (linear + log), Stat, Gauge, Tabs, Sheet, ForecastChart, BarBreakdown, Field/NumberInput, EstimateTag, SourceNote, Money, Stack/Row; showcase at `/kit` | Done |
 | View-model hooks S1–S12 (`features/*/model`) + client state (`src/state`: Zustand store persisted to localStorage, anon id, session sync seam); game playable on fixtures (`NEXT_PUBLIC_GAME_SOURCE`) | Done (Y7) |
 | Screens S1–S15 | Placeholder pages |
+| S11 Can I Afford It? (`/afford`: form + free text with confirm, verdict and reason, with / without chart, wishlist) and S12 Loan Lab (`/loan`: 3 offers side by side, debt-load gauges, extra-payment slider, edit / add / type an offer) | Placeholder UI on real data (Y11) |
 | Deploy (live URL) | Pending: Vercel access |
