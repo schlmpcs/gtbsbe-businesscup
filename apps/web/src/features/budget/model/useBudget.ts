@@ -1,16 +1,18 @@
-// View-model of the Budget screen (MP11, #171). Fixture-backed: the plan is in ./budgetStore.ts, the
-// actuals come from the in-memory ledger, the table from ./table.ts.
-// MP11b: swap the store for the real one (MP9), the table for `budgetRows` / `budgetRowsForYear`, and
-// the demo profile for the person's (accountsToProfile).
+// View-model of the Budget screen (MP11, #171). The plan is the person's own, kept in this browser
+// (./budgetStore.ts: "Create budget" copies the profile's spending, each cell can be edited); the actuals
+// are the ledger's monthly totals (`transactionTotals`, MP10); the table is the engine's `budgetRows` /
+// `budgetRowsForYear` (MP9).
 import { useCallback, useMemo, useState } from 'react';
 import { addMonths } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
-import { profileDemo } from '@/fixtures';
 import { usEasternDate } from '@/lib/dates';
 import { formatMonthYear } from '@/lib/format';
-import { useTransactionsStore } from '@/features/transactions/model/transactionsStore';
+import { transactionTotals } from '@/lib/model/transactions';
+import { useAppStore } from '@/state/store';
+import { usePersistedReady } from '@/features/dashboard/model/persisted';
+import { useLedger } from '@/features/transactions/model/transactionsStore';
 import { useBudgetStore, zeroPlanned } from './budgetStore';
-import { elapsedShare, fixtureBudgetTable } from './table';
+import { budgetTable, elapsedShare } from './budgetTable';
 import type { BudgetMode, BudgetVM } from './types';
 import { toGroupVMs, toIncomeVM } from './view';
 
@@ -19,13 +21,15 @@ export function useBudget({ today: todayArg }: { today?: string } = {}): BudgetV
   const todayMonth = today.slice(0, 7);
   const planned = useBudgetStore((s) => s.planned);
   const incomePlanned = useBudgetStore((s) => s.incomePlanned);
-  const transactions = useTransactionsStore((s) => s.transactions);
+  const budgetReady = usePersistedReady(useBudgetStore);
+  const { lines, ready: ledgerReady } = useLedger();
   const [mode, setMode] = useState<BudgetMode>('month');
   const [month, setMonth] = useState(todayMonth);
 
+  const totals = useMemo(() => transactionTotals(lines), [lines]);
   const table = useMemo(
-    () => fixtureBudgetTable({ planned: planned ?? zeroPlanned(), incomePlanned, txs: transactions, mode, month, today }),
-    [planned, incomePlanned, transactions, mode, month, today],
+    () => budgetTable({ planned: planned ?? zeroPlanned(), totals, mode, month, today }),
+    [planned, totals, mode, month, today],
   );
   const marker = elapsedShare(mode, month, today);
   const groups = useMemo(() => toGroupVMs(table, marker), [table, marker]);
@@ -36,9 +40,10 @@ export function useBudget({ today: todayArg }: { today?: string } = {}): BudgetV
   const goToday = useCallback(() => setMonth(todayMonth), [todayMonth]);
 
   const createBudget = useCallback(() => {
-    // MP11b: the person's profile (accountsToProfile), not the demo one.
-    const fromProfile = Object.fromEntries(COST_CATEGORIES.map((c) => [c, profileDemo.spending[c].value])) as Record<CostCategory, number>;
-    useBudgetStore.getState().create(fromProfile, profileDemo.takeHomePay.value);
+    // The person's profile (kept in line with their accounts), its monthly spending and take-home pay.
+    const { profile } = useAppStore.getState();
+    const fromProfile = Object.fromEntries(COST_CATEGORIES.map((c) => [c, profile.spending[c].value])) as Record<CostCategory, number>;
+    useBudgetStore.getState().create(fromProfile, profile.takeHomePay.value);
   }, []);
   const setPlanned = useCallback((category: CostCategory, amount: number): boolean => {
     if (!Number.isFinite(amount) || amount < 0) return false;
@@ -47,14 +52,14 @@ export function useBudget({ today: todayArg }: { today?: string } = {}): BudgetV
   }, []);
 
   return {
-    ready: true,
+    ready: budgetReady && ledgerReady,
     hasBudget: planned !== null,
     mode,
     setMode,
     month,
     monthLabel: mode === 'year' ? month.slice(0, 4) : formatMonthYear(month),
     isCurrent: mode === 'year' ? month.slice(0, 4) === todayMonth.slice(0, 4) : month === todayMonth,
-    income: toIncomeVM(table.income, marker),
+    income: toIncomeVM(table.income, incomePlanned, mode === 'year' ? 12 : 1, marker),
     groups,
     totals: table.totals,
     createBudget,

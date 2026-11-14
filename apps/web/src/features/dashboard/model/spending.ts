@@ -4,11 +4,11 @@
 import { dailyTotalsByDay } from '@lifeguessr/engine';
 import type { DailyEntry, LedgerTransaction, Money, YearMonth } from '@lifeguessr/types';
 import { daysInMonth } from '@/features/bills/model/calendar';
-import { isCostClass } from '@/features/transactions/model/ledger';
+import { isCostClass } from '@/features/transactions/model/rows';
 import type { SpendingPointVM } from './types';
 
 /** Money-out lines of spending categories as daily-log entries (refunds are money in: not entries). */
-export function toDailyEntries(txs: readonly LedgerTransaction[]): DailyEntry[] {
+export function toDailyEntries(txs: readonly Pick<LedgerTransaction, 'id' | 'date' | 'cls' | 'amount'>[]): DailyEntry[] {
   return txs.flatMap((t): DailyEntry[] => (isCostClass(t.cls) && t.amount < 0 ? [{ id: t.id, date: t.date, category: t.cls, amount: -t.amount }] : []));
 }
 

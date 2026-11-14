@@ -1,49 +1,46 @@
-// View-model of the Transactions page (MP11, #171). Fixture-backed: reads the in-memory ledger
-// (./transactionsStore.ts, seeded from the demo fixture). No network, no engine math.
-// MP11b: swap the store for the real one (MP9/MP10) and `importCsv`'s default for the statement pipeline.
+// View-model of the Transactions page (MP11, #171). Reads the browser's Transactions store (MP10,
+// lib/model/transactions.ts) and the Accounts store (MP8). The list filter, paging and CSV export are
+// the store's; the summary is the engine's (rows.ts). The one network call is the categorize request of
+// a CSV import, which the store makes (masked label, amount, month and day only).
 import { useCallback, useMemo, useState } from 'react';
-import type { LedgerTransaction } from '@lifeguessr/types';
-import { transactionsDemo } from '@/fixtures';
-import { useAccountsStore } from '@/features/accounts/model/accountsStore';
-import { downloadTextFile } from '@/lib/download';
+import type { StatementClass } from '@lifeguessr/types';
+import { useAccountsReady, useAccountsStore } from '@/lib/model/accounts';
 import { toVMError } from '@/lib/model/errors';
 import {
-  classesIn, filterTransactions, monthsIn, NO_FILTERS, PAGE_SIZE, summarize, toRow, TRANSACTIONS_CSV_FILE, transactionsCsv,
+  exportTransactionsCsv, filterTransactions as storeFilter, transactionPage, type ImportResult,
+} from '@/lib/model/transactions';
+import { addLine } from './addLine';
+import { useGoalLinks } from './goalLinks';
+import {
+  classesIn, matchesDirection, monthsIn, newestFirst, NO_FILTERS, PAGE_SIZE, storeFilterOf, summarize, toRow,
 } from './rows';
-import { useTransactionsStore } from './transactionsStore';
-import { validNewTransaction } from './validate';
+import { ledger, useLedger } from './transactionsStore';
 import type { ImportStateVM, NewTransactionInput, TransactionFilters, TransactionsVM } from './types';
 
-/** Reads a statement file into ledger lines. */
-export type CsvImporter = (file: File) => Promise<readonly LedgerTransaction[]>;
-
-/**
- * Fixture importer: ignores the file and returns the demo statement's lines, so the progress states and
- * the "already there" count can be built and tested without a network.
- * MP11b: wire to `readStatementFile` (features/upload) + /api/statement/categorize, mapped to LedgerTransaction.
- */
-export const fixtureImporter: CsvImporter = async () => transactionsDemo;
+/** Reads a statement file and stores its lines; the default is the store's own import (tests pass one with a fake categorizer). */
+export type CsvImporter = (file: File) => Promise<Pick<ImportResult, 'added' | 'duplicates'>>;
 
 export type UseTransactionsOptions = { importer?: CsvImporter; pageSize?: number };
 
-export function useTransactions({ importer = fixtureImporter, pageSize = PAGE_SIZE }: UseTransactionsOptions = {}): TransactionsVM {
-  const transactions = useTransactionsStore((s) => s.transactions);
+export function useTransactions({ importer, pageSize = PAGE_SIZE }: UseTransactionsOptions = {}): TransactionsVM {
+  const { lines, ready: ledgerReady } = useLedger();
+  const accountsReady = useAccountsReady();
   const accounts = useAccountsStore((s) => s.accounts);
+  const goalLinks = useGoalLinks((s) => s.links);
   const [filters, setFilters] = useState<TransactionFilters>(NO_FILTERS);
   const [requestedPage, setPage] = useState(0);
   const [importState, setImportState] = useState<ImportStateVM>({ status: 'idle' });
 
-  const matching = useMemo(() => filterTransactions(transactions, filters), [transactions, filters]);
-  const pageCount = Math.max(1, Math.ceil(matching.length / pageSize));
-  const page = Math.min(requestedPage, pageCount - 1);
-  const rows = useMemo(
-    () => matching.slice(page * pageSize, (page + 1) * pageSize).map((t) => toRow(t, accounts)),
-    [matching, page, pageSize, accounts],
+  const matching = useMemo(
+    () => storeFilter(lines, storeFilterOf(filters)).filter((t) => matchesDirection(t, filters.direction)).sort(newestFirst),
+    [lines, filters],
   );
+  const current = useMemo(() => transactionPage(matching, requestedPage + 1, pageSize), [matching, requestedPage, pageSize]);
+  const rows = useMemo(() => current.items.map((t) => toRow(t, accounts, goalLinks)), [current, accounts, goalLinks]);
   const summary = useMemo(() => summarize(matching), [matching]);
   const options = useMemo(
-    () => ({ categories: classesIn(transactions), accounts: accounts.map((a) => ({ id: a.id, name: a.name })), months: monthsIn(transactions) }),
-    [transactions, accounts],
+    () => ({ categories: classesIn(lines), accounts: accounts.map((a) => ({ id: a.id, name: a.name })), months: monthsIn(lines) }),
+    [lines, accounts],
   );
 
   const setFilter = useCallback(<K extends keyof TransactionFilters>(key: K, value: TransactionFilters[K]) => {
@@ -56,9 +53,8 @@ export function useTransactions({ importer = fixtureImporter, pageSize = PAGE_SI
     async (file: File) => {
       setImportState({ status: 'reading' });
       try {
-        const lines = await importer(file);
-        const added = useTransactionsStore.getState().addMany(lines);
-        setImportState({ status: 'done', added, skipped: lines.length - added });
+        const result = await (importer ?? ((f: File) => ledger().importFile(f)))(file);
+        setImportState({ status: 'done', added: result.added, skipped: result.duplicates });
       } catch (err) {
         setImportState({ status: 'error', error: toVMError(err) });
       }
@@ -66,27 +62,20 @@ export function useTransactions({ importer = fixtureImporter, pageSize = PAGE_SI
     [importer],
   );
 
-  const add = useCallback((input: NewTransactionInput): string | null => {
-    const valid = validNewTransaction(input);
-    return valid === null ? null : useTransactionsStore.getState().addTransaction(valid);
+  const add = useCallback((input: NewTransactionInput): string | null => addLine(input), []);
+
+  const setCategory = useCallback((id: string, category: StatementClass, applyAll: boolean) => {
+    void ledger().setCategory(id, category, { applyToMerchant: applyAll }).catch(() => undefined);
   }, []);
 
-  const setCategory = useCallback(
-    (id: string, category: LedgerTransaction['cls'], applyAll: boolean) => useTransactionsStore.getState().setCategory(id, category, applyAll),
-    [],
-  );
-
-  const exportCsv = useCallback(
-    () => downloadTextFile(TRANSACTIONS_CSV_FILE, 'text/csv', transactionsCsv(matching.map((t) => toRow(t, accounts)))),
-    [matching, accounts],
-  );
+  const exportCsv = useCallback(() => exportTransactionsCsv(matching), [matching]);
 
   return {
-    ready: true,
+    ready: ledgerReady && accountsReady,
     rows,
-    total: matching.length,
-    page,
-    pageCount,
+    total: current.total,
+    page: current.page - 1,
+    pageCount: current.pageCount,
     setPage,
     filters,
     setFilter,

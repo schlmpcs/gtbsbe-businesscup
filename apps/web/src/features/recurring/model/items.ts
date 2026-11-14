@@ -1,27 +1,16 @@
-// Pure parts of Recurring: the statement lines as the detector reads them, the items of each section,
-// and which items fall in a month. The detection itself is the engine's `detectSubscriptions`, the same
-// one the subscription audit (/tools/subscriptions) uses; nothing is detected here.
+// Pure parts of Recurring: the items of each section and which items fall in a month. The detection is
+// the engine's `detectSubscriptions`, the same one the subscription audit (/tools/subscriptions) uses,
+// fed with the Transactions store's `recurringInput`; nothing is detected here.
 import { detectSubscriptions } from '@lifeguessr/engine';
-import {
-  CADENCE_MONTHS, type Account, type LedgerTransaction, type Profile, type StatementClass, type StatementItem, type SubscriptionFinding,
-} from '@lifeguessr/types';
+import { CADENCE_MONTHS, type Account, type Profile, type SubscriptionFinding } from '@lifeguessr/types';
+import { recurringInput, type StoredTransaction } from '@/lib/model/transactions';
 import { DEFAULT_DEBT_DUE_DAY, DEFAULT_RENT_DUE_DAY } from '@/features/bills/model/sources';
 import { counted, isLiabilityGroup } from '@/features/accounts/model/series';
 import type { RecurringItemVM } from './types';
 
-/** The ledger as the masked statement lines the detector reads: money out is positive. */
-export function toStatementItems(txs: readonly LedgerTransaction[]): { items: StatementItem[]; classOf: (label: string) => StatementClass | undefined } {
-  const classes = new Map<string, StatementClass>();
-  const items = txs.map((t) => {
-    classes.set(t.label, t.cls);
-    return { label: t.label, amount: -t.amount, month: t.date.slice(0, 7), day: Number(t.date.slice(8, 10)) };
-  });
-  return { items, classOf: (label) => classes.get(label) };
-}
-
 /** Findings that are active and not only a pattern (a `low` one waits for the person to confirm it). */
-export function detectFindings(txs: readonly LedgerTransaction[]): SubscriptionFinding[] {
-  const { items, classOf } = toStatementItems(txs);
+export function detectFindings(lines: readonly StoredTransaction[]): SubscriptionFinding[] {
+  const { items, classOf } = recurringInput(lines);
   return detectSubscriptions(items, { classOf }).findings.filter((f) => f.status === 'active' && f.confidence !== 'low');
 }
 

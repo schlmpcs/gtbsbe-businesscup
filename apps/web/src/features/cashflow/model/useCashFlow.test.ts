@@ -1,13 +1,20 @@
 // @vitest-environment jsdom
 // Cash Flow on the fixture ledger (2026-07-01 to 2026-11-12). No network.
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
-import { useTransactionsStore } from '@/features/transactions/model/transactionsStore';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FIXTURE_NOW, resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
+import { cashFlowSummary } from '@lifeguessr/engine';
+import { transactionTotals } from '@/lib/model/transactions';
+import { ledger } from '@/features/transactions/model/transactionsStore';
 import { useCashFlow } from './useCashFlow';
 
 const TODAY = '2026-11-15';
-beforeEach(resetFixtureStores);
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(FIXTURE_NOW);
+  await resetFixtureStores();
+});
+afterEach(() => vi.useRealTimers());
 
 describe('useCashFlow', () => {
   it('draws six months and the KPIs of the current one', () => {
@@ -60,11 +67,24 @@ describe('useCashFlow', () => {
     const { nodes, links } = result.current.summary.sankey;
     expect(nodes.map((n) => n.kind)).toContain('savings');
     expect(links.find((l) => l.target === 'savings')!.value).toBeCloseTo(4878.03, 2);
-    expect(links.find((l) => l.source === 'income')!.value).toBe(24000);
+    expect(links.find((l) => l.target === 'income')!.value).toBe(24000); // the engine's pay -> income link
   });
 
-  it('is empty without transactions', () => {
-    useTransactionsStore.setState({ transactions: [] });
+  it('is the engine\'s cash flow summary of the stored lines', () => {
+    const { result } = renderHook(() => useCashFlow({ today: TODAY }));
+    const expected = cashFlowSummary(transactionTotals(ledger().list()), { from: '2026-11', to: '2026-11' });
+    expect(result.current.summary).toEqual(expected);
+    // November so far: pay 2400 in, 2544.96 out, so 2400 - 2544.96 = -144.96 comes from savings. The engine's Sankey:
+    // pay -> income 2400, and the gap 144.96 flows fromSavings -> income so Income balances.
+    const { nodes, links } = result.current.summary.sankey;
+    expect(nodes.slice(0, 3)).toEqual([{ id: 'pay', kind: 'income' }, { id: 'fromSavings', kind: 'savings' }, { id: 'income', kind: 'total' }]);
+    expect(links[0]).toEqual({ source: 'pay', target: 'income', value: 2400 });
+    expect(links[1]!.source).toBe('fromSavings');
+    expect(links[1]!.value).toBeCloseTo(144.96, 2);
+  });
+
+  it('is empty without transactions', async () => {
+    await ledger().clear();
     const { result } = renderHook(() => useCashFlow({ today: TODAY }));
     expect(result.current.empty).toBe(true);
     expect(result.current.kpis[3]).toMatchObject({ id: 'savingsRate', value: null });

@@ -1,12 +1,12 @@
 // Pure parts of the add-account form: which fields a type has, how typed text is read, and how a valid
-// form becomes an Account. The only formula is the engine's `cardMinPaymentFor` (a card's default minimum).
-import { cardMinPaymentFor } from '@lifeguessr/engine';
-import type { Account, AccountGroup, Debt, Money, Rate, YearMonth } from '@lifeguessr/types';
-import { isLiabilityGroup } from './series';
+// form becomes the store's `AccountForm` (lib/model/addAccount.ts). A blank minimum payment or APR is
+// not filled in here: the engine's default is what the store keeps (`liabilityEstimates`).
+import type { AccountGroup, Money, Rate } from '@lifeguessr/types';
+import { DEFAULT_LOAN_KIND, isLiabilityGroup, LOAN_KINDS, type AccountForm, type LoanKind } from '@/lib/model/addAccount';
 import type { AddAccountFieldId, AddAccountFieldVM } from './types';
 
-export const DEBT_KINDS: Debt['kind'][] = ['auto', 'student', 'personal', 'bnpl'];
-export const DEFAULT_DEBT_KIND: Debt['kind'] = 'auto';
+export const DEBT_KINDS: LoanKind[] = [...LOAN_KINDS];
+export const DEFAULT_DEBT_KIND: LoanKind = DEFAULT_LOAN_KIND;
 
 type FieldSpec = Pick<AddAccountFieldVM, 'id' | 'input' | 'required' | 'canBeEstimate'>;
 
@@ -74,28 +74,18 @@ export function toFields(group: AccountGroup, form: FormState, showErrors: boole
   });
 }
 
-/** The Account to add (without id and with its first history point in `month`), or null when a field is invalid. */
-export function buildAccount(group: AccountGroup, form: FormState, month: YearMonth): Omit<Account, 'id'> | null {
+/** The form the store adds an account from, and the growth rate to set on it (assets only), or null when a field is invalid. */
+export function buildForm(group: AccountGroup, form: FormState): { form: AccountForm; growth: Rate | null } | null {
   const fields = toFields(group, form, true);
   if (fields.some((f) => f.error !== null)) return null;
-  const at = (id: AddAccountFieldId) => fields.find((f) => f.id === id);
   const balance = parseMoney(valueOf(form, 'balance')) as Money;
-  const account: Omit<Account, 'id'> = {
-    group,
-    name: valueOf(form, 'name').trim(),
-    balance: { value: balance, isEstimate: at('balance')?.isEstimate ?? false },
-    history: [{ month, balance }],
-  };
-  if (isLiabilityGroup(group)) {
-    const apr = parsePercent(valueOf(form, 'apr')) as Rate;
-    account.apr = apr;
-    const given = parseMoney(valueOf(form, 'minPayment'));
-    const minPayment = given ?? cardMinPaymentFor(balance, apr);
-    account.minPayment = { value: minPayment, isEstimate: given === null || at('minPayment')?.isEstimate === true };
-    if (group === 'loan') account.debtKind = valueOf(form, 'debtKind') as Debt['kind'];
-  } else {
-    const growth = parsePercent(valueOf(form, 'growth'));
-    if (growth !== null) account.growth = growth;
-  }
-  return account;
+  const out: AccountForm = { group, name: valueOf(form, 'name').trim(), balance };
+  if (!isLiabilityGroup(group)) return { form: out, growth: parsePercent(valueOf(form, 'growth')) };
+  const apr = parsePercent(valueOf(form, 'apr')) as Rate;
+  out.apr = { value: apr, isEstimate: false };
+  if (group === 'loan') out.debtKind = valueOf(form, 'debtKind') as LoanKind;
+  // A typed minimum is the person's number (measured); a blank one is left to the engine's default.
+  const given = parseMoney(valueOf(form, 'minPayment'));
+  if (given !== null) out.minPayment = { value: given, isEstimate: false };
+  return { form: out, growth: null };
 }
