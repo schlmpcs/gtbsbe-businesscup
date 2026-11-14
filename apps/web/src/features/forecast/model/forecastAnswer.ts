@@ -1,9 +1,9 @@
 // Pure helpers over a forecast answer (what POST /api/ai/forecast, or the local rules engine, said
 // about one profile and its candidate moves). No React: the request hook, the move ranking and the
 // two screens' view-models all read an answer through these, so they agree on what it means.
-import { deflateForecast, forecastFacts, hasEstimates, type MoveCandidate } from '@lifeguessr/engine';
+import { deflateForecast, forecastFacts, hasEstimates, pointAt, type MoveCandidate } from '@lifeguessr/engine';
 import type {
-  Forecast, ForecastBundle, ForecastPoint, ForecastSource, Move, Profile, ProfilePatch, Rate,
+  Forecast, ForecastBundle, ForecastPoint, ForecastSource, HorizonYears, Move, Profile, ProfilePatch, Rate,
 } from '@lifeguessr/types';
 import type { ScenarioPatch } from '@/lib/api/aiForecast';
 import { inflationForZip } from '@/lib/areas';
@@ -94,15 +94,15 @@ export const bandKindOf = (source: ForecastSource | null): BandKind => (source =
 /**
  * Whether the band has no width, so there is no range to show. For the rules forecast it follows the
  * inputs: zero when none of the answered profile's numbers is an estimate. For the AI forecast it follows
- * the answer: zero when the model gave (nearly) a single number. `in10y` is the point shown, in the
- * dollars shown.
+ * the answer: zero when the model gave (nearly) a single number. `point` is the point shown (at the
+ * chosen year), in the dollars shown.
  */
-export function bandIsZero(source: ForecastSource, profile: Profile, in10y: ForecastPoint): boolean {
-  return source === 'ai' ? in10y.high - in10y.low < 1 : !hasEstimates(profile);
+export function bandIsZero(source: ForecastSource, profile: Profile, point: ForecastPoint): boolean {
+  return source === 'ai' ? point.high - point.low < 1 : !hasEstimates(profile);
 }
 
 /** Zero point shown until there is a forecast (the screens show a skeleton, not this). */
-export const NO_IN10Y: ForecastPoint = { month: 120, low: 0, mid: 0, high: 0 };
+export const NO_POINT: ForecastPoint = { month: 0, low: 0, mid: 0, high: 0 };
 
 /**
  * Moves can be committed or marked done only once the numbers on screen answer the current profile: not
@@ -119,36 +119,38 @@ export type ShownForecast = {
   status: 'loading' | 'ready' | 'error';
   error: VMError | null;
   source: ForecastSource | null;
-  /** The base forecast in the shown dollars; null until there is one. */
+  /** The base forecast in the shown dollars, all ten years (a screen cuts it to the horizon); null until there is one. */
   base: Forecast | null;
-  /** `base.in10y`, or a zero point until there is one. */
-  in10y: ForecastPoint;
+  /** The base point at the chosen year (month 12·years), or a zero point until there is one. */
+  atHorizon: ForecastPoint;
   /** Derived from the answered profile and bundle, never from the live profile (which may be ahead of them). */
   band: { kind: BandKind; isZero: boolean };
 };
 
 /**
- * Reads the base forecast of `forecast` in today's dollars or nominal. `error` comes from the request
- * state, or from the deflation itself failing; `band.isZero` is true when there is nothing to show.
+ * Reads the base forecast of `forecast` in today's dollars or nominal, at year `years`. `error` comes from
+ * the request state, or from reading the answer failing (deflation, or no point at that year);
+ * `band.isZero` is true when there is nothing to show. Changing `years` is reading: no request.
  */
-export function shownForecast(forecast: ForecastState, todaysDollars: boolean): ShownForecast {
+export function shownForecast(forecast: ForecastState, todaysDollars: boolean, years: HorizonYears): ShownForecast {
   if (forecast.status !== 'ready') {
     const error = forecast.status === 'error' ? forecast.error : null;
     return {
-      status: error ? 'error' : 'loading', error, source: null, base: null, in10y: NO_IN10Y,
+      status: error ? 'error' : 'loading', error, source: null, base: null, atHorizon: NO_POINT,
       band: { kind: 'inputs', isZero: true },
     };
   }
   const { answer, source } = forecast;
   try {
     const base = answerDollars(answer, todaysDollars)(answer.bundle.base);
+    const atHorizon = pointAt(base, years);
     return {
-      status: 'ready', error: null, source, base, in10y: base.in10y,
-      band: { kind: bandKindOf(source), isZero: bandIsZero(source, answer.profile, base.in10y) },
+      status: 'ready', error: null, source, base, atHorizon,
+      band: { kind: bandKindOf(source), isZero: bandIsZero(source, answer.profile, atHorizon) },
     };
   } catch (err) {
     return {
-      status: 'error', error: toVMError(err), source, base: null, in10y: NO_IN10Y,
+      status: 'error', error: toVMError(err), source, base: null, atHorizon: NO_POINT,
       band: { kind: bandKindOf(source), isZero: true },
     };
   }

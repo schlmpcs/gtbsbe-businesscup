@@ -185,6 +185,71 @@ describe('forecastWithModel', () => {
     expect(sent(1)).toContain('times the plausible size');
   });
 
+  // The model's year-10 anchor for 'cut-eating' is the rules one; its year-1 anchor moves only
+  // a tenth of the way from the base to the rules scenario (inside the base envelope, so only
+  // the effect check can see it).
+  const shortEffectTooSmall = (req: ForecastRequest) => {
+    const answer = goodAnswer(req);
+    const base = answer.find((f) => f.id === 'base')!;
+    return answer.map((f) => {
+      if (f.id !== 'cut-eating') return f;
+      const [first, ...rest] = f.anchors;
+      const b = base.anchors[0]!;
+      const toward = (from: number, to: number) => from + 0.1 * (to - from);
+      return {
+        ...f,
+        anchors: [
+          { ...first!, low: toward(b.low, first!.low), mid: toward(b.mid, first!.mid), high: toward(b.high, first!.high) },
+          ...rest,
+        ],
+      };
+    });
+  };
+
+  it("retries when a scenario's 1-year effect is far off although its 10-year effect is fine", async () => {
+    const req = request();
+    create.mockResolvedValueOnce(forecastReply(shortEffectTooSmall(req))).mockResolvedValueOnce(goodReply(req));
+    const bundle = await forecastWithModel(req, client);
+
+    expect(bundle.source).toBe('ai');
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(sent(1)).toContain('scenario "cut-eating": 1-year effect');
+    expect(sent(1)).not.toContain('10-year effect');
+  });
+
+  it('puts a scenario that fails at 1 and 3 years in one issue line naming both years, so the cap counts scenarios', async () => {
+    const req = request();
+    const answer = goodAnswer(req);
+    const base = answer.find((f) => f.id === 'base')!;
+    // Years 1 and 3 move only a tenth of the way from the base to the rules scenario; 5 and 10 are right.
+    const toward = (from: number, to: number) => from + 0.1 * (to - from);
+    const bad = answer.map((f) => (f.id !== 'cut-eating' ? f : {
+      ...f,
+      anchors: f.anchors.map((a, i) => {
+        if (i !== 0 && i !== 2) return a;
+        const b = base.anchors[i]!;
+        return { ...a, low: toward(b.low, a.low), mid: toward(b.mid, a.mid), high: toward(b.high, a.high) };
+      }),
+    }));
+    create.mockResolvedValueOnce(forecastReply(bad)).mockResolvedValueOnce(goodReply(req));
+    expect((await forecastWithModel(req, client)).source).toBe('ai');
+
+    const lines = sent(1).split('\n').filter((l) => l.startsWith('- scenario "cut-eating":') && l.includes('-year effect'));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^- scenario "cut-eating": 3-year effect -?\$[\d,]+ .+; 1-year effect -?\$[\d,]+ .+$/);
+    expect(lines[0]).not.toMatch(/(5|10)-year effect/);
+  });
+
+  it('falls back to rules when the short-horizon effect stays wrong', async () => {
+    const req = request();
+    const bad = forecastReply(shortEffectTooSmall(req));
+    create.mockResolvedValueOnce(bad).mockResolvedValueOnce(bad);
+    const bundle = await forecastWithModel(req, client);
+
+    expect(bundle).toEqual(rulesBundle(req.profile, req.scenarios, req.rates));
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
   it('falls back to the rules bundle after two bad answers', async () => {
     const req = request();
     const bad = forecastReply(scaled(goodAnswer(req), 1 / 1000));

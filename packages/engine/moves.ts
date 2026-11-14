@@ -171,10 +171,13 @@ export function moveCandidates(p: Profile, opts: RankMovesOptions = {}): MoveCan
 }
 
 /**
- * Ranks measured candidates: `effectOf` gives each candidate's 10-year effect, effects below
- * MIN_EFFECT_10Y (and NaN) are dropped, the rest sorted by effect descending (ties: kind order,
- * then id), at most MOVES_SHOWN. The committed move is always kept while it survives the filter:
- * outside the top 3 it takes the third slot (the list stays sorted). `effectOf` runs once per candidate.
+ * Ranks measured candidates: `effectOf` gives the effect to rank each candidate by (the 10-year effect
+ * in `rankMoves`; the web app passes the effect at the horizon picked on S10). Effects below
+ * MIN_EFFECT_10Y ($1, applied to that effect whatever year it is for) and NaN are dropped, the rest
+ * sorted by effect descending (ties: kind order, then id), at most MOVES_SHOWN. The committed move is
+ * always kept while it survives the filter: outside the top 3 it takes the third slot (the list stays
+ * sorted). `effectOf` runs once per candidate. Each returned move's `effect10y` holds what `effectOf`
+ * returned, so a caller that ranks by another year puts the real 10-year effect back.
  */
 export function rankCandidates(
   p: Profile,

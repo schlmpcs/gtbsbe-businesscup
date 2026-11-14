@@ -1,7 +1,8 @@
 // Value lists for the unions in ./index.ts (runtime iteration, zod enums). Each `satisfies` line
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
 import type {
-  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, KidAge, MoveKind,
+  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, HorizonYears,
+  KidAge, MoveKind,
   ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
   MissBucket, SubscriptionFinding, SubscriptionFlag,
 } from './index';
@@ -19,6 +20,9 @@ export const MOVE_KINDS = [
   'payCardFirst', 'cutCategory', 'cancelSubscriptions',
   'retirementMatch', 'hsa', 'refinance', 'negotiateRent', 'reshopInsurance',
 ] as const satisfies readonly MoveKind[];
+
+/** The horizons the forecast screen's picker offers, shortest first (the default is the last). */
+export const FORECAST_HORIZONS = [1, 3, 5, 10] as const satisfies readonly HorizonYears[];
 
 // ----- Duel game (S2/S3) -----------------------------------------------------------------------
 
@@ -70,14 +74,15 @@ export const CLIENT_EVENT_NAMES = [
   'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared',
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
-  'paywall_viewed', 'sample_loaded',
-  'goal_set', 'goal_verdict_shown', 'goal_cleared',
+  'paywall_viewed', 'avatar_preview_viewed', 'avatar_stats_viewed', 'sample_loaded',
+  'goal_set', 'goal_verdict_shown', 'goal_cleared', 'forecast_horizon_changed',
   'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked',
   'renewals_exported', 'overpaying_checked', 'payoff_planned',
+  'duel_picked', 'hint_opened', 'challenge_copied', 'own_guess_started',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 /** Events only the server records (the Pro routes). */
 export const SERVER_EVENT_NAMES = [
-  'checkout_started', 'pro_purchased', 'pro_demo_purchased', 'pro_promo_redeemed',
+  'avatar_published', 'avatar_unpublished', 'checkout_started', 'pro_purchased', 'pro_demo_purchased', 'pro_promo_redeemed',
 ] as const satisfies readonly ServerFunnelEvent['name'][];
 export const FUNNEL_EVENT_NAMES = [...CLIENT_EVENT_NAMES, ...SERVER_EVENT_NAMES] as const satisfies readonly FunnelEventName[];
 /**
@@ -128,3 +133,7 @@ export const SUBSCRIPTION_FINDINGS_MAX = 500;
 export const MAX_ID_LENGTH = 100;
 /** Most services a person can have ticked in the subscription tool (the tick-list is about 40, with room for more). */
 export const SUBSCRIPTION_TICKS_MAX = 200;
+
+export { AVATAR_ROUND_BALANCE,AVATAR_ROUND_MONTHLY,AVATAR_RENT_SHARE_STEP,AVATAR_BOUNDS,AVATAR_TTL_DAYS,AVATAR_MIN_POOL,AVATAR_MIN_PICKS } from './avatar';
+
+/** Exact integer mask capacity shared by JavaScript arithmetic and Postgres bigint queries. */

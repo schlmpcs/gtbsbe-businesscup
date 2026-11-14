@@ -131,9 +131,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
       client.pick(round, letter, day.date).then(
         (result) => {
           const picks = { ...progress.picks, [round]: { choice: letter, result } };
-          // The funnel's existing game events: a duel round is a home guessed, and the hint is the
-          // mailbox clue (neighborhood tier). The event mask has room for 31 names (server/store/events.ts).
-          track({ name: 'home_guessed', props: { home: round, cluesOpened: progress.hints[round] ? 1 : 0 } }, { once: `duel_pick:${day.date}:${round}` });
+          track({ name: 'duel_picked', props: { round, correct: result.correct } }, { once: `duel_pick:${day.date}:${round}` });
           if (day.duels.every((d) => picks[d.round])) {
             track({ name: 'game_finished', props: { homes: day.duels.length } }, { once: `duel_finished:${day.date}` });
           }
@@ -159,7 +157,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
         if (!mounted.current) return;
         setProgress((p) => ({ ...p, hints: { ...p.hints, [round]: hint } }));
         setHintStatus('idle');
-        track({ name: 'clue_opened', props: { home: round, clue: 'mailbox' } }, { once: `duel_hint:${day.date}:${round}` });
+        track({ name: 'hint_opened', props: { round } }, { once: `duel_hint:${day.date}:${round}` });
       },
       () => {
         if (mounted.current) setHintStatus('error');
@@ -197,14 +195,14 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
     if (!challengeUrl) return;
     copyImpl(challengeUrl).then(
       (ok) => {
-        if (ok) track({ name: 'result_shared', props: { via: 'copy' } });
+        if (ok) track({ name: 'challenge_copied' }, { once: `duel_challenge:${date}` });
         if (mounted.current) setCopyStatus(ok ? 'copied' : 'failed');
       },
       () => {
         if (mounted.current) setCopyStatus('failed');
       },
     );
-  }, [challengeUrl, copyImpl]);
+  }, [challengeUrl, copyImpl, date]);
 
   const shareImpl = opts.share ?? shareOrCopy;
   const shareText = summary?.shareText ?? null;
@@ -253,6 +251,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
     pick,
     openHint,
     next,
+    guessOwn: () => track({ name: 'own_guess_started' }, { once: `duel_own_guess:${date}` }),
     copyChallenge,
     copyStatus,
     share,
