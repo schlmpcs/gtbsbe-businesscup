@@ -35,13 +35,13 @@ export function CategoryBar({ label, categories, className }: CategoryBarProps) 
       </div>
       <ul aria-label={label} className="flex flex-col gap-xs text-sm">
         {categories.map((c) => (
-          <li key={c.category} className="flex items-center justify-between gap-sm">
+          <li key={c.category} className="flex flex-wrap items-center justify-between gap-x-sm">
             <span className="flex min-w-0 items-center gap-xs">
               <span aria-hidden="true" className={cx('size-sm shrink-0 rounded-full', CATEGORY_COLOR[c.category])} />
-              <span className="truncate">{common.categories[c.category]}</span>
-              {c.isEstimate && <EstimateTag />}
+              <span className="break-words">{common.categories[c.category]}</span>
             </span>
-            <span className="shrink-0 font-semibold tabular-nums">
+            <span className="ml-auto flex shrink-0 items-center gap-xs font-semibold tabular-nums">
+              {c.isEstimate && <EstimateTag />}
               <Money value={c.amount} />
               <span className="text-text-muted">{t.card.perMonth}</span>
             </span>
