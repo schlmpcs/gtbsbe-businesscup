@@ -8,7 +8,7 @@ import { errorText } from './errorText';
 import { GuessPanel } from './GuessPanel';
 import { HomeCard } from './HomeCard';
 import { HomeStrip } from './HomeStrip';
-import { HouseSceneClues } from './HouseSceneClues';
+import { HouseScene3D } from './HouseScene3D';
 import { RevealView } from './RevealView';
 import { SummaryView } from './SummaryView';
 
@@ -17,7 +17,8 @@ export type PlayScreenProps = {
   /** S5 route for the "guess your own life" bridge. */
   guessOwnHref: string;
   /**
-   * The clue panel. Default: the illustrated house (HouseSceneClues, T12). The static ClueBoard
+   * The clue panel. Default: the 3D house (HouseScene3D, D1 renders). The 2D HouseSceneClues
+   * (T12, ui-kit HouseScene) and the static ClueBoard
    * (tap-to-reveal rooms) takes the same props and is the fallback (ENGINEERING.md → Cut order).
    */
   ClueSlot?: ComponentType<ClueBoardProps>;
@@ -39,7 +40,7 @@ function LoadingState() {
 }
 
 /** /play: S2 explore + guess, S3 reveal and the day's summary, S4 streamer mode (`vm.streamer`). */
-export function PlayScreen({ vm, guessOwnHref, ClueSlot = HouseSceneClues }: PlayScreenProps) {
+export function PlayScreen({ vm, guessOwnHref, ClueSlot = HouseScene3D }: PlayScreenProps) {
   const streamer = vm.streamer;
   const large = streamer !== null;
   const screen = large ? 'S4' : vm.status === 'ready' && vm.phase !== 'explore' ? 'S3' : 'S2';

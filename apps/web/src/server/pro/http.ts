@@ -77,17 +77,26 @@ export function storeFailure(err: unknown): Response {
 }
 
 /**
- * Guard for routes only Pro users may call (e.g. the T4 session save): 400 without a valid
- * x-anon-id, 402 `not_paid` when that id is not Pro, 503 when the store is unavailable. It does
- * not rate-limit; the calling route applies its own limit.
+ * Whether `anonId` is Pro, for a route that gates only part of what it does (the T4 session save
+ * gates adding to the wishlist, not saving the profile). 503 when the store is unavailable.
+ */
+export async function proStatusFor(anonId: string): Promise<{ pro: boolean } | { response: Response }> {
+  try {
+    return { pro: (await getEntitlementStore().get(anonId)) !== null };
+  } catch (err) {
+    return { response: storeFailure(err) };
+  }
+}
+
+/**
+ * Guard for routes only Pro users may call: 400 without a valid x-anon-id, 402 `not_paid` when
+ * that id is not Pro, 503 when the store is unavailable. It does not rate-limit; the calling route
+ * applies its own limit.
  */
 export async function requirePro(req: Request): Promise<{ anonId: string } | { response: Response }> {
   const anonId = readAnonId(req);
   if (!anonId) return { response: missingAnonId() };
-  try {
-    const entitlement = await getEntitlementStore().get(anonId);
-    return entitlement ? { anonId } : { response: proError(402, 'not_paid') };
-  } catch (err) {
-    return { response: storeFailure(err) };
-  }
+  const status = await proStatusFor(anonId);
+  if ('response' in status) return status;
+  return status.pro ? { anonId } : { response: proError(402, 'not_paid') };
 }

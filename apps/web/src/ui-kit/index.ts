@@ -34,6 +34,7 @@ export { Scoreboard, type ScoreboardItem, type ScoreboardProps } from './Scorebo
 export { Sheet, type SheetProps } from './Sheet';
 export { LOG_SLIDER_POSITIONS, Slider, sliderScale, type SliderProps } from './Slider';
 export { SourceNote, type SourceNoteProps } from './SourceNote';
+export { SpriteImage, type SpriteImageProps } from './SpriteImage';
 export { Sticker, type StickerProps, type StickerTone } from './Sticker';
 export { Stat, type StatProps, type StatTone } from './Stat';
 export { Tabs, type TabItem, type TabsProps } from './Tabs';
