@@ -571,7 +571,7 @@ describe('FutureScreen (S10)', () => {
     const setHorizonYears = vi.fn();
     function Spied() {
       const vm: FutureVM = useFuture();
-      return <FutureScreen vm={{ ...vm, setHorizonYears }} links={{ today: '/', makeExact: '/me/upload' }} Link={A} />;
+      return <FutureScreen vm={{ ...vm, setHorizonYears }} links={{ makeExact: '/me/upload' }} Link={A} />;
     }
     render(<Spied />);
     await user.click(await screen.findByRole('radio', { name: '3 years' }));

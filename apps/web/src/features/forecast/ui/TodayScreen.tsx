@@ -98,7 +98,10 @@ function HouseHero({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; 
             {t.today.home.title}
           </Sticker>
         </h1>
-        <div data-testid="at-horizon" className="w-full">
+        <div data-testid="at-horizon" className="flex w-full flex-col gap-sm">
+          <h2 className="font-display text-2xl font-extrabold tracking-tight">
+            {ready && vm.horizonReady ? t.today.future.title(vm.horizonYears) : t.today.future.titleNeutral}
+          </h2>
           {!ready || vm.forecastStatus === 'loading' ? (
             <Skeleton lines={4} />
           ) : vm.forecastStatus === 'error' && vm.forecastError ? (
@@ -291,11 +294,10 @@ function MoveSummary({ move, vm }: { move: MoveVM; vm: TodayVM }) {
   return (
     <Stack gap="sm">
       <div>
-        <p className="font-display text-5xl font-extrabold leading-display tracking-tight text-primary tabular-nums">
-          {formatMoney(move.effect, { signed: true })}
+        <p className="font-display text-4xl font-extrabold leading-display tracking-tight text-primary tabular-nums">
+          {t.moves.effect(formatMoney(move.effect, { signed: true }), move.horizonYears)}
         </p>
         <p className="mt-xs flex flex-wrap items-center gap-sm text-xs text-text-muted">
-          <span>{t.moves.effectLabel(move.horizonYears)}</span>
           <SourceTag source={move.source} />
         </p>
       </div>
