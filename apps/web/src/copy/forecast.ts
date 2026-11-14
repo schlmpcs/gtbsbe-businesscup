@@ -26,11 +26,29 @@ export const forecast = {
   sampleProfile: 'Sample numbers, not yours yet.',
   todaysDollarsNote: 'In today’s dollars.',
   futureDollarsNote: 'In future dollars, before inflation.',
-  /** The range band (docs/ENGINEERING.md → Forecast: label it exactly this way). */
+  /**
+   * Who made a forecast number (docs/ENGINEERING.md → AI forecast → Labeling). `rulesPreview` labels the
+   * ladder's 10-year number (S5–S9), which always comes from the rules engine so it can move as you type.
+   */
+  source: {
+    ai: 'AI estimate',
+    rules: 'Rules-based estimate',
+    rulesPreview: 'Rules-based preview',
+  },
+  /**
+   * The range band (docs/ENGINEERING.md → Forecast: label it exactly this way). `label` / `explain` /
+   * `zero` are the rules forecast's band, made from the numbers we estimated; `model` is the AI
+   * forecast's own range.
+   */
   band: {
     label: 'Range from the numbers we estimated',
     explain: 'The shaded band covers only the numbers we estimated, not market or inflation risk.',
     zero: 'Every number is yours, so there is no range.',
+    model: {
+      label: 'Range from the AI model’s own uncertainty',
+      explain: 'The shaded band is the AI model’s own range, not a guarantee. It may not narrow as you add real numbers.',
+      zero: 'The model gave a single number, with no range.',
+    },
     estimatedTitle: 'Numbers we estimated',
     /** Names of estimated inputs (spending categories use common.categories). */
     fields: {
@@ -141,6 +159,8 @@ export const forecast = {
     /** Sticker on the illustration (no number: the amounts are shown once, above and in the moves). */
     artSticker: 'If nothing changes',
     backCta: 'Back to Today',
+    /** Shown while a new answer is on its way and the numbers on screen are the previous ones. */
+    refreshing: 'Updating the forecast…',
   },
 
   moves: {
@@ -177,7 +197,11 @@ export const forecast = {
   /** "How we calculate" panel (S10). */
   how: {
     title: 'How we calculate',
+    /** The rules forecast: every number is the engine's. */
     intro: 'One month-by-month simulation: same inputs, same answer. Its rates and rules:',
+    /** The AI forecast: the model writes the numbers, code checks them against the simulation. */
+    introAi:
+      'An AI model writes the 10-year numbers and code checks them against our month-by-month simulation; an answer that strays too far is replaced by the simulation’s, labeled. Everything else is our own rules. The simulation’s rates and rules:',
     forecastTitle: 'Forecast',
     movesTitle: 'Next moves',
     assumption: 'our assumption',

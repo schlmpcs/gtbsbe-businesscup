@@ -17,7 +17,17 @@ import {
   type ArtName,
 } from '@/ui-kit';
 import type { MonthEndVM, MoveVM, TodayHomeVM, TodayVM } from '../model/types';
-import { ErrorNote, moveDetail, moveTitle, RangeText, Skeleton, tilt, type LinkComponent } from './shared';
+import {
+  bandText,
+  ErrorNote,
+  moveDetail,
+  moveTitle,
+  RangeText,
+  Skeleton,
+  SourceTag,
+  tilt,
+  type LinkComponent,
+} from './shared';
 
 export type TodayLinks = {
   play: string;
@@ -66,7 +76,11 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
 
         <div className="grid items-start gap-xl lg:grid-cols-2">
           <Card title={t.today.future.title} data-testid="in10y" style={tilt(-1)}>
-            {ready ? (
+            {!ready || vm.forecastStatus === 'loading' ? (
+              <Skeleton />
+            ) : vm.forecastStatus === 'error' && vm.forecastError ? (
+              <ErrorNote error={vm.forecastError} />
+            ) : (
               <Stack gap="sm">
                 <Stat
                   label={t.netWorthIn10y}
@@ -76,12 +90,16 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
                   hint={t.today.future.hint}
                 />
                 <RangeText point={vm.in10y} isZero={vm.in10yBandIsZero} />
+                <div className="flex flex-wrap items-center gap-sm">
+                  <SourceTag source={vm.source} />
+                  {!vm.in10yBandIsZero && (
+                    <span className="text-xs text-text-muted">{bandText(vm.in10yBandKind, false).label}</span>
+                  )}
+                </div>
                 <Link href={links.future} className={cx(buttonClassName({ variant: 'secondary' }), 'mt-sm self-start')}>
                   {t.today.future.cta}
                 </Link>
               </Stack>
-            ) : (
-              <Skeleton />
             )}
           </Card>
 
@@ -267,7 +285,7 @@ function MoveCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; L
   const title = committed ? t.today.move.committedTitle : t.today.move.topTitle;
   let body;
   if (vm.status !== 'ready') body = <Skeleton lines={2} />;
-  else if (committed) body = <MoveSummary move={committed} onDone={vm.markCommittedDone} />;
+  else if (committed) body = <MoveSummary move={committed} onDone={vm.markCommittedDone} disabled={vm.actionsDisabled} />;
   else if (vm.topMove.status === 'loading') body = <Skeleton lines={2} />;
   else if (vm.topMove.status === 'error') body = <ErrorNote error={vm.topMove.error} />;
   else if (vm.topMove.data === null) body = <p className="text-sm text-text-muted">{t.today.move.none}</p>;
@@ -288,7 +306,7 @@ function MoveCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; L
   );
 }
 
-function MoveSummary({ move, onDone }: { move: MoveVM; onDone?: () => void }) {
+function MoveSummary({ move, onDone, disabled = false }: { move: MoveVM; onDone?: () => void; disabled?: boolean }) {
   const detail = moveDetail(move);
   return (
     <div className="flex flex-col gap-md sm:flex-row sm:items-end sm:justify-between">
@@ -296,14 +314,17 @@ function MoveSummary({ move, onDone }: { move: MoveVM; onDone?: () => void }) {
         <p className="text-lg font-semibold">{moveTitle(move)}</p>
         {detail && <p className="text-sm text-text-muted">{detail}</p>}
         {onDone && (
-          <Button variant="secondary" size="sm" className="mt-sm self-start" onClick={onDone}>
+          <Button variant="secondary" size="sm" className="mt-sm self-start" onClick={onDone} disabled={disabled}>
             {t.today.move.markDone}
           </Button>
         )}
       </Stack>
-      <p className="font-display text-4xl font-extrabold leading-tight text-positive tabular-nums">
-        {t.moves.effect(formatMoney(move.effect10y, { signed: true }))}
-      </p>
+      <div className="flex flex-col items-start gap-xs sm:items-end">
+        <p className="font-display text-4xl font-extrabold leading-tight text-positive tabular-nums">
+          {t.moves.effect(formatMoney(move.effect10y, { signed: true }))}
+        </p>
+        <SourceTag source={move.source} />
+      </div>
     </div>
   );
 }

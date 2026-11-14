@@ -5,9 +5,10 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFixtureGameClient } from '@/features/game/model/fixtureClient';
 import { getArea } from '@lifeguessr/data/areas';
+import { cloneProfileDemo } from '@/fixtures';
 import { cardById, cardsSample } from '@/fixtures/cards';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
-import { thisMonth } from '@/lib/model/profile';
+import { displayForecast, thisMonth } from '@/lib/model/profile';
 import { useAppStore, useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { useBalanceSheet } from './useBalanceSheet';
@@ -130,6 +131,13 @@ describe('useQuickSliders (S7)', () => {
 
     act(() => result.current.setSavingsShare(0.123));
     expect(result.current.savings).toMatchObject({ value: 0.12, isEstimate: false });
+  });
+
+  it('stays on the rules preview, and says so', async () => {
+    const { result } = renderHook(() => useQuickSliders());
+    await waitForReady(result);
+    expect(result.current.in10ySource).toBe('rules');
+    expect(result.current.in10y).toEqual(displayForecast(cloneProfileDemo()).in10y); // the engine's, with no request
   });
 
   it('free text: parse, show for confirmation, apply only on confirm', async () => {
@@ -339,6 +347,7 @@ describe('useLadderProgress', () => {
       ['S9', '/me/upload', false],
     ]);
     expect(result.current.futureHref).toBe('/future');
+    expect(result.current.in10ySource).toBe('rules'); // the ladder's number is the engine's preview, never the model's
 
     act(() => useAppStore.getState().setSelfGuess(4000));
     const { result: closest } = renderHook(() => useClosestLife());

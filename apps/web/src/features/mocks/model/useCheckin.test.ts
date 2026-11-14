@@ -140,6 +140,9 @@ describe('useCheckin (S14)', () => {
     const s = result.current.move.suggestions;
     expect(s.status === 'ready' && s.data.map((m) => m.id)).toEqual(ranked.map((m) => m.id));
     expect(result.current.move).toMatchObject({ committed: null, progress: null, answer: 'none', level: 1 });
+    // No model in tests: the answer is the local rules forecast, and the list says so. Not busy once it is in.
+    expect(s.status === 'ready' && s.data.every((m) => m.source === 'rules')).toBe(true);
+    expect(result.current.move.actionsDisabled).toBe(false);
 
     const card = ranked.find((m) => m.kind === 'payCardFirst')!;
     act(() => result.current.move.commit(card.id));

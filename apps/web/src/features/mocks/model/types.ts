@@ -146,8 +146,10 @@ export type CheckinMoveAnswer = 'none' | 'done' | 'keepGoing';
 export type CheckinMoveVM = {
   committed: MoveVM | null;
   progress: Loadable<MoveProgressVM | null> | null;
-  /** Ranked moves to commit to when there is none (engine rankMoves). */
+  /** Ranked moves to commit to when there is none (the forecast's ranking; each carries who made its number). */
   suggestions: Loadable<MoveVM[]>;
+  /** True while the list on screen is a previous profile's answer: committing waits for the new one. */
+  actionsDisabled: boolean;
   answer: CheckinMoveAnswer;
   /** The move marked done in this check-in. */
   doneMove: MoveVM | null;

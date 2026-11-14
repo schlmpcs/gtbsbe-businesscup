@@ -10,13 +10,21 @@ import { common, forecast as t } from '@/copy';
 import { getArea } from '@lifeguessr/data/areas';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
+import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
+import { FORECAST_DEBOUNCE_MS } from './model/useForecastBundle';
+import type { TodayVM } from './model/types';
 import type { ExplainFn } from './model/useMoveExplain';
 import { useFuture } from './model/useFuture';
 import { useToday } from './model/useToday';
 import { FutureScreen } from './ui/FutureScreen';
 import { TodayScreen, type TodayLinks } from './ui/TodayScreen';
 
-beforeEach(resetClientState);
+let route: ReturnType<typeof mockForecastRoute>;
+
+beforeEach(() => {
+  resetClientState();
+  route = mockForecastRoute();
+});
 
 function A({ href, children, ...rest }: { href: string; children?: ReactNode; className?: string }) {
   return (
@@ -41,6 +49,25 @@ function Future({ explain }: { explain?: ExplainFn }) {
   return <FutureScreen vm={vm} links={{ today: '/', makeExact: '/me/upload' }} Link={A} />;
 }
 
+/** A hand-made Today view-model: ready, with the forecast answered by the rules. */
+function todayVm(over: Partial<TodayVM> = {}): TodayVM {
+  return {
+    status: 'ready', profileOrigin: 'user', isDemoProfile: false,
+    monthEnd: {
+      status: 'ready',
+      data: {
+        projectedSpend: 3900, vsAverage: null, drifts: [], historyMonths: 0, noAverage: 'history', fromStatement: false,
+        month: '2026-11', asOfDay: null, takeHome: { value: 5200, isEstimate: false },
+      },
+    },
+    in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, in10yBandKind: 'inputs',
+    forecastStatus: 'ready', forecastError: null, source: 'rules', actionsDisabled: false, committedMove: null,
+    markCommittedDone: () => {}, topMove: { status: 'ready', data: null },
+    game: { date: null, played: 0, total: 0, finished: false, homes: [] },
+    ...over,
+  };
+}
+
 const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
 
@@ -50,6 +77,8 @@ describe('TodayScreen (S1)', () => {
     const card = await screen.findByTestId('in10y');
     await waitFor(() => expect(within(card).getByText(t.netWorthIn10y)).toBeInTheDocument());
     expect(within(card).getByText(/^Likely between \$[\d,]+ and \$[\d,]+$/)).toBeInTheDocument();
+    expect(within(card).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
+    expect(within(card).getByText(t.band.label)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: t.today.play.cta })).toHaveAttribute('href', '/play');
     expect(screen.getByRole('link', { name: t.today.future.cta })).toHaveAttribute('href', '/future');
     expect(screen.getByRole('link', { name: new RegExp(t.today.tools.afford.title) })).toHaveAttribute('href', '/afford');
@@ -68,10 +97,58 @@ describe('TodayScreen (S1)', () => {
     expect(within(card).queryByTestId('month-end-drifts')).not.toBeInTheDocument();
   });
 
+  it('labels the 10-year number as the AI estimate, with the model’s band, when the model answered', async () => {
+    route = mockForecastRoute((body) => aiAnswer(body));
+    render(<Today />);
+    const card = await screen.findByTestId('in10y');
+    await waitFor(() => expect(within(card).getByTestId('forecast-source')).toHaveAttribute('data-source', 'ai'));
+    expect(within(card).getByTestId('forecast-source')).toHaveTextContent(t.source.ai);
+    expect(within(card).getByText(t.band.model.label)).toBeInTheDocument();
+    expect(within(card).queryByText(t.band.label)).not.toBeInTheDocument();
+    const move = await screen.findByTestId('today-move');
+    await waitFor(() => expect(within(move).getByTestId('forecast-source')).toHaveTextContent(t.source.ai));
+  });
+
+  it('shows this month while the 10-year number is still on its way', async () => {
+    let release!: () => void;
+    route = mockForecastRoute((body) => new Promise((resolve) => (release = () => resolve(aiAnswer(body)))));
+    render(<Today />);
+    const monthEnd = await screen.findByTestId('month-end');
+    await waitFor(() => expect(within(monthEnd).getByTestId('month-end-no-history')).toBeInTheDocument());
+    const card = screen.getByTestId('in10y');
+    expect(card.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(within(card).queryByTestId('forecast-source')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('today-move')).queryByTestId('forecast-source')).not.toBeInTheDocument();
+
+    act(() => release());
+    await waitFor(() => expect(within(card).getByText(t.netWorthIn10y)).toBeInTheDocument());
+    expect(card.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('says so, instead of a skeleton forever, when the forecast cannot be built', () => {
+    const vm = todayVm({ forecastStatus: 'error', forecastError: { kind: 'unknown', message: 'x' }, source: null });
+    render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
+    const card = screen.getByTestId('in10y');
+    expect(within(card).getByRole('alert')).toHaveTextContent(t.errors.unknown);
+    expect(card.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.getByTestId('month-end')).toBeInTheDocument();
+  });
+
+  it('disables “I did it” while the forecast is refreshing', () => {
+    const committed = {
+      id: 'cutCategory:other', kind: 'cutCategory' as const, level: 1 as const, effect10y: 1234,
+      patch: { spending: { other: 100 } }, isCommitted: true,
+      target: { kind: 'spendingTo' as const, category: 'other' as const, monthly: 100 }, source: 'rules' as const,
+    };
+    const { rerender } = render(<TodayScreen vm={todayVm({ committedMove: committed })} links={links} screens={[]} Link={A} />);
+    expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeEnabled();
+    rerender(<TodayScreen vm={todayVm({ committedMove: committed, actionsDisabled: true })} links={links} screens={[]} Link={A} />);
+    expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeDisabled();
+  });
+
   it('shows drift flags when the view-model has an average', async () => {
     // monthEnd is T9's engine piece; feed the screen a VM that has the 3-month average.
-    const vm = {
-      status: 'ready' as const, profileOrigin: 'user' as const, isDemoProfile: false,
+    const vm = todayVm({
       monthEnd: {
         status: 'ready' as const,
         data: {
@@ -80,10 +157,7 @@ describe('TodayScreen (S1)', () => {
           takeHome: { value: 5200, isEstimate: false },
         },
       },
-      in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, committedMove: null,
-      markCommittedDone: () => {}, topMove: { status: 'ready' as const, data: null },
-      game: { date: null, played: 0, total: 0, finished: false, homes: [] },
-    };
+    });
     render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
     const drifts = screen.getByTestId('month-end-drifts');
     expect(within(drifts).getByText(t.today.monthEnd.vsAverageValue('+$240'))).toBeInTheDocument();
@@ -95,7 +169,8 @@ describe('TodayScreen (S1)', () => {
     const user = userEvent.setup();
     render(<Today />);
     const moveCard = await screen.findByTestId('today-move');
-    await waitFor(() => expect(within(moveCard).getByText(t.today.move.topTitle)).toBeInTheDocument());
+    await waitFor(() => expect(within(moveCard).getByTestId('forecast-source')).toBeInTheDocument()); // the answer is in
+    expect(within(moveCard).getByText(t.today.move.topTitle)).toBeInTheDocument();
     expect(within(moveCard).queryByRole('button')).not.toBeInTheDocument();
 
     const ranked = rankMoves(useAppStore.getState().profile, { rates: { inflationAnnual: inflationAnnualOf(getArea('75206')) } });
@@ -143,13 +218,17 @@ describe('FutureScreen (S10)', () => {
     render(<Future />);
     const headline = await screen.findByTestId('in10y');
     expect(within(headline).getByText(t.future.headline)).toBeInTheDocument();
+    expect(within(headline).getByTestId('forecast-source')).toHaveAttribute('data-source', 'rules');
+    expect(within(headline).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
     expect(within(screen.getByTestId('band-note')).getByText(t.band.label)).toBeInTheDocument();
     expect(screen.getByRole('figure', { name: t.future.chartTitle })).toBeInTheDocument();
     const moves = within(screen.getByTestId('moves')).getAllByRole('article');
     expect(moves.length).toBeGreaterThanOrEqual(1);
     expect(moves.length).toBeLessThanOrEqual(3);
+    for (const move of moves) expect(within(move).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
     expect(screen.getByTestId('level-2')).toHaveAttribute('data-locked', 'true');
     const how = screen.getByTestId('how-we-calculate');
+    expect(within(how).getByText(t.how.intro)).toBeInTheDocument();
     expect(within(how).getByText(t.how.labels.cardAprDefault)).toBeInTheDocument();
     expect(within(how).getAllByText(t.how.assumption).length).toBeGreaterThan(0);
     expect(within(how).getByRole('link', { name: /Federal Reserve G\.19/ })).toBeInTheDocument();
@@ -166,7 +245,8 @@ describe('FutureScreen (S10)', () => {
     expect(within(committed).getByTestId('committed-badge')).toHaveTextContent(t.moves.committed);
     expect(useAppStore.getState().profile.committedMoveId).toBe(id);
     expect(screen.getByTestId('level-2')).toHaveAttribute('data-locked', 'false');
-    expect(screen.getByTestId('committed-preview')).toBeInTheDocument();
+    expect(screen.getByTestId('committed-preview')).toBeInTheDocument(); // at once: it came with the answer
+    expect(route.calls).toHaveLength(1);
 
     await user.click(within(committed).getByRole('button', { name: t.moves.markDone }));
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([id]);
@@ -197,6 +277,75 @@ describe('FutureScreen (S10)', () => {
     await waitFor(() => expect(within(first).getByText('Because it helps. It adds up.')).toBeInTheDocument());
     expect(within(first).getByText(t.moves.whyTemplate)).toBeInTheDocument();
     expect(explain).toHaveBeenCalledTimes(1);
+  });
+
+  it('labels everything as the AI estimate, with the model’s band note and the matching “How we calculate”', async () => {
+    route = mockForecastRoute((body) => aiAnswer(body));
+    render(<Future />);
+    const headline = await screen.findByTestId('in10y');
+    await waitFor(() => expect(within(headline).getByTestId('forecast-source')).toHaveAttribute('data-source', 'ai'));
+    expect(within(headline).getByTestId('forecast-source')).toHaveTextContent(t.source.ai);
+    const band = screen.getByTestId('band-note');
+    expect(within(band).getByText(t.band.model.label)).toBeInTheDocument();
+    expect(within(band).getByText(t.band.model.explain)).toBeInTheDocument();
+    expect(within(band).queryByText(t.band.label)).not.toBeInTheDocument();
+    for (const move of within(screen.getByTestId('moves')).getAllByRole('article')) {
+      expect(within(move).getByTestId('forecast-source')).toHaveTextContent(t.source.ai);
+    }
+    const how = screen.getByTestId('how-we-calculate');
+    expect(within(how).getByText(t.how.introAi)).toBeInTheDocument();
+    expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
+  });
+
+  it('says the forecast is updating while a new answer is on its way', async () => {
+    render(<Future />);
+    const headline = await screen.findByTestId('in10y');
+    await waitFor(() => expect(within(headline).getByText(t.future.headline)).toBeInTheDocument());
+    expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument();
+
+    act(() => useAppStore.getState().setSpending('eatingOut', 100));
+    expect(screen.getByText(t.future.refreshing)).toBeInTheDocument();
+    expect(within(headline).getByText(t.future.headline)).toBeInTheDocument(); // still the previous answer
+    await waitFor(() => expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument(), {
+      timeout: FORECAST_DEBOUNCE_MS + 1_000,
+    });
+    expect(route.calls).toHaveLength(2);
+  });
+
+  it('disables the move buttons while the forecast is refreshing, and enables them again with the new answer', async () => {
+    render(<Future />);
+    const first = (await screen.findAllByRole('article'))[0]!;
+    await waitFor(() => expect(within(first).getByRole('button', { name: t.moves.commit })).toBeEnabled());
+
+    act(() => useAppStore.getState().setSpending('eatingOut', 100));
+    await waitFor(() => expect(screen.getByText(t.future.refreshing)).toBeInTheDocument());
+    for (const article of screen.getAllByRole('article')) {
+      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeDisabled();
+      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeDisabled();
+    }
+    await waitFor(() => expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument(), {
+      timeout: FORECAST_DEBOUNCE_MS + 1_000,
+    });
+    for (const article of screen.getAllByRole('article')) {
+      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeEnabled();
+      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeEnabled();
+    }
+  });
+
+  it('keeps the move buttons enabled while a remembered rules answer for this profile is asked for again', async () => {
+    const first = render(<Future />);
+    await screen.findAllByRole('article'); // the rules answer is in and remembered
+    first.unmount();
+
+    route = mockForecastRoute(() => new Promise(() => {})); // the model is slow
+    render(<Future />);
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    const articles = await screen.findAllByRole('article'); // the remembered answer, no skeleton
+    expect(screen.getByText(t.future.refreshing)).toBeInTheDocument();
+    for (const article of articles) {
+      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeEnabled();
+      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeEnabled();
+    }
   });
 
   it('shows the effect in signed dollars', async () => {

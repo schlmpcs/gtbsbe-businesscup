@@ -2,11 +2,11 @@
 
 // S14 Monthly check-in (Figma S14). Presentational: every number comes from useCheckin() (engine
 // monthEnd on the user's statements or the labelled sample statement; simulate / rankMoves for the
-// move).
+// move; the ranked suggestions say who made their 10-year numbers).
 import { useId } from 'react';
 import { common, forecast, mocks } from '@/copy';
 import {
-  Art, Button, buttonClassName, Card, Choice, cx, formatMoney, formatRate, Money, Scoreboard, Sticker, type ScoreboardItem,
+  Art, Button, buttonClassName, Card, Choice, cx, formatMoney, formatRate, Money, Scoreboard, Sticker, Tag, type ScoreboardItem,
 } from '@/ui-kit';
 import type { CheckinCompareVM, CheckinMoveVM, CheckinVM, MoveProgressVM, MoveVM } from '../model/types';
 import { PreviewBadge } from './PreviewBadge';
@@ -197,8 +197,18 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
                 <div className="flex min-w-0 flex-col">
                   <span className="font-semibold">{moveTitle(s)}</span>
                   <span className="text-sm text-positive tabular-nums">{m.effect(formatMoney(s.effect10y, { signed: true }))}</span>
+                  {s.source && (
+                    <Tag data-testid="forecast-source" data-source={s.source} className="mt-xs">
+                      {forecast.source[s.source]}
+                    </Tag>
+                  )}
                 </div>
-                <Button size="sm" onClick={() => move.commit(s.id)} aria-label={`${m.commit}: ${moveTitle(s)}`}>
+                <Button
+                  size="sm"
+                  onClick={() => move.commit(s.id)}
+                  disabled={move.actionsDisabled}
+                  aria-label={`${m.commit}: ${moveTitle(s)}`}
+                >
                   {m.commit}
                 </Button>
               </li>

@@ -6,6 +6,7 @@ import type { FutureVM } from '../model/types';
 import { HowWeCalculate } from './HowWeCalculate';
 import { NextMoves } from './NextMoves';
 import {
+  bandText,
   ErrorNote,
   estimatedFieldLabel,
   FULL_BLEED_PRIMARY,
@@ -13,6 +14,7 @@ import {
   ON_ARENA,
   RangeText,
   Skeleton,
+  SourceTag,
   Toggle,
   type LinkComponent,
 } from './shared';
@@ -51,7 +53,7 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
         <NextMoves vm={vm} explanations={vm.explanations} onExplain={vm.explain} loading={loading} />
 
         <div className="flex flex-col gap-xl lg:flex-row lg:items-start">
-          <HowWeCalculate vm={vm.howWeCalculate} className="lg:flex-1" />
+          <HowWeCalculate vm={vm.howWeCalculate} source={vm.source} className="lg:flex-1" />
           <Link href={links.today} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'lg:min-w-sm')}>
             {f.backCta}
             <span aria-hidden="true">→</span>
@@ -66,6 +68,7 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
   const f = t.future;
   const dollarsNote = vm.todaysDollars ? t.todaysDollarsNote : t.futureDollarsNote;
   const compareTitle = vm.compareMove ? moveTitle(vm.compareMove) : '';
+  const band = bandText(vm.band.kind, vm.band.isZero);
   return (
     <div className="grid gap-2xl lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
       <Stack gap="xl" className="min-w-0">
@@ -78,7 +81,11 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
             <Money value={vm.in10y.mid} />
           </p>
           <RangeText point={vm.in10y} isZero={vm.band.isZero} className="mt-md text-lg" />
+          <SourceTag source={vm.source} className="mt-xs border-on-primary/40" />
           <p className="mt-xs text-sm text-text-muted">{dollarsNote}</p>
+          <p aria-live="polite" className="mt-xs text-sm text-text-muted" data-testid="forecast-refreshing">
+            {vm.isRefreshing ? f.refreshing : null}
+          </p>
           <div className="mt-lg flex flex-wrap gap-x-xl gap-y-sm border-t border-on-primary/40 pt-md text-base">
             <span>
               <span className="text-text-muted">{f.todayLabel}: </span>
@@ -119,12 +126,12 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
           {/* The band's label stays visible as the summary; what it means opens on tap. */}
           <details className="group mt-md rounded-md bg-surface-strong p-md text-sm" data-testid="band-note">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-semibold">
-              <span>{t.band.label}</span>
+              <span>{band.label}</span>
               <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
                 ▾
               </span>
             </summary>
-            <p className="mt-xs text-text-muted">{vm.band.isZero ? t.band.zero : t.band.explain}</p>
+            <p className="mt-xs text-text-muted">{band.text}</p>
             {!vm.band.isZero && vm.band.estimatedFields.length > 0 && (
               <>
                 <h3 className="mt-md text-xs font-semibold uppercase tracking-wide text-text-muted">{t.band.estimatedTitle}</h3>

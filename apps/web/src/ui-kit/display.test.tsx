@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Display pieces: Stat, EstimateTag, SourceNote, Gauge, BarBreakdown, ForecastChart, Money.
+// Display pieces: Stat, Tag, EstimateTag, SourceNote, Gauge, BarBreakdown, ForecastChart, Money.
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -11,6 +11,8 @@ import { Gauge, gaugeZone } from './Gauge';
 import { Money, Percent } from './Money';
 import { SourceNote } from './SourceNote';
 import { Stat } from './Stat';
+import { Tag } from './Tag';
+import { EstimateTag } from './EstimateTag';
 
 const hud = { name: 'HUD Fair Market Rents', year: 2025, url: 'https://www.huduser.gov/portal/datasets/fmr.html' };
 
@@ -27,6 +29,29 @@ describe('Stat', () => {
   it('has no estimate tag unless asked', () => {
     render(<Stat label="Cash" value="$3,800" />);
     expect(screen.queryByText(common.estimateTag)).not.toBeInTheDocument();
+  });
+});
+
+describe('Tag / EstimateTag', () => {
+  it('renders its text and passes attributes through, with a solid or a dashed outline', () => {
+    render(
+      <p>
+        <Tag data-testid="solid" title="who made it">AI estimate</Tag>
+        <Tag data-testid="dashed" variant="dashed" className="mt-xs">our assumption</Tag>
+      </p>,
+    );
+    expect(screen.getByTestId('solid')).toHaveTextContent('AI estimate');
+    expect(screen.getByTestId('solid')).toHaveAttribute('title', 'who made it');
+    expect(screen.getByTestId('solid')).toHaveClass('border-border', 'rounded-full');
+    expect(screen.getByTestId('solid')).not.toHaveClass('border-dashed');
+    expect(screen.getByTestId('dashed')).toHaveClass('border-dashed', 'mt-xs');
+  });
+
+  it('EstimateTag is a dashed tag with its hint for screen readers', () => {
+    render(<EstimateTag />);
+    const tag = screen.getByTitle(common.estimateHint);
+    expect(tag).toHaveClass('border-dashed');
+    expect(tag).toHaveTextContent(`${common.estimateTag}: ${common.estimateHint}`);
   });
 });
 

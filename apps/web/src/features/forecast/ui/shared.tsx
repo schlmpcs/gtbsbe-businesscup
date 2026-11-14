@@ -1,8 +1,8 @@
 // Pieces S1 and S10 share. Presentational only: props in, events out.
 import type { ComponentType, ReactNode } from 'react';
 import { common, forecast as t } from '@/copy';
-import { cx, formatMoney } from '@/ui-kit';
-import type { EstimatedField, ForecastPoint, MoveVM, VMError } from '../model/types';
+import { cx, formatMoney, Tag } from '@/ui-kit';
+import type { BandKind, EstimatedField, ForecastPoint, ForecastSource, MoveVM, VMError } from '../model/types';
 
 /**
  * The router's link component (next/link), passed in by the route page: ui/ may not import next/*.
@@ -42,6 +42,22 @@ export function moveDetail(move: Pick<MoveVM, 'target'>): string | null {
   if (!target) return null;
   if (target.kind === 'extraPayment') return t.moves.detail.payCardFirst(formatMoney(target.monthly));
   return t.moves.detail.spendingTo(common.categories[target.category], formatMoney(target.monthly));
+}
+
+/** Who made a forecast number: "AI estimate" or "Rules-based estimate". Nothing while there is no answer. */
+export function SourceTag({ source, className }: { source: ForecastSource | null; className?: string }) {
+  if (!source) return null;
+  return (
+    <Tag data-testid="forecast-source" data-source={source} className={className}>
+      {t.source[source]}
+    </Tag>
+  );
+}
+
+/** What the range band means, by where it comes from: its title and the sentence under it. */
+export function bandText(kind: BandKind, isZero: boolean): { label: string; text: string } {
+  if (kind === 'model') return { label: t.band.model.label, text: isZero ? t.band.model.zero : t.band.model.explain };
+  return { label: t.band.label, text: isZero ? t.band.zero : t.band.explain };
 }
 
 /** "Likely between $X and $Y", or nothing when there is no range. */
@@ -92,13 +108,10 @@ export function Skeleton({ lines = 3, className }: { lines?: number; className?:
 /** A small "our assumption" tag (a default we chose, not a published figure). */
 export function AssumptionTag() {
   return (
-    <span
-      title={t.how.assumptionHint}
-      className="inline-flex items-center rounded-full border border-dashed border-text-muted px-sm text-xs font-medium leading-normal text-text-muted"
-    >
+    <Tag variant="dashed" title={t.how.assumptionHint}>
       {t.how.assumption}
       <span className="sr-only">: {t.how.assumptionHint}</span>
-    </span>
+    </Tag>
   );
 }
 

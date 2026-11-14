@@ -1,13 +1,38 @@
 // View-model types for the forecast feature (S1, S10). Tasks: Y7 (model) / Y10 (ui).
 // ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
 // Hooks: useToday (S1) in ./useToday.ts, useFuture (S10) in ./useFuture.ts.
-import type { CostCategory, ForecastPoint, Money, Move, MoveKind, Rate, Source } from '@lifeguessr/types';
+import type { MoveCandidate } from '@lifeguessr/engine';
+import type {
+  CostCategory, ForecastBundle, ForecastPoint, ForecastSource, Money, Move, MoveKind, Profile, Rate, Source,
+} from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 import type { ProfileOrigin } from '@/state';
 
 export type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 export type { ProfileOrigin } from '@/state';
-export type { CostCategory, ForecastPoint, Money, MoveKind, Source } from '@lifeguessr/types';
+export type { CostCategory, ForecastPoint, ForecastSource, Money, MoveKind, Source } from '@lifeguessr/types';
+
+/**
+ * What the 10-year range band is made of: 'inputs' = the numbers we estimated (rules forecast),
+ * 'model' = the AI forecaster's own uncertainty.
+ */
+export type BandKind = 'inputs' | 'model';
+
+/** A forecast bundle with what it answered: the profile and the candidate moves that were asked about. */
+export type ForecastAnswer = { bundle: ForecastBundle; profile: Profile; candidates: MoveCandidate[] };
+
+/**
+ * The 10-year forecast of S1 and S10 (POST /api/ai/forecast, else the local rules engine).
+ * 'ready' always holds an answer, labeled by `source`. `isRefreshing`: a newer answer is on its way.
+ * `isStale` says whether `answer` is out of date for it: true when it answers another profile (the
+ * profile changed, so its ids, patches and numbers are the previous one's); false when it answers
+ * the current one and only the route's rules answer or the local fallback is being asked for again
+ * to see whether the model is back (the numbers on screen are right, they may just get upgraded).
+ */
+export type ForecastState =
+  | { status: 'loading' }
+  | { status: 'ready'; source: ForecastSource; answer: ForecastAnswer; isRefreshing: boolean; isStale: boolean }
+  | { status: 'error'; error: VMError };
 
 /** A Next Move as the UI shows it. Copy comes from `kind` (+ `category`). */
 export type MoveVM = Move & {
@@ -15,6 +40,11 @@ export type MoveVM = Move & {
   isCommitted: boolean;
   /** What the move sets, read from its patch, for a one-line detail. Null when the patch has neither. */
   target: MoveTarget | null;
+  /**
+   * Where `effect10y` came from: the forecast the ranking used. Null for a stored committed move
+   * that is not in the current ranking (its number is the one frozen when it was committed).
+   */
+  source: ForecastSource | null;
 };
 
 /** The concrete change a move makes: a monthly extra debt payment, or a category's new monthly amount. */
@@ -22,9 +52,17 @@ export type MoveTarget =
   | { kind: 'extraPayment'; debtId: string; monthly: Money }
   | { kind: 'spendingTo'; category: CostCategory; monthly: Money };
 
-/** The ranked moves (engine rankMoves, top 3) and the unlock state. */
+/** The ranked moves (engine rankCandidates over the forecast's scenarios, top 3) and the unlock state. */
 export type NextMovesVM = {
   moves: Loadable<MoveVM[]>;
+  /** The forecast the ranking and the screen's numbers come from. */
+  forecast: ForecastState;
+  /**
+   * True until the forecast for the current profile has arrived (first load, or after the profile changed): the
+   * moves on screen are then the previous profile's, so `commit` and `markDone` do nothing and their buttons are
+   * disabled. Not true while only a background revalidation of the current profile's rules answer runs.
+   */
+  actionsDisabled: boolean;
   /** Highest unlocked level (engine movesLevel): 2 once a level 1 move is done or committed. */
   level: 1 | 2;
   /** Move kinds of level 2 (engine MOVE_LEVELS), for the locked / coming-soon preview. */
@@ -64,19 +102,29 @@ export type TodayHomeVM = { id: string; metro: string; played: boolean };
 
 /** S1 Today. */
 export type TodayVM = {
+  /** Saved state loaded. The 10-year number has its own `forecastStatus`: it may take a while. */
   status: 'loading' | 'ready';
   profileOrigin: ProfileOrigin;
   /** Still the sample profile: nudge to the ladder (S5). */
   isDemoProfile: boolean;
   monthEnd: Loadable<MonthEndVM>;
-  /** Net worth in 10 years, today's dollars, with the range band. */
+  /** 'loading' until the first forecast arrives (up to the client timeout); 'error' only when nothing could be computed. */
+  forecastStatus: 'loading' | 'ready' | 'error';
+  forecastError: VMError | null;
+  /** Who made the 10-year number: the AI forecaster or the rules engine. Null until there is one. */
+  source: ForecastSource | null;
+  /** Net worth in 10 years, today's dollars, with the range band (a zero point until `forecastStatus` is 'ready'). */
   in10y: ForecastPoint;
-  /** True when no input is an estimate: low = mid = high, so there is no range to show. */
+  /** True when the band has no width (no estimated input for the rules, a single number from the model). */
   in10yBandIsZero: boolean;
+  /** What the band means: the numbers we estimated, or the model's own uncertainty. */
+  in10yBandKind: BandKind;
   /** The move the user committed to, if any. */
   committedMove: MoveVM | null;
-  /** Mark the committed move done. */
+  /** Mark the committed move done. Does nothing while `actionsDisabled`. */
   markCommittedDone: () => void;
+  /** The forecast is loading or out of date for the profile: the move buttons are disabled (see NextMovesVM.actionsDisabled). */
+  actionsDisabled: boolean;
   /** Best move right now (first of rankMoves), or why there is none. */
   topMove: Loadable<MoveVM | null>;
   /** Daily game call to action. */
@@ -102,9 +150,19 @@ export type FutureVM = NextMovesVM & {
   yearly: ForecastPoint[];
   today: ForecastPoint;
   in10y: ForecastPoint;
-  /** The band shows only uncertainty in estimated inputs; it is zero when nothing is estimated. */
-  band: { isZero: boolean; estimatedFields: EstimatedField[] };
-  /** In-10-years with the committed move applied, for a "with your move" line. */
+  /** Who made the numbers on screen (also on each move). Null until there is an answer. */
+  source: ForecastSource | null;
+  /**
+   * A newer answer is on its way: the profile changed and the numbers on screen are the previous one's, or
+   * a rules answer is being asked for again in the background to see whether the model is back.
+   */
+  isRefreshing: boolean;
+  /**
+   * 'inputs' (rules forecast): the band shows only uncertainty in estimated inputs, zero when nothing is
+   * estimated. 'model' (AI forecast): the model's own range, zero when it gave a single number.
+   */
+  band: { isZero: boolean; kind: BandKind; estimatedFields: EstimatedField[] };
+  /** In-10-years with the committed move applied (from the same answer), for a "with your move" line. */
   committedPreview: { moveId: string; in10y: ForecastPoint } | null;
   /**
    * The move the chart can compare against: the committed move while it is ranked, otherwise the
@@ -114,7 +172,7 @@ export type FutureVM = NextMovesVM & {
   /** Whether the chart shows the "with this move" line. */
   compareOn: boolean;
   setCompareOn: (on: boolean) => void;
-  /** The forecast with `compareMove`'s patch applied (same rates and dollars); null while off. */
+  /** The forecast with `compareMove`'s patch applied (same answer and dollars); null while off. */
   withMove: { moveId: string; points: ForecastPoint[]; in10y: ForecastPoint } | null;
   /** "Why?" text per move id (POST /api/ai/explain); absent until asked for that move. */
   explanations: Record<string, Loadable<ExplanationVM>>;

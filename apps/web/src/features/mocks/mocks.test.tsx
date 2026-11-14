@@ -91,7 +91,11 @@ describe('S14 check-in', () => {
   it('commits to a move, shows its progress and marks it done', async () => {
     const user = userEvent.setup();
     render(<Checkin />);
-    await screen.findByTestId('checkin-move');
+    const section = await screen.findByTestId('checkin-move');
+    // Each suggested move's 10-year number says who made it (the rules forecast, with no model key).
+    expect((await within(section).findAllByTestId('forecast-source')).map((e) => e.textContent)).toEqual(
+      rankMoves(cloneProfileDemo(), { rates }).map(() => forecast.source.rules),
+    );
     const card = rankMoves(cloneProfileDemo(), { rates }).find((m) => m.kind === 'payCardFirst')!;
     const title = forecast.moves.title(card.kind, card.category ? common.categories[card.category] : undefined);
     await user.click(screen.getByRole('button', { name: `${c.move.commit}: ${title}` }));

@@ -1,13 +1,15 @@
-// S1 Today: month-end card (engine monthEnd), You in 10 years, the committed / top move and the
-// daily game call to action.
-import { hasEstimates, monthEnd, monthEndHistoryMonths, type CurrentMonth } from '@lifeguessr/engine';
+// S1 Today: month-end card (engine monthEnd), You in 10 years (the AI forecast, else rules), the
+// committed / top move and the daily game call to action.
+import { monthEnd, monthEndHistoryMonths, type CurrentMonth } from '@lifeguessr/engine';
 import { useMemo } from 'react';
 import { localMonthDay } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
-import { displayForecast } from '@/lib/model/profile';
 import { useAppReady, useAppStore, useGameStore } from '@/state';
+import { shownForecast } from './forecastAnswer';
 import type { Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
 import { toMoveVM, useNextMoves } from './useNextMoves';
+
+const NO_MOVES: MoveVM[] = [];
 
 export function useToday(opts: { now?: Date } = {}): TodayVM {
   const ready = useAppReady();
@@ -20,6 +22,7 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);
   const nextMoves = useNextMoves(profile);
+  const { forecast } = nextMoves;
   const now = opts.now;
 
   const monthEndVM: Loadable<MonthEndVM> = useMemo(() => {
@@ -55,10 +58,15 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     };
   }, [profile, statementMonths, now]);
 
-  const in10y = useMemo(() => displayForecast(profile).in10y, [profile]);
+  // The 10-year number in today's dollars, from the answer (S10 can also show nominal; S1 never does).
+  const shown = useMemo(() => shownForecast(forecast, true), [forecast]);
 
+  const rankedMoves = nextMoves.moves.status === 'ready' ? nextMoves.moves.data : NO_MOVES;
+  // The committed move as ranked now (current number and label) when it is on the list, else as stored.
   const committed: MoveVM | null =
-    committedMove && profile.committedMoveId === committedMove.id ? toMoveVM(committedMove, profile) : null;
+    committedMove && profile.committedMoveId === committedMove.id
+      ? (rankedMoves.find((m) => m.id === committedMove.id) ?? toMoveVM(committedMove, profile, null))
+      : null;
 
   const topMove: Loadable<MoveVM | null> =
     nextMoves.moves.status === 'ready' ? { status: 'ready', data: nextMoves.moves.data[0] ?? null } : nextMoves.moves;
@@ -70,12 +78,17 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     profileOrigin,
     isDemoProfile: profileOrigin === 'demo',
     monthEnd: monthEndVM,
-    in10y,
-    in10yBandIsZero: !hasEstimates(profile),
+    forecastStatus: shown.status,
+    forecastError: shown.error,
+    source: shown.source,
+    in10y: shown.in10y,
+    in10yBandIsZero: shown.band.isZero,
+    in10yBandKind: shown.band.kind,
     committedMove: committed,
     markCommittedDone: () => {
-      if (committedMove) markMoveDone(committedMove);
+      if (committedMove && !nextMoves.actionsDisabled) markMoveDone(committedMove);
     },
+    actionsDisabled: nextMoves.actionsDisabled,
     topMove,
     game: {
       date: gameDate,

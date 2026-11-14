@@ -284,7 +284,7 @@ packages/data scripts ──► packages/data/out/areas.json (cached, committed)
 cards.json (server) ──► sceneOf ──► /api/daily (PublicCard) + /api/daily/clue (ClueReveal) ──► HouseScene (S2)
                  └──► costOfLife + scoreGuess in /api/daily/guess ──► game reveal (S3)
                                    │
-sliders / balance sheet / CSV ──► Profile ──► /api/ai/forecast (S1, S10; rules fallback) · engine (S5 preview, canAfford, loan, monthEnd)
+sliders / balance sheet / CSV ──► Profile ──► /api/ai/forecast (S1, S10; rules fallback) · engine (the ladder's 10-year preview on S5–S9, canAfford, loan, monthEnd)
                                    │                         │
                          /api/session (persist)        view-model hooks ──► ui
 CSV (browser parse, mask names) ──► StatementItem[] ──► /api/statement/categorize ──► CategoryTotals[] ──► Profile

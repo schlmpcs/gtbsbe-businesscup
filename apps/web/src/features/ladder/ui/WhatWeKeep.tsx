@@ -1,6 +1,8 @@
 // "What we keep" (S9): a one-line gist, with the ✓ kept / ✕ never lists collapsed under it: exactly what the app persists from a statement, from the view-model's
 // whatWeKeep (CLAUDE.md rule 6; docs/ARCHITECTURE.md → Privacy design). The "what leaves your
-// browser" line appears only once the in-browser reader is wired (`sendsLabels`).
+// browser" line for statement labels appears only once the in-browser reader is wired
+// (`sendsLabels`). The forecast line is always there: S1 and S10 send the profile's numbers to the
+// model provider whether or not a statement was uploaded.
 import { common, ladder } from '@/copy';
 import { Card, Stack } from '@/ui-kit';
 import type { StatementUploadVM } from '../model/types';
@@ -52,6 +54,7 @@ export function WhatWeKeep({ keep, sendsLabels }: WhatWeKeepProps) {
                 <span className="font-semibold">{t.sentTitle}</span> {t.sent}
               </p>
             )}
+            <p className="rounded-md bg-bg p-md">{t.forecastSent}</p>
           </Stack>
         </details>
       </Stack>

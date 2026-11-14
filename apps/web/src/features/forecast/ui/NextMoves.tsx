@@ -3,7 +3,7 @@
 import { forecast as t } from '@/copy';
 import { Button, Card, cx, formatMoney, Stack, Sticker } from '@/ui-kit';
 import type { ExplanationVM, Loadable, MoveVM, NextMovesVM } from '../model/types';
-import { ErrorNote, moveDetail, moveTitle, Skeleton } from './shared';
+import { ErrorNote, moveDetail, moveTitle, Skeleton, SourceTag } from './shared';
 
 export type NextMovesProps = {
   vm: NextMovesVM;
@@ -27,6 +27,7 @@ export function NextMoves({ vm, explanations, onExplain, loading = false }: Next
             rank={i + 1}
             move={move}
             explanation={explanations[move.id]}
+            actionsDisabled={vm.actionsDisabled}
             onCommit={() => vm.commit(move.id)}
             onUncommit={vm.uncommit}
             onDone={() => vm.markDone(move.id)}
@@ -56,6 +57,7 @@ function MoveItem({
   rank,
   move,
   explanation,
+  actionsDisabled,
   onCommit,
   onUncommit,
   onDone,
@@ -64,6 +66,7 @@ function MoveItem({
   rank: number;
   move: MoveVM;
   explanation: Loadable<ExplanationVM> | undefined;
+  actionsDisabled: boolean;
   onCommit: () => void;
   onUncommit: () => void;
   onDone: () => void;
@@ -97,6 +100,7 @@ function MoveItem({
               {formatMoney(move.effect10y, { signed: true })}
             </p>
             <p className="text-xs text-text-muted">{m.effectLabel}</p>
+            <SourceTag source={move.source} className="mt-xs" />
           </div>
           {detail && <p className="text-sm text-text-muted">{detail}</p>}
 
@@ -112,11 +116,11 @@ function MoveItem({
                 {m.uncommit}
               </Button>
             ) : (
-              <Button size="sm" variant={rank === 1 ? 'primary' : 'secondary'} onClick={onCommit}>
+              <Button size="sm" variant={rank === 1 ? 'primary' : 'secondary'} onClick={onCommit} disabled={actionsDisabled}>
                 {m.commit}
               </Button>
             )}
-            <Button size="sm" variant="ghost" onClick={onDone}>
+            <Button size="sm" variant="ghost" onClick={onDone} disabled={actionsDisabled}>
               {m.markDone}
             </Button>
             {explanation?.status !== 'ready' && explanation?.status !== 'error' && (

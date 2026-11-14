@@ -159,7 +159,7 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
 
   const committedMoveId = profile.committedMoveId;
   const committed: MoveVM | null = useMemo(
-    () => (committedMove && committedMoveId === committedMove.id ? toMoveVM(committedMove, { committedMoveId }) : null),
+    () => (committedMove && committedMoveId === committedMove.id ? toMoveVM(committedMove, { committedMoveId }, null) : null),
     [committedMove, committedMoveId],
   );
 
@@ -170,7 +170,7 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
 
   const markDone = useCallback(() => {
     if (!committedMove) return;
-    setDoneMove(toMoveVM(committedMove, profile));
+    setDoneMove(toMoveVM(committedMove, profile, null));
     markMoveDone(committedMove);
     setAnswer('done');
   }, [committedMove, profile, markMoveDone]);
@@ -193,6 +193,7 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
       committed,
       progress,
       suggestions: nextMoves.moves,
+      actionsDisabled: nextMoves.actionsDisabled,
       answer,
       doneMove,
       level: movesLevel(profile),

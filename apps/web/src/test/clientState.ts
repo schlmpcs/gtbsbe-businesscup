@@ -1,14 +1,16 @@
 // Test helpers for view-model hooks (jsdom tests only): a clean store and storage per test.
 import { act, cleanup, waitFor } from '@testing-library/react';
 import { expect } from 'vitest';
+import { resetForecastMemory } from '@/features/forecast/model/useForecastBundle';
 import { createLocalSessionAdapter } from '@/lib/api/session';
 import { resetEventsForTests } from '@/lib/events';
 import { initialAppData, initialGameData, resetProStore, setSessionAdapter, useAppStore, useGameStore } from '@/state';
 
-/** Empty localStorage, default stores (Pro included), session sync and funnel events off. Call in beforeEach. */
+/** Empty localStorage, default stores (Pro included), no remembered forecasts, session sync and funnel events off. Call in beforeEach. */
 export function resetClientState(): void {
   cleanup();
   localStorage.clear();
+  resetForecastMemory();
   useAppStore.setState(initialAppData());
   useGameStore.setState(initialGameData());
   resetProStore();

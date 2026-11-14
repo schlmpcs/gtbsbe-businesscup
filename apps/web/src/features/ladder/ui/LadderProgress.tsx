@@ -2,8 +2,8 @@
 // readers), the 10-year number with its range, how far the user's own numbers have narrowed that
 // band (the explanation is collapsed), then one primary CTA and the other as a ghost link.
 import { useId } from 'react';
-import { ladder, screenTitles } from '@/copy';
-import { buttonClassName, Card, cx, EstimateTag, formatMoney, formatRate, Stack } from '@/ui-kit';
+import { forecast, ladder, screenTitles } from '@/copy';
+import { buttonClassName, Card, cx, EstimateTag, formatMoney, formatRate, Stack, Tag } from '@/ui-kit';
 import type { LadderProgressVM, LadderScreen } from '../model/types';
 
 const t = ladder.shell;
@@ -77,6 +77,11 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
                   <p className="font-display text-4xl font-extrabold leading-display text-primary tabular-nums">
                     {formatMoney(in10y.mid)}
                   </p>
+                  {progress.in10ySource === 'rules' && (
+                    <Tag data-testid="ladder-in10y-source" className="mt-xs">
+                      {forecast.source.rulesPreview}
+                    </Tag>
+                  )}
                 </div>
                 <p className="text-xs text-text-muted tabular-nums" data-testid="ladder-range">
                   {t.range(formatMoney(in10y.low), formatMoney(in10y.high))}
