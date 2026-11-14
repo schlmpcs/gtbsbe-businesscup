@@ -1,0 +1,21 @@
+@import "tailwindcss";
+/* Design tokens (generated from tokens.json by `pnpm tokens`): CSS variables + Tailwind theme. */
+@import "../src/ui-kit/tokens.css";
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    line-height: var(--leading-normal);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
