@@ -397,3 +397,8 @@ export const assumptions = {
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;
+
+/** Solver bound: at most $1 million of additional debt payments per month. */
+export const PAYOFF_MAX_EXTRA = 1_000_000;
+/** Dollar precision of the feasible upper bound returned by the payoff solver. */
+export const PAYOFF_SOLVE_TOLERANCE = 1;
