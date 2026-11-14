@@ -1,10 +1,11 @@
 // Scenarios, Compare and moves on the plan (MP6, #166): the issue's tests. Expected numbers are worked
 // out in the comments.
 import { describe, expect, it } from 'vitest';
-import type { CostCategory, PlanEventOf, PlanResult, Profile, Scenario } from '@lifeguessr/types';
+import type { CostCategory, MonteCarloSettings, PlanEventOf, PlanResult, Profile, Scenario } from '@lifeguessr/types';
 import { COST_CATEGORIES } from '@lifeguessr/types';
 import { areaByZip, profileDemo } from '@lifeguessr/data/fixtures';
 import { accountsDemo, scenarioDemo } from '@lifeguessr/data/fixtures/plan';
+import { monteCarlo } from './monteCarlo';
 import type { MoveCandidate } from './moves';
 import { plan } from './plan';
 import { baselineScenario, compareScenarios, duplicateScenario, planMoveEffects } from './scenarios';
@@ -128,5 +129,32 @@ describe('planMoveEffects', () => {
     expect(planMoveEffects(person, [], scenario, moves)).toEqual(r);
   });
 
-  it.todo('successRateDelta with the same seed is 0 for a no-op move (needs monteCarlo, MP5)');
+  it('successRateDelta with the same seed is 0 for a no-op move', () => {
+    const settings = (o: Partial<MonteCarloSettings>): MonteCarloSettings => ({
+      paths: 20, seed: 7, inflation: { mean: 0, sd: 0 },
+      growth: { cash: { mean: 0, sd: 0 }, retirement: { mean: 1.01 ** 12 - 1, sd: 0 } }, endThreshold: 52_000, ...o,
+    });
+
+    // 1. No spread: every path is the plan above. End net worth without a move: 2000 × 24 = 48000 in
+    //    cash, below the 52000 threshold, so 0% success. retirementMatch ends at 48000 + 5946.93 =
+    //    53946.93 ≥ 52000: 100%, delta +1. cutCategory ends at 48000 + 2400 = 50400 < 52000: delta 0.
+    //    hsa: no-op, delta 0. refinance is 4th, outside the top 3: no field.
+    const exact = planMoveEffects(person, [], scenario, moves, undefined, { monteCarlo: settings({}) });
+    expect(exact.map((e) => [e.moveId, e.successRateDelta])).toEqual([
+      ['retirementMatch', 1], ['cutCategory:other', 0], ['hsa', 0], ['refinance', undefined],
+    ]);
+
+    // 2. With spread: savings all to retirement, which now draws a 15% yearly sd around 1% a month, and
+    //    the threshold at the no-spread end value 2000 × (1.01^24 − 1) / 0.01 = 53946.93, so some paths
+    //    pass and some fail (0 < success < 1). A no-op move runs the same inputs with the same seed: the
+    //    same draws, the same success rate, a delta of exactly 0 (a new seed would move it by noise alone).
+    const toRetirement: Scenario = { ...scenario, assumptions: { ...scenario.assumptions, savingsSplit: [{ group: 'retirement', share: 1 }] } };
+    const noisy = settings({ paths: 200, growth: { cash: { mean: 0, sd: 0 }, retirement: { mean: 1.01 ** 12 - 1, sd: 0.15 } }, endThreshold: 53_946.93 });
+    const base = monteCarlo(person, [], toRetirement, noisy).successRate;
+    expect(base).toBeGreaterThan(0);
+    expect(base).toBeLessThan(1);
+    const r = planMoveEffects(person, [], toRetirement, moves, undefined, { monteCarlo: noisy });
+    expect(r.find((e) => e.moveId === 'hsa')!.successRateDelta).toBe(0);
+    expect(r.find((e) => e.moveId === 'retirementMatch')!.successRateDelta).toBe(0); // share already 1: a no-op here too
+  });
 });

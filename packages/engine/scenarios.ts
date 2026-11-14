@@ -17,7 +17,7 @@
 //    diff ≥ COMPARE_TIE; sentence data read in the year A retires (A's age = a.kpis.retireAge, clamped
 //    to the shared years like plan() clamps it): the leader (|diff| ≥ COMPARE_TIE, else null), the gap,
 //    and since when the leader has stayed ahead. Both plans must use the same display unit.
-// 4. planMoveEffects(profile, accounts, scenario, moves, area): each move's patch applied to this
+// 4. planMoveEffects(profile, accounts, scenario, moves, area, opts): each move's patch applied to this
 //    scenario's plan; effect = plan with the move − plan without it, at retirement and at the end.
 //    The patch is applied to the profile (applyPatch), to the accounts (a debt's `apr` on the liability
 //    account of that id, since plan() reads debts from the accounts) and, for `retirementShare`, to a
@@ -25,7 +25,10 @@
 //    of 1 − r (all of it to cash when they had none). Sorted by effectAtRetirement descending; ties by
 //    kind order (MOVE_KINDS), then id. Debt ids in a patch must be the accounts' ids: take the
 //    candidates from moveCandidates(accountsToProfile(accounts, profile)).
-//    `successRateDelta` (Monte Carlo with the same seed before and after, top 3 only) waits for MP5.
+//    With `opts.monteCarlo` (its seed fixed, never null), the top MOVES_SHOWN moves of that order also get
+//    successRateDelta = monteCarlo(with the move).successRate − monteCarlo(without).successRate, both
+//    runs with the same settings and seed: a move changes no plan year and no draw order, so both runs
+//    see the same draws and the difference is the move's, not noise. The others have no field.
 // 5. previewEvent(profile, accounts, scenario, event, area): the plan with the event (enabled, in its
 //    place when the scenario has it, else appended) and without it (removed). leftOverMonthly = the
 //    with-event plan's take-home pay − spending − debt payments, averaged over the months of the
@@ -42,6 +45,7 @@ import {
   type CompareYear,
   type EventPreview,
   type Money,
+  type MonteCarloSettings,
   type PlanAssumptions,
   type PlanEvent,
   type PlanEventContext,
@@ -57,7 +61,8 @@ import {
 } from '@lifeguessr/types';
 import { planEndAgeDefault, planRetireAgeDefault, planWithdrawalOrderDefault } from './assumptions';
 import { applyPatch } from './forecast';
-import type { MoveCandidate } from './moves';
+import { monteCarlo } from './monteCarlo';
+import { type MoveCandidate, MOVES_SHOWN } from './moves';
 import { plan } from './plan';
 import { defaultEvent } from './planEvents';
 import { inflationAnnualOf } from './simulate';
@@ -214,32 +219,49 @@ function patchAccounts(accounts: readonly Account[], patch: ProfilePatch): reado
 
 const isLiability = (acc: Account) => (LIABILITY_GROUPS as readonly string[]).includes(acc.group);
 
+export type PlanMoveEffectsOptions = {
+  /** Adds successRateDelta to the top MOVES_SHOWN moves. `seed` must be fixed (not null): RangeError otherwise. */
+  monteCarlo?: MonteCarloSettings;
+};
+
 /**
  * Each move measured on this scenario's plan (with − without, in the plan's display unit), sorted by
- * effectAtRetirement descending (ties: kind order, then id). See the header.
+ * effectAtRetirement descending (ties: kind order, then id); with `opts.monteCarlo`, the top
+ * MOVES_SHOWN also get successRateDelta (same seed before and after). See the header.
  */
 export function planMoveEffects(
   profile: Profile, accounts: readonly Account[], scenario: Scenario, moves: readonly MoveCandidate[], area?: AreaData,
+  opts: PlanMoveEffectsOptions = {},
 ): PlanMoveEffect[] {
+  const mc = opts.monteCarlo;
+  if (mc && mc.seed === null) throw new RangeError('planMoveEffects() needs a fixed Monte Carlo seed');
   if (moves.length === 0) return [];
   const base = plan(profile, accounts, scenario, area).kpis;
-  return moves
+  const measured = moves
     .map((m) => {
-      const k = plan(applyPatch(profile, m.patch), patchAccounts(accounts, m.patch), patchScenario(scenario, m.patch), area).kpis;
+      const inputs = [applyPatch(profile, m.patch), patchAccounts(accounts, m.patch), patchScenario(scenario, m.patch)] as const;
+      const k = plan(...inputs, area).kpis;
       return {
         kind: m.kind,
+        inputs,
         effect: {
           moveId: m.id,
           effectAtRetirement: k.netWorthAtRetirement - base.netWorthAtRetirement,
           effectAtEnd: k.netWorthAtEnd - base.netWorthAtEnd,
-        } satisfies PlanMoveEffect,
+        } as PlanMoveEffect,
       };
     })
     .sort((x, y) =>
       y.effect.effectAtRetirement - x.effect.effectAtRetirement ||
       MOVE_KINDS.indexOf(x.kind) - MOVE_KINDS.indexOf(y.kind) ||
-      (x.effect.moveId < y.effect.moveId ? -1 : x.effect.moveId > y.effect.moveId ? 1 : 0))
-    .map((x) => x.effect);
+      (x.effect.moveId < y.effect.moveId ? -1 : x.effect.moveId > y.effect.moveId ? 1 : 0));
+  if (mc) {
+    const baseRate = monteCarlo(profile, accounts, scenario, mc, area).successRate;
+    for (const x of measured.slice(0, MOVES_SHOWN)) {
+      x.effect.successRateDelta = monteCarlo(...x.inputs, mc, area).successRate - baseRate;
+    }
+  }
+  return measured.map((x) => x.effect);
 }
 
 // ----- 5. Event preview -----------------------------------------------------------------------
