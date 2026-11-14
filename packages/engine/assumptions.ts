@@ -768,6 +768,33 @@ export const loanTermsTypical = {
   note: 'A typical rate, not an offer. Not yet listed in `assumptions` (the "How we calculate" map).',
 } satisfies Assumption<Record<LoanKind, { apr: Rate; termMonths: number }>>;
 
+// MP9 ----- Budget and cash flow (budget.ts, cashFlow.ts) ----------------------------------------
+
+/**
+ * Budget: categories paid in one lump each month (the table's "Fixed" group). Their expected-by-today
+ * is the full planned amount once anything has been paid in the month, else 0: rent due on the 1st
+ * isn't "behind" before it is paid, and isn't expected pro rata. Every other category ("Flexible":
+ * groceries, eating out, car, other) is expected to accrue evenly over the month.
+ */
+export const budgetFixedCategories = {
+  value: ['rentUtilities', 'childcare', 'debtPayments', 'subscriptions'] as const satisfies readonly CostCategory[],
+  assumption: true,
+  note: 'Fixed vs Flexible groups of the budget table (#169). Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<readonly CostCategory[]>;
+
+/** Budget: a category is "on pace" while its actual is within this share of expected-by-today, either side. */
+export const budgetOnPaceBand = {
+  value: 0.1,
+  assumption: true,
+  note: '±10% of expected-by-today (#169); above the planned amount is always "over". Not yet listed in `assumptions`.',
+} satisfies Assumption<number>;
+
+/** Cash flow Sankey: a category below this share of the period's expenses is drawn inside "Other". */
+export const cashFlowSankeyMergeShare = {
+  value: 0.02,
+  assumption: true,
+  note: 'Keeps thin ribbons out of the Sankey (#169); byCategory still lists every category. Not yet listed in `assumptions`.',
+} satisfies Assumption<number>;
 // MP4: plan events (planEvents.ts: defaultEvent, expandEvent, buyHomeBreakdown) ----------------------
 // What "Add event" fills in when the area data has no value, and the national figures the events
 // build on. Not yet listed in `assumptions` (the "How we calculate" map) above.

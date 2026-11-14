@@ -4,12 +4,11 @@ import { describe, expect, it } from 'vitest';
 import * as engine from './index';
 
 const stubs: [name: keyof typeof engine, task: string][] = [
-  ['budgetRows', 'MP9'],
-  ['budgetRowsForYear', 'MP9'],
-  ['cashFlowSummary', 'MP9'],
 ];
 
 describe('planner stubs', () => {
+  // An empty table would leave the file without tests (a vitest error).
+  if (stubs.length === 0) it.skip('none left: every MP2 planner function has landed', () => {});
   it.each(stubs)('%s is exported and throws "not implemented" (%s)', (name, task) => {
     const fn = engine[name];
     expect(typeof fn).toBe('function');
