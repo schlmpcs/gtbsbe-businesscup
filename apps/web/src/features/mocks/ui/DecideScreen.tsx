@@ -159,10 +159,13 @@ function Sentence({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
   );
 }
 
-function Disclosure({ title, children }: { title: string; children: ReactNode }) {
+function Disclosure({ title, testId, children }: { title: string; testId?: string; children: ReactNode }) {
   return (
-    <details className="group rounded-xl bg-surface p-lg shadow-md">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-semibold">
+    <details className="group rounded-xl bg-surface p-lg shadow-md" data-testid={testId}>
+      <summary
+        className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-semibold"
+        data-testid={testId && `${testId}-summary`}
+      >
         <span>{title}</span>
         <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
           ▾
@@ -261,13 +264,13 @@ export function DecideScreen({ vm, Link }: { vm: DecideVM; Link: LinkComponent }
             <>
               <Sentence vm={vm} r={r.data} />
               <Paths vm={vm} r={r.data} />
-              <Disclosure title={t.detailsTitle}>
+              <Disclosure title={t.detailsTitle} testId="decide-details-disclosure">
                 <Result vm={vm} r={r.data} />
               </Disclosure>
             </>
           )}
           {r?.status === 'error' && <ErrorNote error={r.error} />}
-          <Disclosure title={t.editDisclosure}>
+          <Disclosure title={t.editDisclosure} testId="lease-edit-disclosure">
             <LeaseEditor vm={vm} />
           </Disclosure>
         </>

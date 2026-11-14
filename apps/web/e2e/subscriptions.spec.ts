@@ -1,6 +1,7 @@
-// The subscription audit, cold path (issue #81): open /tools/subscriptions with no profile and no upload,
-// guess, tick three services, see the gap; then read the sample statement and see the findings, and
-// come back to them after a reload (the tool's state is kept in this browser, through the real store).
+// The subscription audit (issue #81; JF8 #140: detection first). Open /tools/subscriptions with no profile:
+// it opens on the statement upload; read the sample statement and see what was found, and come back to it
+// after a reload (the tool's state is kept in this browser, through the real store). With no statement,
+// the by-hand fallback: guess, tick three services, see the gap.
 //
 // The services come from the real catalogue (packages/data/subscriptions.json) and the statement is the
 // sample one (the `statementPath` fixture of the tools harness), read through the real categorize route
@@ -11,21 +12,13 @@ import { expect, test } from './tools/fixtures';
 
 const TICKED = ['Netflix', 'Spotify', 'Planet Fitness'];
 
-test('guess, tick three, see the gap; read the sample statement and see what was found', async ({ page, statementPath }) => {
+test('opens on the statement; read the sample statement and see what was found, also after a reload', async ({ page, statementPath }) => {
   await page.goto('/tools/subscriptions');
   await expect(page.getByRole('heading', { level: 1, name: t.screens.S21 })).toBeVisible();
 
-  await page.getByLabel(t.guess.label).fill('40');
-  await page.getByRole('button', { name: t.guess.next }).click();
-  for (const name of TICKED) await page.getByRole('checkbox', { name, exact: true }).check();
-  await page.getByRole('button', { name: t.ticks.next }).click();
-  await expect(page.getByRole('heading', { name: t.reveal.title })).toBeVisible();
-  await expect(page.getByText(t.reveal.surveyNote, { exact: true })).toBeVisible();
-
-  await page.getByRole('button', { name: t.reveal.findOnes }).click();
   await page.getByLabel(t.statement.pickerLabel).setInputFiles(statementPath);
   await expect(page.getByRole('heading', { name: t.findings.title })).toBeVisible({ timeout: 15_000 });
-  const headline = t.findings.headline(5, TICKED.length);
+  const headline = t.findings.headline(5, 0);
   const totals = `${t.findings.perMonth('$69.54')} · ${t.findings.perYear('$834.52')}`;
   await expect(page.getByText(headline, { exact: true })).toBeVisible();
   await expect(page.getByText(totals, { exact: true })).toBeVisible();
@@ -37,8 +30,19 @@ test('guess, tick three, see the gap; read the sample statement and see what was
   await expect(page.getByText(totals, { exact: true })).toBeVisible();
 });
 
+test('no statement: by hand, guess, tick three, see the gap', async ({ page }) => {
+  await page.goto('/tools/subscriptions');
+  await page.getByRole('button', { name: t.statement.byHand }).click();
+  await page.getByLabel(t.guess.label).fill('40');
+  await page.getByRole('button', { name: t.guess.next }).click();
+  for (const name of TICKED) await page.getByRole('checkbox', { name, exact: true }).check();
+  await page.getByRole('button', { name: t.ticks.next }).click();
+  await expect(page.getByRole('heading', { name: t.reveal.title })).toBeVisible();
+  await expect(page.getByText(t.reveal.surveyNote, { exact: true })).toBeVisible();
+});
+
 test('streamer mode never shows the tool', async ({ page }) => {
   await page.goto('/tools/subscriptions?stream=1');
   await expect(page.getByRole('heading', { level: 1, name: t.streamer.title })).toBeVisible();
-  await expect(page.getByLabel(t.guess.label)).toHaveCount(0);
+  await expect(page.getByLabel(t.statement.pickerLabel)).toHaveCount(0);
 });

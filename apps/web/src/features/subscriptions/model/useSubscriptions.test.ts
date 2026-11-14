@@ -23,7 +23,7 @@ const track = vi.fn<NonNullable<SubscriptionsDeps['track']>>();
 const downloadRenewals = vi.fn<NonNullable<SubscriptionsDeps['downloadRenewals']>>(() => 'downloaded');
 const trackTool = vi.fn<NonNullable<SubscriptionsDeps['trackTool']>>();
 
-type Options = Partial<Pick<SubscriptionsDeps, 'catalogue' | 'categorize'>> & { initial?: SubscriptionsToolState };
+type Options = Partial<Pick<SubscriptionsDeps, 'catalogue' | 'categorize' | 'importedStatement'>> & { initial?: SubscriptionsToolState };
 
 function renderTool(opts: Options = {}) {
   const view = renderHook(() => {
@@ -32,6 +32,7 @@ function renderTool(opts: Options = {}) {
     const vm = useSubscriptions(profile, {
       catalogue: opts.catalogue ?? testCatalogue, store, track, trackTool, downloadRenewals,
       categorize: opts.categorize ?? fakeCategorize(),
+      importedStatement: opts.importedStatement,
     });
     // The screen mounts this only while something is marked (SubscriptionsTool); here it is always there.
     const cancel = useCancelResult(profile, vm.plan.candidate, { track });
@@ -58,13 +59,13 @@ beforeEach(() => {
 });
 
 describe('cold path: no profile, no upload', () => {
-  it('starts on the guess; tools open is counted once the saved state is read', async () => {
+  it('starts on the statement (detection first); tools open is counted once the saved state is read', async () => {
     const tool = renderTool();
     await ready(tool);
     const { vm } = tool.result.current;
-    expect(vm.step).toBe('guess');
+    expect(vm.step).toBe('statement');
     expect(vm.steps.map((s) => [s.id, s.available])).toEqual([
-      ['guess', true], ['ticks', true], ['reveal', false], ['statement', true], ['findings', false], ['plan', false],
+      ['statement', true], ['findings', false], ['guess', true], ['ticks', true], ['reveal', false], ['plan', false],
     ]);
     expect(vm.guess).toMatchObject({ value: null, presets: [25, 50, 100, 200] });
     expect(vm.canReveal).toBe(false);
@@ -191,7 +192,7 @@ describe('guess and reveal', () => {
     await ready(tool);
     expect(tool.result.current.vm.canReveal).toBe(false);
     act(() => tool.result.current.vm.goTo('reveal'));
-    expect(tool.result.current.vm.step).toBe('guess');
+    expect(tool.result.current.vm.step).toBe('statement');
     act(() => tool.result.current.vm.guess.set(40));
     expect(tool.result.current.vm.canReveal).toBe(false); // a guess alone has nothing to compare with
     expect(tool.result.current.vm.reveal).toMatchObject({ guess: 40, actual: 0, missFactor: null, miss: null });
@@ -213,12 +214,15 @@ describe('guess and reveal', () => {
   it('moves between the steps that are available with next and back', async () => {
     const tool = renderTool();
     await ready(tool);
+    act(() => tool.result.current.vm.next()); // no findings yet: on to the by-hand fallback
+    expect(tool.result.current.vm.step).toBe('guess');
     act(() => tool.result.current.vm.next());
     expect(tool.result.current.vm.step).toBe('ticks');
-    act(() => tool.result.current.vm.next()); // reveal is not available yet: on to the statement
-    expect(tool.result.current.vm.step).toBe('statement');
-    act(() => tool.result.current.vm.back());
+    act(() => tool.result.current.vm.next()); // nothing ticked: no gap and no plan to go on to
     expect(tool.result.current.vm.step).toBe('ticks');
+    act(() => tool.result.current.vm.back());
+    expect(tool.result.current.vm.step).toBe('guess');
+    act(() => tool.result.current.vm.next());
     tickThree(tool);
     act(() => tool.result.current.vm.next());
     expect(tool.result.current.vm.step).toBe('reveal');
@@ -227,7 +231,7 @@ describe('guess and reveal', () => {
     act(() => tool.result.current.vm.back());
     act(() => tool.result.current.vm.back());
     act(() => tool.result.current.vm.back());
-    expect(tool.result.current.vm.step).toBe('guess');
+    expect(tool.result.current.vm.step).toBe('statement');
   });
 });
 
@@ -235,7 +239,7 @@ describe('where the tool starts', () => {
   const empty = { ticks: [], confirmed: [], dismissed: [], cancelMarked: [] };
 
   const cases: [string, SubscriptionsToolState | undefined, string][] = [
-    ['nothing saved', undefined, 'guess'],
+    ['nothing saved', undefined, 'statement'],
     ['a guess only', { ...empty, guess: 40 }, 'ticks'],
     ['ticks only', { ...empty, ticks: [{ serviceId: 'netflix', planId: 'standard' }] }, 'ticks'],
   ];
@@ -258,12 +262,37 @@ describe('where the tool starts', () => {
   });
 
   it('does not start on a step that is not available (saved state that points past what exists)', async () => {
-    // A saved audit that is gone from the state when the tool is cleared: it falls back to the guess.
+    // A saved audit that is gone from the state when the tool is cleared: it falls back to the upload.
     const first = renderTool();
     await ready(first);
     await uploaded(first);
     act(() => first.result.current.vm.clearLocalData());
-    expect(first.result.current.vm.step).toBe('guess');
+    expect(first.result.current.vm.step).toBe('statement');
+  });
+
+  it('a statement already read on S9 is audited on open: it starts on the findings, no upload and no ticks', async () => {
+    const take = vi.fn(() => ({ items: [...statementItemsSample], classes: ruleClasses(statementItemsSample) }));
+    const tool = renderTool({ importedStatement: take });
+    await ready(tool);
+    await waitFor(() => expect(tool.result.current.vm.step).toBe('findings'));
+    const { vm } = tool.result.current;
+    // The sample statement's golden findings (M3): five recurring charges, $69.54 a month, $834.52 a year.
+    expect(vm.findings.active.map((f) => f.id)).toEqual(subscriptionsExpected.findings.map((f) => f.id));
+    expect(vm.findings).toMatchObject({ found: 5, monthly: 69.54, yearly: 834.52, ticked: 0 });
+    expect(vm.statement.status).toBe('done');
+    expect(take).toHaveBeenCalledTimes(1);
+  });
+
+  it('findings already saved win over a statement read on S9: it is not taken and nothing is audited again', async () => {
+    const first = renderTool();
+    await ready(first);
+    await uploaded(first, csvFile(['2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99']));
+    const take = vi.fn(() => ({ items: [...statementItemsSample], classes: ruleClasses(statementItemsSample) }));
+    const tool = renderTool({ initial: first.result.current.store.state, importedStatement: take });
+    await ready(tool);
+    expect(tool.result.current.vm.step).toBe('findings');
+    expect(tool.result.current.vm.findings.active.map((f) => f.id)).toEqual(['netflix-com']);
+    expect(take).not.toHaveBeenCalled();
   });
 });
 
@@ -1246,6 +1275,6 @@ describe('what stays in this browser', () => {
     act(() => tool.result.current.vm.clearLocalData());
     const { vm, store } = tool.result.current;
     expect(store.state).toBeUndefined();
-    expect(vm).toMatchObject({ hasLocalData: false, step: 'guess', guess: { value: null }, ticks: { count: 0 }, findings: { found: 0 }, statement: { status: 'idle', monthsCovered: 0 } });
+    expect(vm).toMatchObject({ hasLocalData: false, step: 'statement', guess: { value: null }, ticks: { count: 0 }, findings: { found: 0 }, statement: { status: 'idle', monthsCovered: 0 } });
   });
 });

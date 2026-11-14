@@ -161,7 +161,7 @@ test('demo path: 5 duels → own guess → statement → by hand → forecast �
   await page.getByRole('link', { name: ladder.shell.cta.last }).click();
   await expect(page).toHaveURL(/\/future$/);
   await expect(h1(page)).toHaveText(forecast.future.title(10));
-  await page.getByTestId('chart-disclosure').locator('summary').click(); // JF16: behind a disclosure
+  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
   const chart = page.getByRole('figure', { name: forecast.future.chartTitle(10) });
   await expect(chart.locator('.recharts-line-curve').first()).toBeVisible();
   await expect(chart.locator('.recharts-area-area').first()).toBeVisible();
