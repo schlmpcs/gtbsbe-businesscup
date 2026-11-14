@@ -27,7 +27,8 @@ function A({ href, children, ...rest }: { href: string; children?: ReactNode; cl
 }
 
 const links: TodayLinks = {
-  play: '/play', future: '/future', afford: '/afford', loan: '/loan', profile: '/me/guess', upload: '/me/upload',
+  play: '/play', future: '/future', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
+  profile: '/me/guess', upload: '/me/upload',
 };
 
 function Today() {
@@ -53,6 +54,8 @@ describe('TodayScreen (S1)', () => {
     expect(screen.getByRole('link', { name: t.today.future.cta })).toHaveAttribute('href', '/future');
     expect(screen.getByRole('link', { name: new RegExp(t.today.tools.afford.title) })).toHaveAttribute('href', '/afford');
     expect(screen.getByRole('link', { name: new RegExp(t.today.tools.loan.title) })).toHaveAttribute('href', '/loan');
+    expect(screen.getByRole('link', { name: new RegExp(t.today.tools.decide.title) })).toHaveAttribute('href', '/decide');
+    expect(screen.getByRole('link', { name: new RegExp(t.today.tools.checkin.title) })).toHaveAttribute('href', '/checkin');
     expect(screen.getByTestId('sample-note')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: t.today.allScreens }).querySelectorAll('a[data-screen]')).toHaveLength(2);
   });
