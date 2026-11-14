@@ -100,6 +100,18 @@ describe('useClosestLife (S6)', () => {
 });
 
 describe('useQuickSliders (S7)', () => {
+  it('dragging a slider to the end again and again never grows its range (no runaway)', async () => {
+    const { result } = renderHook(() => useQuickSliders());
+    await waitForReady(result);
+    for (let i = 0; i < 6; i++) {
+      const rent = result.current.sliders.find((s) => s.category === 'rentUtilities')!;
+      act(() => result.current.setSpending('rentUtilities', rent.max));
+    }
+    const rent = result.current.sliders.find((s) => s.category === 'rentUtilities')!;
+    expect(rent.value).toBe(6000);
+    expect(rent.max).toBe(6000);
+  });
+
   it('sliders patch spending as measured values and the month updates from the engine', async () => {
     const { result } = renderHook(() => useQuickSliders());
     await waitForReady(result);
