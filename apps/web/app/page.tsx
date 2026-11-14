@@ -1,19 +1,13 @@
 'use client';
 
 // S1 Today (`/`): thin route. The view-model hook feeds the presentational screen.
+// The screen list for judges is at /screens (JF15: not on the production landing).
 import Link from 'next/link';
-import { duel } from '@/copy';
 import { useToday } from '@/features/forecast/model/useToday';
 import { TodayScreen, type TodayLinks } from '@/features/forecast/ui/TodayScreen';
 import { useQuickAdd } from '@/features/spend/model/useQuickAdd';
 import { QuickAdd } from '@/features/spend/ui/QuickAdd';
-import { gameMode } from '@/lib/config';
-import { linkedScreenIds, SCREEN_ROUTES } from '@/lib/screens';
-
-// With the duel at /play (the default), S2/S3 are its round and reveal, and S4 (the slider's
-// streamer mode) is not listed.
-const duelTitles: Partial<Record<string, string>> = gameMode() === 'duel' ? duel.screens : {};
-const screens = linkedScreenIds().map((id) => ({ id, href: SCREEN_ROUTES[id], title: duelTitles[id] }));
+import { SCREEN_ROUTES } from '@/lib/screens';
 
 const links: TodayLinks = {
   play: SCREEN_ROUTES.S2,
@@ -33,5 +27,5 @@ const links: TodayLinks = {
 export default function TodayPage() {
   const vm = useToday();
   const quickAdd = useQuickAdd({ ready: vm.status === 'ready' });
-  return <TodayScreen vm={vm} links={links} screens={screens} Link={Link} quickAdd={<QuickAdd vm={quickAdd} />} />;
+  return <TodayScreen vm={vm} links={links} Link={Link} quickAdd={<QuickAdd vm={quickAdd} />} />;
 }
