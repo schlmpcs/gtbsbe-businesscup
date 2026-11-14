@@ -39,8 +39,9 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
   const clues = useGameStore((s) => s.clues);
   const reveals = useGameStore((s) => s.reveals);
 
-  const [load, setLoad] = useState<{ status: 'loading' | 'ready' | 'error'; error: VMError | null }>({ status: 'loading', error: null });
+  // Outcome of the latest daily() call, tagged with the attempt it belongs to (set only async).
   const [attempt, setAttempt] = useState(0);
+  const [loaded, setLoaded] = useState<{ attempt: number; error: VMError | null } | null>(null);
   const [opening, setOpening] = useState<Record<string, true>>({});
   const [clueErrors, setClueErrors] = useState<Record<string, VMError>>({});
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -59,18 +60,14 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     if (!ready) return;
     let cancelled = false;
     const today = usEasternDate();
-    const saved = useGameStore.getState();
-    const hasToday = saved.date === today && saved.cards.length > 0;
-    setLoad(hasToday ? { status: 'ready', error: null } : { status: 'loading', error: null });
     client.daily(today).then(
       (set) => {
         if (cancelled) return;
         useGameStore.getState().startDay(set.date, set.cards);
-        setLoad({ status: 'ready', error: null });
+        setLoaded({ attempt, error: null });
       },
       (err: unknown) => {
-        if (cancelled || hasToday) return;
-        setLoad({ status: 'error', error: toVMError(err) });
+        if (!cancelled) setLoaded({ attempt, error: toVMError(err) });
       },
     );
     return () => {
@@ -146,44 +143,40 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
 
   // ----- streamer countdown -----
 
-  const [deadline, setDeadline] = useState<number | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState(countdownTotal);
+  // The countdown belongs to one card: another card (or none) means a fresh, stopped countdown.
+  const currentId = current?.id ?? null;
+  const [timer, setTimer] = useState<{ cardId: string | null; deadline: number | null; secondsLeft: number }>({
+    cardId: null, deadline: null, secondsLeft: countdownTotal,
+  });
+  const countdown = timer.cardId === currentId ? timer : { cardId: currentId, deadline: null, secondsLeft: countdownTotal };
   const submitRef = useRef(submitGuess);
   useEffect(() => {
     submitRef.current = submitGuess;
   });
 
-  // A new card resets the countdown.
-  const currentId = current?.id ?? null;
   useEffect(() => {
-    setDeadline(null);
-    setSecondsLeft(countdownTotal);
-  }, [currentId, countdownTotal]);
-
-  useEffect(() => {
+    const { deadline, cardId } = countdown;
     if (deadline === null) return;
-    const tick = () => {
+    const id = setInterval(() => {
       const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      setSecondsLeft(left);
-      if (left === 0) {
-        setDeadline(null);
-        submitRef.current(); // time's up: lock in the current guess
-      }
-    };
-    tick();
-    const id = setInterval(tick, 250);
+      setTimer({ cardId, deadline: left === 0 ? null : deadline, secondsLeft: left });
+      if (left === 0) submitRef.current(); // time's up: lock in the current guess
+    }, 250);
     return () => clearInterval(id);
-  }, [deadline]);
+  }, [countdown.deadline, countdown.cardId]); // eslint-disable-line react-hooks/exhaustive-deps -- countdown is rebuilt each render
 
   const locked = current !== null && (submitting === current.id || currentReveal !== undefined);
   const startCountdown = useCallback(() => {
-    if (!locked) setDeadline(Date.now() + secondsLeft * 1000);
-  }, [locked, secondsLeft]);
-  const stopCountdown = useCallback(() => setDeadline(null), []);
+    if (!locked && countdown.deadline === null && countdown.secondsLeft > 0) {
+      setTimer({ cardId: currentId, deadline: Date.now() + countdown.secondsLeft * 1000, secondsLeft: countdown.secondsLeft });
+    }
+  }, [locked, countdown.deadline, countdown.secondsLeft, currentId]);
+  const stopCountdown = useCallback(() => {
+    setTimer((t) => (t.cardId === currentId ? { ...t, deadline: null } : t));
+  }, [currentId]);
   const resetCountdown = useCallback(() => {
-    setDeadline(null);
-    setSecondsLeft(countdownTotal);
-  }, [countdownTotal]);
+    setTimer({ cardId: currentId, deadline: null, secondsLeft: countdownTotal });
+  }, [currentId, countdownTotal]);
 
   // ----- view-model -----
 
@@ -226,7 +219,7 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
 
   const streamer: StreamerVM | null = streamerOn
     ? {
-        countdown: { total: countdownTotal, secondsLeft, running: deadline !== null },
+        countdown: { total: countdownTotal, secondsLeft: countdown.secondsLeft, running: countdown.deadline !== null },
         startCountdown,
         stopCountdown,
         resetCountdown,
@@ -235,10 +228,12 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
       }
     : null;
 
-  const status = !ready ? 'loading' : load.status;
+  const latest = loaded?.attempt === attempt ? loaded : null;
+  const haveCards = total > 0 && (date === usEasternDate() || (latest !== null && latest.error === null));
+  const status: PlayVM['status'] = !ready ? 'loading' : haveCards ? 'ready' : latest?.error ? 'error' : 'loading';
   return {
     status,
-    error: status === 'error' ? load.error : null,
+    error: status === 'error' ? (latest?.error ?? null) : null,
     retry,
     source: client.source,
     date,

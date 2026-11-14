@@ -1,13 +1,21 @@
 // Engine calls several screens share: the display forecast, this month's flows, debt-load zones
 // and which inputs are estimates. All numbers come from @lifeguessr/engine.
-import { debtLoadThresholds, forecast, simulate, type SimulationMonth } from '@lifeguessr/engine';
+import { debtLoadThresholds, forecast, simulate, type ForecastRates, type SimulationMonth } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type Forecast, type Profile, type Rate } from '@lifeguessr/types';
 import { inflationForZip } from '@/lib/areas';
 import type { EstimatedField } from './types';
 
+/**
+ * Rates for every engine call about this profile (forecast, rankMoves, canAfford, simulate): the
+ * area's CPI inflation for its ZIP. One helper so all screens agree.
+ */
+export function areaRates(p: Pick<Profile, 'zip'>): Partial<ForecastRates> {
+  return { inflationAnnual: inflationForZip(p.zip) };
+}
+
 /** Forecast for display: 10 years, area inflation for the profile's ZIP, today's dollars by default. */
 export function displayForecast(p: Profile, todaysDollars = true): Forecast {
-  return forecast(p, 10, { todaysDollars, rates: { inflationAnnual: inflationForZip(p.zip) } });
+  return forecast(p, 10, { todaysDollars, rates: areaRates(p) });
 }
 
 /**
@@ -15,7 +23,7 @@ export function displayForecast(p: Profile, todaysDollars = true): Forecast {
  * surplus and debt load for month 1.
  */
 export function thisMonth(p: Profile): SimulationMonth {
-  return simulate(p, 1, { rates: { inflationAnnual: inflationForZip(p.zip) } }).path[1]!;
+  return simulate(p, 1, { rates: areaRates(p) }).path[1]!;
 }
 
 /** Today's net worth (cash + retirement − debts): the simulation's month-0 entry. */

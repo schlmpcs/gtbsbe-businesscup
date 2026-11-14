@@ -25,7 +25,7 @@ export function useClosestLife(): ClosestLifeVM {
   }, [cards, reveals]);
 
   const candidates = useMemo(() => {
-    const list = sources.map(({ card, cost, fromToday }) => {
+    const list = sources.map(({ card, cost, fromToday }): LifeCandidateVM => {
       const area = areaForZip(card.zip);
       const breakdown = cost ?? (area ? costOfLife(card, area) : null);
       return {
@@ -40,7 +40,7 @@ export function useClosestLife(): ClosestLifeVM {
         fromToday,
         isNearest: false,
         available: area !== null && breakdown !== null,
-      } satisfies LifeCandidateVM;
+      };
     });
     if (selfGuess === null) return list;
     // Nearest in ratio terms (log distance), like the game's scoring.

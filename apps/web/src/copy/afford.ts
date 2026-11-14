@@ -3,4 +3,6 @@ export const afford = {
   screens: {
     S11: 'Can I afford it?',
   },
+  /** Label used when the user leaves the purchase name blank. */
+  defaultPurchaseLabel: 'Purchase',
 } as const;
