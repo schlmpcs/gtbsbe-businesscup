@@ -59,6 +59,9 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
               <RangeText point={vm.in10y} isZero={vm.in10yBandIsZero} />
               <SourceTag source={vm.source} />
               {!vm.in10yBandIsZero && <p className="text-xs text-text-muted">{bandText(vm.in10yBandKind, false).label}</p>}
+              <p aria-live="polite" className="text-xs text-text-muted" data-testid="forecast-refreshing">
+                {vm.isRefreshing ? t.future.refreshing : null}
+              </p>
               <Link href={links.future} className={cx(buttonClassName({ variant: 'secondary' }), 'mt-sm self-start')}>
                 {t.today.future.cta}
               </Link>

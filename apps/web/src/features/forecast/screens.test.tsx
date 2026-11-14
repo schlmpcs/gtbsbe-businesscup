@@ -54,7 +54,7 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
     status: 'ready', profileOrigin: 'user', isDemoProfile: false,
     monthEnd: { status: 'ready', data: { projectedSpend: 3900, vsAverage: null, drifts: [], historyMonths: 0, fromStatement: false, takeHome: { value: 5200, isEstimate: false } } },
     in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, in10yBandKind: 'inputs',
-    forecastStatus: 'ready', forecastError: null, source: 'rules', actionsDisabled: false, committedMove: null,
+    forecastStatus: 'ready', forecastError: null, source: 'rules', isRefreshing: false, actionsDisabled: false, committedMove: null,
     markCommittedDone: () => {}, topMove: { status: 'ready', data: null },
     game: { date: null, played: 0, total: 0, finished: false },
     ...over,
@@ -135,6 +135,27 @@ describe('TodayScreen (S1)', () => {
     expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeEnabled();
     rerender(<TodayScreen vm={todayVm({ committedMove: committed, actionsDisabled: true })} links={links} screens={[]} Link={A} />);
     expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeDisabled();
+  });
+
+  it('says the forecast is updating, politely, while the number on the card is the previous answer', async () => {
+    render(<Today />);
+    const card = await screen.findByTestId('in10y');
+    await waitFor(() => expect(within(card).getByText(t.netWorthIn10y)).toBeInTheDocument());
+    const status = within(card).getByTestId('forecast-refreshing');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toBeEmptyDOMElement();
+
+    act(() => useAppStore.getState().setSpending('eatingOut', 100));
+    expect(status).toHaveTextContent(t.future.refreshing);
+    expect(within(card).getByText(t.netWorthIn10y)).toBeInTheDocument(); // still the previous answer
+    await waitFor(() => expect(status).toBeEmptyDOMElement(), { timeout: FORECAST_DEBOUNCE_MS + 1_000 });
+  });
+
+  it('shows the updating line from the view-model flag only', () => {
+    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument();
+    rerender(<TodayScreen vm={todayVm({ isRefreshing: true })} links={links} screens={[]} Link={A} />);
+    expect(within(screen.getByTestId('in10y')).getByText(t.future.refreshing)).toBeInTheDocument();
   });
 
   it('shows drift flags when the view-model has an average', async () => {

@@ -110,6 +110,11 @@ export type TodayVM = {
   committedMove: MoveVM | null;
   /** Mark the committed move done. Does nothing while `actionsDisabled`. */
   markCommittedDone: () => void;
+  /**
+   * A newer answer is on its way (the profile changed, or a rules answer is being asked for again): the 10-year
+   * number on screen may be the previous one's. Same flag as FutureVM.isRefreshing.
+   */
+  isRefreshing: boolean;
   /** The forecast is loading or out of date for the profile: the move buttons are disabled (see NextMovesVM.actionsDisabled). */
   actionsDisabled: boolean;
   /** Best move right now (first of rankMoves), or why there is none. */
