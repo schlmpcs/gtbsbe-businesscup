@@ -1,3 +1,5 @@
+import type { Goal } from './goal';
+import type { TOOL_IDS } from './constants';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
 // Change only together (Amir + Aibek): update this file, the zod schemas in ./schemas.ts,
 // the fixtures in packages/data/fixtures and both consumers in the same PR.
@@ -181,7 +183,7 @@ export type StatementClass = CostCategory | 'pay' | 'transfer';
 // POST /api/statement/categorize. `categorizedBy`: who sorted the labels: the AI, the keyword
 // rules (no API key, provider failure or invalid output), or both (the AI skipped some labels).
 export type StatementCategorizeRequest = { items: StatementItem[] };
-export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed' };
+export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed'; classes?: { label: string; class: StatementClass }[] };
 
 // ----- Pro (S15): the paywall demo -----------------------------------------------------------
 // No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo_checkout` = the
@@ -202,7 +204,7 @@ export type ProErrorCode =
 // ----- Sessions (T4): POST /api/session ----------------------------------------------------
 // The profile and wishlist saved under the anonymous id, so a reload restores them without an
 // account. `revision` counts saves (0 = nothing saved yet); `updatedAt` is ISO 8601 UTC.
-export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
+export type SessionState = { goal?: Goal | null; profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
 export type SessionErrorCode =
   | 'bad_request' | 'too_large' | 'rate_limited'
   | 'unavailable'         // the store is not configured or cannot be reached (503)
@@ -213,7 +215,19 @@ export type SessionErrorCode =
 // fixed list. Props hold only small enums, flags and counts: never text, amounts, ids or anything
 // a person typed, so an event cannot carry personal data. Stored under the hash of the anonymous id.
 // `home` is the 1-based position of a home in today's set.
+export type ToolId = (typeof TOOL_IDS)[number];
+export type MissBucket = 'under0.5'|'0.5to0.8'|'0.8to1.25'|'1.25to2'|'over2';
 export type ClientFunnelEvent =
+  | {name:'goal_set';props:{years:number}}
+  | {name:'goal_verdict_shown';props:{verdict:'onTrack'|'withinRange'|'behind'}}
+  | {name:'goal_cleared'}
+  | { name: 'tool_opened'; props: { tool: ToolId } }
+  | { name: 'subs_started'; props: { path: 'tickList'|'statement' } }
+  | { name: 'subs_revealed'; props: { miss: MissBucket } }
+  | { name: 'subs_flagged'|'subs_cancel_marked'; props: { count: number } }
+  | { name: 'renewals_exported' }
+  | { name: 'overpaying_checked'; props: { lines: number; above: number } }
+  | { name: 'payoff_planned'; props: { method: 'avalanche'|'snowball' } }
   | { name: 'play_started' }
   | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
   | { name: 'home_guessed'; props: { home: number; cluesOpened: number } }
@@ -259,6 +273,7 @@ export type FunnelReport = {
   users: number;                                  // distinct anonymous ids with any event
   steps: FunnelStep[];                            // FUNNEL_STEPS, in order
   events: Record<FunnelEventName, number>;        // distinct anonymous ids per event
+  tools: { opened: Record<ToolId, number>; completed: Record<ToolId, number>; rates: Record<ToolId, number | null> };
   game: {
     players: number; finished: number; finishRate: number | null;
     guesses: number; cluesPerHome: number | null; blindGuessRate: number | null;  // blind = no clue opened
@@ -268,3 +283,8 @@ export type FunnelReport = {
 
 export * from './constants';
 export * from './schemas';
+export * from './goal';
+export * from './tools';
+export * from './payoff';
+export * from './overpaying';
+export * from './subscriptions';

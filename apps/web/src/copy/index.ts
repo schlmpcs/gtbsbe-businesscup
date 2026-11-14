@@ -29,3 +29,4 @@ export const screenTitles = {
 } as const;
 
 export type ScreenId = keyof typeof screenTitles;
+export { goal } from './goal';

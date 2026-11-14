@@ -3,7 +3,7 @@
 // Hooks: useToday (S1) in ./useToday.ts, useFuture (S10) in ./useFuture.ts.
 import type { MoveCandidate } from '@lifeguessr/engine';
 import type {
-  CostCategory, ForecastBundle, ForecastPoint, ForecastSource, Money, Move, MoveKind, Profile, Rate, Source,
+  Goal, GoalStatus, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, Money, Move, MoveKind, Profile, Rate, Source,
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 import type { ProfileOrigin } from '@/state';
@@ -220,3 +220,15 @@ export type AssumptionVM = {
 
 /** The assumptions behind the forecast and behind Next Moves. */
 export type HowWeCalculateVM = { forecast: AssumptionVM[]; moves: AssumptionVM[] };
+
+export type GoalVM = {
+  goal: Goal | null;
+  setGoal: (goal: Goal) => void;
+  clearGoal: () => void;
+  status: Loadable<GoalStatus | null>;
+  saving: Loadable<SavingToReach | null>;
+  moves: Loadable<MovesTowardGoal | null>;
+  moveLabels: {id:string;kind:MoveKind;category?:CostCategory}[];
+  inputError: boolean;
+  presets: {targets:Money[];years:number[]};
+};

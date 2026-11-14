@@ -1,3 +1,5 @@
+import { GoalSchema } from './goal';
+export { GoalSchema } from './goal';
 // Zod schemas for the contracts in ./index.ts. Use them to validate every API input and every
 // LLM output (docs/ENGINEERING.md → AI usage rules), and to load fixtures and data files.
 //
@@ -229,6 +231,7 @@ export const StatementCategorizeResponseSchema = z.object({
   ok: z.literal(true),
   months: z.array(CategoryTotalsSchema),
   categorizedBy: z.enum(CATEGORIZED_BY),
+  classes: z.array(z.object({ label: z.string().min(1).max(200), class: z.enum(STATEMENT_CLASSES) })).optional(),
 });
 
 // ----- Pro (S15): requests and responses of /api/pro/* ---------------------------------------
@@ -303,12 +306,14 @@ export const AnonIdSchema = z.uuid().transform((id) => id.toLowerCase());
  * so nothing is silently dropped.
  */
 export const SessionRequestSchema = z.strictObject({
+  goal: GoalSchema.nullable().optional(),
   anonId: AnonIdSchema,
   profile: ProfileSchema.optional(),
   wishlist: z.array(PurchaseSchema).max(SESSION_WISHLIST_MAX).optional(),
 });
 
 export const SessionStateSchema = z.object({
+  goal: GoalSchema.nullable().optional(),
   profile: ProfileSchema.optional(),
   wishlist: z.array(PurchaseSchema),
   revision: z.number().int().min(0),
@@ -410,6 +415,17 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   withProps('hint_opened', { round: DuelRoundSchema }),
   bare('challenge_copied'),
   bare('own_guess_started'),
+  withProps('goal_set', {years:z.number().int().min(1).max(30)}),
+  withProps('goal_verdict_shown', {verdict:z.enum(['onTrack','withinRange','behind'])}),
+  bare('goal_cleared'),
+  withProps('tool_opened', { tool: z.enum(['subscriptions','overpaying','payoff']) }),
+  withProps('subs_started', { path: z.enum(['tickList','statement']) }),
+  withProps('subs_revealed', { miss: z.enum(['under0.5','0.5to0.8','0.8to1.25','1.25to2','over2']) }),
+  withProps('subs_flagged', { count: z.number().int().min(0).max(5000) }),
+  withProps('subs_cancel_marked', { count: z.number().int().min(0).max(5000) }),
+  bare('renewals_exported'),
+  withProps('overpaying_checked', { lines: z.number().int().min(0).max(4), above: z.number().int().min(0).max(4) }),
+  withProps('payoff_planned', { method: z.enum(['avalanche','snowball']) }),
 ]);
 
 /** POST /api/events: 1–EVENTS_BATCH_MAX events for one anonymous id. */
@@ -447,6 +463,9 @@ export const FunnelReportSchema = z.object({
   users: userCount,
   steps: z.array(FunnelStepSchema),
   events: z.record(FunnelEventNameSchema, userCount),
+  tools: z.object({ opened: z.record(z.enum(['subscriptions','overpaying','payoff']), userCount),
+    completed: z.record(z.enum(['subscriptions','overpaying','payoff']), userCount),
+    rates: z.record(z.enum(['subscriptions','overpaying','payoff']), share) }),
   game: z.object({
     players: userCount,
     finished: userCount,

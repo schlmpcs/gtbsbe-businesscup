@@ -115,16 +115,17 @@ describe('S14 check-in', () => {
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([card.id]);
   });
 
-  it('“I did it” stays disabled until the forecast answer for the current profile is in', async () => {
+  it('“I did it” is usable at once: the rules forecast for the current profile is on screen while the answer is on its way', async () => {
     let release: (() => void) | undefined;
     mockForecastRoute((body) => new Promise<ForecastBundle>((resolve) => (release = () => resolve(rulesAnswer(body)))));
     useAppStore.getState().commitMove(rankMoves(cloneProfileDemo(), { rates })[0]!);
     render(<Checkin />);
     const done = await screen.findByRole('button', { name: c.move.done });
-    expect(done).toBeDisabled();
+    expect(done).toBeEnabled();
+    expect(within(screen.getByTestId('checkin-move')).getByTestId('forecast-source').textContent).toBe(forecast.source.rules);
     await waitFor(() => expect(release).toBeDefined());
     await act(async () => release?.());
-    await waitFor(() => expect(screen.getByRole('button', { name: c.move.done })).toBeEnabled());
+    expect(screen.getByRole('button', { name: c.move.done })).toBeEnabled();
   });
 
   it('“not yet” keeps the committed move', async () => {

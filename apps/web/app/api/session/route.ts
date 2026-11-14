@@ -34,7 +34,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const body = await readJsonBody(req, SessionRequestSchema, MAX_SESSION_BODY_BYTES);
   if ('response' in body) return body.response;
-  const { anonId, profile, wishlist } = body.data;
+  const { anonId, profile, wishlist, goal } = body.data;
   if (header.anonId !== null && header.anonId !== anonId) {
     return sessionError(400, 'bad_request', { issues: ['x-anon-id does not match anonId'] });
   }
@@ -53,7 +53,7 @@ export async function POST(req: Request): Promise<Response> {
       mayAddToWishlist = status.pro;
     }
 
-    const result = await sessions.save(anonId, { profile, wishlist }, { mayAddToWishlist });
+    const result = await sessions.save(anonId, { profile, wishlist, goal }, { mayAddToWishlist });
     if (!result.ok) {
       return sessionError(402, 'not_paid', { issues: ['adding to the wishlist needs Pro; saved items stay and can be removed'] });
     }

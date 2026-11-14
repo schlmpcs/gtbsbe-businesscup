@@ -138,20 +138,22 @@ describe('TodayScreen (S1)', () => {
     await waitFor(() => expect(within(move).getByTestId('forecast-source')).toHaveTextContent(t.source.ai));
   });
 
-  it('shows this month while the 10-year number is still on its way', async () => {
+  it('shows this month and the rules-based 10-year number at once, then the AI estimate when it lands', async () => {
     let release!: () => void;
     route = mockForecastRoute((body) => new Promise((resolve) => (release = () => resolve(aiAnswer(body)))));
     render(<Today />);
     const monthEnd = await screen.findByTestId('month-end');
     await waitFor(() => expect(within(monthEnd).getByTestId('month-end-no-history')).toBeInTheDocument());
     const card = screen.getByTestId('in10y');
-    expect(card.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(within(card).queryByTestId('forecast-source')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('today-move')).queryByTestId('forecast-source')).not.toBeInTheDocument();
+    expect(card.querySelector('[aria-busy="true"]')).toBeNull(); // no skeleton
+    expect(within(card).getByTestId('forecast-source')).toHaveAttribute('data-source', 'rules');
+    expect(within(card).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
+    expect(within(card).getByText(t.future.refreshing)).toBeInTheDocument();
+    expect(within(screen.getByTestId('today-move')).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
 
     act(() => release());
-    await waitFor(() => expect(within(card).getByText(t.netWorthIn10y)).toBeInTheDocument());
-    expect(card.querySelector('[aria-busy="true"]')).toBeNull();
+    await waitFor(() => expect(within(card).getByTestId('forecast-source')).toHaveAttribute('data-source', 'ai'));
+    expect(within(card).queryByText(t.future.refreshing)).not.toBeInTheDocument();
   });
 
   it('says so, instead of a skeleton forever, when the forecast cannot be built', () => {
@@ -365,19 +367,18 @@ describe('FutureScreen (S10)', () => {
     expect(within(aiChart).queryByText(t.band.label)).not.toBeInTheDocument();
   });
 
-  it('shows a neutral “How we calculate” intro, naming no source, until the first answer is in', async () => {
+  it('describes the rules forecast in “How we calculate” while the model’s answer is on its way, then the AI one', async () => {
     let release!: () => void;
     route = mockForecastRoute((body) => new Promise((resolve) => (release = () => resolve(aiAnswer(body)))));
     render(<Future />);
-    const how = screen.getByTestId('how-we-calculate');
-    expect(within(how).getByText(t.how.introPending)).toBeInTheDocument();
-    expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
+    const how = await screen.findByTestId('how-we-calculate');
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    expect(within(how).getByText(t.how.intro)).toBeInTheDocument(); // the numbers on screen are the rules'
     expect(within(how).queryByText(t.how.introAi)).not.toBeInTheDocument();
 
-    await waitFor(() => expect(route.calls).toHaveLength(1));
     act(() => release());
     await waitFor(() => expect(within(how).getByText(t.how.introAi)).toBeInTheDocument());
-    expect(within(how).queryByText(t.how.introPending)).not.toBeInTheDocument();
+    expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
   });
 
   it('says the forecast is updating while a new answer is on its way', async () => {
@@ -395,7 +396,7 @@ describe('FutureScreen (S10)', () => {
     expect(route.calls).toHaveLength(2);
   });
 
-  it('disables the move buttons while the forecast is refreshing, and enables them again with the new answer', async () => {
+  it('keeps the move buttons enabled on a profile change: the moves on screen are the new profile’s rules ranking', async () => {
     render(<Future />);
     const first = (await screen.findAllByRole('article'))[0]!;
     await waitFor(() => expect(within(first).getByRole('button', { name: t.moves.commit })).toBeEnabled());
@@ -403,8 +404,8 @@ describe('FutureScreen (S10)', () => {
     act(() => useAppStore.getState().setSpending('eatingOut', 100));
     await waitFor(() => expect(screen.getByText(t.future.refreshing)).toBeInTheDocument());
     for (const article of screen.getAllByRole('article')) {
-      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeDisabled();
-      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeDisabled();
+      expect(within(article).getByRole('button', { name: t.moves.commit })).toBeEnabled();
+      expect(within(article).getByRole('button', { name: t.moves.markDone })).toBeEnabled();
     }
     await waitFor(() => expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument(), {
       timeout: FORECAST_DEBOUNCE_MS + 1_000,
