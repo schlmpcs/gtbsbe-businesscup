@@ -139,9 +139,13 @@ test('demo path: 5 duels → own guess → sliders → forecast → statement �
   await adjusted;
   await expectNoSideScroll(page);
 
-  // ----- 5. You in 10 years (S10): the range band and the next moves -----
+  // ----- 5. You in 10 years (S10), through the step CTAs: S7 → S8 → S9 → the forecast -----
+  await page.getByRole('link', { name: ladder.shell.cta.S7 }).click();
+  await expect(page).toHaveURL(/\/me\/balance$/);
+  await page.getByRole('link', { name: ladder.shell.cta.S8 }).click();
+  await expect(page).toHaveURL(/\/me\/upload$/);
   const viewed = stored(page, 'forecast_viewed');
-  await page.getByRole('link', { name: ladder.shell.futureCta }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S9 }).click();
   await expect(page).toHaveURL(/\/future$/);
   await expect(h1(page)).toHaveText(forecast.future.title(10));
   const chart = page.getByRole('figure', { name: forecast.future.chartTitle(10) });
@@ -151,17 +155,15 @@ test('demo path: 5 duels → own guess → sliders → forecast → statement �
   await expect(page.getByTestId('moves').getByRole('article').first()).toBeVisible();
   await viewed;
 
-  // ----- 6. Upload the sample statement (S9): estimates become measured, the range tightens -----
+  // ----- 6. Upload the sample statement (S9): estimates become measured, the step is done -----
   await page.goto('/me/upload');
-  const range = page.getByTestId('ladder-range');
-  await expect(range).toBeVisible();
-  const rangeBefore = await range.textContent();
+  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'false');
   await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
   await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).toBeVisible();
   const applied = stored(page, 'statement_applied');
   await page.getByRole('button', { name: ladder.upload.apply }).click();
   await expect(page.getByText(ladder.upload.applied)).toBeVisible();
-  await expect(range).not.toHaveText(rangeBefore ?? '');
+  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'true');
   await applied;
 
   // ----- 7. Loan Lab (S12): three offers side by side, the debt-load gauge, pick another -----

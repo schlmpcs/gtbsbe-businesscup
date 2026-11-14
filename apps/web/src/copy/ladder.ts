@@ -45,12 +45,12 @@ export const ladder = {
     S8: 'Pay, savings and debts',
   },
 
-  /** Shared frame of every rung: progress, the 10-year number and its range band, the CTA. */
+  /** Shared frame of every rung: the step pills, the headline, the footer (text action + CTA). */
   shell: {
     intro: {
       S5: 'Rent, car, food, everything. Just guess.',
       S6: 'We start from its numbers. You fine-tune next.',
-      S7: 'Drag to match a normal month. Gray tags are our estimates.',
+      S7: 'Drag to match a normal month. Tagged amounts are our estimates.',
       S8: 'Six taps. Skip anything; we’ll use estimates and tag them.',
       S9: 'Swap our estimates for your real numbers. Or skip; estimates are fine.',
     },
@@ -68,17 +68,8 @@ export const ladder = {
     notYet: 'not yet',
     current: 'this step',
     stepsDone: (done: number, total: number) => `${done} of ${total} steps done`,
-    in10yLabel: 'You in 10 years',
-    range: (low: string, high: string) => `Likely range ${low} to ${high}`,
-    /** Collapsed explanation of the 10-year number and its range. */
-    howTitle: 'How this works',
-    in10yHint: 'Net worth in today’s dollars, if nothing changes.',
-    bandNote: 'The range comes only from the numbers we estimated. Each real number you add narrows it.',
-    narrowedLabel: 'Range narrowed',
-    narrowed: (share: string) => `${share} narrower than with every number estimated`,
-    estimatesLeft: (left: number, total: number) =>
-      left === 0 ? `All ${total} inputs are yours` : `${left} of ${total} inputs are estimates`,
-    futureCta: 'See your future →',
+    /** S9 only: one short line above the CTA (net worth in 10 years, today's dollars). */
+    in10yLabel: 'You in 10 years:',
     /** The one orange CTA of each rung (S5–S8 lead to the next rung, S9 to the forecast). */
     cta: {
       S5: 'Next: closest life →',
@@ -87,8 +78,12 @@ export const ladder = {
       S8: 'Next →',
       S9: 'See me in 10 years →',
     },
-    /** The text link on the left of the CTA: go straight to the forecast, keeping the estimates. */
+    /**
+     * The text link on the left of the CTA. `step`: S5–S7, go to the next step. S8/S9: go straight
+     * to the forecast, keeping the estimates.
+     */
     skip: {
+      step: 'Skip this step',
       S8: 'Skip, use estimates',
       S9: 'Skip, use my estimates',
     },
@@ -127,6 +122,16 @@ export const ladder = {
     nearest: 'Closest',
     chosen: 'That’s me',
     perMonthSuffix: '/ month',
+    /** The card's headline: "1 adult · studio", "2 adults · 2 kids · 3-bedroom". */
+    headline: (adults: 1 | 2, kids: number, bedrooms: number) =>
+      [
+        adults === 1 ? '1 adult' : '2 adults',
+        kids === 0 ? null : kids === 1 ? '1 kid' : `${kids} kids`,
+        bedrooms === 0 ? 'studio' : `${bedrooms}-bedroom`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    /** The full household, inside "Costs & sources". */
     household: (adults: 1 | 2, kids: readonly KidAge[], bedrooms: number) => {
       const people = adults === 1 ? '1 adult' : '2 adults';
       const kidText = kids.length === 0 ? 'no kids' : kids.map((k) => kidAges[k]).join(', ');
@@ -135,7 +140,6 @@ export const ladder = {
     },
     car: (price: string) => `Car worth ${price}`,
     noCar: 'No car',
-    perMonth: (amount: string) => `≈ ${amount}/mo`,
     monthlyRange: (low: string, high: string) => `Range ${low} to ${high}`,
     costsToggle: 'Costs & sources',
     costsLabel: (metro: string) => `Monthly costs for the ${metro} life`,
@@ -159,8 +163,10 @@ export const ladder = {
     slidersTitle: 'Monthly spending',
     slidersLabel: 'Spending by category',
     savingsLabel: 'Retirement: share of what’s left',
+    moreOptions: 'More options',
     describe: {
-      title: 'Or describe your life',
+      /** The text link that opens the free-text box. */
+      open: 'Or type it in one sentence',
       label: 'Describe your month in your own words',
       placeholder: 'Rent 1,800, groceries 500, eat out twice a week.',
       hint: 'You confirm before anything changes.',

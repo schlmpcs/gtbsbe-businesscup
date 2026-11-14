@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 // Ladder UI (features/ladder/ui) with hand-made view-models: states the e2e path can't reach yet
-// (S9 errors and review states, parse errors and confirmation on S7) and the S8 debt form units.
+// (S9 errors and review states, parse errors and confirmation on S7), the S8 debt form units, and
+// the one-task-per-step frame (one orange CTA, a text action, no 10-year strip before S9).
 import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { common, forecast, ladder } from '@/copy';
 import type {
-  GuessYourselfVM, LadderProgressVM, ParsedRowVM, QuickSlidersVM, StatementUploadVM,
+  GuessYourselfVM, LadderProgressVM, LifeCandidateVM, ParsedRowVM, QuickSlidersVM, StatementUploadVM,
 } from './model/types';
+import { artsFor } from './ui/ClosestLife';
 import { DebtForm } from './ui/DebtForm';
 import { DescribeLife } from './ui/DescribeLife';
 import { GuessYourself } from './ui/GuessYourself';
@@ -48,23 +50,54 @@ function uploadVM(over: Partial<StatementUploadVM> = {}): StatementUploadVM {
   };
 }
 
-describe('LadderProgress (via any rung)', () => {
-  it('shows the rungs, the 10-year range, how much it narrowed and the CTAs', () => {
-    const vm = uploadVM();
-    render(<StatementUpload vm={vm} progress={progress} />);
+describe('LadderShell (via any rung)', () => {
+  it('shows the step pills with the current one marked', () => {
+    render(<StatementUpload vm={uploadVM()} progress={progress} />);
     const steps = screen.getByRole('navigation', { name: ladder.shell.stepsLabel });
     expect(within(steps).getAllByRole('link')).toHaveLength(5);
     expect(within(steps).getByRole('link', { current: 'step' })).toHaveAttribute('href', '/x/S9');
     expect(screen.getByText(ladder.shell.stepsDone(2, 5))).toBeInTheDocument();
-    expect(screen.getByText(ladder.shell.range('$40,000', '$90,000'))).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: ladder.shell.narrowedLabel })).toHaveAttribute('aria-valuenow', '0.5');
-    expect(screen.getByRole('link', { name: ladder.shell.futureCta })).toHaveAttribute('href', '/future');
   });
 
-  it('labels the 10-year number as the rules preview, next to the number', () => {
+  it('S9: one short 10-year line above the CTA, tagged as an estimate; no technical wording', () => {
     render(<StatementUpload vm={uploadVM()} progress={progress} />);
-    const number = screen.getByTestId('ladder-in10y');
-    expect(within(number).getByTestId('ladder-in10y-source')).toHaveTextContent(forecast.source.rulesPreview);
+    const line = screen.getByTestId('ladder-in10y');
+    expect(line).toHaveTextContent(`${ladder.shell.in10yLabel}$60,000${common.estimateTag}`);
+    expect(screen.queryByText(forecast.source.rulesPreview)).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('S5–S8 have no 10-year strip: one orange CTA and one text action', () => {
+    const vm: GuessYourselfVM = {
+      status: 'ready',
+      guess: { value: 3000, min: 1000, max: 15000, step: 10, position: 0.4 },
+      savedGuess: null,
+      comparison: null,
+      bridge: null,
+      setGuess: vi.fn(),
+      setGuessPosition: vi.fn(),
+      submit: vi.fn(),
+    };
+    render(<GuessYourself vm={vm} progress={progress} />);
+    expect(screen.queryByTestId('ladder-in10y')).toBeNull();
+    expect(screen.queryByText(forecast.source.rulesPreview)).toBeNull();
+    expect(screen.queryByText(ladder.shell.in10yLabel)).toBeNull();
+    expect(screen.getByRole('link', { name: ladder.shell.skip.step })).toHaveAttribute('href', '/x/S6');
+  });
+});
+
+describe('ClosestLife (S6) art', () => {
+  const life = (kids: number, bedrooms: LifeCandidateVM['bedrooms']) => ({
+    kids: Array.from({ length: kids }, () => 'schoolAge' as const),
+    bedrooms,
+  });
+
+  it('keeps the household picture, but never the same picture on two neighbouring cards', () => {
+    const arts = artsFor([life(0, 1), life(0, 0), life(2, 2), life(1, 3), life(0, 1), life(1, 4)]);
+    expect(arts[0]).toBe('home-apartment');
+    expect(arts[2]).toBe('home-family');
+    expect(arts[5]).toBe('home-large');
+    for (let i = 1; i < arts.length; i++) expect(arts[i]).not.toBe(arts[i - 1]);
   });
 });
 
@@ -239,9 +272,15 @@ describe('DescribeLife (S7)', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(ladder.sliders.describe.errors.incomplete);
   });
 
-  it('submits the text', async () => {
+  it('is one text link until opened, then submits the text', async () => {
     const parse = parseVM();
     render(<DescribeLife parse={parse} rows={[]} />);
+    expect(screen.queryByRole('textbox')).toBeNull();
+    const open = screen.getByRole('button', { name: ladder.sliders.describe.open });
+    expect(open).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(open);
+    expect(open).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('textbox', { name: ladder.sliders.describe.label })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: ladder.sliders.describe.submit }));
     expect(parse.submit).toHaveBeenCalledOnce();
   });
