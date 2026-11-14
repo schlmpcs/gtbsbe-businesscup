@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
-import { forecast, inflationAnnualOf, monthEnd, rankMoves } from '@lifeguessr/engine';
+import {
+  applyPatch, cardAprDefault, estimateSpread, forecast, inflationAnnualFallback, inflationAnnualOf, monthEnd, rankMoves,
+  returnAnnualNominal,
+} from '@lifeguessr/engine';
 import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
-import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@/lib/api/http';
 import { areaByZip, cloneProfileDemo } from '@/fixtures';
 import { useAppStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
+import { howWeCalculate } from './howWeCalculate';
 import { useFuture } from './useFuture';
+import { moveTarget } from './useNextMoves';
 import { useToday } from './useToday';
 
 beforeEach(resetClientState);
@@ -40,6 +46,7 @@ describe('useFuture (S10)', () => {
     if (result.current.moves.status !== 'ready') return;
     expect(result.current.moves.data.map((m) => m.id)).toEqual(expected.map((m) => m.id));
     expect(result.current.level).toBe(1);
+    expect(result.current.level2Kinds).toEqual(['retirementMatch', 'hsa', 'refinance', 'negotiateRent', 'reshopInsurance']);
 
     const first = result.current.moves.data[0]!;
     act(() => result.current.commit(first.id));
@@ -87,7 +94,9 @@ describe('useToday (S1)', () => {
       expect(result.current.monthEnd.data.takeHome).toEqual({ value: 5200, isEstimate: false });
     }
     expect(result.current.in10y).toEqual(forecast(cloneProfileDemo(), 10, { todaysDollars: true, rates }).in10y);
-    expect(result.current.topMove).toEqual({ status: 'ready', data: { ...rankMoves(cloneProfileDemo(), { rates })[0]!, isCommitted: false } });
+    expect(result.current.in10yBandIsZero).toBe(false);
+    const top = rankMoves(cloneProfileDemo(), { rates })[0]!;
+    expect(result.current.topMove).toEqual({ status: 'ready', data: { ...top, isCommitted: false, target: moveTarget(top) } });
     expect(result.current.committedMove).toBeNull();
     expect(result.current.game).toEqual({ date: null, played: 0, total: 0, finished: false });
   });
@@ -117,5 +126,151 @@ describe('useToday (S1)', () => {
     act(() => result.current.markCommittedDone());
     expect(result.current.committedMove).toBeNull();
     expect(useAppStore.getState().profile.doneMoveIds).toContain(move.id);
+  });
+});
+
+describe('useFuture compare with a move (S10 toggle)', () => {
+  it('compares with the top move, then with the committed one, in the same dollars', async () => {
+    const { result } = renderHook(() => useFuture());
+    await waitForReady(result);
+    const ranked = rankMoves(cloneProfileDemo(), { rates });
+    expect(ranked.length).toBeGreaterThanOrEqual(2);
+    expect(result.current.compareMove?.id).toBe(ranked[0]!.id);
+    expect(result.current.compareOn).toBe(false);
+    expect(result.current.withMove).toBeNull();
+
+    act(() => result.current.setCompareOn(true));
+    const top = applyPatch(cloneProfileDemo(), ranked[0]!.patch);
+    expect(result.current.withMove?.moveId).toBe(ranked[0]!.id);
+    expect(result.current.withMove?.points).toHaveLength(121);
+    expect(result.current.withMove?.in10y).toEqual(forecast(top, 10, { todaysDollars: true, rates }).in10y);
+    expect(result.current.withMove!.in10y.mid).toBeGreaterThan(result.current.in10y.mid);
+
+    act(() => result.current.setTodaysDollars(false));
+    expect(result.current.withMove?.in10y).toEqual(forecast(top, 10, { rates }).in10y);
+
+    act(() => result.current.commit(ranked[1]!.id));
+    expect(result.current.compareMove?.id).toBe(ranked[1]!.id);
+    expect(result.current.withMove?.moveId).toBe(ranked[1]!.id);
+
+    act(() => result.current.setCompareOn(false));
+    expect(result.current.withMove).toBeNull();
+  });
+
+  it('keeps the move list identity between renders while the ranking is unchanged', async () => {
+    const { result, rerender } = renderHook(() => useFuture());
+    await waitForReady(result);
+    const before = result.current.moves;
+    rerender();
+    expect(result.current.moves).toBe(before);
+  });
+});
+
+describe('useFuture "Why?" (POST /api/ai/explain)', () => {
+  it('asks for one move and keeps the answer while the move is unchanged', async () => {
+    const explain = vi.fn(async () => ({ text: 'Two sentences. About the move.', source: 'template' as const }));
+    const { result } = renderHook(() => useFuture({ explain }));
+    await waitForReady(result);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    const move = result.current.moves.data[0]!;
+    expect(result.current.explanations[move.id]).toBeUndefined();
+
+    act(() => result.current.explain(move.id));
+    expect(result.current.explanations[move.id]).toEqual({ status: 'loading' });
+    await waitFor(() => expect(result.current.explanations[move.id]?.status).toBe('ready'));
+    expect(result.current.explanations[move.id]).toEqual({
+      status: 'ready', data: { text: 'Two sentences. About the move.', fromAi: false },
+    });
+    expect(explain).toHaveBeenCalledTimes(1);
+    expect((explain.mock.calls[0] as unknown[])[0]).toEqual({ move });
+
+    // A profile change moves the numbers: the old sentence no longer applies.
+    act(() => useAppStore.getState().setSpending('rentUtilities', 1500));
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    expect(result.current.moves.data.find((m) => m.id === move.id)?.effect10y).not.toBe(move.effect10y);
+    expect(result.current.explanations[move.id]).toBeUndefined();
+  });
+
+  it('maps a failed request to a VMError and can retry', async () => {
+    const explain = vi.fn()
+      .mockRejectedValueOnce(new ApiError('limited', 429))
+      .mockResolvedValueOnce({ text: 'Retry worked. Fine.', source: 'ai' });
+    const { result } = renderHook(() => useFuture({ explain }));
+    await waitForReady(result);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    const id = result.current.moves.data[0]!.id;
+    act(() => result.current.explain(id));
+    await waitFor(() => expect(result.current.explanations[id]).toEqual({ status: 'error', error: { kind: 'rateLimited' } }));
+    act(() => result.current.explain(id));
+    await waitFor(() => expect(result.current.explanations[id]).toEqual({
+      status: 'ready', data: { text: 'Retry worked. Fine.', fromAi: true },
+    }));
+  });
+
+  it('ignores an unknown move id', async () => {
+    const explain = vi.fn();
+    const { result } = renderHook(() => useFuture({ explain }));
+    await waitForReady(result);
+    act(() => result.current.explain('nope'));
+    expect(explain).not.toHaveBeenCalled();
+  });
+});
+
+describe('howWeCalculate', () => {
+  it('lists the forecast and moves assumptions with their sources or assumption flags', () => {
+    const area = areaByZip('75206');
+    const vm = howWeCalculate({ zip: '75206' });
+    expect(vm.forecast.map((a) => a.id)).toEqual([
+      'inflation', 'incomeGrowth', 'returnAnnualNominal', 'cashYieldAnnual', 'cardAprDefault', 'cardMinPayment',
+      'retirementShareDefault', 'estimateSpread',
+    ]);
+    expect(vm.moves.map((a) => a.id)).toEqual([
+      'payCardExtraShareOfSurplus', 'payCardExtraStep', 'cutCategoryShare', 'cancelSubscriptionsShare',
+    ]);
+    const byId = Object.fromEntries([...vm.forecast, ...vm.moves].map((a) => [a.id, a]));
+    expect(byId.inflation).toEqual({
+      id: 'inflation', value: { kind: 'ratePerYear', value: area.cpiYoY.value }, source: area.cpiYoY.source, isAssumption: false,
+    });
+    expect(byId.cardAprDefault).toEqual({
+      id: 'cardAprDefault', value: { kind: 'ratePerYear', value: cardAprDefault.value }, source: cardAprDefault.source,
+      isAssumption: false,
+    });
+    expect(byId.returnAnnualNominal).toMatchObject({ value: { value: returnAnnualNominal.value }, source: null, isAssumption: true });
+    expect(byId.estimateSpread).toMatchObject({ value: { kind: 'spread', value: estimateSpread.value }, isAssumption: true });
+    expect(byId.incomeGrowth!.value).toEqual({ kind: 'sameAsInflation' });
+    for (const a of [...vm.forecast, ...vm.moves]) expect(a.source !== null || a.isAssumption).toBe(true);
+  });
+
+  it('falls back to the engine inflation assumption for an unknown ZIP', () => {
+    expect(howWeCalculate({ zip: '00000' }).forecast[0]).toEqual({
+      id: 'inflation', value: { kind: 'ratePerYear', value: inflationAnnualFallback.value }, source: null, isAssumption: true,
+    });
+    expect(howWeCalculate({}).forecast[0]!.isAssumption).toBe(true);
+  });
+
+  it('is exposed by useFuture for the profile', async () => {
+    const { result } = renderHook(() => useFuture());
+    await waitForReady(result);
+    expect(result.current.howWeCalculate).toEqual(howWeCalculate(cloneProfileDemo()));
+  });
+});
+
+describe('moveTarget', () => {
+  const base = { level: 1 as const, effect10y: 100 };
+  it('reads the extra payment or the category amount from the patch', () => {
+    expect(moveTarget({ ...base, id: 'payCardFirst:card-1', kind: 'payCardFirst', patch: { debts: [{ id: 'card-1', extraPayment: 250 }] } }))
+      .toEqual({ kind: 'extraPayment', debtId: 'card-1', monthly: 250 });
+    expect(moveTarget({ ...base, id: 'cutCategory:eatingOut', kind: 'cutCategory', category: 'eatingOut', patch: { spending: { eatingOut: 272 } } }))
+      .toEqual({ kind: 'spendingTo', category: 'eatingOut', monthly: 272 });
+    expect(moveTarget({ ...base, id: 'cancelSubscriptions', kind: 'cancelSubscriptions', patch: { spending: { subscriptions: 60 } } }))
+      .toEqual({ kind: 'spendingTo', category: 'subscriptions', monthly: 60 });
+    expect(moveTarget({ ...base, id: 'x', kind: 'hsa', level: 2, patch: { retirementShare: 0.1 } })).toBeNull();
+  });
+
+  it('is set on every ranked move of the demo profile', async () => {
+    const { result } = renderHook(() => useFuture());
+    await waitForReady(result);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    for (const m of result.current.moves.data) expect(m.target).not.toBeNull();
   });
 });

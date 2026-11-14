@@ -5,15 +5,22 @@ import { useMemo, useState } from 'react';
 import { runEngine } from '@/lib/model/errors';
 import { displayForecast, estimatedFields } from '@/lib/model/profile';
 import { useAppReady, useAppStore } from '@/state';
-import type { FutureVM } from './types';
+import { howWeCalculate } from './howWeCalculate';
+import type { FutureVM, MoveVM } from './types';
+import { useMoveExplain, type ExplainFn } from './useMoveExplain';
 import { useNextMoves } from './useNextMoves';
 
-export function useFuture(): FutureVM {
+const NO_MOVES: MoveVM[] = [];
+
+export function useFuture(opts: { explain?: ExplainFn } = {}): FutureVM {
   const ready = useAppReady();
   const profile = useAppStore((s) => s.profile);
   const committedMove = useAppStore((s) => s.committedMove);
   const [todaysDollars, setTodaysDollars] = useState(true);
+  const [compareOn, setCompareOn] = useState(false);
   const nextMoves = useNextMoves(profile);
+  const rankedMoves = nextMoves.moves.status === 'ready' ? nextMoves.moves.data : NO_MOVES;
+  const { explanations, explain } = useMoveExplain(rankedMoves, opts.explain);
 
   const result = useMemo(() => runEngine(() => displayForecast(profile, todaysDollars)), [profile, todaysDollars]);
 
@@ -22,6 +29,18 @@ export function useFuture(): FutureVM {
     const preview = runEngine(() => displayForecast(applyPatch(profile, committedMove.patch), todaysDollars));
     return preview.status === 'ready' ? { moveId: committedMove.id, in10y: preview.data.in10y } : null;
   }, [committedMove, profile, todaysDollars]);
+
+  // Compare with the committed move while it is ranked (rankMoves always returns it while it helps),
+  // else with the best move.
+  const compareMove = rankedMoves.find((m) => m.isCommitted) ?? rankedMoves[0] ?? null;
+
+  const withMove = useMemo(() => {
+    if (!compareOn || !compareMove) return null;
+    const r = runEngine(() => displayForecast(applyPatch(profile, compareMove.patch), todaysDollars));
+    return r.status === 'ready' ? { moveId: compareMove.id, points: r.data.points, in10y: r.data.in10y } : null;
+  }, [compareOn, compareMove, profile, todaysDollars]);
+
+  const assumptionsVM = useMemo(() => howWeCalculate(profile), [profile]);
 
   const band = useMemo(
     () => ({ isZero: !hasEstimates(profile), estimatedFields: estimatedFields(profile) }),
@@ -44,5 +63,12 @@ export function useFuture(): FutureVM {
     in10y: result.status === 'ready' ? result.data.in10y : empty,
     band,
     committedPreview,
+    compareMove,
+    compareOn,
+    setCompareOn,
+    withMove,
+    explanations,
+    explain,
+    howWeCalculate: assumptionsVM,
   };
 }

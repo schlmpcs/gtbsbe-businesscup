@@ -1,30 +1,23 @@
-import Link from 'next/link';
-import { common, screenTitles } from '@/copy';
-import { SCREEN_IDS, SCREEN_ROUTES } from '@/lib/screens';
-import { ScreenPage } from './_components/ScreenPage';
+'use client';
 
-// S1 Today (forecast). Placeholder + nav to every screen until Y10 lands.
+// S1 Today (`/`): thin route. The view-model hook feeds the presentational screen.
+import Link from 'next/link';
+import { useToday } from '@/features/forecast/model/useToday';
+import { TodayScreen, type TodayLinks } from '@/features/forecast/ui/TodayScreen';
+import { SCREEN_IDS, SCREEN_ROUTES } from '@/lib/screens';
+
+const screens = SCREEN_IDS.map((id) => ({ id, href: SCREEN_ROUTES[id] }));
+
+const links: TodayLinks = {
+  play: SCREEN_ROUTES.S2,
+  future: SCREEN_ROUTES.S10,
+  afford: SCREEN_ROUTES.S11,
+  loan: SCREEN_ROUTES.S12,
+  profile: SCREEN_ROUTES.S5,
+  upload: SCREEN_ROUTES.S9,
+};
+
 export default function TodayPage() {
-  return (
-    <ScreenPage id="S1">
-      <nav aria-label={common.nav.title} className="mt-xl">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">{common.nav.title}</h2>
-        <ul className="mt-sm divide-y divide-border rounded-md border border-border">
-          {SCREEN_IDS.map((id) => (
-            <li key={id}>
-              <Link
-                href={SCREEN_ROUTES[id]}
-                className="flex items-baseline gap-md px-lg py-md hover:bg-surface"
-                data-screen={id}
-              >
-                <span className="w-10 shrink-0 font-mono text-xs text-text-muted">{id}</span>
-                <span>{screenTitles[id]}</span>
-                <span className="ml-auto font-mono text-xs text-text-muted">{SCREEN_ROUTES[id]}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </ScreenPage>
-  );
+  const vm = useToday();
+  return <TodayScreen vm={vm} links={links} screens={screens} Link={Link} />;
 }
