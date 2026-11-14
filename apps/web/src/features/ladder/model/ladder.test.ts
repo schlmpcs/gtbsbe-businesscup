@@ -11,8 +11,8 @@ import type { ParseFn } from '@/lib/model/useParseConfirm';
 import { displayForecast, thisMonth } from '@/lib/model/profile';
 import { useAppStore, useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
-import { useBalanceSheet } from './useBalanceSheet';
-import { useClosestLife } from './useClosestLife';
+import { detectedDebtPayments, useBalanceSheet } from './useBalanceSheet';
+import { differentiatorsFor, useClosestLife } from './useClosestLife';
 import { useGuessYourself } from './useGuessYourself';
 import { useLadderProgress } from './useLadderProgress';
 import { useQuickSliders } from './useQuickSliders';
@@ -459,5 +459,31 @@ describe('debtsChanged / startingDebts', () => {
     expect(startingDebts('no-such-card', cardsSample)).toBeNull();
     const withCar = cardsSample.find((c) => c.car)!;
     expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, getArea(withCar.zip)).debts);
+  });
+});
+
+describe('JF13 / JF17 helpers', () => {
+  const item = (category: CostCategory, amount: number) => ({
+    id: category, category, amount, source: { name: 'test', year: 2026 }, isEstimate: true,
+  });
+  it('differentiatorsFor: car vs no car, childcare, and the area tier among same-size cards', () => {
+    const chips = differentiatorsFor([
+      { available: true, bedrooms: 1, carPrice: null, items: [item('rentUtilities', 1000)] },
+      { available: true, bedrooms: 1, carPrice: 62000, items: [item('rentUtilities', 2000), item('car', 1300)] },
+      { available: true, bedrooms: 2, carPrice: 18000, items: [item('rentUtilities', 1500), item('car', 600), item('childcare', 1100)] },
+      { available: false, bedrooms: 1, carPrice: null, items: [] },
+    ]);
+    expect(chips[0]).toEqual([{ kind: 'noCar' }, { kind: 'cheaperArea', amount: 1000 }]);
+    expect(chips[1]).toEqual([{ kind: 'car', amount: 1300 }, { kind: 'pricierArea', amount: 2000 }]);
+    expect(chips[2]).toEqual([{ kind: 'childcare', amount: 1100 }]);
+    expect(chips[3]).toEqual([]);
+  });
+  it('detectedDebtPayments: mean over the statement months that have debt payments', () => {
+    expect(detectedDebtPayments([])).toBeNull();
+    expect(detectedDebtPayments([{ totals: { groceries: 300 } }])).toBeNull();
+    expect(detectedDebtPayments([{ totals: { debtPayments: 400 } }, { totals: { debtPayments: 200 } }, { totals: {} }])).toEqual({
+      monthlyPayment: 300,
+      months: 2,
+    });
   });
 });

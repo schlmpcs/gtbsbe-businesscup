@@ -26,29 +26,27 @@ describe('whyLine (S10)', () => {
     // $9,716 out, $6,000 in: $3,716 short. Cash 24,000 − 3,716·m: 1,704 left after month 6,
     // gone in month 7 (24,000 / 3,716 = 6.46).
     expect(whyLine(profile(6000, 9716, 24_000), ZERO)).toEqual({
-      income: 6000,
+      takeHome: 6000,
       outflow: 9716,
-      short: 3716,
-      cashRunsOutInMonths: 7,
+      cashOutMonth: 7,
     });
   });
 
   it('cash that covers the gap exactly runs out in that month', () => {
     // $1,000 short, $3,000 cash: 0 left at the end of month 3.
-    expect(whyLine(profile(4000, 5000, 3000), ZERO).cashRunsOutInMonths).toBe(3);
+    expect(whyLine(profile(4000, 5000, 3000), ZERO).cashOutMonth).toBe(3);
   });
 
   it('earning more than goes out: not short, no run-out month', () => {
     expect(whyLine(profile(5000, 4000, 1000), ZERO)).toEqual({
-      income: 5000,
+      takeHome: 5000,
       outflow: 4000,
-      short: 0,
-      cashRunsOutInMonths: null,
+      cashOutMonth: null,
     });
   });
 
   it('short, but cash lasts past 10 years: no run-out month', () => {
     // $100 short, $20,000 cash: 200 months > 120.
-    expect(whyLine(profile(4000, 4100, 20_000), ZERO).cashRunsOutInMonths).toBeNull();
+    expect(whyLine(profile(4000, 4100, 20_000), ZERO).cashOutMonth).toBeNull();
   });
 });

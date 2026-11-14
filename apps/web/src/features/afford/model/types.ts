@@ -36,8 +36,6 @@ export type AffordResultVM = {
   cheapestWay: AffordResult['cheapestWay'];
   /** False when no way to pay fits now: the UI says so instead of recommending `cheapestWay`. */
   cheapestWayFits: boolean;
-  /** The outcome first: net worth in 10 years with and without (mid, nominal). */
-  outcome: AffordOutcomeVM;
   /** The goal effect, when a goal is set; null otherwise. */
   goalEffect: AffordGoalEffectVM | null;
   /** canAfford's forecasts are nominal (not today's dollars). */
@@ -64,9 +62,6 @@ export type AffordWorkTimeVM = {
   /** Take-home pay is an estimate. */
   isEstimate: boolean;
 };
-
-/** Net worth in 10 years with vs without; `cost` = without − with (below 0 = the purchase adds net worth). */
-export type AffordOutcomeVM = { with10y: Money; without10y: Money; cost: Money };
 
 /**
  * When the plan reaches the goal's target (today's dollars), with the purchase vs without.

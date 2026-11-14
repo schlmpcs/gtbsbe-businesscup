@@ -1,9 +1,12 @@
 // /duel (S2 Duel round, S3 Reveal, S3 Day result) in a real browser on the fixture duel: tap a
 // life → the reveal shows both monthly totals → next round; then the rest of the day to the result.
+// A duel API build (NEXT_PUBLIC_DUEL_SOURCE=api) runs duel-api.spec.ts instead.
 // Selectors come from the copy file and roles. Runs on the phone and desktop projects.
 import { expect, test, type Page } from '@playwright/test';
 import { duel as t } from '../src/copy/duel';
 import { forecast } from '../src/copy/forecast';
+
+test.skip(process.env.NEXT_PUBLIC_DUEL_SOURCE === 'api', 'the build plays the duel against the server: duel-api.spec.ts');
 
 let pageErrors: string[] = [];
 

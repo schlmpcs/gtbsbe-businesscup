@@ -1,12 +1,12 @@
 // S12 Loan Lab: compare up to 3 offers (engine compareLoans), the debt-load gauge, and an
 // extra-payment slider on the selected offer (engine loan). Starts from the fixture offers.
-import { compareLoans, loan, payoffOrder } from '@lifeguessr/engine';
+import { compareLoans, loan, payoffOrder, simulate } from '@lifeguessr/engine';
 import { LoanInputSchema, type Debt, type LoanInput, type Money } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { loanOffersSample } from '@/fixtures';
 import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
-import { areaRates, debtLoadGauge, thisMonth } from '@/lib/model/profile';
+import { areaRates, debtLoadGauge } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { useAppReady, useProfile } from '@/state';
@@ -80,16 +80,6 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
     return debtLoadGauge(probe.status === 'ready' ? probe.data : Number.NaN);
   }, [profile]);
 
-  // What is left each month today (rules engine, month 1), and after the selected offer's payment.
-  const surplusToday = useMemo(() => {
-    const r = runEngine(() => thisMonth(profile).surplus);
-    return r.status === 'ready' ? r.data : Number.NaN;
-  }, [profile]);
-  const leftOver = useMemo(
-    () => ({ before: surplusToday, after: selected?.result ? surplusToday - selected.result.monthly : null }),
-    [surplusToday, selected],
-  );
-
   const extra = useMemo(() => {
     if (!selected?.result) return null;
     const base = selected.result;
@@ -122,6 +112,13 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
       payoffMonth: plan.data.payoffMonth,
       totalInterest: plan.data.totalInterest,
     };
+  }, [profile, selected]);
+
+  const leftOver = useMemo(() => {
+    const r = runEngine(() => simulate(profile, 1, { rates: areaRates(profile) }).path[1]?.surplus ?? null);
+    if (r.status !== 'ready' || r.data === null) return null;
+    const before = r.data;
+    return { before, after: selected?.result ? before - selected.result.monthly : null };
   }, [profile, selected]);
 
   const addOffer = useCallback(
@@ -173,10 +170,10 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
       isEstimate: profile.takeHomePay.isEstimate || profile.debts.some((d) => d.minPayment.isEstimate),
       max: DEBT_LOAD_GAUGE_MAX,
     },
-    leftOver,
     extra,
     setExtraPayment: setExtra,
     payoffPlan,
     parse,
+    leftOver,
   };
 }

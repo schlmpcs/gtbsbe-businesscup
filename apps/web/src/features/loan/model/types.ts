@@ -75,11 +75,6 @@ export type LoanLabVM = {
   /** Debt-load gauge: today (before) and with the selected offer (after). */
   /** `max` is the end of the dial (a display scale; loads above it pin the needle). */
   gauge: { before: DebtLoadGaugeVM; after: DebtLoadGaugeVM | null; isEstimate: boolean; max: Rate };
-  /**
-   * Left over each month (take-home pay − spending − debt payments, this month): today, and with the
-   * selected offer's payment on top (null when no valid offer is selected). Below 0 = short.
-   */
-  leftOver: { before: Money; after: Money | null };
   /** Null when no valid offer is selected. */
   extra: ExtraPaymentVM | null;
   setExtraPayment: (value: Money) => void;
@@ -87,6 +82,11 @@ export type LoanLabVM = {
   payoffPlan: PayoffPlanVM | null;
   /** "28k at 6.9% for 5 years, $495 fees" → LoanInput; added (or replaces the selected offer when full). */
   parse: ParseConfirmVM<LoanInput>;
+  /**
+   * JF14: money left over each month (take-home − spending − debt payments, engine simulate, first month):
+   * today, and with the selected offer's payment added (null without a valid selected offer). Negative = short.
+   */
+  leftOver: { before: Money; after: Money | null } | null;
 };
 
 // ----- Debt payoff planner (M13): usePayoffPlanner() in ./usePayoffPlanner.ts ----------------------

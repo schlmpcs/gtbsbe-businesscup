@@ -227,18 +227,6 @@ export type CushionVM = {
 };
 
 /** S10 You in N years (the picked horizon) + Next Moves. */
-/**
- * The "why" under the headline (rules engine, this month, the user's inputs): take-home pay vs
- * everything that goes out. `short` = outflow − income when positive, else 0. `cashRunsOutInMonths`:
- * the first month cash is gone while short (null when not short, or not within 10 years).
- */
-export type WhyLineVM = {
-  income: Money;
-  outflow: Money;
-  short: Money;
-  cashRunsOutInMonths: number | null;
-};
-
 export type FutureVM = NextMovesVM & {
   status: 'loading' | 'ready' | 'error';
   error: VMError | null;
@@ -251,8 +239,6 @@ export type FutureVM = NextMovesVM & {
   today: ForecastPoint;
   /** Net worth at `horizonYears` (month 12·horizonYears), in the shown dollars. */
   atHorizon: ForecastPoint;
-  /** Why the number moves: pay vs outflow this month, and when cash runs out if short. */
-  why: WhyLineVM;
   /** Who made the numbers on screen (also on each move). Null until there is an answer. */
   source: ForecastSource | null;
   /**
@@ -286,6 +272,13 @@ export type FutureVM = NextMovesVM & {
   explain: (moveId: string) => void;
   /** The engine assumptions behind these numbers, for the "How we calculate" panel. */
   howWeCalculate: HowWeCalculateVM;
+  /**
+   * JF14 "why" line (./whyLine.ts): this month's take-home pay and everything that goes out (spending,
+   * debt payments, cash purchases), from the rules simulation of the profile at area rates;
+   * `cashOutMonth` = the first month cash is gone while more goes out than comes in (null otherwise or
+   * beyond 10 years, whatever horizon is picked). Null when the engine cannot run.
+   */
+  why: { takeHome: number; outflow: number; cashOutMonth: number | null } | null;
 };
 
 /** Two plain sentences about a move. `fromAi` = written by the model, else the server's template. */

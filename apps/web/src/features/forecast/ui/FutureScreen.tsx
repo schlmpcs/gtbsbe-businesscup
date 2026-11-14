@@ -1,6 +1,6 @@
-// S10 You in N years + Next Moves: the year picker, the headline number with its range, the forecast
-// chart with the range band, a comparison with a move, "Coming up" (life events, passed in by the
-// route), the ranked moves and "How we calculate".
+// S10 You in N years + Next Moves (JF14/JF16): one message (the headline number and a plain "why" line)
+// and one action (see the ranked moves). The goal, the chart with its range band, "Coming up" and
+// "How we calculate" sit behind disclosures.
 import type { ReactNode } from 'react';
 import { forecast as t, yearsPhrase } from '@/copy';
 import { Art, buttonClassName, Choice, cx, EstimateTag, ForecastChart, formatMoney, Money, Stack, Sticker } from '@/ui-kit';
@@ -31,6 +31,33 @@ export type FutureScreenProps = {
 };
 
 const CARD = 'rounded-xl bg-surface p-xl shadow-md';
+const MOVES_ID = 'next-moves';
+
+/** A secondary panel, closed by default (JF16: one main message, one main action per screen). */
+function Disclosure({ title, testId, children }: { title: string; testId?: string; children: ReactNode }) {
+  return (
+    <details className="group rounded-xl bg-surface p-lg shadow-md" data-testid={testId}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-display text-xl font-extrabold">
+        <span>{title}</span>
+        <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <div className="mt-md">{children}</div>
+    </details>
+  );
+}
+
+/** JF14: why the headline is what it is, in one plain sentence (engine numbers, formatted here). */
+function whyText(why: NonNullable<FutureVM['why']>): string {
+  const f = t.future;
+  const take = formatMoney(why.takeHome);
+  const out = formatMoney(why.outflow);
+  const gap = why.takeHome - why.outflow;
+  if (Math.abs(gap) < 1) return f.whyEven(take);
+  if (gap > 0) return f.whyLeft(take, out, formatMoney(gap));
+  return f.whyShort(take, out, formatMoney(-gap)) + (why.cashOutMonth !== null ? f.cashRunsOut(why.cashOutMonth) : '');
+}
 
 export function FutureScreen({ vm, links, Link, goal, events }: FutureScreenProps) {
   const f = t.future;
@@ -60,7 +87,11 @@ export function FutureScreen({ vm, links, Link, goal, events }: FutureScreenProp
             ) : (
               <Headline vm={vm} />
             )}
-            {goal}
+            {shown && (
+              <a href={`#${MOVES_ID}`} className={cx(buttonClassName({ variant: 'primary' }), 'self-start')}>
+                {f.seeMoves} <span aria-hidden="true">→</span>
+              </a>
+            )}
           </Stack>
 
           {/* Decoration: the house and its sticker repeat the headline number, nothing new. */}
@@ -74,11 +105,19 @@ export function FutureScreen({ vm, links, Link, goal, events }: FutureScreenProp
           </div>
         </section>
 
-        {shown && <ChartCard vm={vm} links={links} Link={Link} />}
+        <div id={MOVES_ID} className="scroll-mt-xl">
+          <NextMoves vm={vm} explanations={vm.explanations} onExplain={vm.explain} loading={loading} />
+        </div>
 
-        {events}
+        {goal && <Disclosure title={f.goalDisclosure} testId="goal-disclosure">{goal}</Disclosure>}
 
-        <NextMoves vm={vm} explanations={vm.explanations} onExplain={vm.explain} loading={loading} />
+        {shown && (
+          <Disclosure title={f.chartDisclosure} testId="chart-disclosure">
+            <ChartCard vm={vm} links={links} Link={Link} />
+          </Disclosure>
+        )}
+
+        {events && <Disclosure title={f.eventsDisclosure} testId="events-disclosure">{events}</Disclosure>}
 
         <HowWeCalculate vm={vm.howWeCalculate} source={vm.source} />
       </Stack>
@@ -126,7 +165,11 @@ function Headline({ vm }: { vm: FutureVM }) {
         {!vm.band.isZero && <span aria-hidden="true">·</span>}
         <span className="tabular-nums">{f.todayInline(formatMoney(vm.today.mid))}</span>
       </div>
-      <WhyLine why={vm.why} />
+      {vm.why && (
+        <p className="mt-md max-w-prose text-lg font-semibold" data-testid="future-why">
+          {whyText(vm.why)}
+        </p>
+      )}
       <div className="mt-sm flex flex-wrap items-center gap-sm text-sm">
         <SourceTag source={vm.source} />
         <span className="text-text-muted">{dollarsNote}</span>
@@ -157,26 +200,12 @@ function Headline({ vm }: { vm: FutureVM }) {
   );
 }
 
-/** Why the number moves: pay vs outflow this month and, if short, when cash runs out. Numbers from the view-model. */
-function WhyLine({ why }: { why: FutureVM['why'] }) {
-  const w = t.future.why;
-  const out = formatMoney(why.outflow);
-  const pay = formatMoney(why.income);
-  return (
-    <p data-testid="future-why" className="mt-md max-w-prose text-base">
-      {why.short > 0 ? w.short(out, pay, formatMoney(why.short)) : w.left(out, pay, formatMoney(why.income - why.outflow))}{' '}
-      {why.short > 0 && (why.cashRunsOutInMonths !== null ? w.runsOut(why.cashRunsOutInMonths) : w.lasts)}{' '}
-      <span className="text-sm text-text-muted">({w.source})</span>
-    </p>
-  );
-}
-
 function ChartCard({ vm, links, Link }: { vm: FutureVM; links: FutureScreenProps['links']; Link: LinkComponent }) {
   const f = t.future;
   const compareTitle = vm.compareMove ? moveTitle(vm.compareMove) : '';
   const band = bandText(vm.band.kind, vm.band.isZero);
   return (
-    <section className={CARD}>
+    <section>
       <div className="mb-md flex flex-col gap-x-xl sm:flex-row sm:flex-wrap">
         <Toggle checked={vm.todaysDollars} onChange={vm.setTodaysDollars}>
           {f.todaysDollarsToggle}

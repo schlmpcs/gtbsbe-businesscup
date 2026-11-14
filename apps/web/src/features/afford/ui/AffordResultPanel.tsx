@@ -106,7 +106,7 @@ function Fact({ value, label, note }: { value: ReactNode; label: string; note?: 
   );
 }
 
-/** The goal effect in one sentence (null when no goal is set). */
+/** The goal effect in one sentence (only when a goal is set). */
 function goalText(g: NonNullable<AffordResultVM['goalEffect']>): string {
   const target = formatMoney(g.target, { compact: true });
   if (g.reachYear === null || g.delayMonths === null) return t.result.goal.never(target);
@@ -114,47 +114,82 @@ function goalText(g: NonNullable<AffordResultVM['goalEffect']>): string {
   return g.delayMonths === 0 ? t.result.goal.sameTime(target, g.reachYear) : t.result.goal.later(target, g.reachYear, g.delayMonths);
 }
 
-/** The cost phrased as an effect on the user, never a bare signed number. */
-function costText(cost: number): string {
-  const amount = formatMoney(Math.abs(cost));
-  if (amount === formatMoney(0)) return t.result.outcome.free;
-  return cost > 0 ? t.result.outcome.costs(amount) : t.result.outcome.adds(amount);
+/**
+ * JF14: where you will be with vs without the purchase at the furthest horizon (rules engine, labeled),
+ * then the cost in words. No bare signed number as a headline.
+ */
+function WithVsWithout({ data }: { data: AffordResultVM }) {
+  const w = t.result.withVsWithout;
+  const row = [...data.horizons].sort((a, b) => b.month - a.month)[0];
+  if (!row) return null;
+  const when = w.at[row.month]!;
+  const diff = row.with.mid - row.without.mid;
+  const sentence =
+    Math.abs(diff) < 1
+      ? w.same(when)
+      : diff < 0
+        ? w.costs(formatMoney(-diff, { compact: true }), when)
+        : w.gains(formatMoney(diff, { compact: true }), when);
+  return (
+    <div data-testid="afford-horizons" className="flex w-full flex-col gap-sm">
+      <dl aria-label={w.label} className="grid grid-cols-2 gap-md">
+        <div className="flex min-w-0 flex-col gap-xs rounded-lg bg-bg p-md">
+          <dt className="order-2 text-sm text-text-muted">
+            {w.with} · {when}
+          </dt>
+          <dd className="order-1 font-display text-3xl font-extrabold tabular-nums">
+            <Money value={row.with.mid} compact />
+          </dd>
+        </div>
+        <div className="flex min-w-0 flex-col gap-xs rounded-lg bg-bg p-md">
+          <dt className="order-2 text-sm text-text-muted">
+            {w.without} · {when}
+          </dt>
+          <dd className="order-1 font-display text-3xl font-extrabold tabular-nums">
+            <Money value={row.without.mid} compact />
+          </dd>
+        </div>
+      </dl>
+      <p data-testid="afford-cost" className="text-lg font-semibold">
+        {sentence}
+      </p>
+      {data.goalEffect && (
+        <p data-testid="afford-goal-effect" className="text-lg">
+          {goalText(data.goalEffect)}
+        </p>
+      )}
+      <SourceLabel source={data.forecastSource} className="self-start" />
+    </div>
+  );
 }
 
-/**
- * Outcome first: net worth in 10 years with vs without (rules engine, labeled), the cost in words,
- * the goal effect, and the cheapest way to pay that fits. Every number comes from the view-model.
- */
-function Facts({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWithChoice }) {
-  const o = data.outcome;
+/** Collapsed (JF16): the other horizons and the cheapest way to pay. */
+function Details({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWithChoice }) {
   return (
-    <div data-testid={data.horizons.length > 0 ? 'afford-horizons' : undefined} className="flex flex-col gap-sm">
-      <section data-testid="afford-outcome" aria-label={t.result.outcome.label} className="flex flex-col gap-xs rounded-xl bg-surface p-xl shadow-md">
-        <p className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">
-          {t.result.outcome.withVsWithout(formatMoney(o.with10y, { compact: true }), formatMoney(o.without10y, { compact: true }))}
-        </p>
-        <p className="text-lg text-text-muted">{costText(o.cost)}</p>
-        {data.goalEffect && (
-          <p data-testid="afford-goal-effect" className="text-lg font-semibold">
-            {goalText(data.goalEffect)}
-          </p>
-        )}
-      </section>
-      <dl aria-label={t.result.effectsLabel} className="grid grid-cols-1 gap-md sm:grid-cols-3">
-        <Fact
-          value={data.cheapestWayFits ? t.result.cheapestWays[data.cheapestWay] : t.result.cheapestNone}
-          label={t.result.cheapestTitle}
-          note={
-            !data.cheapestWayFits
-              ? t.result.cheapestNoneNote
-              : data.cheapestWay === chosenWay
-                ? t.result.cheapestSame
-                : t.result.cheapestDifferent
-          }
-        />
-      </dl>
-      {data.horizons.length > 0 && <SourceLabel source={data.forecastSource} className="self-start" />}
-    </div>
+    <details className="group rounded-xl bg-surface p-lg shadow-md">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-semibold">
+        <span>{t.result.detailsTitle}</span>
+        <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <div className="mt-md flex flex-col gap-md">
+        {data.horizons.length > 0 && <Horizons data={data} />}
+        <dl className="grid grid-cols-1 gap-md">
+          <Fact
+            value={data.cheapestWayFits ? t.result.cheapestWays[data.cheapestWay] : t.result.cheapestNone}
+            label={t.result.cheapestTitle}
+            note={
+              !data.cheapestWayFits
+                ? t.result.cheapestNoneNote
+                : data.cheapestWay === chosenWay
+                  ? t.result.cheapestSame
+                  : t.result.cheapestDifferent
+            }
+          />
+        </dl>
+      </div>
+    </details>
   );
 }
 
@@ -270,9 +305,10 @@ export function AffordVerdictTile({ result, rules, invalidFields, chosenWay }: O
         }
       >
         <Verdict data={data} rules={rules} />
+        <WithVsWithout data={data} />
         <HowWeDecide data={data} />
       </AnswerCard>
-      <Facts data={data} chosenWay={chosenWay} />
+      <Details data={data} chosenWay={chosenWay} />
     </div>
   );
 }
@@ -290,14 +326,6 @@ export function AffordEffects({ result, purchaseLabel }: Pick<AffordResultPanelP
         compare={{ label: t.result.chartWithout, points: data.withoutPoints }}
         footnote={t.result.chartFootnote}
       />
-      {data.horizons.length > 0 && (
-        <details className="mt-md">
-          <summary className="cursor-pointer text-sm font-medium text-text-muted">{t.result.horizonsTitle}</summary>
-          <div className="mt-sm">
-            <Horizons data={data} />
-          </div>
-        </details>
-      )}
     </Card>
   );
 }

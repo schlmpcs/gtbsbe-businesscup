@@ -99,6 +99,19 @@ export const afford = {
       60: 'net worth in 5 years, vs not buying',
       120: 'net worth in 10 years, vs not buying',
     } as Record<number, string>,
+    /** JF14: where you will be with vs without the purchase (amounts formatted by the UI), not a signed delta. */
+    withVsWithout: {
+      label: 'Where you’ll be, with vs without it',
+      with: 'With it',
+      without: 'Without it',
+      /** Under each amount: the horizon it is read at. */
+      at: { 1: 'after this month', 12: 'in 1 year', 60: 'in 5 years', 120: 'in 10 years' } as Record<number, string>,
+      /** The cost in words; `amount` is the positive difference, formatted. */
+      costs: (amount: string, when: string) => `It costs you about ${amount} of net worth ${when}.`,
+      gains: (amount: string, when: string) => `It leaves you about ${amount} ahead ${when}.`,
+      same: (when: string) => `It barely changes your net worth ${when}.`,
+    },
+    detailsTitle: 'Details: other years and the cheapest way to pay',
     verdicts: {
       fits: 'Yes, it fits.',
       wait: (n: number) => `Yes, in ${months(n)}.`,
@@ -128,14 +141,6 @@ export const afford = {
     horizonsCaption: 'Net worth with and without the purchase, in future (nominal) dollars',
     horizonHeaders: { when: 'When', with: 'With it', without: 'Without it', delta: 'Difference' },
     horizons: { 1: 'After this month', 12: 'In 1 year', 60: 'In 5 years', 120: 'In 10 years' } as Record<number, string>,
-    /** Outcome first (amounts already formatted): with vs without in 10 years, then the cost in words. */
-    outcome: {
-      label: 'Net worth in 10 years',
-      withVsWithout: (withIt: string, without: string) => `In 10 years: ${withIt}, vs ${without} without.`,
-      costs: (amount: string) => `This costs you ${amount} of future net worth.`,
-      adds: (amount: string) => `This adds ${amount} to your future net worth.`,
-      free: 'This doesn’t change your future net worth.',
-    },
     /** The goal effect (target already formatted). */
     goal: {
       label: 'Your goal',

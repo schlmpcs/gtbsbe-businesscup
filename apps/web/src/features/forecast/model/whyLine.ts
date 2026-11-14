@@ -3,7 +3,9 @@
 // values), never the AI forecast, so the line is labeled as computed from the inputs.
 import { simulate, type ForecastRates } from '@lifeguessr/engine';
 import type { Profile } from '@lifeguessr/types';
-import type { WhyLineVM } from './types';
+import type { FutureVM } from './types';
+
+export type WhyLine = NonNullable<FutureVM['why']>;
 
 /** How far ahead the run-out month is looked for. */
 export const WHY_LINE_MONTHS = 120;
@@ -11,7 +13,8 @@ export const WHY_LINE_MONTHS = 120;
 /** Cash below this counts as gone (absorbs floating-point dust; the engine floors cash at 0). */
 const CASH_GONE = 0.5;
 
-export function whyLine(p: Profile, rates: Partial<ForecastRates>): WhyLineVM {
+/** `outflow` = income − surplus, so cash purchases and life events count; the run-out month is looked for over 10 years. */
+export function whyLine(p: Profile, rates: Partial<ForecastRates>): WhyLine {
   const path = simulate(p, WHY_LINE_MONTHS, { rates }).path;
   const m1 = path[1]!;
   const income = m1.income;
@@ -27,5 +30,5 @@ export function whyLine(p: Profile, rates: Partial<ForecastRates>): WhyLineVM {
       }
     }
   }
-  return { income, outflow, short, cashRunsOutInMonths };
+  return { takeHome: income, outflow, cashOutMonth: cashRunsOutInMonths };
 }

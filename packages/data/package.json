@@ -9,6 +9,7 @@
     "./cards": "./cards.ts",
     "./fixtures": "./fixtures/index.ts",
     "./fixtures/cards": "./fixtures/cards.ts",
+    "./fixtures/duelCards": "./fixtures/duelCards.ts",
     "./fixtures/node": "./fixtures/node.ts",
     "./fixtures/tools": "./fixtures/tools.ts",
     "./fixtures/*.json": "./fixtures/*.json",

@@ -93,13 +93,22 @@ export const forecast = {
     },
     /** First visit (no profile, no game yet): what the app is, in one look. No user numbers. */
     firstVisit: {
-      title: 'Which life costs more?',
-      body: 'Guess what strangers’ lives cost. Then see where yours is going.',
+      eyebrow: 'Budget planner that looks ahead',
+      title: 'See where your money is heading.',
+      body: 'Count your real month. See you in 10 years. Get your next best money move, ranked in dollars.',
+      start: 'Start with your month',
       play: 'Play',
-      sample: 'Try with sample data',
-      note: 'No sign-up. About a minute.',
+      sample: 'or try with sample data',
+      note: 'No sign-up. About a minute. Have a bank statement?',
+      upload: 'Import a CSV',
+      heroSticker: 'You in 10 years',
       stepsLabel: 'How it works',
-      steps: ['Play 5 quick rounds', 'Price your own month', 'See you in 10 years'],
+      steps: ['Count your real month', 'See where you’re heading', 'Your next best move'],
+      game: {
+        label: 'Daily game',
+        title: 'Which life costs more?',
+        body: 'Guess what strangers’ lives cost. 5 quick rounds, new every day.',
+      },
       vs: 'vs',
     },
     monthEnd: {
@@ -185,6 +194,7 @@ export const forecast = {
       },
     },
     allScreens: 'All screens',
+    allScreensIntro: 'Every screen in the app, for reviewers. Not linked from the landing.',
   },
 
   /** S10 You in N years + Next Moves (N = the picked horizon: 1, 3, 5 or 10). */
@@ -195,14 +205,6 @@ export const forecast = {
     /** The picker's visible label (a legend); its options are `yearsPhrase(years)`. */
     horizonLabel: 'Look ahead',
     headline: netWorthAt,
-    /** The "why" under the headline (amounts already formatted): this month's pay vs what goes out. */
-    why: {
-      short: (out: string, pay: string, short: string) => `You spend ${out} a month and earn ${pay}, so you’re ${short} short.`,
-      left: (out: string, pay: string, left: string) => `You earn ${pay} a month and spend ${out}, so ${left} a month is left over.`,
-      runsOut: (months: number) => (months === 1 ? 'Cash runs out this month.' : `Cash runs out in about ${months} months.`),
-      lasts: 'At this pace your cash lasts more than 10 years.',
-      source: 'From your inputs',
-    },
     todayLabel: 'Today',
     chartTitle: (years: number) => `Your net worth over the next ${years === 1 ? 'year' : `${years} years`}`,
     seriesLabel: 'Your plan',
@@ -220,6 +222,23 @@ export const forecast = {
     howLink: 'How we calculate',
     /** Shown while a new answer is on its way and the numbers on screen are the previous ones. */
     refreshing: 'Updating the forecast…',
+    /**
+     * JF14: one plain "why" line under the headline (amounts formatted by the UI, per month). `left` is
+     * take-home minus what goes out; `short` the gap when more goes out than comes in.
+     */
+    whyLeft: (takeHome: string, outflow: string, left: string) =>
+      `Why: you take home ${takeHome} a month and ${outflow} goes out, so about ${left} is left to save.`,
+    whyShort: (takeHome: string, outflow: string, short: string) =>
+      `Why: ${outflow} goes out each month but you take home ${takeHome}, so you fall ${short} short.`,
+    whyEven: (takeHome: string) => `Why: you take home ${takeHome} a month and about the same goes out.`,
+    /** Added to whyShort when the simulation's cash reaches zero within the horizon. */
+    cashRunsOut: (months: number) => ` At this pace your cash runs out in ${months === 1 ? '1 month' : `${months} months`}.`,
+    /** The one main action: the ranked moves below. */
+    seeMoves: 'See your next best moves',
+    /** JF16: secondary panels sit behind these disclosures. */
+    goalDisclosure: 'Set a goal',
+    chartDisclosure: 'Chart and range',
+    eventsDisclosure: 'Coming up in your life',
   },
 
   moves: {

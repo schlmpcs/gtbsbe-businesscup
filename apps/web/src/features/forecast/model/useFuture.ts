@@ -67,8 +67,13 @@ export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}):
     return r.status === 'ready' ? { moveId: compareMove.id, ...r.data } : null;
   }, [compareOn, compareMove, forecast, todaysDollars, horizonYears]);
 
+  // JF14 "why" line: the first simulated month's flows (rules engine; same for AI and rules answers).
+  const why = useMemo(() => {
+    const r = runEngine(() => whyLine(profile, areaRates(profile)));
+    return r.status === 'ready' ? r.data : null;
+  }, [profile]);
+
   const assumptionsVM = useMemo(() => howWeCalculate(profile), [profile]);
-  const why = useMemo(() => whyLine(profile, areaRates(profile)), [profile]);
 
   // Which inputs were estimates in the profile the numbers were made for, not in the live one: during a
   // refresh the user may have just made one exact, and the band on screen still has it in it.
@@ -92,7 +97,6 @@ export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}):
     yearly,
     today: points[0] ?? TODAY_EMPTY,
     atHorizon: shown.atHorizon,
-    why,
     source: shown.source,
     isRefreshing: forecast.status === 'ready' && forecast.isRefreshing,
     band,
@@ -104,5 +108,6 @@ export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}):
     explanations,
     explain,
     howWeCalculate: assumptionsVM,
+    why,
   };
 }

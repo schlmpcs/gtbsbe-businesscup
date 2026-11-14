@@ -323,6 +323,11 @@ export type DuelVM = {
   summary: DuelSummaryVM | null;
   /** Opened from a friend's challenge link (/duel?c=…). */
   challenged: boolean;
+  /**
+   * The day on screen ended while it was played (the server answered 409 `day_over`), so these are
+   * the new day's five: say so. Cleared by the next pick or hint.
+   */
+  newDay: boolean;
   pick: (letter: DuelLetter) => void;
   openHint: () => void;
   /** Next round, or the day result after round 5. */

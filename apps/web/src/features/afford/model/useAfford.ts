@@ -137,7 +137,6 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
         baselineFails: a.baselineFails,
         cheapestWay: a.cheapestWay,
         cheapestWayFits: a.cheapestWayFits,
-        outcome: { with10y: a.with.in10y.mid, without10y: a.without.in10y.mid, cost: a.without.in10y.mid - a.with.in10y.mid },
         goalEffect,
         todaysDollars: false,
         forecastSource: 'rules',

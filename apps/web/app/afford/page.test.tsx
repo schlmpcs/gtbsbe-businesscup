@@ -135,7 +135,6 @@ describe('AffordResultPanel', () => {
     baselineFails: false,
     cheapestWay: 'cash',
     cheapestWayFits: true,
-    outcome: { with10y: 0, without10y: 0, cost: 0 },
     goalEffect: null,
     todaysDollars: false,
     forecastSource: 'rules',

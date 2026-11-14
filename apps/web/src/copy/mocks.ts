@@ -40,18 +40,15 @@ export const mocks = {
     title: 'Keep the Camry or lease a RAV4?',
     titleOwn: 'Keep your car or lease a new one?',
     vs: 'VS',
-    /** Under each path: its own net worth at the horizon (today's dollars). */
-    effectLabel: 'Your net worth on this path',
+    /** Under each path: its 10-year net worth against the other path. */
+    effectLabel: 'Net worth vs the other path',
     effectBy: (year: number) => `by ${year}`,
-    /** The one-sentence answer above the paths (`amount` already formatted). */
-    verdict: {
-      keep: 'Keeping the Camry',
-      keepOwn: 'Keeping your car',
-      lease: 'Leasing the RAV4',
-      leaseOwn: 'Leasing a new car',
-      richer: (path: string, amount: string, year: number) => `${path} leaves you ${amount} richer by ${year}.`,
-      same: (year: number) => `Both paths leave you about the same by ${year}.`,
-    },
+    /** JF14: each path shows its own net worth (no ±); one sentence names the winner. */
+    levelLabel: (year: number) => `Net worth by ${year}`,
+    sentence: (subject: string, amount: string, year: number) => `${subject} leaves you ${amount} richer by ${year}.`,
+    sentenceSubject: { keep: 'Keeping the Camry', keepOwn: 'Keeping your car', lease: 'Leasing the RAV4', leaseOwn: 'Leasing a new car' },
+    detailsTitle: 'Loan left and monthly savings',
+    editDisclosure: 'Change the lease terms',
     better: 'Better path',
     /** Labels of the engine purchases (never shown as results). */
     purchaseLabels: { lease: 'Lease payment', signing: 'Due at signing' },

@@ -2,8 +2,10 @@
 
 // S12 Loan Lab (Figma Design v3, S12). All numbers come from useLoanLab(), which calls the engine's loan /
 // compareLoans / payoffOrder (and, for the planner section, comparePayoff). Nothing is computed here.
+// JF14/JF16: one message (offers + what is left over each month), secondary tools behind disclosures.
 import { loan as t } from '@/copy';
-import { Art, Stack } from '@/ui-kit';
+import { Art, cx, formatMoney, Money, Stack } from '@/ui-kit';
+import type { ReactNode } from 'react';
 import type { LinkComponent, LoanLabVM, PayoffPlannerVM } from '../model/types';
 import { DebtLoadGauges } from './DebtLoadGauges';
 import { ExtraPayment } from './ExtraPayment';
@@ -21,6 +23,47 @@ function Loading() {
       <div aria-hidden="true" className="h-2xl animate-pulse rounded-xl bg-surface" />
       <div aria-hidden="true" className="h-2xl animate-pulse rounded-xl bg-surface" />
     </div>
+  );
+}
+
+/** A secondary section, closed by default (JF16). */
+function Disclosure({ title, testId, children }: { title: string; testId?: string; children: ReactNode }) {
+  return (
+    <details className="group rounded-xl bg-surface p-lg shadow-md" data-testid={testId}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-display text-xl font-extrabold">
+        <span>{title}</span>
+        <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <div className="mt-md">{children}</div>
+    </details>
+  );
+}
+
+/** JF14: "left over each month after this loan", next to the debt load (engine numbers, formatted here). */
+function LeftOver({ leftOver, selectedName }: { leftOver: LoanLabVM['leftOver']; selectedName: string | null }) {
+  if (!leftOver) return null;
+  const l = t.leftOver;
+  const shown = leftOver.after !== null && selectedName !== null ? leftOver.after : leftOver.before;
+  const withLoan = leftOver.after !== null && selectedName !== null;
+  return (
+    <section aria-label={l.title} data-testid="loan-left-over" className="flex flex-col gap-xs rounded-xl bg-surface p-xl shadow-md">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">{l.title}</h2>
+      <p className={cx('font-display text-5xl font-extrabold leading-display tabular-nums', shown < 0 ? 'text-primary' : 'text-positive')}>
+        {shown < 0 ? l.short(formatMoney(-shown)) : <Money value={shown} />}
+      </p>
+      <p className="text-sm text-text-muted">
+        {withLoan ? (
+          <>
+            {l.after(selectedName)} · {l.vsToday(formatMoney(leftOver.before))}
+          </>
+        ) : (
+          l.today
+        )}
+      </p>
+      {shown < 0 && <p className="text-sm font-semibold">{l.shortNote}</p>}
+    </section>
   );
 }
 
@@ -63,14 +106,26 @@ export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payo
                 }}
               />
               {vm.offers.length > 0 && <LoanVerdict offers={vm.offers} />}
-              <LoanParse parse={vm.parse} canAddOffer={vm.canAddOffer} />
             </Stack>
-            <DebtLoadGauges gauge={vm.gauge} leftOver={vm.leftOver} selectedName={selectedName} />
-            <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-2">
-              <ExtraPayment extra={vm.extra} setExtraPayment={vm.setExtraPayment} selectedName={selectedName} />
-              {payoff ? null : <PayoffOrder plan={vm.payoffPlan} selectedName={selectedName} />}
+            <div className="grid grid-cols-1 items-stretch gap-xl lg:grid-cols-[2fr_3fr]">
+              <LeftOver leftOver={vm.leftOver} selectedName={selectedName} />
+              <DebtLoadGauges gauge={vm.gauge} selectedName={selectedName} />
             </div>
-            {payoff && <PayoffPlanner vm={payoff} selectedName={selectedName} Link={Link} />}
+            <Stack gap="md">
+              <Disclosure title={t.disclosures.extra} testId="extra-disclosure">
+                <ExtraPayment extra={vm.extra} setExtraPayment={vm.setExtraPayment} selectedName={selectedName} />
+              </Disclosure>
+              <Disclosure title={t.disclosures.payoff} testId="payoff-disclosure">
+                {payoff ? (
+                  <PayoffPlanner vm={payoff} selectedName={selectedName} Link={Link} />
+                ) : (
+                  <PayoffOrder plan={vm.payoffPlan} selectedName={selectedName} />
+                )}
+              </Disclosure>
+              <Disclosure title={t.disclosures.parse} testId="parse-disclosure">
+                <LoanParse parse={vm.parse} canAddOffer={vm.canAddOffer} />
+              </Disclosure>
+            </Stack>
             <p className="text-xs text-text-muted">{t.footnote}</p>
           </Stack>
         )}

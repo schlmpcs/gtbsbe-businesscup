@@ -22,6 +22,7 @@ import { useLifeEvents } from './model/useLifeEvents';
 import { useToday } from './model/useToday';
 import { FutureScreen } from './ui/FutureScreen';
 import { LifeEventsCard } from './ui/LifeEventsCard';
+import { ScreensIndex } from './ui/ScreensIndex';
 import { TodayScreen, type TodayLinks } from './ui/TodayScreen';
 
 let route: ReturnType<typeof mockForecastRoute>;
@@ -46,7 +47,7 @@ const links: TodayLinks = {
 
 function Today() {
   const vm = useToday({ now: new Date(2026, 10, 14) });
-  return <TodayScreen vm={vm} links={links} screens={[{ id: 'S1', href: '/' }, { id: 'S10', href: '/future' }]} Link={A} />;
+  return <TodayScreen vm={vm} links={links} Link={A} />;
 }
 
 function Future({ explain }: { explain?: ExplainFn }) {
@@ -94,12 +95,14 @@ const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
 
 describe('TodayScreen (S1) first visit', () => {
-  it('explains the app with Play and Try with sample data, and shows no numbers', async () => {
+  it('shows the product first (one primary CTA, the game as the hook) and no numbers or screen list', async () => {
     render(<Today />);
     const f = t.today.firstVisit;
     expect(await screen.findByRole('heading', { level: 1, name: f.title })).toBeInTheDocument();
     expect(screen.getByText(f.body)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: new RegExp(`^${f.play}`) })).toHaveAttribute('href', '/play');
+    expect(screen.getByRole('link', { name: new RegExp(`^${f.start}`) })).toHaveAttribute('href', '/me/guess');
+    expect(screen.getByRole('link', { name: f.upload })).toHaveAttribute('href', '/me/upload');
+    expect(within(screen.getByTestId('play')).getByRole('link', { name: new RegExp(`^${f.play}`) })).toHaveAttribute('href', '/play');
     expect(screen.getByRole('link', { name: f.sample })).toHaveAttribute('href', '/future?sample=1');
     expect(screen.getByText(f.note)).toBeInTheDocument();
     const steps = within(screen.getByRole('region', { name: f.stepsLabel })).getAllByRole('listitem');
@@ -107,7 +110,7 @@ describe('TodayScreen (S1) first visit', () => {
     expect(screen.queryByText(/\$\d/)).not.toBeInTheDocument();
     expect(screen.queryByTestId('at-horizon')).not.toBeInTheDocument();
     expect(screen.queryByTestId('month-end')).not.toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: t.today.allScreens }).querySelectorAll('a[data-screen]')).toHaveLength(2);
+    expect(screen.queryByRole('navigation', { name: t.today.allScreens })).not.toBeInTheDocument();
   });
 
   it('shows the usual Today once the sample life is loaded, without the sample note (the banner says it)', async () => {
@@ -147,18 +150,18 @@ describe('TodayScreen (S1)', () => {
     // Still the starting profile: one nudge, to build yours.
     expect(within(screen.getByTestId('nudge')).getByRole('link', { name: t.today.home.nudge.buildProfile })).toHaveAttribute('href', '/me/guess');
     expect(screen.queryByText(t.today.firstVisit.sample)).not.toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: t.today.allScreens }).querySelectorAll('a[data-screen]')).toHaveLength(2);
+    expect(screen.queryByRole('navigation', { name: t.today.allScreens })).not.toBeInTheDocument();
   });
 
   it('shows the goal verdict from the view-model under the house number', () => {
-    render(<TodayScreen vm={todayVm({ goal: { target: 250_000, years: 10, verdict: 'withinRange' } })} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen vm={todayVm({ goal: { target: 250_000, years: 10, verdict: 'withinRange' } })} links={links} Link={A} />);
     const goal = screen.getByTestId('today-goal');
     expect(goal).toHaveTextContent(goalCopy.verdictLabel.withinRange);
     expect(goal).toHaveTextContent(t.today.home.goalLine('$250,000', 10));
   });
 
   it('shows the cushion card: months of essentials, a meter, the next step, and the estimate tag', () => {
-    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} Link={A} />);
     const card = screen.getByTestId('cushion');
     expect(within(card).getByRole('heading', { name: cushionCopy.title })).toBeInTheDocument();
     expect(within(card).getByTestId('cushion-months')).toHaveTextContent(cushionCopy.months('2.3')); // 2.37 rounds down
@@ -175,7 +178,7 @@ describe('TodayScreen (S1)', () => {
         data: { monthsEssential: 7, monthsFull: 5, band: '6plus', bands: { thin: 1, okay: 3, solid: 6 }, next: null, isEstimate: true },
       },
     });
-    rerender(<TodayScreen vm={estimated} links={links} screens={[]} Link={A} />);
+    rerender(<TodayScreen vm={estimated} links={links} Link={A} />);
     expect(within(screen.getByTestId('cushion')).getByTestId('cushion-next')).toHaveTextContent(cushionCopy.top);
     expect(within(screen.getByTestId('cushion')).getByText(common.estimateTag)).toBeInTheDocument();
   });
@@ -188,19 +191,19 @@ describe('TodayScreen (S1)', () => {
   });
 
   it('shows a skeleton, never a number, while the forecast loads', () => {
-    render(<TodayScreen vm={todayVm({ forecastStatus: 'loading', source: null })} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen vm={todayVm({ forecastStatus: 'loading', source: null })} links={links} Link={A} />);
     const card = screen.getByTestId('at-horizon');
     expect(card.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(within(card).queryByText(/\$/)).not.toBeInTheDocument();
   });
 
   it('shows at most one nudge: none with the sample life, “make it exact” for estimates, none when all is exact', () => {
-    const { rerender } = render(<TodayScreen vm={todayVm({ isSample: true, isDemoProfile: true, hasEstimates: true })} links={links} screens={[]} Link={A} />);
+    const { rerender } = render(<TodayScreen vm={todayVm({ isSample: true, isDemoProfile: true, hasEstimates: true })} links={links} Link={A} />);
     expect(screen.queryByTestId('nudge')).not.toBeInTheDocument();
-    rerender(<TodayScreen vm={todayVm({ hasEstimates: true })} links={links} screens={[]} Link={A} />);
+    rerender(<TodayScreen vm={todayVm({ hasEstimates: true })} links={links} Link={A} />);
     expect(screen.getByTestId('nudge')).toHaveTextContent(t.today.home.nudge.estimates);
     expect(within(screen.getByTestId('nudge')).getByRole('link', { name: t.today.home.nudge.makeExact })).toHaveAttribute('href', '/me/upload');
-    rerender(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    rerender(<TodayScreen vm={todayVm()} links={links} Link={A} />);
     expect(screen.queryByTestId('nudge')).not.toBeInTheDocument();
   });
 
@@ -244,7 +247,7 @@ describe('TodayScreen (S1)', () => {
 
   it('says so, instead of a skeleton forever, when the forecast cannot be built', () => {
     const vm = todayVm({ forecastStatus: 'error', forecastError: { kind: 'unknown', message: 'x' }, source: null });
-    render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen vm={vm} links={links} Link={A} />);
     const card = screen.getByTestId('at-horizon');
     expect(within(card).getByRole('alert')).toHaveTextContent(t.errors.unknown);
     expect(card.querySelector('[aria-busy="true"]')).toBeNull();
@@ -257,9 +260,9 @@ describe('TodayScreen (S1)', () => {
       effect: 1234, horizonYears: 10 as const, patch: { spending: { other: 100 } }, isCommitted: true,
       target: { kind: 'spendingTo' as const, category: 'other' as const, monthly: 100 }, source: 'rules' as const,
     };
-    const { rerender } = render(<TodayScreen vm={todayVm({ committedMove: committed })} links={links} screens={[]} Link={A} />);
+    const { rerender } = render(<TodayScreen vm={todayVm({ committedMove: committed })} links={links} Link={A} />);
     expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeEnabled();
-    rerender(<TodayScreen vm={todayVm({ committedMove: committed, actionsDisabled: true })} links={links} screens={[]} Link={A} />);
+    rerender(<TodayScreen vm={todayVm({ committedMove: committed, actionsDisabled: true })} links={links} Link={A} />);
     expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeDisabled();
   });
 
@@ -268,7 +271,7 @@ describe('TodayScreen (S1)', () => {
       horizonYears: 1,
       topMove: { status: 'ready', data: moveVm({ effect: 513, horizonYears: 1 }) },
     });
-    render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen vm={vm} links={links} Link={A} />);
     const card = screen.getByTestId('at-horizon');
     expect(within(card).getByRole('heading', { name: 'You in 1 year' })).toBeInTheDocument();
     expect(within(card).getByText('Net worth in 1 year')).toBeInTheDocument();
@@ -280,7 +283,7 @@ describe('TodayScreen (S1)', () => {
       horizonYears: 3,
       committedMove: moveVm({ isCommitted: true, source: null, effect: 1234, horizonYears: 10 }),
     });
-    render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen vm={vm} links={links} Link={A} />);
     expect(within(screen.getByTestId('at-horizon')).getByRole('heading', { name: 'You in 3 years' })).toBeInTheDocument();
     expect(within(screen.getByTestId('today-move')).getByText('+$1,234 in 10 years')).toBeInTheDocument();
   });
@@ -319,9 +322,9 @@ describe('TodayScreen (S1)', () => {
   });
 
   it('shows the updating line from the view-model flag only', () => {
-    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} Link={A} />);
     expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument();
-    rerender(<TodayScreen vm={todayVm({ isRefreshing: true })} links={links} screens={[]} Link={A} />);
+    rerender(<TodayScreen vm={todayVm({ isRefreshing: true })} links={links} Link={A} />);
     expect(within(screen.getByTestId('at-horizon')).getByText(t.future.refreshing)).toBeInTheDocument();
   });
 
@@ -337,7 +340,7 @@ describe('TodayScreen (S1)', () => {
         },
       },
     });
-    render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen vm={vm} links={links} Link={A} />);
     const drifts = screen.getByTestId('month-end-drifts');
     expect(within(drifts).getByText(t.today.monthEnd.vsAverageValue('+$240'))).toBeInTheDocument();
     expect(within(drifts).getByText(t.today.monthEnd.drift(common.categories.eatingOut, '+$120'))).toBeInTheDocument();
@@ -366,13 +369,13 @@ describe('TodayScreen (S1) daily game copy', () => {
   it('duel: counts today’s five in the game card, then says it is done until tomorrow', () => {
     const p = t.today.playDuel;
     const { unmount } = render(
-      <TodayScreen vm={todayVm({ game: { kind: 'duel', date: '2026-11-14', played: 2, total: 5, finished: false, homes: [] } })} links={links} screens={[]} Link={A} />,
+      <TodayScreen vm={todayVm({ game: { kind: 'duel', date: '2026-11-14', played: 2, total: 5, finished: false, homes: [] } })} links={links} Link={A} />,
     );
     expect(within(screen.getByTestId('play')).getByRole('link', { name: p.continue(2, 5) })).toHaveAttribute('href', '/play');
     expect(screen.queryByText(/today’s homes/i)).not.toBeInTheDocument();
     unmount();
 
-    render(<TodayScreen vm={todayVm({ game: { kind: 'duel', date: '2026-11-14', played: 5, total: 5, finished: true, homes: [] } })} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen vm={todayVm({ game: { kind: 'duel', date: '2026-11-14', played: 5, total: 5, finished: true, homes: [] } })} links={links} Link={A} />);
     const game = screen.getByTestId('play');
     expect(within(game).getByText(p.doneSticker)).toBeInTheDocument();
     expect(within(game).getByText(p.doneScore(5, 5))).toBeInTheDocument();
@@ -382,14 +385,14 @@ describe('TodayScreen (S1) daily game copy', () => {
 
   it('slider (NEXT_PUBLIC_GAME_MODE=slider): the game card counts homes', () => {
     const homes = [{ id: 'a', metro: 'Austin, TX', played: true }, { id: 'b', metro: 'Boise, ID', played: false }];
-    render(<TodayScreen vm={todayVm({ game: { kind: 'slider', date: '2026-11-14', played: 1, total: 2, finished: false, homes } })} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen vm={todayVm({ game: { kind: 'slider', date: '2026-11-14', played: 1, total: 2, finished: false, homes } })} links={links} Link={A} />);
     const game = screen.getByTestId('play');
     expect(within(game).getByText(t.today.title)).toBeInTheDocument();
     expect(within(game).getByRole('link', { name: t.today.play.continue(1, 2) })).toHaveAttribute('href', '/play');
   });
 
-  it('lists a screen under the title it is given (S2 as the duel)', () => {
-    render(<TodayScreen vm={todayVm()} links={links} screens={[{ id: 'S2', href: '/play', title: 'Which life costs more?' }]} Link={A} />);
+  it('/screens lists a screen under the title it is given (S2 as the duel)', () => {
+    render(<ScreensIndex screens={[{ id: 'S2', href: '/play', title: 'Which life costs more?' }]} Link={A} />);
     expect(screen.getByRole('link', { name: /S2\s*Which life costs more\?/ })).toHaveAttribute('href', '/play');
   });
 });
@@ -726,10 +729,11 @@ describe('S10 “Coming up” (life events)', () => {
     for (const name of Object.values(le.shortcuts)) expect(within(card).getByRole('button', { name })).toBeEnabled();
     expect(within(card).getByRole('button', { name: le.custom })).toBeEnabled();
     expect(within(card).getByText(le.todaysDollars)).toBeInTheDocument();
-    // Under the forecast chart, above the moves.
+    // JF16: behind its own disclosure, under the moves and the chart.
     const chart = screen.getByRole('figure', { name: t.future.chartTitle(10) });
     expect(chart.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(card.compareDocumentPosition(screen.getByTestId('moves')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.compareDocumentPosition(screen.getByTestId('moves')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(card.closest('details')).toBe(screen.getByTestId('events-disclosure'));
   });
 
   it('adding a kid from the shortcut lists it as an estimate and lowers the headline', async () => {

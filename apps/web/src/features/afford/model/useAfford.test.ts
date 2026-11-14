@@ -52,10 +52,6 @@ describe('useAfford (S11)', () => {
     const ten = r.data.horizons[3]!;
     expect(ten.with).toEqual(expected.with.points[120]);
     expect(ten.deltaMid).toBeCloseTo(expected.with.points[120]!.mid - expected.without.points[120]!.mid, 6);
-    // Outcome first: with vs without in 10 years, and the cost as a positive "costs you" amount.
-    expect(r.data.outcome.with10y).toBe(expected.with.in10y.mid);
-    expect(r.data.outcome.without10y).toBe(expected.without.in10y.mid);
-    expect(r.data.outcome.cost).toBeCloseTo(-ten.deltaMid, 6);
     expect(r.data.cheapestWayFits).toBe(expected.cheapestWayFits);
     expect(r.data.goalEffect).toBeNull(); // no goal set
   });

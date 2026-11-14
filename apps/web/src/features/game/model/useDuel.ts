@@ -1,17 +1,21 @@
 // S2 Duel round, S3 Reveal, S3 Day result: one hook for the duel ("Which life costs more?").
 // Client components only (localStorage, timers). The source (./duelClient) holds the answers and
 // the picks; this hook keeps which round is on screen (localStorage, per day) and builds the VM.
+// When the server closes the day on screen (409 `day_over` on a pick or a hint, after New York
+// midnight and its grace period), the hook loads the new day's five and says so (`newDay`), as the
+// slider's usePlay reloads its set.
 import { DUEL_ROUND_COUNT } from '@lifeguessr/engine';
 import { DUEL_ROUNDS, type DuelLetter, type DuelRound } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { duel as t } from '@/copy/duel';
+import { ApiError } from '@/lib/api/http';
 import { usEasternDate } from '@/lib/dates';
 import { track, useTrackOnce } from '@/lib/events';
 import { toVMError } from '@/lib/model/errors';
 import type { VMError } from '@/lib/model/types';
 import { readStorage, writeStorage } from '@/lib/safeStorage';
 import { createDuelClient, type DuelClient, type DuelDay, type DuelProgress } from './duelClient';
-import { buildDuelCards, buildDuelDots, buildDuelHint, buildDuelReveal, buildDuelSummary } from './duelDerive';
+import { buildDuelCards, buildDuelDots, buildDuelHint, buildDuelReveal, buildDuelSummary, choiceOf } from './duelDerive';
 import { loadShareImage, shareImageOrText, type ShareOutcome } from './share';
 import type { DuelCopyStatus, DuelShareStatus, DuelVM } from './types';
 
@@ -45,6 +49,9 @@ async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+/** The server closed the day on screen (409 `day_over`): load the new day instead of an error. */
+const isDayOver = (err: unknown) => err instanceof ApiError && err.code === 'day_over';
+
 const firstOpenIndex = (picks: DuelProgress['picks']) => {
   const i = DUEL_ROUNDS.findIndex((r) => !picks[r]);
   return i === -1 ? DUEL_ROUND_COUNT : i;
@@ -75,6 +82,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
   const [copyStatus, setCopyStatus] = useState<DuelCopyStatus>('idle');
   const [shareStatus, setShareStatus] = useState<DuelShareStatus>('idle');
   const [now, setNow] = useState<Date | null>(null);
+  const [newDay, setNewDay] = useState(false);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -127,6 +135,14 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
 
   // ----- actions -----
 
+  /** The day on screen ended: drop its round state and load the new day's five. */
+  const dayOver = useCallback(() => {
+    setNewDay(true);
+    setPickError(null);
+    setHintStatus('idle');
+    setAttempt((a) => a + 1);
+  }, []);
+
   const pick = useCallback(
     (letter: DuelLetter) => {
       if (!day || !round || picking || progress.picks[round]) return;
@@ -134,23 +150,28 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
       setPickError(null);
       client.pick(round, letter, day.date).then(
         (result) => {
-          const picks = { ...progress.picks, [round]: { choice: letter, result } };
+          // A repeated pick answers the first pick's result: show the letter it was scored for.
+          const choice = choiceOf(result) ?? letter;
+          const picks = { ...progress.picks, [round]: { choice, result } };
           track({ name: 'duel_picked', props: { round, correct: result.correct } }, { once: `duel_pick:${day.date}:${round}` });
           if (day.duels.every((d) => picks[d.round])) {
             track({ name: 'game_finished', props: { homes: day.duels.length } }, { once: `duel_finished:${day.date}` });
           }
           if (!mounted.current) return;
-          setProgress((p) => ({ ...p, picks: { ...p.picks, [round]: { choice: letter, result } } }));
+          setProgress((p) => ({ ...p, picks: { ...p.picks, [round]: { choice, result } } }));
+          setNewDay(false);
           setIndex(viewIndex); // a reload shows this reveal, not the next round
         },
         (err: unknown) => {
-          if (mounted.current) setPickError(toVMError(err));
+          if (!mounted.current) return;
+          if (isDayOver(err)) dayOver();
+          else setPickError(toVMError(err));
         },
       ).finally(() => {
         if (mounted.current) setPicking(null);
       });
     },
-    [client, day, round, picking, progress.picks, viewIndex, setIndex],
+    [client, day, round, picking, progress.picks, viewIndex, setIndex, dayOver],
   );
 
   const openHint = useCallback(() => {
@@ -161,13 +182,16 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
         if (!mounted.current) return;
         setProgress((p) => ({ ...p, hints: { ...p.hints, [round]: hint } }));
         setHintStatus('idle');
+        setNewDay(false);
         track({ name: 'hint_opened', props: { round } }, { once: `duel_hint:${day.date}:${round}` });
       },
-      () => {
-        if (mounted.current) setHintStatus('error');
+      (err: unknown) => {
+        if (!mounted.current) return;
+        if (isDayOver(err)) dayOver();
+        else setHintStatus('error');
       },
     );
-  }, [client, day, round, hintStatus, progress.hints, progress.picks, picking]);
+  }, [client, day, round, hintStatus, progress.hints, progress.picks, picking, dayOver]);
 
   const next = useCallback(() => {
     if (round && progress.picks[round]) {
@@ -270,6 +294,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
     reveal: status === 'ready' ? reveal : null,
     summary: status === 'ready' ? summary : null,
     challenged: opts.challenged ?? false,
+    newDay: status === 'ready' && newDay,
     pick,
     openHint,
     next,
