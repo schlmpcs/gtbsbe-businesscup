@@ -1,6 +1,54 @@
 # TASKS.md — split and status
 
-Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) + T12 (the house scene, sized at Hour 0), **Kiko** (UI/UX) on Figma, tokens and the sprite kit. Each task is a GitHub issue. Every task can start on fixtures. "Depends on" names the real piece that later replaces a fixture. Update the checkboxes as you go.
+Split for the 24h build: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) + T12 (the house scene, sized at Hour 0), **Kiko** (UI/UX) on Figma, tokens and the sprite kit. Each task is a GitHub issue. Every task can start on fixtures. "Depends on" names the real piece that later replaces a fixture. Update the checkboxes as you go.
+
+## Pivot: a Monarch-style planner (epic #160, tasks MP1–MP19)
+
+Decided Nov 15 (`docs/PIVOT.md`): one app with a sidebar (Dashboard, Accounts, Transactions, Cash Flow, Budget, Recurring, Goals, Plan), the Duel as the front door, the rules engine and Monte Carlo as the forecast source, the AI forecast as a labeled second opinion. **No cut line:** every task ships. Order still matters: follow "Depends on" so the demo path works at every merge, and every merged PR keeps the live link working. The tables for the 24h build (Hour 0, Y, T, D) below stay as the record of what was built.
+
+Each task is a GitHub issue; the issue body is its spec. `[x]` done, `[~]` in review, `[ ]` open.
+
+In the pivot Kiko also builds the `ui/*` of the new screens (MP14–MP17): props in, events out, no change to a model, the engine or an API. The task ID `P1` in Amir's 24h table (the Pro paywall demo) is a task; screen IDs P1–P12 are in `ARCHITECTURE.md`.
+
+| Done | ID | Issue | Task | Owner | Depends on | Blocks |
+| --- | --- | --- | --- | --- | --- | --- |
+| [~] | MP1 | #161 | Docs: record the pivot decisions (CLAUDE.md, PRODUCT, ARCHITECTURE, ENGINEERING, TASKS, PIVOT) | Amir | — | nothing (do early so everyone codes against the same rules) |
+| [ ] | MP2 | #162 | Contracts + fixtures + zod schemas: `Account`, `PlanEvent`, `Scenario`, `PlanResult`, `MonteCarlo*`, `BudgetRow`, `CashFlowSummary`, stored `Transaction`; engine stubs. **First** | Amir | — | MP3–MP11, MP15–MP17 |
+| [ ] | MP3 | #163 | Engine `plan()`: yearly plan to the end age, shortfall, withdrawal order, savings split | Amir | MP2, MP4, MP8 (stub until they land) | MP5, MP6, MP7 |
+| [ ] | MP4 | #164 | Engine `expandEvent()` + `defaultEvent()` from area data (Buy a home, Have a kid, New job, Retire, …) | Aibek | MP2 | MP3, MP7 |
+| [ ] | MP5 | #165 | Engine `monteCarlo()`: seeded paths, p10/p50/p90 bands, success rate, histograms | Amir | MP3 | MP6, MP7 (AI band), MP16 |
+| [ ] | MP6 | #166 | Scenarios, Compare, Next Moves ranked on the plan | Amir | MP3, MP5 | MP7 |
+| [ ] | MP7 | #167 | `/plan` view-models (`usePlan`, `useScenarios`, `useEventEditor`, `useAssumptions`, `useChanceOfSuccess` in a worker) + the AI line | Amir | MP2 (fixtures first); MP3–MP6 to wire | MP15, MP16 |
+| [ ] | MP8 | #168 | Accounts: `accountsToProfile`, net worth, browser store, onboarding → accounts | Aibek | MP2 | MP3, MP11, MP17 |
+| [ ] | MP9 | #169 | Engine `budgetRows()` and `cashFlowSummary()` (incl. Sankey data) | Aibek | MP2 | MP11, MP17 |
+| [ ] | MP10 | #170 | Transactions: browser-only store, CSV import into it, manual add, category override | Aibek | MP2, T6/T7 | MP11, MP17 |
+| [ ] | MP11 | #171 | View-models for Dashboard, Accounts, Transactions, Cash Flow, Budget, Recurring, Goals | Aibek | MP2 (fixtures first); MP8–MP10 to wire | MP17 |
+| [ ] | MP12 | #172 | Design: shell, design-system extension and `/plan` (Plan, event panels, Assumptions, Compare, Chance of success) | Kiko | — | MP14, MP15, MP16 |
+| [ ] | MP13 | #173 | Design: Dashboard, Accounts, Transactions, Cash Flow, Budget, Recurring, Goals, onboarding bridge from the Duel | Kiko | MP12 (system) | MP17 |
+| [ ] | MP14 | #174 | Frontend: app shell (sidebar + bottom tabs), routing, redirects, old screens out of the navigation | Kiko | MP12 (shell frames) | MP15–MP17 |
+| [ ] | MP15 | #175 | Frontend: `/plan` UI (KPIs, chart with events, tables, Add event, event editors, Assumptions, Compare, Next Moves, AI line) | Kiko | MP7 (`plan/model/types.ts` on fixtures), MP12, MP14 | — |
+| [ ] | MP16 | #176 | Frontend: Chance of success (gauge, path fan, band, histograms, settings) | Kiko | MP7 (`useChanceOfSuccess` on `monteCarlo.demo.json`), MP12 | — |
+| [ ] | MP17 | #177 | Frontend: Dashboard, Accounts (+ add modal, account page), Transactions (+ import), Cash Flow (+ Sankey), Budget, Recurring, Goals | Kiko | MP11 (types on fixtures), MP13, MP14 | — |
+| [ ] | MP18 | #178 | QA: new e2e demo path, performance budget, deploy check | Aibek | MP14 first, then grows with MP15–MP17 | MP19 |
+| [ ] | MP19 | #179 | Deck (≤ 10 slides) and the 2-minute demo script for the new product (Kiko on slide design) | Amir | the demo path working (MP18) | — |
+
+```
+MP1 (decisions/docs)
+MP2 (contracts + fixtures) ──► MP3 plan() ──► MP5 monteCarlo() ──► MP6 scenarios + moves
+                 │            └► MP4 expandEvent()
+                 │            └► MP7 /plan view-models (+ AI line) ──► MP15 /plan UI ──► MP16 Chance of success UI
+                 ├► MP8 accounts ─┐
+                 ├► MP9 budget + cash flow ─┼► MP11 view-models ──► MP17 the other screens' UI
+                 └► MP10 transactions store ┘
+MP12 + MP13 (Figma) ──► MP14 app shell + routing ──► MP15 / MP16 / MP17
+MP18 e2e + perf + deploy      MP19 deck + demo script
+```
+
+The pivot is done when the demo in `docs/PIVOT.md` runs on a phone at the live URL (Duel → guess your own → sliders → Dashboard → `/plan` + Buy a home → Next Moves → Chance of success → Compare → CSV → Transactions / Cash Flow / Budget) and `pnpm lint && pnpm test && pnpm e2e` are green.
+
+## The 24h build (record)
+
+Screen IDs S1–S15 in the tables below are the old build's. They map to the new ones: S1 → P1, S2–S3 → P11, S10 → P8, S11 (Can I Afford It?) → an Expense event on P8, S12 (Loan Lab) → P7 Goals › Pay down, S13 (Decide) → P9, S14 (check-in) → P5, S15 → P12; S5–S9 keep their IDs as the onboarding steps (`ARCHITECTURE.md`).
 
 ## Hour 0 (together)
 

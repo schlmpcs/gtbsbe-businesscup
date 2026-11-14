@@ -2,7 +2,7 @@
 
 ## One line
 
-A forward-looking budget planner: it forecasts your month and you in 10 years, and ranks your next money moves and decisions in dollars. A viral daily guessing game is how people discover it.
+A Monarch-style money planner without the bank login: a yearly plan to age 90 with life events, a Chance of success (Monte Carlo) and Next Moves ranked in dollars, plus Accounts, Transactions, Cash Flow, Budget, Recurring and Goals. A viral daily game, the Duel, is how people discover it. Why we rebuilt around the planner: `docs/PIVOT.md`.
 
 Name: **LifeGuessr** is the working name. Shortlist: Tomoro, Fork, Plotto, Ahead, Should I? (still to be checked for existing apps and domains).
 
@@ -28,7 +28,7 @@ Adults aged 25–45 make their biggest money decisions (rent, car, kids, debt, j
 
 - People underestimate even small recurring costs. In a C+R Research survey, quick guesses averaged $86/month on subscriptions against $219 when itemized.
 - US credit card balances hit about $1.29T in Q3 2026 (New York Fed). The average card APR is about 22.8%.
-- Budget apps mostly look backward ("where your money went"). Forward-looking planners (ProjectionLab, Boldin, Empower) are built for retirement planners who open them a few times a year.
+- Budget apps mostly look backward ("where your money went"). Forward-looking planners (ProjectionLab, Boldin, Empower, Monarch's Forecasting) are built for retirement planners, or sit behind a bank login and a high price, and are opened a few times a year.
 
 ## Target user
 
@@ -36,74 +36,74 @@ US adults aged 25–45 with a job, bills and at least one big decision ahead. Ty
 
 ## Product: features
 
-| ID | Feature | Status in the 24h build |
-| --- | --- | --- |
-| F1 | **Five Lives**: a daily game with 5 homes to explore (illustrated dollhouse cutaways); tap rooms for clues, guess the monthly cost; the same set for everyone | Real |
-| F2 | **Typical Range reveal**: cost range with bars per category, each showing its source and year | Real |
-| F3 | **Guess Yourself**: one slider for your own monthly cost | Real |
-| F4 | **Closest Life**: pick one of today's cards as your starting point | Real |
-| F5 | **Quick Sliders**: rent, car, food, subscriptions and savings (~30 s) | Real |
-| F6 | **Balance Sheet in 6 taps**: age, take-home pay, cash, retirement, card balance and APR, other loans; skipped fields become estimates | Real |
-| F7 | **Make It Exact**: CSV statement upload (parsed in the browser) that tightens the range (on the AI forecast, checked by the Y19 eval); or connect a bank app (read-only, through an aggregator), as most US budgeting apps do | Real (CSV); PDF if time allows; bank connect = "coming soon" button |
-| F8 | **You in 10 Years**: forecast line with a range band, in today's dollars by default | Real (AI-generated and code-checked, labeled; rules-based fallback) |
-| F9 | **Next Moves**: top 3 moves ranked by 10-year dollar effect; levels; an "I'm doing this" commitment | Real (level 1) |
-| F10 | **Decisions**: car, moving city, having a kid, job offer, wedding (Path A vs B) | Mock (car example) |
-| F11 | **This Life vs Yours**: each game card compared with your own numbers | Real if time allows |
-| F12 | **Monthly Check-in**: forecast vs 3-month average, drift flags, progress on your committed move | Mock |
-| F13 | **Pro / Paywall**: a simulated in-app checkout (demo card, nothing charged; Stripe Checkout in test mode instead when a key is set) plus a promo code on screen for the jury; gates saving purchases to the wishlist | Simulated payment, labelled as such (no real or test money moves) |
-| F14 | **Can I Afford It?**: a planned purchase (one-time or recurring) and its effect on this month, 12 months, 5 and 10 years; verdict and wishlist | Real |
-| F15 | **Loan Lab**: model car, personal, student, BNPL, card and mortgage loans; compare 3 options; debt-load gauge; extra payments | Real |
-| F16 | **Game as marketing**: streamer mode, share cards (9:16 and 1:1), creator packs, daily leaderboard | Streamer mode + share cards real |
+The sidebar (desktop) or bottom tabs (phone) holds: Play, Dashboard, Plan, Accounts, Transactions, Cash Flow, Budget, Recurring, Goals. Screen IDs P1–P12 and routes are in `docs/ARCHITECTURE.md`. Tasks MP1–MP19 (epic #160) are in `docs/TASKS.md`.
+
+| ID | Feature (screen) | What it does | Status |
+| --- | --- | --- | --- |
+| F1 | **Duel** (P11, `/play`): the daily game, the front door | "Which life costs more?": 5 rounds a day, two composite lives each, pick the costlier, optional hint (900 points instead of 1,000), reveal with category bars, sources and year, a shareable result and a challenge link. Server-scored; the answers never reach the browser before the pick | Real |
+| F2 | **Guess Yourself**, **Closest Life**, **Quick Sliders**, **Balance sheet** (onboarding after the game) | Guess your own month, pick the closest life, rent / car / food / subscriptions / savings sliders (~30 s), then age, take-home pay, cash, retirement, card balance and APR, other loans. Skipped fields become estimates. The balance sheet edits the same accounts as P2 | Real |
+| F3 | **Dashboard** (P1, `/`) | Net worth with the 1-month change, this month's spending pace, budget summary, top Next Move, today's Duel card and streak, recent transactions, a setup checklist (x of 5) | Real |
+| F4 | **Accounts** (P2, `/accounts`, `/accounts/[id]`) | Manual accounts: Cash, Investments, Retirement, Real estate, Vehicle (assets); Credit card, Loan, Mortgage (liabilities). Name + balance, net worth = assets − liabilities, balance history. Names stay in the browser. "Connect a bank" is a disabled "coming soon" card | Real |
+| F5 | **Transactions** (P3, `/transactions`) | CSV import (parsed in the browser, names masked), list with search and filters, manual add, change a category ("apply to all from this merchant"), export. Lines are stored in the browser only | Real |
+| F6 | **Cash Flow** (P4, `/cash-flow`) | Income, expenses, savings and savings rate by month, quarter or year; Sankey by category | Real |
+| F7 | **Budget** (P5, `/budget`) | Planned vs actual per category with a "where you should be today" marker. "Create my budget" fills Planned from **our sliders and area data** (Monarch fills a generic sample). Replaces the monthly check-in | Real |
+| F8 | **Recurring** (P6, `/recurring`) | Detected recurring charges (the subscription audit, moved into the shell) | Real |
+| F9 | **Goals** (P7, `/goals`) | **Save up** goals (On track / At risk / Completed, the monthly amount to stay on track) and **Pay down** = Loan Lab (compare 3 loans, debt-load gauge, extra payments, payoff order) | Real |
+| F10 | **Plan** (P8, `/plan`), the hero | A yearly net-worth line from today to age 90 (the part below zero is red and hatched), four KPIs (net worth at year end, at retirement, retirement age, at the end), tabs Accounts / Cash Flow / Events (all views of one simulation), an Assumptions panel (inflation, today's vs future dollars, withdrawal order, savings split), an **Add event** catalog (Income, Expense, Buy a home, Have a kid, New job, Career break, Windfall, Retire, Social Security) whose defaults come from our area data, autosave, and Next Moves ranked in dollars. Deterministic: `plan()` | Real |
+| F11 | **Compare** (P9, `/plan?view=compare`) | Two scenarios (a copy of assumptions + events) overlaid, with a sentence like "Plan B leaves you $34K richer by 2036". Replaces Decide | Real |
+| F12 | **Chance of success** (P10, `/plan?view=chance`) | 1,000 seeded Monte Carlo paths: a fan, a 10th–90th percentile band, a success % gauge, histograms of net worth at retirement and at the end, shortfall age; settings for inflation and growth spread, number of paths, fixed seed | Real |
+| F13 | **AI estimate line** (on P8) | The AI forecaster's 10-year line as a labeled **second opinion**: shown only when it passes the code checks and falls inside the Monte Carlo p5–p95 band; hidden otherwise. It never feeds a KPI or a move | Real (labeled; hidden on failure) |
+| F14 | **Make It Exact**: CSV statement upload | Tightens the range and fills Transactions, Cash Flow and Budget; or connect a bank app (read-only, through an aggregator), as most US budgeting apps do | Real (CSV); PDF if time allows; bank connect = "coming soon" button |
+| F15 | **Pro / Paywall** (P12, `/pro`) | A simulated in-app checkout (demo card, nothing charged; Stripe Checkout in test mode instead when a key is set) plus a promo code on screen for the jury; gates saving purchases to the wishlist | Simulated payment, labelled as such (no real or test money moves) |
+| F16 | **Game as marketing** | Share cards (9:16 and 1:1) and challenge links for the Duel's day result | Real |
+
+**Folded in from the old build:** Can I Afford It? is now the **Expense** event on the plan (a one-off or financed purchase); Decide is **Compare**; the monthly Check-in is **Budget** (planned vs actual); Loan Lab is **Goals › Pay down** (and inside an Expense event with financing).
+
+**Left the navigation:** the features that no longer have a place in the sidebar are listed in `docs/PIVOT.md` (their code stays until after the demo, then is deleted). Investments tracking is cut: an Investments account is just a balance.
 
 ### User journey
 
-Play 5 lives → guess your own cost → pick the closest life → quick sliders → balance sheet → **You in 10 years + top 3 moves** → (optional) upload a statement to make it exact → commit to a move, check affordability, try Loan Lab → come back daily (game) and monthly (check-in).
+Play the Duel → guess your own month → sliders → Dashboard (net worth, this month) → **Plan** (the line to age 90; add Buy a home) + Next Moves → Chance of success → Compare → (optional) upload a statement: Transactions, Cash Flow, Budget → come back daily (the Duel) and monthly (Budget).
 
-The paywall appears after the user has seen their own forecast.
+The paywall appears after the user has seen their own plan.
 
-## Game design: Five Lives
+## Game design: the Duel (P11)
 
-Each day everyone gets the same 5 homes. Each home is an illustrated dollhouse cutaway you explore by tapping rooms, like GeoGuessr's looking around, but not a 3D walk-through.
+The game is the front door. Each day everyone gets the same five rounds. A round shows two composite lives (a metro, a household, a home size, a car, how often they eat out) and asks "Which life costs more per month?".
 
-- **Visible at once:** the metro (skyline in the window), the layout (studio to 4-bed, which sets the rent) and a one-line caption that contains no cost facts.
-- **Clues (tap a room):**
-  - garage: the car (none / economy / mid / luxury) and its loan term;
-  - kids' room: crib, toddler, preschool or school-age toys, or a home office if there are no kids;
-  - kitchen: piles of takeout = how often they eat out each week;
-  - entry: coats and shoes = how many adults;
-  - mailbox: ZIP and neighborhood tier (cheap / mid / expensive / suburb).
-- **Clues cost points:** each opened clue lowers the card's multiplier by 10%, down to a floor of 50%. A blind guess can score the most; opening everything still scores half.
-- **Guess:** a log-scale slider from $1k to $15k.
-- **Reveal:** a needle sweeps to the mid, the typical-range band lights up with your guess pinned on it, then cost bars per category with source and year, and one surprise line ("Rent was 54% of her month").
-- **After 5 homes:** a spoiler-free grid for sharing (🟩 in range, 🟨 500+ points, 🟥 below), plus a 9:16 clip card of the most surprising home.
-- **Bridge:** "You guessed low on 4 of 5. Now guess your own month." → S5.
-- **Day shape:** card 1 is easy, card 5 is a curveball (e.g. childcare costs more than rent).
-- **Integrity:** every clickable object is generated from the card's data and matches one cost line; decorative objects never imply a cost. The server holds the answers: the browser gets only what's visible, each clue is fetched on tap, and guesses are scored server-side.
-- **Streamer mode:** big type, a countdown, the answer hidden until the streamer locks in. Later: chat votes which room to open next.
+- **Pick:** tap the life you think costs more. Rounds can be played in any order; one pick per round per player per day.
+- **Hint:** an optional extra fact on both lives (each life's neighborhood tier). Using it lowers that round's score from 1,000 to 900.
+- **Score:** 1,000 points for the costlier life (900 after a hint), 0 for the other. A pair whose lives cost the same is never served.
+- **Reveal:** both monthly totals by category with source and year, what decided it, and the crowd's split once at least 20 players have picked.
+- **Day result:** a spoiler-free tile grid, the total, a share card (9:16 or 1:1 PNG) and a challenge link that shows a friend's real score before they play ("Your friend got 4/5 · 3,600 points").
+- **Bridge:** "Now guess your own month." (Guess Yourself) → Closest Life → Quick Sliders → Balance sheet → Dashboard.
+- **Day shape:** round 1 is easy, round 5 is a curveball (e.g. childcare costs more than rent).
+- **Integrity:** the server holds the answers. The browser gets only the lives' public facts, hints are fetched on request, and picks are scored server-side from what the server recorded; the client never sends a score.
+- **Rollback variant:** the earlier slider game (explore an illustrated dollhouse cutaway, tap rooms for clues that cost points, guess the monthly cost on a log slider, streamer mode) is kept behind `NEXT_PUBLIC_GAME_MODE=slider` and is not in the navigation.
 
 ## Retention loop
 
-- **Daily (1 min):** the game, a streak, sharing. Planned: guess your own week's spending before you look (the game becomes budgeting practice).
+- **Daily (1 min):** the Duel, a streak, sharing. Planned: guess your own week's spending before you look (the game becomes budgeting practice).
 - **Content runway:** 50 hand-made cards at 5 a day give only 10 days of new sets. After the hackathon, generate cards from `areas.json` × lifestyle templates so the daily set never repeats within a season.
-- **Monthly (3 min):** check-in comparing forecast vs actual, with progress on the committed move.
-- **On demand:** Can I Afford It? and Loan Lab, whenever a real purchase or loan comes up.
+- **Monthly (3 min):** Budget: planned vs actual per category and the "where you should be today" marker; a new statement updates Transactions, Cash Flow and the plan.
+- **On demand:** the Plan (add an Expense or Buy a home event when a real decision comes up, then Compare) and Goals › Pay down (Loan Lab).
 - Bill yearly first, so one skipped month doesn't lead straight to a cancellation.
 
 ## Business model (assumptions, label them as such)
 
-- **Free:** daily game and one forecast.
-- **Pro:** $39.99/year (yearly first) or $6.99/month. Includes a saved life, check-ins, decisions, Loan Lab history, a wishlist and move levels.
+- **Free:** the daily Duel, the Dashboard and one plan with the Baseline scenario.
+- **Pro:** $39.99/year (yearly first) or $6.99/month. Includes saved scenarios and Compare, Chance of success runs, Goals and Loan Lab history, a wishlist and move levels. (The simulated checkout is built; exactly which screens it gates is an assumption to tune.)
 - RevenueCat SOSA 2026: low-priced apps retain 36% vs 23% for high-priced apps, which supports a low price.
 - Growth: game clips by creators and share cards. Target CAC under $15; LTV around $45–60 (assumption). Check: $39.99 / (1 − 36% yearly renewal) ≈ $62 gross before payment fees and refunds, consistent with that range.
 - $100M ARR at $39.99/year means about 2.5M paying subscribers. Have this number ready for the "Why does it make money?" question.
-- Market proof: Monarch Money reportedly reached about $100M revenue in 2026 (Sacra).
+- Market proof: Monarch Money reportedly reached about $100M revenue in 2026 (Sacra), and its Forecasting sits in the $299/year tier.
 
 ## Marketing: the game as the channel
 
-- **Streamer mode:** big cards, a countdown and a dramatic reveal. Later: "chat vs streamer" via a room code.
-- **TikTok:** 9:16 result cards and reveal clips ("I guessed $3,400. It was $4,610.").
-- **Creator packs:** "Guess the NYC 25-year-old", "Your city vs mine".
-- **Funnel:** clip → play (no sign-up) → guess your own → forecast → paywall.
+- **Challenge links:** the Duel's day result links a friend straight into the same five rounds with your score to beat.
+- **TikTok:** 9:16 result cards and reveal clips ("I picked the wrong life. It cost $1,200 more.").
+- **Creator packs:** "Your city vs mine" (the creator packs are cut order items).
+- **Funnel:** clip → play (no sign-up) → guess your own → sliders → Dashboard → Plan → paywall.
 - **Guardrails:** cards are fictional composites from public averages; no prizes (avoids sweepstakes law).
 
 ## Competitors and positioning
@@ -112,30 +112,42 @@ Each day everyone gets the same 5 homes. Each home is an illustrated dollhouse c
 | --- | --- | --- | --- | --- | --- |
 | ProjectionLab | No | Yes | No (scenario compare) | No | Free; Premium $129/yr |
 | Boldin | Optional | Yes (retirement) | No | No | Free; PlannerPlus $168/yr |
-| Monarch Plus (Forecasting) | Yes | Yes | Scenarios | No | $299/yr |
+| Monarch Plus (Forecasting) | Yes | Yes (plan to a chosen age, Monte Carlo) | Scenarios | No | $299/yr |
+| **Us** | **No** (sliders, manual accounts, CSV in the browser) | **Yes** (plan to 90, Chance of success) | **Yes** (Next Moves and events) | **Yes** (the Duel) | Free; Pro $39.99/yr (assumption) |
 | Empower | Yes | Yes (retirement) | No | No | Free |
 | Monarch Core / Copilot / Cleo / Rocket Money | Yes | Mostly no | No | No | ~$4–15/mo |
 | Housle / PropQwiz (house-price games) | No | No | No | Yes | Free |
 | ChatGPT/Claude + statement | No | Ad hoc | Inconsistent | No | ~$20/mo |
 
-**Beat line:** unlike planners people open a few times a year, we give a 25–45 adult a 30-second forecast with no bank link, rank their next decisions in dollars, and earn a daily visit with a game.
+**Beat line:** Monarch's best feature is the forecast, and it is behind a bank login and a $299/year plan. We give a 25–45 adult that plan in 2 minutes, from a game, with no bank login, and rank which decision to make next in dollars.
 
-**Why not ChatGPT?** A chatbot has no memory of your life; the app saves your profile, tracks forecast against reality, ranks your next moves in dollars, and comes with the daily game. Be straight about the forecast: a model produces it, code checks it (shape, today's balance exact, a sanity envelope), and it is labeled "AI estimate". Loans, costs, scoring and affordability are computed by tested code. Do not claim the forecast is deterministic.
+**What is different from Monarch** (we take its information architecture and math; we never copy its name, logo, copy, colors, icons or illustrations):
 
-Avoid saying "budget apps only look at the past". Monarch and PocketSmith do forecast. Say: "they forecast your accounts; we forecast your decisions."
+- **No bank login.** Sliders, manual accounts and a CSV parsed in the browser. Account names and transactions stay in the browser.
+- **A game as the front door.** The Duel gives a reason to come back tomorrow; Monarch has no daily habit.
+- **Local public data behind every default.** Rent, childcare, property tax, home insurance and home appreciation by area (HUD, Census, BLS, FHFA, NAIC). Monarch uses flat rules of thumb: our Buy a home and Have a kid events start from the user's ZIP.
+- **Moves and events ranked in dollars.** Next Moves ("Raise your 401(k) by 3% = +$41k at 65") on the plan screen.
+- **Price.** Pro at $39.99/year (an assumption to test) against Monarch's $299/year plan.
+
+**Why not ChatGPT?** A chatbot has no memory of your life; the app saves your profile, tracks forecast against reality, ranks your next moves in dollars, and comes with the daily game. Be straight about where the AI is: the plan, every KPI and Chance of success are computed by tested, deterministic code (`plan()` and a seeded Monte Carlo), so the same inputs and seed give the same answer. The AI forecaster is only a second opinion: a separate line labeled "AI estimate", checked in code against the Monte Carlo band and hidden when it fails. Loans, costs, scoring, budget rows and affordability are also computed by tested code.
+
+Avoid saying "budget apps only look at the past". Monarch and PocketSmith do forecast. Say: "they forecast your accounts; we forecast your decisions, and rank which one to make next."
 
 ## Two-minute demo script
 
-1. Judges scan the QR code and play 3 homes (tap the garage and kitchen, guess); the reveal shows that most guess low.
-2. Guess your own cost → closest life → sliders.
-3. You in 10 years appears with a range, plus the top 3 moves.
-4. Upload the sample statement and estimated fields become measured; the AI forecast is told which inputs are estimates, so its range should tighten. Check that in rehearsal with the eval script (Y19) and quote the before/after numbers the app produces for `profile.demo.json` + `statement.sample.csv`; never hand-type them into the deck. If the range does not tighten, say what changed instead of claiming it did.
-5. Loan Lab: car 36 vs 60 months vs waiting; the debt-load gauge and the 10-year effect.
-6. Show the guardrails: the "AI estimate" label and the "How we calculate" panel, the rules-based fallback (with no key the forecast still renders, labeled), and the engine tests for loans, scoring and affordability. Do not run a "ChatGPT twice" comparison: our forecast comes from a model too, so it proves nothing.
+Same as `docs/PIVOT.md`.
+
+1. Judges scan the QR code and play one home of the daily Duel (30 s); the reveal shows what decided it. Guess your own month.
+2. Three sliders → the Dashboard shows your net worth and this month.
+3. Plan: the line to age 90. Add "Buy a home" in 2029: the mortgage, tax and insurance come from data for your area, and the line drops.
+4. Next Moves: the top move and its dollar effect.
+5. Chance of success: 1,000 paths and the success %; change the seed and get the same result with "fixed seed" on. Compare: the two scenarios overlaid.
+6. Upload the sample CSV → Transactions, Cash Flow Sankey, Budget planned vs actual.
+7. Show the guardrails: the tests for `plan`, `expandEvent` and `monteCarlo` in the repo, the "How we calculate" panel, and the labeled "AI estimate" line (visible only when it passes the checks and falls inside the Monte Carlo band; with no key it is simply absent). Do not run a "ChatGPT twice" comparison.
 
 ## Metrics to show
 
-Game: clues opened per home, blind-guess rate, finish rate. Funnel: finished game → guessed own cost → sliders → balance sheet → upload → saw paywall → paid. Plus share rate and plays per shared link.
+Game: rounds played, hint rate, finish rate, challenge-link opens. Funnel: finished game → guessed own cost → sliders → Dashboard → viewed the plan → added an event → ran Chance of success → upload → saw paywall → paid. Plus share rate and plays per shared link.
 
 ## Legal and wording
 
