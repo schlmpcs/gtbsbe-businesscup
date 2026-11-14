@@ -203,6 +203,18 @@ export type TodayVM = {
 };
 
 /** S10 You in N years (the picked horizon) + Next Moves. */
+/**
+ * The "why" under the headline (rules engine, this month, the user's inputs): take-home pay vs
+ * everything that goes out. `short` = outflow − income when positive, else 0. `cashRunsOutInMonths`:
+ * the first month cash is gone while short (null when not short, or not within 10 years).
+ */
+export type WhyLineVM = {
+  income: Money;
+  outflow: Money;
+  short: Money;
+  cashRunsOutInMonths: number | null;
+};
+
 export type FutureVM = NextMovesVM & {
   status: 'loading' | 'ready' | 'error';
   error: VMError | null;
@@ -215,6 +227,8 @@ export type FutureVM = NextMovesVM & {
   today: ForecastPoint;
   /** Net worth at `horizonYears` (month 12·horizonYears), in the shown dollars. */
   atHorizon: ForecastPoint;
+  /** Why the number moves: pay vs outflow this month, and when cash runs out if short. */
+  why: WhyLineVM;
   /** Who made the numbers on screen (also on each move). Null until there is an answer. */
   source: ForecastSource | null;
   /**

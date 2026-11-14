@@ -7,7 +7,7 @@ import type { ForecastPoint, HorizonYears } from '@lifeguessr/types';
 import { useMemo, useState } from 'react';
 import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
-import { estimatedFields } from '@/lib/model/profile';
+import { areaRates, estimatedFields } from '@/lib/model/profile';
 import { useAppStore, useProfile } from '@/state';
 import { answerDollars, committedScenario, shownForecast } from './forecastAnswer';
 import { howWeCalculate } from './howWeCalculate';
@@ -15,6 +15,7 @@ import type { FutureVM, MoveVM } from './types';
 import { useMoveExplain, type ExplainFn } from './useMoveExplain';
 import { useNextMoves } from './useNextMoves';
 import { useSampleRequest } from './useSampleRequest';
+import { whyLine } from './whyLine';
 
 const NO_MOVES: MoveVM[] = [];
 const NO_POINTS: ForecastPoint[] = [];
@@ -67,6 +68,7 @@ export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}):
   }, [compareOn, compareMove, forecast, todaysDollars, horizonYears]);
 
   const assumptionsVM = useMemo(() => howWeCalculate(profile), [profile]);
+  const why = useMemo(() => whyLine(profile, areaRates(profile)), [profile]);
 
   // Which inputs were estimates in the profile the numbers were made for, not in the live one: during a
   // refresh the user may have just made one exact, and the band on screen still has it in it.
@@ -90,6 +92,7 @@ export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}):
     yearly,
     today: points[0] ?? TODAY_EMPTY,
     atHorizon: shown.atHorizon,
+    why,
     source: shown.source,
     isRefreshing: forecast.status === 'ready' && forecast.isRefreshing,
     band,

@@ -115,7 +115,8 @@ function Headline({ vm }: { vm: FutureVM }) {
     <div data-testid="at-horizon">
       <div className="flex flex-wrap items-center gap-sm">
         <span className={EYEBROW}>{f.headline(vm.horizonYears)}</span>
-        {!vm.band.isZero && <EstimateTag />}
+        {/* "Estimate" only when an input behind the number is one (the source tag below says who made it). */}
+        {vm.band.estimatedFields.length > 0 && <EstimateTag />}
       </div>
       <p className="mt-sm font-display text-7xl font-extrabold leading-display tracking-tight tabular-nums break-words sm:text-8xl lg:text-9xl">
         <Money value={vm.atHorizon.mid} />
@@ -125,6 +126,7 @@ function Headline({ vm }: { vm: FutureVM }) {
         {!vm.band.isZero && <span aria-hidden="true">·</span>}
         <span className="tabular-nums">{f.todayInline(formatMoney(vm.today.mid))}</span>
       </div>
+      <WhyLine why={vm.why} />
       <div className="mt-sm flex flex-wrap items-center gap-sm text-sm">
         <SourceTag source={vm.source} />
         <span className="text-text-muted">{dollarsNote}</span>
@@ -152,6 +154,20 @@ function Headline({ vm }: { vm: FutureVM }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Why the number moves: pay vs outflow this month and, if short, when cash runs out. Numbers from the view-model. */
+function WhyLine({ why }: { why: FutureVM['why'] }) {
+  const w = t.future.why;
+  const out = formatMoney(why.outflow);
+  const pay = formatMoney(why.income);
+  return (
+    <p data-testid="future-why" className="mt-md max-w-prose text-base">
+      {why.short > 0 ? w.short(out, pay, formatMoney(why.short)) : w.left(out, pay, formatMoney(why.income - why.outflow))}{' '}
+      {why.short > 0 && (why.cashRunsOutInMonths !== null ? w.runsOut(why.cashRunsOutInMonths) : w.lasts)}{' '}
+      <span className="text-sm text-text-muted">({w.source})</span>
+    </p>
   );
 }
 

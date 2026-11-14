@@ -195,6 +195,14 @@ export const forecast = {
     /** The picker's visible label (a legend); its options are `yearsPhrase(years)`. */
     horizonLabel: 'Look ahead',
     headline: netWorthAt,
+    /** The "why" under the headline (amounts already formatted): this month's pay vs what goes out. */
+    why: {
+      short: (out: string, pay: string, short: string) => `You spend ${out} a month and earn ${pay}, so you’re ${short} short.`,
+      left: (out: string, pay: string, left: string) => `You earn ${pay} a month and spend ${out}, so ${left} a month is left over.`,
+      runsOut: (months: number) => (months === 1 ? 'Cash runs out this month.' : `Cash runs out in about ${months} months.`),
+      lasts: 'At this pace your cash lasts more than 10 years.',
+      source: 'From your inputs',
+    },
     todayLabel: 'Today',
     chartTitle: (years: number) => `Your net worth over the next ${years === 1 ? 'year' : `${years} years`}`,
     seriesLabel: 'Your plan',
