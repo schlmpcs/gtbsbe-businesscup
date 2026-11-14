@@ -21,6 +21,7 @@ import { useSubscriptions, type SubscriptionsDeps } from './useSubscriptions';
 
 const track = vi.fn<NonNullable<SubscriptionsDeps['track']>>();
 const downloadRenewals = vi.fn<NonNullable<SubscriptionsDeps['downloadRenewals']>>(() => 'downloaded');
+const trackTool = vi.fn<NonNullable<SubscriptionsDeps['trackTool']>>();
 
 type Options = Partial<Pick<SubscriptionsDeps, 'catalogue' | 'categorize'>> & { initial?: SubscriptionsToolState };
 
@@ -29,7 +30,7 @@ function renderTool(opts: Options = {}) {
     const store = useMemoryStore(opts.initial);
     const profile = useAppStore((s) => s.profile);
     const vm = useSubscriptions(profile, {
-      catalogue: opts.catalogue ?? testCatalogue, store, track, downloadRenewals,
+      catalogue: opts.catalogue ?? testCatalogue, store, track, trackTool, downloadRenewals,
       categorize: opts.categorize ?? fakeCategorize(),
     });
     // The screen mounts this only while something is marked (SubscriptionsTool); here it is always there.
@@ -51,6 +52,7 @@ async function uploaded(tool: Tool, file: File = sampleStatementFile()) {
 beforeEach(() => {
   resetClientState();
   track.mockClear();
+  trackTool.mockClear();
   downloadRenewals.mockClear();
   mockForecastRoute();
 });
@@ -66,8 +68,9 @@ describe('cold path: no profile, no upload', () => {
     ]);
     expect(vm.guess).toMatchObject({ value: null, presets: [25, 50, 100, 200] });
     expect(vm.canReveal).toBe(false);
-    expect(track).toHaveBeenCalledWith({ name: 'tool_opened', props: { tool: 'subscriptions' } }, { once: 'tool:subscriptions' });
-    expect(track).toHaveBeenCalledTimes(1);
+    // Opening the tool is main's `trackTool` (one `tool_opened` per page session), sent once the saved state is read.
+    expect(trackTool).toHaveBeenCalledExactlyOnceWith('subscriptions');
+    expect(track).not.toHaveBeenCalled();
   });
 
   it('the tick-list is the catalogue by category, ambiguous services and free plans left out', async () => {
@@ -1170,10 +1173,10 @@ describe('events carry enums and counts only', () => {
 
     const events = track.mock.calls.map(([e]) => e as ClientFunnelEvent);
     expect(events.map((e) => e.name)).toEqual([
-      'tool_opened', 'subs_started', 'subs_revealed', 'subs_started', 'subs_flagged', 'subs_cancel_marked', 'move_committed',
+      'subs_started', 'subs_revealed', 'subs_started', 'subs_flagged', 'subs_cancel_marked', 'move_committed',
     ]);
+    expect(trackTool).toHaveBeenCalledExactlyOnceWith('subscriptions');
     expect(events).toEqual([
-      { name: 'tool_opened', props: { tool: 'subscriptions' } },
       { name: 'subs_started', props: { path: 'tickList' } },
       { name: 'subs_revealed', props: { miss: 'over2' } },          // 40 ÷ 17.99 = 2.22
       { name: 'subs_started', props: { path: 'statement' } },

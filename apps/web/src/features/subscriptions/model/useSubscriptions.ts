@@ -13,14 +13,14 @@
 import { auditTotals, detectSubscriptions, subsMinCharges } from '@lifeguessr/engine';
 import {
   ServiceCategorySchema,
-  type ClientFunnelEvent, type KnownService, type MissBucket, type Profile, type ServiceCategory,
+  type ClientFunnelEvent, type KnownService, type MissBucket, type Profile, type ServiceCategory, type ToolId,
   type StatementClass, type SubscriptionFinding,
 } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { patchesEqual } from '@/features/forecast/model/forecastAnswer';
 import { categorizeStatement } from '@/lib/api/statement';
 import { downloadRenewalsCalendar } from '@/lib/download';
-import { track as defaultTrack } from '@/lib/events';
+import { track as defaultTrack, trackTool as defaultTrackTool } from '@/lib/events';
 import { renewalsFromFindings } from '@/lib/ics';
 import { toVMError } from '@/lib/model/errors';
 import { useAppReady, useAppStore } from '@/state';
@@ -44,6 +44,8 @@ export type SubscriptionsDeps = {
   store: SubscriptionsStore;
   /** The event sender (lib/events `track`). */
   track?: typeof defaultTrack;
+  /** Records that the tool was opened: one `tool_opened` per page session (lib/events `trackTool`, M2). */
+  trackTool?: (tool: ToolId) => void;
   /** The statement categorizer client (lib/api/statement `categorizeStatement`). */
   categorize?: typeof categorizeStatement;
   /** Saves the renewals calendar file (lib/download `downloadRenewalsCalendar`). */
@@ -68,6 +70,7 @@ const without = (list: readonly string[], id: string): string[] => list.filter((
 export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): SubscriptionsVM {
   const { catalogue, store } = deps;
   const track = deps.track ?? defaultTrack;
+  const trackTool = deps.trackTool ?? defaultTrackTool;
   const categorize = deps.categorize ?? categorizeStatement;
   const downloadRenewals = deps.downloadRenewals ?? downloadRenewalsCalendar;
 
@@ -117,9 +120,14 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     sender.current(event, { once });
   }, []);
 
+  // `trackTool` already sends one `tool_opened` per page session (its own once-key), so no key is kept here.
+  const opened = useRef(trackTool);
   useEffect(() => {
-    if (ready) emit({ name: 'tool_opened', props: { tool: 'subscriptions' } }, 'tool:subscriptions');
-  }, [ready, emit]);
+    opened.current = trackTool;
+  });
+  useEffect(() => {
+    if (ready) opened.current('subscriptions');
+  }, [ready]);
 
   // ----- what the state says ----------------------------------------------------------------------
   const combined = useMemo(() => combineFindings(state, catalogue), [state, catalogue]);
