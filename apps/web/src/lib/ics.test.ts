@@ -128,6 +128,19 @@ describe('renewalsToIcs: the file', () => {
     expect(renewalsToIcs([], { now: NOW })).toBe(calendar());
   });
 
+  it('an empty calendar name falls back to the default name, so X-WR-CALNAME is never blank', () => {
+    expect(renewalsToIcs([], { now: NOW, calendarName: '' })).toBe(calendar());
+  });
+
+  it('leaves out an item whose cadence is not monthly, quarterly or yearly, so no RRULE is ever "undefined"', () => {
+    const valid = item({ id: 'ok', label: 'OK', amount: 1 });
+    for (const cadence of ['weekly', 'MONTHLY', '', undefined, null, 3]) {
+      const text = renewalsToIcs([item({ id: 'bad', cadence: cadence as never }), valid], { now: NOW });
+      expect(text, String(cadence)).toBe(calendar(event({ uid: 'sub-ok-20261212@lifeguessr', start: '20261212', rrule: 'FREQ=MONTHLY', summary: 'Renews: OK · $1.00' })));
+      expect(text).not.toContain('undefined');
+    }
+  });
+
   it('refuses a `now` that is not a date and an alarm that is not a whole number of days', () => {
     expect(() => renewalsToIcs([item()], { now: new Date('nope') })).toThrow(RangeError);
     for (const bad of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 366]) {
@@ -197,6 +210,132 @@ describe('renewalsToIcs: month-end days', () => {
     for (const next of bad) {
       expect(renewalsToIcs([item({ next })], { now: NOW }), JSON.stringify(next)).toBe(calendar());
     }
+  });
+});
+
+// ----- the month-end rules, expanded ----------------------------------------------------------------
+// A small expander written from RFC 5545 §3.3.10 alone, using nothing from ics.ts. For each period (a
+// month, every third month, or a year) it lists the dates the BYMONTH and BYMONTHDAY parts name (without
+// them, the month and day of DTSTART); a day the month does not have drops out of that list; then
+// BYSETPOS picks from what is left (-1 is the last). A period with nothing left has no instance: the
+// month is skipped. The first period is the one that holds DTSTART.
+describe('renewalsToIcs: the month-end rules, expanded the way a calendar app expands them', () => {
+  type Ymd = { y: number; m: number; d: number };
+  const daysIn = (y: number, m: number): number =>
+    [31, y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]!;
+
+  function expand(rule: string, start: Ymd, periods: number): Ymd[][] {
+    const part = Object.fromEntries(rule.split(';').map((p) => p.split('=') as [string, string]));
+    const list = (s: string | undefined): number[] | undefined => s?.split(',').map(Number);
+    const interval = Number(part.INTERVAL ?? 1);
+    const [byMonth, byMonthDay, bySetPos] = [list(part.BYMONTH), list(part.BYMONTHDAY), list(part.BYSETPOS)];
+    const result: Ymd[][] = [];
+    for (let i = 0; i < periods; i++) {
+      const found: Ymd[] = [];
+      if (part.FREQ === 'MONTHLY') {
+        const index = start.y * 12 + (start.m - 1) + i * interval;
+        const [y, m] = [Math.floor(index / 12), (index % 12) + 1];
+        for (const d of byMonthDay ?? [start.d]) if (d >= 1 && d <= daysIn(y, m)) found.push({ y, m, d });
+      } else if (part.FREQ === 'YEARLY') {
+        const y = start.y + i * interval;
+        for (const m of byMonth ?? [start.m]) for (const d of byMonthDay ?? [start.d]) if (d >= 1 && d <= daysIn(y, m)) found.push({ y, m, d });
+      } else {
+        throw new Error(`unexpected rule ${rule}`);
+      }
+      found.sort((a, b) => a.m * 100 + a.d - (b.m * 100 + b.d));
+      const picked = bySetPos
+        ? bySetPos.flatMap((p) => {
+            const one = p > 0 ? found[p - 1] : found[found.length + p];
+            return one ? [one] : [];
+          })
+        : found;
+      result.push(picked.filter((c) => c.y * 10_000 + c.m * 100 + c.d >= start.y * 10_000 + start.m * 100 + start.d));
+    }
+    return result;
+  }
+
+  /** The RRULE and DTSTART the code writes for one item. */
+  function written(over: Partial<RenewalItem>): { rule: string; start: Ymd } {
+    const text = renewalsToIcs([item(over)], { now: NOW });
+    const rule = /\r\nRRULE:(.+)\r\n/.exec(text)![1]!;
+    const s = /\r\nDTSTART;VALUE=DATE:(\d{4})(\d{2})(\d{2})\r\n/.exec(text)!;
+    return { rule, start: { y: Number(s[1]), m: Number(s[2]), d: Number(s[3]) } };
+  }
+
+  /** Expected: in period i, the billing day or, in a month too short for it, the month's last day. */
+  const expectedMonthly = (start: Ymd, billingDay: number, step: number, periods: number): Ymd[][] =>
+    Array.from({ length: periods }, (_, i) => {
+      const index = start.y * 12 + (start.m - 1) + i * step;
+      const [y, m] = [Math.floor(index / 12), (index % 12) + 1];
+      return [{ y, m, d: Math.min(billingDay, daysIn(y, m)) }];
+    });
+
+  it('monthly, billed on any day 1 to 31: one date every month for four years, February included', () => {
+    for (let day = 1; day <= 31; day++) {
+      const { rule, start } = written({ next: { month: '2026-12', day } });
+      expect(expand(rule, start, 48), `day ${day}: ${rule}`).toEqual(expectedMonthly({ y: 2026, m: 12, d: day }, day, 1, 48));
+    }
+  });
+
+  it('monthly on the 31st, by hand: 31 Dec, 31 Jan, 28 Feb, 31 Mar, 30 Apr, ..., 29 Feb 2028', () => {
+    const { rule, start } = written({ next: { month: '2026-12', day: 31 } });
+    const dates = expand(rule, start, 15);
+    expect(dates.slice(0, 5).flat()).toEqual([
+      { y: 2026, m: 12, d: 31 }, { y: 2027, m: 1, d: 31 }, { y: 2027, m: 2, d: 28 }, { y: 2027, m: 3, d: 31 }, { y: 2027, m: 4, d: 30 },
+    ]);
+    expect(dates[14]).toEqual([{ y: 2028, m: 2, d: 29 }]); // December 2026 plus 14 months
+  });
+
+  it('monthly on the 29th and the 30th, by hand: the 28th (29th in a leap year) in February, the billing day otherwise', () => {
+    for (const day of [29, 30]) {
+      const { rule, start } = written({ next: { month: '2026-12', day } });
+      const dates = expand(rule, start, 15).flat();
+      expect(dates[2], `day ${day}, February 2027`).toEqual({ y: 2027, m: 2, d: 28 });
+      expect(dates[1], `day ${day}, January 2027`).toEqual({ y: 2027, m: 1, d: day });
+      expect(dates[14], `day ${day}, February 2028`).toEqual({ y: 2028, m: 2, d: 29 });
+    }
+  });
+
+  it('quarterly, billed on 28 to 31: every third month for four years, from December and from November', () => {
+    for (let day = 28; day <= 31; day++) {
+      for (const [month, last] of [['2026-12', 31], ['2026-11', 30]] as const) {
+        if (day > last) continue; // November has no 31st: no such renewal date
+        const { rule, start } = written({ cadence: 'quarterly', next: { month, day } });
+        const [y, m] = month.split('-').map(Number) as [number, number];
+        expect(expand(rule, start, 16), `day ${day} from ${month}: ${rule}`).toEqual(expectedMonthly({ y, m, d: day }, day, 3, 16));
+      }
+    }
+  });
+
+  it('quarterly from 30 November, by hand: 30 Nov, 28 Feb, 30 May, 30 Aug, 30 Nov, 28 Feb, ..., 29 Feb 2028', () => {
+    const { rule, start } = written({ cadence: 'quarterly', next: { month: '2026-11', day: 30 } });
+    const dates = expand(rule, start, 6).flat();
+    expect(dates).toEqual([
+      { y: 2026, m: 11, d: 30 }, { y: 2027, m: 2, d: 28 }, { y: 2027, m: 5, d: 30 }, { y: 2027, m: 8, d: 30 },
+      { y: 2027, m: 11, d: 30 }, { y: 2028, m: 2, d: 29 },
+    ]);
+  });
+
+  it('yearly on 29 February: the 29th in a leap year, the 28th in every other, never a skipped year', () => {
+    const leap = new Set([2028, 2032, 2036, 2040]);
+    for (const over of [
+      { next: { month: '2028-02', day: 29 } },
+      { next: { month: '2029-02', day: 28 }, billingDay: 29 }, // the next date was shortened to fit a common-year February
+    ]) {
+      const { rule, start } = written({ cadence: 'yearly', ...over });
+      const years = Array.from({ length: 12 }, (_, i) => start.y + i);
+      expect(expand(rule, start, 12).map((period) => period.map((d) => [d.y, d.m, d.d])), rule).toEqual(
+        years.map((y) => [[y, 2, leap.has(y) ? 29 : 28]]),
+      );
+    }
+  });
+
+  it('the wording in the issue (BYMONTHDAY=29,30,31) is why the rule uses 28..N: it skips February and sends a 29th to the 31st', () => {
+    const literal = 'FREQ=MONTHLY;BYMONTHDAY=29,30,31;BYSETPOS=-1';
+    // Billed on the 31st from December 2026: December, January, then nothing in February 2027.
+    expect(expand(literal, { y: 2026, m: 12, d: 31 }, 3)).toEqual([[{ y: 2026, m: 12, d: 31 }], [{ y: 2027, m: 1, d: 31 }], []]);
+    // Billed on the 29th: the first date is the 31st.
+    expect(expand(literal, { y: 2026, m: 12, d: 29 }, 1)).toEqual([[{ y: 2026, m: 12, d: 31 }]]);
   });
 });
 
@@ -298,14 +437,66 @@ describe('renewalsToIcs: folding at 75 octets', () => {
     ]);
   });
 
-  it('no physical line is longer than 75 octets, whatever the label, and unfolding gives back the logical lines', () => {
-    const labels = ['x'.repeat(500), 'é, 🎬; '.repeat(40), 'a\\'.repeat(100), '中文'.repeat(60)];
-    for (const label of labels) {
+  // ----- generated labels --------------------------------------------------------------------
+  // TEXT written another way than the code under test writes it (replace chains, not a loop over code
+  // points): line breaks become \n, other control characters a space, then `\` first, `;` and `,`, then
+  // the line breaks as the two characters \n.
+  const escapedIndependently = (s: string): string =>
+    s
+      .replace(/\r\n|\r/g, '\n')
+      // eslint-disable-next-line no-control-regex -- control characters are exactly what this line replaces
+      .replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, ' ')
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\n/g, '\\n');
+
+  /** mulberry32: a small seeded generator, so the same labels are tried on every run and machine. */
+  const seeded = (seed: number): (() => number) => {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+
+  // 1, 2, 3 and 4 octets, a ZWJ family (eight code points), a letter plus a combining accent, the three
+  // characters that take a backslash, every kind of line break, a tab and a NUL.
+  const PIECES = ['a', 'Z', '0', ' ', '#', '*', '[', ']', '$', ',', ';', '\\', '\n', '\r\n', '\r', '\t', '\u0000', 'é', '·', '中',
+    '🎬', '👨‍👩‍👧', 'é'];
+  const generatedLabels = (): string[] => {
+    const rand = seeded(20261114);
+    const labels: string[] = [];
+    for (let i = 0; i < 400; i++) {
+      const length = Math.floor(rand() * 120);
+      labels.push(Array.from({ length }, () => PIECES[Math.floor(rand() * PIECES.length)]!).join(''));
+    }
+    // Every alignment of each kind of character with the 75-octet boundary of the SUMMARY line.
+    for (let pad = 0; pad <= 80; pad++) {
+      for (const tail of ['é', '中', '🎬', '👨‍👩‍👧', ',', '\\', '\n', 'é,中🎬;']) labels.push('a'.repeat(pad) + tail + 'zz');
+    }
+    return [...labels, 'x'.repeat(500), 'é, 🎬; '.repeat(40), 'a\\'.repeat(100), '中文'.repeat(60)];
+  };
+
+  it('folds any label to physical lines of at most 75 octets that unfold to exactly the independently escaped text', () => {
+    const lone = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+    const endsInOddBackslashes = /(?:^|[^\\])(?:\\\\)*\\$/; // a split escape sequence
+    const all = generatedLabels();
+    expect(all.length).toBeGreaterThan(900);
+    for (const label of all) {
       const text = renewalsToIcs([item({ label })], { now: NOW });
-      for (const l of physical(text)) expect(bytes(l)).toBeLessThanOrEqual(75);
-      const unfolded = text.replaceAll('\r\n ', '');
-      expect(unfolded).toContain('\r\nSUMMARY:Renews: ');
-      expect(unfolded).not.toMatch(/�/);
+      for (const l of physical(text)) {
+        expect(bytes(l), JSON.stringify(label)).toBeLessThanOrEqual(75);
+        expect(lone.test(l), `a surrogate pair was split in ${JSON.stringify(label)}`).toBe(false);
+        expect(endsInOddBackslashes.test(l), `an escape was split in ${JSON.stringify(label)}`).toBe(false);
+      }
+      const summary = `Renews: ${escapedIndependently(label)} · $11.99`;
+      expect(text.replaceAll('\r\n ', ''), JSON.stringify(label)).toBe(
+        calendar(event({ uid: 'sub-spotify-usa-ny-20261212@lifeguessr', start: '20261212', rrule: 'FREQ=MONTHLY', summary })),
+      );
     }
   });
 });
@@ -323,6 +514,33 @@ describe('renewalsToIcs: duplicates, determinism, line endings', () => {
     expect(text).toBe(calendar(
       event({ uid: 'sub-a-20261205@lifeguessr', start: '20261205', rrule: 'FREQ=MONTHLY', summary: 'Renews: A second · $3.00' }),
       event({ uid: 'sub-b-20261204@lifeguessr', start: '20261204', rrule: 'FREQ=MONTHLY', summary: 'Renews: B · $2.00' }),
+    ));
+  });
+
+  // The issue says the later of two items with one id wins. "Later" is decided before any date is
+  // checked: an impossible date in the later item cannot bring the earlier one back, which would show a
+  // renewal the caller has since replaced. The id then has no event.
+  it('the later of two items with the same id wins even when its date is impossible: the id has no event', () => {
+    const text = renewalsToIcs(
+      [item({ id: 'x', next: { month: '2026-12', day: 12 } }), item({ id: 'x', next: { month: '2027-02', day: 29 } })],
+      { now: NOW },
+    );
+    expect(text).toBe(calendar());
+    expect(text).not.toContain('UID:sub-x-20261212');
+  });
+
+  it('an impossible earlier item with the same id is replaced by the later valid one, which keeps the first place', () => {
+    const text = renewalsToIcs(
+      [
+        item({ id: 'x', label: 'X bad', next: { month: '2027-02', day: 29 } }),
+        item({ id: 'y', label: 'Y', amount: 2, next: { month: '2026-12', day: 4 } }),
+        item({ id: 'x', label: 'X good', amount: 1, next: { month: '2026-12', day: 12 } }),
+      ],
+      { now: NOW },
+    );
+    expect(text).toBe(calendar(
+      event({ uid: 'sub-x-20261212@lifeguessr', start: '20261212', rrule: 'FREQ=MONTHLY', summary: 'Renews: X good · $1.00' }),
+      event({ uid: 'sub-y-20261204@lifeguessr', start: '20261204', rrule: 'FREQ=MONTHLY', summary: 'Renews: Y · $2.00' }),
     ));
   });
 

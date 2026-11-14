@@ -103,8 +103,17 @@ const daysFrom28To = (last: number): string => Array.from({ length: last - 27 },
  * skipped. A billing day of 30 uses 28,29,30 (31 days or 30: the 30th; February: its last day), a billing
  * day of 29 uses 28,29. The same idea covers a yearly renewal on 29 February: 28 February in a common
  * year, the 29th in a leap year, where a plain `FREQ=YEARLY` would fire only every fourth year.
+ *
+ * DO NOT "fix" this back to the wording of issue #82 (`BYMONTHDAY=29,30,31;BYSETPOS=-1`). It differs on
+ * purpose: in a common-year February none of 29, 30 and 31 exists, so by RFC 5545 §3.3.10 the list for that
+ * month is empty and the month gets no instance (a renewal on the 31st would never show in February), and
+ * a renewal on the 29th would land on the 31st in long months. Starting the list at 28 keeps it non-empty
+ * in every month. The test file expands the written rules and shows both failures of the issue's wording.
+ *
+ * Null for a cadence that is not monthly, quarterly or yearly (a runtime value the types do not allow,
+ * e.g. read back from storage): the caller leaves that item out rather than write a broken RRULE.
  */
-function recurrenceRule(item: RenewalItem, date: CalendarDate): string {
+function recurrenceRule(item: RenewalItem, date: CalendarDate): string | null {
   const billingDay =
     Number.isInteger(item.billingDay) && item.billingDay! >= date.day && item.billingDay! <= 31 ? item.billingDay! : date.day;
   const monthEnd = billingDay >= 29;
@@ -115,6 +124,8 @@ function recurrenceRule(item: RenewalItem, date: CalendarDate): string {
       return `FREQ=MONTHLY;INTERVAL=3${monthEnd ? `;BYMONTHDAY=${daysFrom28To(billingDay)};BYSETPOS=-1` : ''}`;
     case 'monthly':
       return `FREQ=MONTHLY${monthEnd ? `;BYMONTHDAY=${daysFrom28To(billingDay)};BYSETPOS=-1` : ''}`;
+    default:
+      return null;
   }
 }
 
@@ -176,7 +187,7 @@ function fold(line: string): string {
 
 // ----- the file ---------------------------------------------------------------------------------
 
-function eventLines(item: RenewalItem, date: CalendarDate, dtstamp: string, trigger: string): string[] {
+function eventLines(item: RenewalItem, date: CalendarDate, rule: string, dtstamp: string, trigger: string): string[] {
   const summary = escapeText(
     `${wording.summaryPrefix}${item.label}${wording.summarySeparator}${formatMoney(item.amount, { cents: true })}`,
   );
@@ -185,7 +196,7 @@ function eventLines(item: RenewalItem, date: CalendarDate, dtstamp: string, trig
     `UID:sub-${escapeText(item.id)}-${dateValue(date)}@${UID_DOMAIN}`,
     `DTSTAMP:${dtstamp}`,
     `DTSTART;VALUE=DATE:${dateValue(date)}`,
-    `RRULE:${recurrenceRule(item, date)}`,
+    `RRULE:${rule}`,
     `SUMMARY:${summary}`,
     'TRANSP:TRANSPARENT',
     'BEGIN:VALARM',
@@ -202,9 +213,11 @@ function eventLines(item: RenewalItem, date: CalendarDate, dtstamp: string, trig
  * with its cadence, with a reminder `alarmDaysBefore` days ahead. CRLF line endings, folded at 75
  * octets, always ends with `END:VCALENDAR` and a line break.
  *
- * - An item whose date is not a real day (29 February 2027, month '2026-13') is left out: a calendar
- *   would refuse the whole file for it.
- * - Two items with the same `id`: the later one wins and keeps the earlier one's place in the file.
+ * - Two items with the same `id`: the later one wins and keeps the earlier one's place in the file. This
+ *   is settled first, before anything is checked, so a later item that turns out to be unusable (next
+ *   bullet) leaves the id with no event: the earlier item was replaced, and it does not come back.
+ * - An item whose date is not a real day (29 February 2027, month '2026-13') or whose cadence is not
+ *   monthly, quarterly or yearly is left out: a calendar would refuse the whole file for it.
  * - No items gives a valid calendar with no events. Throws a RangeError only for a `now` that is not a
  *   date or an `alarmDaysBefore` that is not a whole number of days from 0 to 365.
  */
@@ -217,19 +230,21 @@ export function renewalsToIcs(items: readonly RenewalItem[], opts: IcsOptions): 
   const dtstamp = utcStamp(opts.now);
   const trigger = alarmDays === 0 ? 'PT0S' : `-P${alarmDays}D`;
 
-  const byId = new Map<string, { item: RenewalItem; date: CalendarDate }>();
-  for (const item of items) {
+  const byId = new Map<string, RenewalItem>();
+  for (const item of items) byId.set(item.id, item); // a repeated id keeps its first position, with the later item
+  const events = [...byId.values()].flatMap((item) => {
     const date = toCalendarDate(item.next);
-    if (date) byId.set(item.id, { item, date }); // a repeated id keeps its first position, with the later item
-  }
+    const rule = date && recurrenceRule(item, date);
+    return date && rule ? eventLines(item, date, rule, dtstamp, trigger) : [];
+  });
 
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     `PRODID:${PRODID}`,
     'CALSCALE:GREGORIAN',
-    `X-WR-CALNAME:${escapeText(opts.calendarName ?? wording.calendarName)}`,
-    ...[...byId.values()].flatMap(({ item, date }) => eventLines(item, date, dtstamp, trigger)),
+    `X-WR-CALNAME:${escapeText(opts.calendarName || wording.calendarName)}`, // `||`: a blank name is no name
+    ...events,
     'END:VCALENDAR',
   ];
   return lines.map((line) => fold(line) + CRLF).join('');
