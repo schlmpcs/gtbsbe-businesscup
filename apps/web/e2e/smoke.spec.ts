@@ -19,8 +19,7 @@ for (const id of linkedScreenIds()) {
     expect(response?.status()).toBe(200);
     const h1 = page.getByRole('heading', { level: 1 });
     await expect(h1).toBeVisible();
-    // Built screens (S1–S14) show their title only, never an internal screen ID. S15 (/pro) keeps
-    // the placeholder-style heading with its ID.
-    if (Number(id.slice(1)) <= 14) await expect(h1).not.toHaveText(/\bS\d{1,2}\b/);
+    // Every screen shows its title only, never an internal screen ID.
+    await expect(h1).not.toHaveText(/\bS\d{1,2}\b/);
   });
 }

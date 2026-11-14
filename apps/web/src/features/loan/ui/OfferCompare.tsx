@@ -2,8 +2,9 @@
 
 import { loan as t } from '@/copy';
 import { cx, formatMoney, formatRate, Money, Sticker } from '@/ui-kit';
-import type { ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { LoanLabVM, LoanOfferVM, LoanResult } from '../model/types';
+import { OfferFields } from './OfferEditor';
 
 type MetricRow = { key: string; label: string; hint?: string };
 
@@ -69,17 +70,77 @@ function Metrics({ r }: { r: LoanResult }) {
   );
 }
 
-export type OfferCompareProps = Pick<LoanLabVM, 'offers' | 'selectedOfferId' | 'selectOffer'>;
+/** The small text toggle on a card that opens that offer's fields inline. */
+function EditToggle({ open, name, controls, onToggle }: { open: boolean; name: string; controls: string; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-controls={open ? controls : undefined}
+      aria-label={open ? t.edit.closeLabel(name) : t.edit.openLabel(name)}
+      onClick={onToggle}
+      className="ml-auto rounded-md px-sm py-xs text-sm font-semibold text-primary transition-colors hover:bg-primary-soft"
+    >
+      {open ? t.edit.close : t.edit.open}
+    </button>
+  );
+}
+
+/** The dashed ghost card after the last offer. */
+function AddOfferCard({ onAdd }: { onAdd: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onAdd}
+      className={cx(
+        'flex w-full flex-col items-center justify-center gap-xs rounded-xl border-2 border-dashed border-border px-xl py-2xl',
+        'text-lg font-bold text-text-muted transition-colors hover:border-primary hover:text-primary',
+      )}
+    >
+      <span aria-hidden="true" className="font-display text-4xl leading-none">
+        +
+      </span>
+      {t.edit.add}
+    </button>
+  );
+}
+
+export type OfferCompareProps = Pick<LoanLabVM, 'offers' | 'selectedOfferId' | 'selectOffer'> & {
+  /** Editing on the cards: an "Edit" toggle per card and an "Add an offer" ghost card. Leave out for a read-only view. */
+  edit?: Pick<LoanLabVM, 'updateOffer' | 'removeOffer' | 'addOffer' | 'canAddOffer'>;
+};
 
 /**
  * Up to 3 offers side by side (Figma Design v3 S12): one white card per offer with its terms in cream
  * boxes, the monthly payment in huge type, then interest · total, payoff and debt load. The cheapest
  * overall gets an orange inset border and a tilted "Least overall" sticker. It is a real table (one row
- * per offer) laid out as cards, so screen readers still get the row and column headers.
+ * per offer) laid out as cards, so screen readers still get the row and column headers. Editing lives on
+ * the cards: a small "Edit" toggle swaps an offer's term boxes for its fields, and a dashed ghost card
+ * after the last offer adds one.
  */
-export function OfferCompare({ offers, selectedOfferId, selectOffer }: OfferCompareProps) {
+export function OfferCompare({ offers, selectedOfferId, selectOffer, edit }: OfferCompareProps) {
+  const idPrefix = useId();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const never = offers.filter((o) => o.result !== null && o.result.payoffMonth === null);
   const name = (o: LoanOfferVM) => t.offerName(offers.indexOf(o) + 1);
+
+  const add = () => {
+    const id = edit?.addOffer() ?? null;
+    if (id) setEditingId(id);
+  };
+
+  if (offers.length === 0) {
+    return (
+      <section aria-label={t.compare.title} className="flex flex-col gap-lg">
+        <p className="text-text-muted">{t.edit.empty}</p>
+        {edit?.canAddOffer && (
+          <div className="grid grid-cols-1 gap-xl md:grid-cols-2 lg:grid-cols-3">
+            <AddOfferCard onAdd={add} />
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section aria-label={t.compare.title} className="flex flex-col gap-lg">
@@ -107,6 +168,8 @@ export function OfferCompare({ offers, selectedOfferId, selectOffer }: OfferComp
         <tbody className="grid grid-cols-1 gap-xl pt-lg md:grid-cols-2 lg:grid-cols-3">
           {offers.map((o) => {
             const selected = o.id === selectedOfferId;
+            const editing = edit !== undefined && editingId === o.id;
+            const fieldsId = `${idPrefix}-${o.id}`;
             const { input } = o;
             const extras = [
               input.downPayment ? t.terms.down(formatMoney(input.downPayment)) : null,
@@ -142,10 +205,7 @@ export function OfferCompare({ offers, selectedOfferId, selectOffer }: OfferComp
                       aria-pressed={selected}
                       aria-label={t.compare.select(name(o))}
                       onClick={() => selectOffer(o.id)}
-                      className={cx(
-                        'rounded-lg font-display text-3xl font-extrabold leading-tight transition-colors',
-                        'text-text hover:text-primary',
-                      )}
+                      className="rounded-lg font-display text-3xl font-extrabold leading-tight text-text transition-colors hover:text-primary"
                     >
                       {name(o)}
                     </button>
@@ -154,14 +214,39 @@ export function OfferCompare({ offers, selectedOfferId, selectOffer }: OfferComp
                         {t.compare.selected}
                       </span>
                     )}
+                    {edit && (
+                      <EditToggle
+                        open={editing}
+                        name={name(o)}
+                        controls={fieldsId}
+                        onToggle={() => setEditingId(editing ? null : o.id)}
+                      />
+                    )}
                   </span>
-                  <span className="grid grid-cols-3 gap-sm">
-                    <TermBox label={t.compare.boxes.amount} value={formatMoney(input.amount)} />
-                    <TermBox label={t.compare.boxes.apr} value={formatRate(input.apr, 2)} />
-                    <TermBox label={t.compare.boxes.term} value={t.compare.termShort(input.termMonths)} />
-                  </span>
-                  {extras.length > 0 && <span className="text-xs text-text-muted">{extras.join(' · ')}</span>}
+                  {!editing && (
+                    <>
+                      <span className="grid grid-cols-3 gap-sm">
+                        <TermBox label={t.compare.boxes.amount} value={formatMoney(input.amount)} />
+                        <TermBox label={t.compare.boxes.apr} value={formatRate(input.apr, 2)} />
+                        <TermBox label={t.compare.boxes.term} value={t.compare.termShort(input.termMonths)} />
+                      </span>
+                      {extras.length > 0 && <span className="text-xs text-text-muted">{extras.join(' · ')}</span>}
+                    </>
+                  )}
                 </th>
+                {editing && (
+                  <td id={fieldsId} role="group" aria-label={t.edit.fieldsLabel(name(o))} className="min-w-0 basis-full">
+                    <OfferFields
+                      offer={o}
+                      name={name(o)}
+                      onChange={edit.updateOffer}
+                      onRemove={() => {
+                        setEditingId(null);
+                        edit.removeOffer(o.id);
+                      }}
+                    />
+                  </td>
+                )}
                 {o.result ? (
                   <Metrics r={o.result} />
                 ) : (
@@ -172,6 +257,13 @@ export function OfferCompare({ offers, selectedOfferId, selectOffer }: OfferComp
               </tr>
             );
           })}
+          {edit?.canAddOffer && (
+            <tr className="flex min-w-0">
+              <td className="flex w-full">
+                <AddOfferCard onAdd={add} />
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </section>
