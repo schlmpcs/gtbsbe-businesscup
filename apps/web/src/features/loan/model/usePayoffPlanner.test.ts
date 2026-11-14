@@ -676,8 +676,8 @@ describe('usePayoffPlanner: events', () => {
 });
 
 describe('usePayoffPlanner: saved inputs', () => {
-  it('starts from the stored method, extra and target (24 months from November 2026 is November 2028)', async () => {
-    const { options, comparePayoff } = plannerOptions({ stored: { method: 'snowball', extra: 250, targetMonths: 24 } });
+  it('starts from the stored method, extra and target month, as saved', async () => {
+    const { options, comparePayoff } = plannerOptions({ stored: { method: 'snowball', extra: 250, targetMonth: '2028-11' } });
     const { result } = await ready(options);
     const p = result.current.planner!;
     expect(p.method).toBe('snowball');
@@ -686,11 +686,86 @@ describe('usePayoffPlanner: saved inputs', () => {
     expect(comparePayoff.mock.lastCall![1]).toBe(250);
   });
 
-  it('reads a stored value it cannot use as "not set" (a negative extra, a month count out of range)', async () => {
-    const { options } = plannerOptions({ stored: { method: 'avalanche', extra: -40, targetMonths: 5_000 } });
+  // The saved target is a calendar month, not a count from the day it was saved: it reopens as the month it was,
+  // however long ago that was, and "months from today" is worked out from today each time.
+  describe('the saved target does not drift', () => {
+    const saved = { method: 'avalanche' as const, extra: 0, targetMonth: '2029-12' };
+
+    it.each([
+      ['2026-11', 37],
+      ['2027-05', 31],
+      ['2029-11', 1],
+    ])('a target saved as 2029-12 reopens as 2029-12 when today is %s (%s months away)', async (today, months) => {
+      const { options, extraToFinishBy } = plannerOptions({ stored: saved, today: () => ({ month: today }), engineOptions: { solve: { extra: 150, reachable: true } } });
+      const { result } = await ready(options);
+      expect(result.current.planner!.targetDate).toBe('2029-12');
+      expect(result.current.planner!.target).toMatchObject({ date: { month: '2029-12', year: 2029 }, months });
+      expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), months, 'avalanche');
+    });
+
+    it('does not slide when the month rolls over: still December 2029, one month nearer', async () => {
+      const { options, extraToFinishBy } = plannerOptions({ stored: saved, engineOptions: { solve: { extra: 150, reachable: true } } });
+      const hook = await ready(options);
+      expect(hook.result.current.planner!.target).toMatchObject({ months: 37 });
+      // The same screen left open past midnight on the 1st: today is now December 2026.
+      hook.rerender({ options: { ...options, today: () => ({ month: '2026-12' }) } });
+      expect(hook.result.current.planner!.targetDate).toBe('2029-12');
+      expect(hook.result.current.planner!.target).toMatchObject({ date: { month: '2029-12', year: 2029 }, months: 36 });
+      expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), 36, 'avalanche');
+    });
+
+    it('saves what was restored again as the same month when the person changes something else', async () => {
+      const onStore = vi.fn<(state: PayoffStoredState) => void>();
+      const { options } = plannerOptions({ stored: saved, onStore, today: () => ({ month: '2027-05' }), engineOptions: { solve: { extra: 150, reachable: true } } });
+      const { result } = await ready(options);
+      act(() => result.current.planner!.setExtra(75));
+      expect(onStore).toHaveBeenLastCalledWith({ method: 'avalanche', extra: 75, targetMonth: '2029-12' });
+    });
+
+    it('drops a saved month that is this month or earlier, rather than showing it', async () => {
+      for (const targetMonth of ['2026-11', '2026-10', '2019-01']) {
+        resetClientState();
+        const { options, extraToFinishBy } = plannerOptions({ stored: { ...saved, targetMonth } });
+        const { result } = await ready(options);
+        expect(result.current.planner!.targetDate, targetMonth).toBeNull();
+        expect(result.current.planner!.target, targetMonth).toEqual({ status: 'none' });
+        expect(extraToFinishBy).not.toHaveBeenCalled();
+      }
+    });
+
+    it('drops a saved month past the longest plan, and one that is not a month', async () => {
+      for (const targetMonth of [addMonths('2026-11', MAX_SIMULATION_MONTHS + 1)!.month, '2200-12', 'soon', '2029-13']) {
+        resetClientState();
+        const { options } = plannerOptions({ stored: { ...saved, targetMonth } });
+        const { result } = await ready(options);
+        expect(result.current.planner!.targetDate, targetMonth).toBeNull();
+        expect(result.current.planner!.target, targetMonth).toEqual({ status: 'none' });
+      }
+    });
+
+    it('drops a saved month once today catches up with it: December 2026 shows in November, not in January', async () => {
+      const { options } = plannerOptions({ stored: { ...saved, targetMonth: '2026-12' }, engineOptions: { solve: { extra: 150, reachable: true } } });
+      const hook = await ready(options);
+      expect(hook.result.current.planner!.targetDate).toBe('2026-12');
+      hook.rerender({ options: { ...options, today: () => ({ month: '2027-01' }) } });
+      expect(hook.result.current.planner!.targetDate).toBeNull();
+      expect(hook.result.current.planner!.target).toEqual({ status: 'none' });
+    });
+
+    it('keeps a month the person typed, even one in the past, so the screen can say why it is not used', async () => {
+      const { options } = plannerOptions({ stored: saved });
+      const { result } = await ready(options);
+      act(() => result.current.planner!.setTargetDate('2020-01'));
+      expect(result.current.planner!.targetDate).toBe('2020-01');
+      expect(result.current.planner!.target).toEqual({ status: 'past' });
+    });
+  });
+
+  it('reads a stored value it cannot use as "not set" (a negative extra)', async () => {
+    const { options } = plannerOptions({ stored: { method: 'avalanche', extra: -40 } });
     const { result } = await ready(options);
     expect(result.current.planner!.extra.value).toBe(0);
-    expect(result.current.planner!.target.status).not.toBe('needs');
+    expect(result.current.planner!.target).toEqual({ status: 'none' });
   });
 
   it('saves nothing until the person changes something', async () => {
@@ -700,7 +775,7 @@ describe('usePayoffPlanner: saved inputs', () => {
     expect(onStore.mock.calls).toHaveLength(0);
   });
 
-  it('saves the method, the extra and the target as months from today after each change', async () => {
+  it('saves the method, the extra and the target month as picked after each change', async () => {
     const onStore = vi.fn<(state: PayoffStoredState) => void>();
     const { options } = plannerOptions({ onStore, engineOptions: { solve: { extra: 100, reachable: true } } });
     const { result } = await ready(options);
@@ -709,12 +784,12 @@ describe('usePayoffPlanner: saved inputs', () => {
     act(() => result.current.planner!.setExtra(125));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'snowball', extra: 125 });
     act(() => result.current.planner!.setTargetDate('2029-12'));
-    expect(onStore).toHaveBeenLastCalledWith({ method: 'snowball', extra: 125, targetMonths: 37 });
+    expect(onStore).toHaveBeenLastCalledWith({ method: 'snowball', extra: 125, targetMonth: '2029-12' });
   });
 
   it('does not save a target it cannot use (past, too far, not a month), and drops a saved one', async () => {
     const onStore = vi.fn<(state: PayoffStoredState) => void>();
-    const { options } = plannerOptions({ onStore, stored: { method: 'avalanche', extra: 0, targetMonths: 12 } });
+    const { options } = plannerOptions({ onStore, stored: { method: 'avalanche', extra: 0, targetMonth: '2027-11' } });
     const { result } = await ready(options);
     act(() => result.current.planner!.setTargetDate('2026-01'));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'avalanche', extra: 0 });

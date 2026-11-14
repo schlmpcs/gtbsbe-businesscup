@@ -42,8 +42,11 @@ export type PayoffEngine = {
   extraToFinishBy: (debts: Debt[], months: number, method: PayoffChoice) => { extra: Money; reachable: boolean };
 };
 
-/** What the store keeps for the planner (`tools.payoff`, issue #78): the picks, browser-local. `targetMonths` counts from the month it was saved. */
-export type PayoffStoredState = { method: PayoffChoice; extra: Money; targetMonths?: number };
+/**
+ * What the store keeps for the planner (`tools.payoff`, M2): the picks, browser-local. `targetMonth` is the calendar
+ * month as picked ('YYYY-MM'), restored as it was: how many months away it is comes from today, on each render.
+ */
+export type PayoffStoredState = { method: PayoffChoice; extra: Money; targetMonth?: string };
 
 export type PayoffPlannerOptions = {
   engine: PayoffEngine;
@@ -149,12 +152,10 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   const storedMethod = stored?.method;
   const method: PayoffChoice = edits.method ?? (isChoice(storedMethod) ? storedMethod : 'avalanche');
   const extra = clampExtra(edits.extra ?? stored?.extra ?? 0);
-  // A saved target counts months from the day it was saved; one that cannot be a target now is dropped.
-  const storedMonths = stored?.targetMonths;
-  const storedTarget =
-    storedMonths !== undefined && Number.isInteger(storedMonths) && storedMonths >= 1 && storedMonths <= MAX_SIMULATION_MONTHS && today !== null
-      ? (addMonths(today, storedMonths)?.month ?? null)
-      : null;
+  // A saved target is a calendar month, restored as it was. One that cannot be a target today (this month or earlier,
+  // past the longest plan, not a month) is dropped, not shown; today moves on, so the check is made on each render.
+  const storedMonth = stored?.targetMonth ?? null;
+  const storedTarget = checkTarget(storedMonth, today).status === 'ok' ? storedMonth : null;
   const targetDate: string | null = edits.target !== undefined ? edits.target : storedTarget;
   const setMethod = useCallback((next: PayoffChoice) => {
     if (isChoice(next)) setEdits((e) => ({ ...e, method: next }));
@@ -247,7 +248,7 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
 
   // ----- the picks, kept after the person's own changes (what was only restored is not saved again) -----
   const touched = Object.keys(edits).length > 0;
-  const toStore: PayoffStoredState = { method, extra, ...(check.status === 'ok' ? { targetMonths: check.months } : {}) };
+  const toStore: PayoffStoredState = { method, extra, ...(check.status === 'ok' && targetDate !== null ? { targetMonth: targetDate } : {}) };
   const storeKey = touched ? JSON.stringify(toStore) : null;
   const onStoreRef = useRef(options?.onStore);
   useEffect(() => {
