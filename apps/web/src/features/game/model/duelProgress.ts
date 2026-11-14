@@ -43,8 +43,9 @@ export function duelDayProgress(log: DuelLog | null, total: number = DUEL_ROUND_
 
 /**
  * Today's duel progress in this browser. Only the fixture source keeps it here; with
- * NEXT_PUBLIC_DUEL_SOURCE=api the server holds it (GET /api/daily, #115) and this reads nothing yet
- * (S1 then shows the "play" call to action, never a made-up count).
+ * NEXT_PUBLIC_DUEL_SOURCE=api the server holds it (GET /api/daily?game=duel, which /play resumes
+ * from) and S1 Today reads nothing here: it shows the "play" call to action, never a made-up
+ * count. Counting the server's rounds on S1 is for the switch-over (#120).
  */
 export function readDuelDayProgress(date: string): DuelDayProgress {
   if (duelSource() === 'api') return duelDayProgress(null);

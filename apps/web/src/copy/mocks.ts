@@ -43,6 +43,12 @@ export const mocks = {
     /** Under each path: its 10-year net worth against the other path. */
     effectLabel: 'Net worth vs the other path',
     effectBy: (year: number) => `by ${year}`,
+    /** JF14: each path shows its own net worth (no ±); one sentence names the winner. */
+    levelLabel: (year: number) => `Net worth by ${year}`,
+    sentence: (subject: string, amount: string, year: number) => `${subject} leaves you ${amount} richer by ${year}.`,
+    sentenceSubject: { keep: 'Keeping the Camry', keepOwn: 'Keeping your car', lease: 'Leasing the RAV4', leaseOwn: 'Leasing a new car' },
+    detailsTitle: 'Loan left and monthly savings',
+    editDisclosure: 'Change the lease terms',
     better: 'Better path',
     /** Labels of the engine purchases (never shown as results). */
     purchaseLabels: { lease: 'Lease payment', signing: 'Due at signing' },

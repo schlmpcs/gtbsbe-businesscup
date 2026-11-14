@@ -69,6 +69,43 @@ function sampleStdDev(values: readonly number[], mean: number): number {
   return Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / (values.length - 1));
 }
 
+export type UsualMonth = {
+  /** Usual monthly spend per category (debtPayments is always 0: informational, see above). */
+  byCategory: Record<CostCategory, Money>;
+  /** Σ byCategory: the planned spend of a usual month. */
+  total: Money;
+  /** true = the mean of the last 3 full months before `month`; false = the profile's monthly values. */
+  fromHistory: boolean;
+};
+
+/**
+ * The "usual" month monthEnd projects bills from: per category, the mean of the last 3 full months
+ * before `month`, or the profile's monthly value with fewer than 3. Same rule and same validation
+ * as monthEnd (a bill category with nothing paid yet projects to exactly this value).
+ */
+export function usualMonthSpend(p: Profile, history: CategoryTotals[], month: string): UsualMonth {
+  daysInMonth(month);
+  const seen = new Set<string>();
+  const months = history.map((h) => {
+    daysInMonth(h.month);
+    if (seen.has(h.month)) throw new RangeError(`Duplicate history month: ${h.month}`);
+    seen.add(h.month);
+    return { month: h.month, spend: spendOf(h.totals, h.month) };
+  });
+  const n = monthEndHistoryMonths.value;
+  const recent = months
+    .filter((h) => h.month < month)
+    .sort((a, b) => (a.month < b.month ? 1 : -1))
+    .slice(0, n);
+  const fromHistory = recent.length >= n;
+  const byCategory = {} as Record<CostCategory, Money>;
+  for (const c of COST_CATEGORIES) {
+    if (c === 'debtPayments') byCategory[c] = 0;
+    else byCategory[c] = fromHistory ? recent.reduce((s, h) => s + h.spend[c], 0) / recent.length : Math.max(0, p.spending[c].value);
+  }
+  return { byCategory, total: SPEND_CATEGORIES.reduce((s, c) => s + byCategory[c], 0), fromHistory };
+}
+
 /** Month-end projection vs the 3-month average, with drift flags per category. */
 export function monthEnd(p: Profile, history: CategoryTotals[], current?: CurrentMonth): MonthEnd {
   // Validate every history month up front, so bad data fails the same way with or without `current`.

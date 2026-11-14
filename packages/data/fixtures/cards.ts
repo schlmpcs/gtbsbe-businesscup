@@ -6,17 +6,12 @@
 // an API-mode build where the server holds the answers. Import them from
 // '@lifeguessr/data/fixtures/cards' only where they are meant to be (an ESLint rule in
 // eslint.config.mjs lists the browser modules that may).
+//
+// The fixture duel's cards live in their own module (./duelCards), so a page that shows these
+// sample lives does not carry the duel's cards too.
 import { LifeCardSchema, type LifeCard } from '@lifeguessr/types';
 import cardsJson from './cards.sample.json';
-import duelCardsJson from './cards.duel.sample.json';
-
-const deepFreeze = <T>(value: T): T => {
-  if (value && typeof value === 'object') {
-    for (const v of Object.values(value)) deepFreeze(v);
-    Object.freeze(value);
-  }
-  return value;
-};
+import { deepFreeze } from './deepFreeze';
 
 /** Sample life cards spanning cheap → expensive. They hold the answer: see the note above. */
 export const cardsSample: readonly LifeCard[] = deepFreeze(LifeCardSchema.array().parse(cardsJson));
@@ -27,11 +22,3 @@ export function cardById(id: string): LifeCard {
   if (!card) throw new Error(`No fixture LifeCard with id ${id}`);
   return card;
 }
-
-/**
- * Made-up cards for the fixture duel: one per metro (15 metros), so a fixture round pairs lives in
- * different cities. Like the sample cards they are not catalog cards (ids `sample-duel-*`; no card
- * matches a catalog card's ZIP and household), so no real game answer ships in a browser chunk.
- * Each ZIP is in packages/data/out/areas.json, which the browser already uses for area lookups.
- */
-export const duelCardsSample: readonly LifeCard[] = deepFreeze(LifeCardSchema.array().parse(duelCardsJson));

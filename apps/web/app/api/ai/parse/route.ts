@@ -1,6 +1,7 @@
-// POST /api/ai/parse  { kind: 'life' | 'purchase' | 'loan', text, debts? }
+// POST /api/ai/parse  { kind: 'life' | 'purchase' | 'loan' | 'spend', text, debts? }
 //   200 { ok: true, kind, value, needsConfirmation: true, inferred }
-//       value: ProfilePatch | Purchase | LoanInput, validated with @lifeguessr/types schemas.
+//       value: ProfilePatch | Purchase | LoanInput | SpendItem[], validated with @lifeguessr/types schemas.
+//       ('spend' = the daily log: every amount must be written in the text.)
 //       These are parsed *inputs*: the UI shows them for the user to confirm before they enter
 //       the profile. `inferred` lists paths not written literally in the text.
 //   4xx/5xx { ok: false, error: { code, ... }, fallback: 'manualForm' }

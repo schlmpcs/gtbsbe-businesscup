@@ -1,12 +1,13 @@
 // S8 Balance sheet (Design v3, Figma 202:2117): white cards for age and take-home pay, savings and
 // debts, each value on a cream row (label left, number right; a skipped field shows an estimate tag,
-// a typed one can be skipped back to our estimate). Debts: add / edit / remove (APR typed as a
-// percent, stored as a decimal; a skipped minimum payment is estimated) with the debt-load gauge.
+// a typed one can be skipped back to our estimate). Debts, confirm not type (JF17): payments found in
+// the statement come up as a card to confirm; "+ kind" chips open a form where only the balance is
+// typed (APR and minimum prefilled, tagged estimate, editable); edit / remove; the debt-load gauge.
 // Right: an ink card with today's net worth, then the house being built.
 import { useId, useState, type ReactNode } from 'react';
 import { ladder } from '@/copy';
-import { Art, Button, cx, EstimateTag, formatMoney, formatRate, Gauge, NumberInput } from '@/ui-kit';
-import type { BalanceFieldKey, BalanceSheetVM, DebtRowVM, LadderProgressVM } from '../model/types';
+import { Art, Button, Choice, cx, EstimateTag, formatMoney, formatRate, Gauge, NumberInput, Sticker } from '@/ui-kit';
+import type { BalanceFieldKey, BalanceSheetVM, DebtInput, DebtRowVM, LadderProgressVM } from '../model/types';
 import { DebtForm } from './DebtForm';
 import { LadderShell } from './LadderShell';
 
@@ -30,8 +31,9 @@ function SheetCard({ title, children }: { title: string; children: ReactNode }) 
 }
 
 export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
-  // Which debt row is being edited ('new' = the add form).
+  // Which debt row is being edited, or 'new:<kind>' for the quick add form.
   const [editing, setEditing] = useState<string | null>(null);
+  const newKind = vm.debtKinds.find((k) => editing === `new:${k}`);
 
   return (
     <LadderShell
@@ -64,7 +66,7 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
       <SheetCard title={t.debtsTitle}>
         <div className="grid gap-xl md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-sm">
-            {vm.debts.length === 0 && editing !== 'new' && <p className="text-sm text-text-muted">{t.noDebts}</p>}
+            {vm.debts.length === 0 && !newKind && !vm.detectedDebt && <p className="text-sm text-text-muted">{t.noDebts}</p>}
             {vm.debts.length > 0 && (
               <ul aria-label={t.debtsLabel} className="flex flex-col gap-sm">
                 {vm.debts.map((d) => (
@@ -74,6 +76,8 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
                         title={t.formTitleEdit(t.debtKinds[d.kind])}
                         kinds={vm.debtKinds}
                         bounds={vm.debtBounds}
+                        aprDefaults={vm.debtAprDefaults}
+                        estimateMinPayment={vm.estimateMinPayment}
                         initial={{
                           kind: d.kind,
                           balance: d.balance,
@@ -101,12 +105,16 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
                 ))}
               </ul>
             )}
-            {editing === 'new' ? (
+            {vm.detectedDebt && editing === null && <DetectedDebt vm={vm} detected={vm.detectedDebt} />}
+            {newKind ? (
               <DebtForm
+                key={newKind}
                 title={t.formTitleAdd}
                 kinds={vm.debtKinds}
                 bounds={vm.debtBounds}
-                initial={{ kind: vm.debtKinds[0]!, balance: null, apr: null, minPayment: null }}
+                aprDefaults={vm.debtAprDefaults}
+                estimateMinPayment={vm.estimateMinPayment}
+                initial={{ kind: newKind, balance: null, apr: null, minPayment: null }}
                 onSave={(input) => {
                   vm.addDebt(input);
                   setEditing(null);
@@ -114,11 +122,20 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
                 onCancel={() => setEditing(null)}
               />
             ) : (
-              <div>
-                <Button size="sm" variant="ghost" onClick={() => setEditing('new')}>
-                  <span aria-hidden="true">+</span>
-                  {t.addDebt}
-                </Button>
+              <div role="group" aria-label={t.addDebt} className="flex flex-wrap gap-sm">
+                {vm.debtKinds.map((k) => (
+                  <Button
+                    key={k}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditing(`new:${k}`)}
+                    aria-label={t.addKindLabel(t.debtKinds[k])}
+                    className="rounded-full border-2 border-border"
+                  >
+                    <span aria-hidden="true">+</span>
+                    {t.debtKinds[k]}
+                  </Button>
+                ))}
               </div>
             )}
           </div>
@@ -221,5 +238,66 @@ function DebtRow({ debt, onEdit, onRemove }: { debt: DebtRowVM; onEdit: () => vo
         </span>
       </div>
     </div>
+  );
+}
+
+/** JF17: debt payments seen in the statement, as a card to confirm (pick a kind, type the balance) or dismiss. */
+function DetectedDebt({
+  vm,
+  detected,
+}: {
+  vm: BalanceSheetVM;
+  detected: NonNullable<BalanceSheetVM['detectedDebt']>;
+}) {
+  const d = t.detected;
+  const [kind, setKind] = useState<DebtInput['kind']>(vm.debtKinds[0]!);
+  const [balance, setBalance] = useState<number | null>(null);
+  const inputId = useId();
+  return (
+    <section aria-label={d.label} className="relative flex flex-col gap-md rounded-lg bg-bg p-lg pt-2xl ring-2 ring-primary ring-inset">
+      <Sticker tilt={-4} className="absolute -top-sm left-lg text-xs">
+        {d.sticker}
+      </Sticker>
+      <p className="text-lg font-bold">{d.text(formatMoney(detected.monthlyPayment), detected.months)}</p>
+      <Choice
+        legend={t.kindLabel}
+        name="detected-debt-kind"
+        value={kind}
+        options={vm.debtKinds.map((k) => ({ value: k, label: t.debtKinds[k] }))}
+        onChange={setKind}
+      />
+      <div className="flex flex-col gap-xs">
+        <label htmlFor={inputId} className="text-sm text-text-muted">
+          {d.balanceLabel}
+        </label>
+        <NumberInput
+          id={inputId}
+          value={balance}
+          min={vm.debtBounds.balance.min}
+          max={vm.debtBounds.balance.max}
+          prefix="$"
+          onValueChange={setBalance}
+          className="font-display text-2xl font-extrabold [&_input]:text-2xl"
+        />
+        <p className="flex flex-wrap items-center gap-sm text-xs text-text-muted">
+          <EstimateTag className="bg-surface" />
+          {t.aprLabel} {formatRate(vm.debtAprDefaults[kind], 2)} · {d.note}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-sm">
+        <Button
+          variant="dark"
+          disabled={balance === null}
+          onClick={() => {
+            if (balance !== null) vm.confirmDetected(kind, balance);
+          }}
+        >
+          {d.confirm}
+        </Button>
+        <Button variant="ghost" onClick={vm.dismissDetected}>
+          {d.dismiss}
+        </Button>
+      </div>
+    </section>
   );
 }

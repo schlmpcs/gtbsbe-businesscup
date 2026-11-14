@@ -25,15 +25,15 @@ export const CHECKED_EVENT_SETTLE_MS = 1_000;
 const FALLBACK_TIER: AreaTier = 'mid';
 
 export function useOverpaying(profile: Profile | null, opts: OverpayingOptions = {}): OverpayingVM {
-  const { streamer = false, stored, onStore } = opts;
+  const { streamer = false, stored, onStore, household = null } = opts;
   const deps = opts.deps ?? defaultOverpayingDeps;
   const ready = useAppReady();
 
   // What the form starts as; once the person changes anything, their draft replaces it whole.
-  const initial = useMemo(() => initialDraft(profile, stored), [profile, stored]);
+  const initial = useMemo(() => initialDraft(profile, stored, household), [profile, stored, household]);
   // What the profile alone gives. Where a value came from is judged against this, never against the saved
   // inputs: those change on every edit (the store round trip) and would otherwise erase the labels.
-  const fromProfile = useMemo(() => initialDraft(profile, undefined), [profile]);
+  const fromProfile = useMemo(() => initialDraft(profile, undefined, household), [profile, household]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const current = draft ?? initial.draft;
   const edit = useCallback((change: (d: Draft) => Draft) => setDraft((prev) => change(prev ?? initial.draft)), [initial]);

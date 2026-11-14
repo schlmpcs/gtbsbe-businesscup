@@ -94,7 +94,7 @@ export type PickResult = {
   breakdown: Record<DuelLetter, CategoryLine[]>;
   decidedBy: { category: CostCategory; A: Money; B: Money };  // biggest gap toward the costlier card (monthly)
   lesson: string;                     // fixed template filled by code, never an LLM
-  crowd: { pickedA: number; total: number } | null;           // null when total < 20
+  crowd: { pickedA: number; total: number } | null;           // live count of stored picks; null when total < DUEL_CROWD_MIN_PICKS (constants.ts)
 };
 export type DuelPickRequest = { anonId: string; date: string; round: DuelRound; choice: DuelLetter };
 export type DuelHintRequest = { anonId: string; date: string; round: DuelRound };
@@ -104,9 +104,17 @@ export type Debt = { id: string; kind: 'card'|'auto'|'student'|'personal'|'bnpl'
   balance: Money; apr: Rate;
   minPayment: Estimate<Money>;   // monthly; defaulted from assumptions when the user skips it
   extraPayment?: Money };        // monthly, set by moves
+/**
+ * "About you" (S6): the household the person typed. With `Profile.zip` it builds their starting life
+ * (engine `lifeCardFromFacts` → `costOfLife` / `cardToProfile`) and prefills the tools. Absent = not asked yet.
+ * Typed by the person, so never an estimate; a car here has no loan (insurance and fuel only).
+ */
+export type HouseholdFacts = { adults: 1|2; kids: KidAge[]; bedrooms: 0|1|2|3|4; hasCar: boolean };
 export type Profile = {
   /** Optional household facts, confirmed in the avatar preview; no effect on forecast math. */
   household?: AvatarFacts;
+  /** The household from "About you" (S6). Absent until the person answers it. */
+  householdFacts?: HouseholdFacts;
   age: Estimate<number>;
   takeHomePay: Estimate<Money>;  // monthly, after tax and payroll retirement contributions
   spending: Record<CostCategory, Estimate<Money>>;      // monthly
@@ -209,6 +217,15 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 // progress from it. Absent on data saved before it existed: the app then falls back to today.
 // `firstDay` = the same for the earliest line: a statement that starts on the 17th covers only half
 // of its first month, so that month is left out of the monthly averages (statementAverages).
+
+// Daily spending log (/spend and the Home quick-add). Kept in the browser only (app store). Only a
+// line the local parser can't read goes to /api/ai/parse (kind 'spend'), and it is not stored there.
+// `label` is what the user typed ("coffee"), `amount` one purchase in dollars.
+/** One line of the daily log, without its id and date: what the parser (local or AI) returns. */
+export type SpendItem = { category: CostCategory; amount: Money; label?: string };
+export type DailyEntry = { id: string; date: string /* YYYY-MM-DD, local */; category: CostCategory;
+  amount: Money;                 // one purchase, > 0
+  label?: string };
 
 // How the server sorted one statement line (labels only; every sum is done in code). A CostCategory
 // is spending in that category when money goes out, or a refund from that kind of merchant when it
@@ -405,3 +422,4 @@ export * from './overpaying';
 export * from './subscriptions';
 export * from './subscriptionAudit';
 export * from './avatar';
+export * from './together';

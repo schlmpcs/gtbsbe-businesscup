@@ -3,10 +3,12 @@ import { expect, test } from '@playwright/test';
 import { common } from '../src/copy/common';
 import { linkedScreenIds, SCREEN_ROUTES } from '../src/lib/screens';
 
-test('home page loads with the disclaimer and a link to every screen', async ({ page }) => {
+test('home page loads with the disclaimer; /screens links every screen', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByText(common.disclaimer)).toBeVisible();
+  await expect(page.locator('a[data-screen]')).toHaveCount(0); // no developer list on the landing (JF15)
+  await page.goto('/screens');
   // Every screen but S4 (the slider's streamer mode) while /play is the duel.
   await expect(page.locator('nav a[data-screen]')).toHaveCount(linkedScreenIds().length);
 });

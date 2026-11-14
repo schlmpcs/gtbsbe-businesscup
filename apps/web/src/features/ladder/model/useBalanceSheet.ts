@@ -1,8 +1,11 @@
 // S8 Balance sheet in six taps: age, take-home pay, cash, retirement, card balance and APR, other
-// loans. A value the user types is measured; a skipped one stays an estimate. Every value is
+// loans. A value the user types is measured; a skipped one stays an estimate. Debts are confirm, not
+// type (JF17): debt payments found in the statement come up as a card to confirm; a new debt needs
+// only its balance (APR and minimum prefilled from engine defaults, tagged estimate). Every value is
 // clamped to what the profile contract accepts, so a half-typed number never breaks the profile.
-import { DEBT_KINDS } from '@lifeguessr/types';
-import { useCallback, useMemo } from 'react';
+import { cardMinPaymentFor, debtAprDefaults } from '@lifeguessr/engine';
+import { DEBT_KINDS, type Debt, type Money } from '@lifeguessr/types';
+import { useCallback, useMemo, useState } from 'react';
 import { track } from '@/lib/events';
 import { debtLoadGauge, netWorthToday, thisMonth } from '@/lib/model/profile';
 import { useAppReady, useAppStore, useProfile, type DebtInput } from '@/state';
@@ -35,6 +38,15 @@ export function clampDebt(input: DebtInput): DebtInput | null {
   };
 }
 
+/** Mean monthly debt payments over the statement months that have them; null when none. */
+export function detectedDebtPayments(
+  months: readonly { totals: Partial<Record<string, number>> }[],
+): { monthlyPayment: Money; months: number } | null {
+  const values = months.map((m) => m.totals.debtPayments).filter((v): v is number => typeof v === 'number' && v > 0);
+  if (values.length === 0) return null;
+  return { monthlyPayment: values.reduce((t, v) => t + v, 0) / values.length, months: values.length };
+}
+
 export function useBalanceSheet(): BalanceSheetVM {
   const ready = useAppReady();
   const profile = useProfile();
@@ -43,6 +55,8 @@ export function useBalanceSheet(): BalanceSheetVM {
   const addDebtAction = useAppStore((s) => s.addDebt);
   const updateDebtAction = useAppStore((s) => s.updateDebt);
   const removeDebt = useAppStore((s) => s.removeDebt);
+  const statementMonths = useAppStore((s) => s.statementMonths);
+  const [dismissed, setDismissed] = useState(false);
 
   const fields = useMemo(
     () => Object.fromEntries(FIELDS.map((f) => [f, { ...profile[f] }])) as BalanceSheetVM['fields'],
@@ -95,6 +109,19 @@ export function useBalanceSheet(): BalanceSheetVM {
     [updateDebtAction],
   );
 
+  const detected = useMemo(() => detectedDebtPayments(statementMonths), [statementMonths]);
+  const detectedDebt = detected && !dismissed && profile.debts.length === 0 ? detected : null;
+
+  const confirmDetected = useCallback(
+    (kind: Debt['kind'], balance: Money) => {
+      if (!detected) return '';
+      setDismissed(true);
+      // The payment seen in the statement is the user's own: kept as their payment (measured).
+      return addDebt({ kind, balance, apr: debtAprDefaults.value[kind], minPayment: detected.monthlyPayment });
+    },
+    [detected, addDebt],
+  );
+
   return {
     status: ready ? 'ready' : 'loading',
     fields,
@@ -102,6 +129,11 @@ export function useBalanceSheet(): BalanceSheetVM {
     debts,
     debtKinds: DEBT_KINDS,
     debtBounds: DEBT_BOUNDS,
+    debtAprDefaults: debtAprDefaults.value,
+    estimateMinPayment: cardMinPaymentFor,
+    detectedDebt,
+    confirmDetected,
+    dismissDetected: () => setDismissed(true),
     debtLoad: debtLoadGauge(month.debtLoad),
     debtLoadMax: DEBT_LOAD_GAUGE_MAX,
     netWorth,

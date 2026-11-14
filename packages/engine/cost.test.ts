@@ -1,17 +1,17 @@
 // Y1: costOfLife + cardToProfile. Expected numbers are worked out by hand from the fixtures
 // (areaData.sample.json, cards.sample.json) and the assumptions they use:
 //   estimateSpread 0.15, monthlyGallons 45, kidGroceryFactor 0.7, weeksPerMonth 4.33, avgMealPrice $18;
-//   Closest Life: subscriptions $90, other $350/adult + $150/kid, pay = outflow / 0.9, cash = 2 × outflow.
+//   Closest Life: subscriptions $90, other $350/adult + $150/kid, pay = BLS CE $87,869 / 12, cash = 2 × outflow.
 import { describe, expect, it } from 'vitest';
 import { areaByZip } from '@lifeguessr/data/fixtures';
 import { cardById, cardsSample } from '@lifeguessr/data/fixtures/cards';
 import { COST_CATEGORIES, ProfileSchema, type AreaData, type CostBreakdown, type LifeCard } from '@lifeguessr/types';
 import {
-  ageDefault, assumptionSource, avgMealPrice, cardSpendingShareOfTakeHome, cashBufferMonthsDefault,
+  ageDefault, assumptionSource, avgMealPrice, cashBufferMonthsDefault, eatingOutPerWeekDefault,
   estimateSpread, kidGroceryFactor, lifeCardLoanSource, monthlyGallons, otherPerAdultMonthly,
-  otherPerKidMonthly, retirementBalanceDefault, subscriptionsMonthlyDefault, weeksPerMonth,
+  otherPerKidMonthly, retirementBalanceDefault, subscriptionsMonthlyDefault, takeHomePayDefault, weeksPerMonth,
 } from './assumptions';
-import { cardToProfile, costOfLife } from './cost';
+import { cardToProfile, costOfLife, lifeCardFromFacts, OWN_LIFE_CARD_ID, scaleSpendingTo } from './cost';
 
 const GROCERIES = 367.95; // USDA moderate plan, per adult, all fixture ZIPs
 const FUEL = 3.408 * 45; // EIA TX gas × monthlyGallons = 153.36
@@ -38,7 +38,9 @@ describe('assumptions used by these hand-checked numbers', () => {
     expect(subscriptionsMonthlyDefault.value).toBe(90);
     expect(otherPerAdultMonthly.value).toBe(350);
     expect(otherPerKidMonthly.value).toBe(150);
-    expect(cardSpendingShareOfTakeHome.value).toBe(0.9);
+    expect(takeHomePayDefault.value).toBe(87_869 / 12);
+    expect(takeHomePayDefault.source.url).toMatch(/^https:\/\/www\.bls\.gov\//);
+    expect(eatingOutPerWeekDefault.value).toBe(2);
     expect(cashBufferMonthsDefault.value).toBe(2);
   });
 });
@@ -198,8 +200,9 @@ describe('cardToProfile (Closest Life)', () => {
     expect(auto.apr).toBe(0.089);
     expect(auto.minPayment.value).toBeCloseTo(331.3576915, 6);
 
+    // Pay is the sourced national default, not derived from the outflow: 87,869 / 12 = 7322.4167
+    expect(p.takeHomePay.value).toBeCloseTo(7322.4166667, 6);
     // outflow = spending 4472.705 + loan 331.3577 = 4804.0627
-    expect(p.takeHomePay.value).toBeCloseTo(4804.0626915 / 0.9, 6); // 5337.8474
     expect(p.cash.value).toBeCloseTo(4804.0626915 * 2, 6); // 9608.1254
     expect(p.age.value).toBe(ageDefault.value);
     expect(p.retirement.value).toBe(retirementBalanceDefault.value);
@@ -237,7 +240,58 @@ describe('cardToProfile (Closest Life)', () => {
     expect(p.debts).toEqual([]);
     expect(p.spending.car.value).toBe(0);
     expect(p.spending.childcare.value).toBe(0);
-    // studio 1840 + groceries 367.95 + eating out 5 × 4.33 × 18 = 389.7, + subscriptions 90 + other 350
-    expect(p.takeHomePay.value).toBeCloseTo((1840 + 367.95 + 389.7 + 90 + 350) / 0.9, 9);
+    // Pay does not follow spending: the same national default as every card.
+    expect(p.takeHomePay.value).toBeCloseTo(7322.4166667, 6);
+  });
+});
+
+describe('lifeCardFromFacts ("About you" → the starting life)', () => {
+  it('1 adult, 1 bedroom, a car without a loan, in 75216', () => {
+    const area = areaByZip('75216');
+    const card = lifeCardFromFacts({ adults: 1, kids: [], bedrooms: 1, hasCar: true }, area);
+    expect(card.id).toBe(OWN_LIFE_CARD_ID);
+    expect(card.zip).toBe('75216');
+    const cost = costOfLife(card, area);
+    // rent 1100 + insurance 150 + fuel 3.408 × 45 = 153.36 + groceries 367.95 + eating out 2 × 4.33 × 18 = 155.88
+    expect(cost.total.mid).toBeCloseTo(1927.19, 9);
+    const p = cardToProfile(card, area);
+    expect(p.debts).toEqual([]); // no loan we don't know about
+    expect(p.spending.car.value).toBeCloseTo(303.36, 9);
+    expect(p.takeHomePay).toEqual({ value: 87_869 / 12, isEstimate: true });
+    expect(() => ProfileSchema.parse(p)).not.toThrow();
+  });
+
+  it('no car: no car line', () => {
+    const area = areaByZip('75216');
+    const card = lifeCardFromFacts({ adults: 2, kids: [], bedrooms: 1, hasCar: false }, area);
+    expect(card.car).toBeUndefined();
+    // rent 1100 + groceries 2 × 367.95 = 735.9 + eating out 155.88
+    expect(costOfLife(card, area).total.mid).toBeCloseTo(1991.78, 9);
+  });
+});
+
+describe('scaleSpendingTo', () => {
+  const e = (value: number, isEstimate = true) => ({ value, isEstimate });
+  const spending = {
+    rentUtilities: e(1000, false), car: e(0), childcare: e(0), groceries: e(500), eatingOut: e(300),
+    subscriptions: e(100), other: e(100), debtPayments: e(250, false),
+  };
+
+  it('scales every category but debtPayments in proportion, to the total, as estimates', () => {
+    // categories add up to 2000; 3000 / 2000 = 1.5
+    const out = scaleSpendingTo(spending, 3000);
+    expect(out.rentUtilities).toEqual(e(1500));
+    expect(out.groceries).toEqual(e(750));
+    expect(out.eatingOut).toEqual(e(450));
+    expect(out.subscriptions).toEqual(e(150));
+    expect(out.other).toEqual(e(150));
+    expect(out.car).toEqual(e(0));
+    expect(out.debtPayments).toEqual(e(250, false)); // untouched
+  });
+
+  it('a total at or below zero, or no spending to scale, gives zeros', () => {
+    expect(scaleSpendingTo(spending, -5).groceries.value).toBe(0);
+    const none = { ...spending, rentUtilities: e(0), groceries: e(0), eatingOut: e(0), subscriptions: e(0), other: e(0) };
+    expect(scaleSpendingTo(none, 3000).rentUtilities.value).toBe(0);
   });
 });

@@ -40,6 +40,15 @@ export const FORECAST_HORIZONS = [1, 3, 5, 10] as const satisfies readonly Horiz
 export const DUEL_LETTERS = ['A', 'B'] as const satisfies readonly DuelLetter[];
 export const DUEL_ROUNDS = [1, 2, 3, 4, 5] as const satisfies readonly DuelRound[];
 
+/**
+ * Fewest stored picks a duel round needs before the reveal says how other players picked
+ * (PickResult.crowd); below it the crowd is null and the reveal says "Not enough picks yet".
+ * "61% picked A" out of five people is noise dressed up as a fact, and with a handful of picks a
+ * player could also work out how their friends answered. 20 keeps the line meaningful from the
+ * first busy hour of a day. Every stored pick counts, the asking player's own included.
+ */
+export const DUEL_CROWD_MIN_PICKS = 20;
+
 // ----- statements (T6/T7) ---------------------------------------------------------------------
 
 export const STATEMENT_CLASSES = [
@@ -153,3 +162,10 @@ export const SUBSCRIPTION_TICKS_MAX = 200;
 export { AVATAR_ROUND_BALANCE,AVATAR_ROUND_MONTHLY,AVATAR_RENT_SHARE_STEP,AVATAR_BOUNDS,AVATAR_TTL_DAYS,AVATAR_MIN_POOL,AVATAR_MIN_PICKS } from './avatar';
 
 /** Exact integer mask capacity shared by JavaScript arithmetic and Postgres bigint queries. */
+
+// ----- Daily spending log (/spend) -------------------------------------------------------------
+
+/** Categories a logged purchase can go in: every CostCategory but the informational debtPayments. */
+export const SPEND_ITEM_CATEGORIES = [
+  'rentUtilities', 'car', 'childcare', 'groceries', 'eatingOut', 'subscriptions', 'other',
+] as const satisfies readonly Exclude<CostCategory, 'debtPayments'>[];

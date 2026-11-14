@@ -12,15 +12,17 @@ export type ToolsHubProps = {
 };
 
 // Your own numbers first (JF6): every other tool answers better once a statement replaced the estimates.
-const ORDER: ToolKey[] = ['exact', 'afford', 'loan', 'decide', 'checkin', 'subscriptions', 'overpaying'];
+const ORDER: ToolKey[] = ['exact', 'afford', 'loan', 'decide', 'checkin', 'subscriptions', 'overpaying', 'bills', 'together'];
 const ART: Record<ToolKey, ArtName> = {
   afford: 'afford-crane',
   loan: 'coins',
   decide: 'home-family',
   checkin: 'house-crane',
   subscriptions: 'streaming',
-  overpaying: 'calendar',
+  overpaying: 'home-suburb',
+  bills: 'calendar',
   exact: 'little-things',
+  together: 'duel-houses',
 };
 
 export function ToolsHub({ hrefs, Link }: ToolsHubProps) {

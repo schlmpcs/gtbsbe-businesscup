@@ -1,7 +1,7 @@
 // Ladder progress for every rung (S5–S9): which rungs are done, and how far the user's real
 // numbers have narrowed the 10-year range band. The band comes from the engine forecast: it is
 // built from the estimated inputs only, so it shrinks as estimates become measured values.
-import { cardToProfile } from '@lifeguessr/engine';
+import { cardToProfile, OWN_LIFE_CARD_ID } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type Debt, type Estimate, type LifeCard, type Profile } from '@lifeguessr/types';
 import { useMemo } from 'react';
 import { profileDemo } from '@/fixtures';
@@ -59,6 +59,8 @@ type ProgressData = Pick<AppData, 'profile' | 'profileOrigin' | 'selfGuess' | 'c
 /** The debts the profile started from (see ProgressData.startDebts). */
 export function startingDebts(closestCardId: string | null, cards: readonly LifeCard[]): readonly Debt[] | null {
   if (closestCardId === null) return profileDemo.debts;
+  // The life built from "About you" has no debts (a car there has no loan).
+  if (closestCardId === OWN_LIFE_CARD_ID) return [];
   const card = cards.find((c) => c.id === closestCardId);
   const area = card ? areaForZip(card.zip) : null;
   return card && area ? cardToProfile(card, area).debts : null;
@@ -84,7 +86,9 @@ export function rungsDone(s: ProgressData): Record<LadderScreen, boolean> {
   const byHand = own && (SPENDING_SLIDERS.some(({ category }) => measured(p.spending[category])) || measured(p.retirementShare));
   return {
     S5: s.selfGuess !== null,
-    S6: s.closestCardId !== null,
+    // About you + your starting life: a life was built, or the household was answered (the life is
+    // skipped when the spending came from a statement).
+    S6: s.closestCardId !== null || p.householdFacts !== undefined,
     S7: byHand,
     S8:
       own &&
