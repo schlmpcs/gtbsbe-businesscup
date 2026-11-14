@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { common, duel as t } from '@/copy';
-import { Button, Card, SourceNote, cx, formatMoney, formatRate } from '@/ui-kit';
+import { Card, SourceNote, cx, formatMoney, formatRate } from '@/ui-kit';
 import type { DuelRevealVM } from '../model/types';
 import { CATEGORY_COLOR } from './CategoryBar';
 
@@ -26,11 +26,10 @@ export function DuelRevealHeader({ reveal }: { reveal: DuelRevealVM }) {
 
 export type DuelRevealProps = {
   reveal: DuelRevealVM;
-  onNext: () => void;
 };
 
-/** S3 below the cards: what decided it (with the lesson), the crowd, sources, and Next round. */
-export function DuelReveal({ reveal, onNext }: DuelRevealProps) {
+/** S3 below the cards: what decided it (with the lesson), the crowd and the sources. Next round sits under the headline. */
+export function DuelReveal({ reveal }: DuelRevealProps) {
   const decidedId = useId();
   const { decidedBy } = reveal;
   const category = common.categories[decidedBy.category];
@@ -38,7 +37,7 @@ export function DuelReveal({ reveal, onNext }: DuelRevealProps) {
     <div className="flex flex-col gap-lg">
       <div className="grid grid-cols-1 gap-lg md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <section aria-labelledby={decidedId} className="flex flex-col gap-sm rounded-xl bg-surface p-xl shadow-md">
-          <h3 id={decidedId} className="text-sm font-bold uppercase tracking-wide text-text-muted">
+          <h3 id={decidedId} className="text-sm font-bold text-text-muted">
             {t.reveal.decidedHeading}
           </h3>
           <p className="flex items-center gap-sm font-display text-2xl font-extrabold leading-tight">
@@ -77,12 +76,6 @@ export function DuelReveal({ reveal, onNext }: DuelRevealProps) {
         </details>
       </Card>
 
-      {/* Sticky on phones so Next round is always on screen without scrolling. */}
-      <div className="sticky bottom-md z-20 flex justify-end">
-        <Button size="lg" onClick={onNext} className="w-full shadow-lg sm:w-auto sm:min-w-[calc(var(--spacing-3xl)*6)]">
-          {reveal.isLastRound ? t.reveal.finish : t.reveal.next}
-        </Button>
-      </div>
     </div>
   );
 }

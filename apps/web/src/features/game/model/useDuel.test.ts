@@ -5,7 +5,7 @@ import type { ClientFunnelEvent, DuelLetter, EventsRequest } from '@lifeguessr/t
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { duel as t } from '@/copy/duel';
-import { cardsSample } from '@/fixtures/cards';
+import { duelCardsSample } from '@/fixtures/cards';
 import { ApiError } from '@/lib/api/http';
 import { areaForZip } from '@/lib/areas';
 import { flushEvents, queuedEventsForTests, resetEventsForTests } from '@/lib/events';
@@ -22,7 +22,7 @@ const now = () => NOW;
 
 /** The right answer per round, worked out with the engine from the same sample cards. */
 function costlierByRound(): DuelLetter[] {
-  const totals = new Map(cardsSample.map((c) => [c.id, costOfLife(c, areaForZip(c.zip)!).total.mid]));
+  const totals = new Map(duelCardsSample.map((c) => [c.id, costOfLife(c, areaForZip(c.zip)!).total.mid]));
   return dailyDuelPairs(TODAY, [...totals].map(([id, total]) => ({ id, total }))).map(
     (p) => duelDifference({ A: totals.get(p.A)!, B: totals.get(p.B)! }).costlier!,
   );

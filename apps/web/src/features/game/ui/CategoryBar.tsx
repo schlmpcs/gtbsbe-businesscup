@@ -35,13 +35,15 @@ export function CategoryBar({ label, categories, className }: CategoryBarProps) 
       </div>
       <ul aria-label={label} className="flex flex-col gap-xs text-sm">
         {categories.map((c) => (
-          <li key={c.category} className="flex flex-wrap items-center justify-between gap-x-sm">
-            <span className="flex min-w-0 items-center gap-xs">
-              <span aria-hidden="true" className={cx('size-sm shrink-0 rounded-full', CATEGORY_COLOR[c.category])} />
-              <span className="break-words">{common.categories[c.category]}</span>
+          <li key={c.category} className="grid grid-cols-1 items-start gap-x-sm sm:grid-cols-[minmax(0,1fr)_auto]">
+            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-xs">
+              <span aria-hidden="true" className={cx('size-sm rounded-full', CATEGORY_COLOR[c.category])} />
+              <span className="flex min-w-0 flex-col items-start gap-xs">
+                <span className="break-words">{common.categories[c.category]}</span>
+                {c.isEstimate && <EstimateTag />}
+              </span>
             </span>
-            <span className="ml-auto flex shrink-0 items-center gap-xs font-semibold tabular-nums">
-              {c.isEstimate && <EstimateTag />}
+            <span className="flex shrink-0 items-baseline gap-xs justify-self-end font-semibold tabular-nums">
               <Money value={c.amount} />
               <span className="text-text-muted">{t.card.perMonth}</span>
             </span>

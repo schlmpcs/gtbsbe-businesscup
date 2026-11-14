@@ -12,7 +12,7 @@ import type {
   AreaData, CostBreakdown, DuelHint, DuelLetter, DuelRound, LifeCard, PickResult, PublicDuel, PublicDuelCard,
 } from '@lifeguessr/types';
 import { duel as t } from '@/copy/duel';
-import { cardsSample } from '@/fixtures/cards';
+import { duelCardsSample } from '@/fixtures/cards';
 import { ApiError } from '@/lib/api/http';
 import { areaForZip } from '@/lib/areas';
 import { readStorage, writeStorage } from '@/lib/safeStorage';
@@ -60,7 +60,7 @@ const hintOf = (area: AreaData | null): string => (area ? t.hintFacts[area.tier]
 export function createFixtureDuelClient(
   opts: { cards?: readonly LifeCard[]; persist?: boolean; areaFor?: (zip: string) => AreaData | null } = {},
 ): DuelClient {
-  const cards = opts.cards ?? cardsSample;
+  const cards = opts.cards ?? duelCardsSample;
   const persist = opts.persist ?? true;
   const areaFor = opts.areaFor ?? areaForZip;
   let log: DuelLog | null = null;

@@ -8,6 +8,7 @@
 // eslint.config.mjs lists the browser modules that may).
 import { LifeCardSchema, type LifeCard } from '@lifeguessr/types';
 import cardsJson from './cards.sample.json';
+import duelCardsJson from './cards.duel.sample.json';
 
 const deepFreeze = <T>(value: T): T => {
   if (value && typeof value === 'object') {
@@ -26,3 +27,10 @@ export function cardById(id: string): LifeCard {
   if (!card) throw new Error(`No fixture LifeCard with id ${id}`);
   return card;
 }
+
+/**
+ * Fixture cards for the duel: one real life card per metro (15 metros), copied from
+ * packages/data/cards/cards.json so fixture duels pair lives across cities. Each card's ZIP is in
+ * packages/data/out/areas.json, which the browser already uses for area lookups.
+ */
+export const duelCardsSample: readonly LifeCard[] = deepFreeze(LifeCardSchema.array().parse(duelCardsJson));

@@ -11,7 +11,6 @@ export type DuelShareStatus = 'idle' | 'sharing' | 'shared' | 'copied' | 'failed
 export type DuelCopyStatus = 'idle' | 'copied' | 'failed';
 
 export const duel = {
-  eyebrow: 'Today’s duel',
   title: 'Which life costs more?',
   subtitle: 'Tap the life you think costs more each month.',
   loading: 'Loading today’s duels…',
@@ -137,7 +136,7 @@ export const duel = {
   /** What decided a round, as one plain lesson (fixed table; engine scoreDuelPick picks the id). */
   lessons: {
     childcareOverRent: 'Childcare often costs more than rent.',
-    childcare: 'Kids under school age add a second rent: daycare.',
+    childcare: 'Childcare can cost as much as rent.',
     rentUtilities: 'Where you live and how many bedrooms usually decide the month.',
     car: 'A financed car can outweigh a bigger home.',
     groceries: 'More mouths at home move the grocery bill more than you think.',

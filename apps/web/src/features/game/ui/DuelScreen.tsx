@@ -66,7 +66,6 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
     <main className="w-full">
       <div className="mx-auto flex w-full max-w-(--container-5xl) flex-col gap-xl px-lg py-xl">
         <header className="flex flex-col items-center gap-md text-center">
-          <p className="text-sm font-bold uppercase tracking-wide text-text-muted">{t.eyebrow}</p>
           <h1 className="font-display text-4xl font-extrabold leading-display sm:text-display">{t.title}</h1>
           {inRound && (
             <div className="flex flex-col items-center gap-sm">
@@ -94,6 +93,14 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
 
           {vm.status === 'ready' && vm.phase === 'reveal' && vm.reveal && <DuelRevealHeader reveal={vm.reveal} />}
 
+          {vm.status === 'ready' && vm.phase === 'reveal' && vm.reveal && (
+            <div className="flex justify-center">
+              <Button size="lg" onClick={vm.next} className="w-full sm:w-auto sm:min-w-[calc(var(--spacing-3xl)*6)]">
+                {vm.reveal.isLastRound ? t.reveal.finish : t.reveal.next}
+              </Button>
+            </div>
+          )}
+
           {vm.status === 'ready' && vm.phase !== 'summary' && vm.cards && (
             <div className="relative grid grid-cols-2 items-stretch gap-md sm:gap-2xl">
               {vm.cards.map((card) => (
@@ -119,7 +126,7 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
             </div>
           )}
 
-          {vm.status === 'ready' && vm.phase === 'reveal' && vm.reveal && <DuelReveal reveal={vm.reveal} onNext={vm.next} />}
+          {vm.status === 'ready' && vm.phase === 'reveal' && vm.reveal && <DuelReveal reveal={vm.reveal} />}
 
           {vm.status === 'ready' && vm.phase === 'summary' && vm.summary && (
             <DuelSummary
