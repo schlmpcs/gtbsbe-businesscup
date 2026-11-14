@@ -426,11 +426,14 @@ export const subsSteadyMinCharges = {
   note: 'One charge is not a steady amount: a lone different charge on the usual day is more likely a one-off than a new price.',
 } satisfies Assumption<number>;
 
-/** A step more than this many times bigger or smaller (either way) is a different charge, not a price change. */
+/**
+ * A step more than this many times bigger or smaller (either way) is a different charge, not a price change.
+ * The same factor bounds a lone charge of a service that sells only monthly plans against a plan's price.
+ */
 export const subsStepMaxRatio = {
   value: 2,
   assumption: true,
-  note: 'Keeps an annual fee or a one-off on the billing day from being read as a price change. A smaller first charge can still be an intro price (below).',
+  note: 'Keeps an annual fee or a one-off on the billing day from being read as a price change. A smaller first charge can still be an intro price (below). Also keeps a one-off purchase or a yearly prepayment from a known vendor (a $1,299 store order, a $264 annual plan) from being read as one monthly bill: a lone charge counts only within this factor of a monthly plan price.',
 } satisfies Assumption<number>;
 
 /** `introEnded`: the first charges were at most this share of the amount that followed. */

@@ -19,7 +19,7 @@
 //    gap). The latest run with at least two charges is the finding.
 // 5. Yearly and one-off sightings. Not inferable from under 12 months of data, so only the
 //    catalogue finds them: a charge that matches a yearly or quarterly plan price, or a single
-//    charge of a service with a monthly plan.
+//    charge of a service with a monthly plan, at a price near that plan's (within a factor of 2).
 //
 // All thresholds are named in assumptions.ts (subs*) with a rationale. Money is worked in whole
 // cents until the end.
@@ -138,6 +138,10 @@ function matchService(key: string, catalogue: readonly CatalogueEntry[]): KnownS
 
 const withinPlanPrice = (cents: number, price: Money) =>
   Math.abs(cents - price * 100) <= subsPlanPriceTolerance.value * price * 100 + EPSILON;
+
+/** A charge at most a factor of `subsStepMaxRatio` (2) above or below a plan price: near it, though no longer at it. */
+const nearPlanPrice = (cents: number, price: Money) =>
+  cents <= subsStepMaxRatio.value * price * 100 + EPSILON && price * 100 <= subsStepMaxRatio.value * cents + EPSILON;
 
 // ----- lanes, chains, runs ---------------------------------------------------------------------
 
@@ -300,18 +304,24 @@ function findPlanPriced(charges: readonly Charge[], service: KnownService, month
 }
 
 /**
- * The latest charge of a recognised service that bills monthly, at a monthly plan's price or when
- * every plan is monthly. This is the issue's "medium for a catalogue match with 1": a known merchant
- * whose charges form no series (one charge in a one-month statement, or several that do not repeat
- * on a pattern) is reported by its latest charge alone, as a single sighting. The earlier charges
- * are not counted (`chargesSeen` is 1), and no price or intro flag is raised: those need a steady
- * amount held for 2 or more charges, which is what was not found.
+ * The latest charge of a recognised service that bills monthly: at a monthly plan's price (within
+ * the plan tolerance), or, when every plan is monthly, within a factor of 2 either way of one of
+ * them (a plan whose price drifted or was discounted; not a one-off purchase or a yearly
+ * prepayment from the same vendor, which have no business being read as a month's bill). This is
+ * the issue's "medium for a catalogue match with 1": a known merchant whose charges form no series
+ * (one charge in a one-month statement, or several that do not repeat on a pattern) is reported by
+ * its latest charge alone, as a single sighting. When that charge is outside the bound nothing is
+ * reported, whatever the earlier charges were. The earlier charges are not counted (`chargesSeen`
+ * is 1), and no price or intro flag is raised: those need a steady amount held for 2 or more
+ * charges, which is what was not found.
  */
 function findLatestMonthly(charges: readonly Charge[], service: KnownService): Detected | null {
   const c = charges.at(-1)!;
-  const priced = service.plans.some((p) => p.cadence === 'monthly' && withinPlanPrice(c.cents, p.price));
+  const monthlyPrices = service.plans.filter((p) => p.cadence === 'monthly').map((p) => p.price);
+  const priced = monthlyPrices.some((price) => withinPlanPrice(c.cents, price));
   const onlyMonthly = service.plans.every((p) => p.cadence === 'monthly');
-  if (!priced && !onlyMonthly) return null;
+  const nearAPlan = onlyMonthly && monthlyPrices.some((price) => nearPlanPrice(c.cents, price));
+  if (!priced && !nearAPlan) return null;
   if (c.cents < subsMinAmount.value * 100 - EPSILON) return null;
   return { months: 1, charges: [c], segments: [], amountCents: c.cents };
 }
