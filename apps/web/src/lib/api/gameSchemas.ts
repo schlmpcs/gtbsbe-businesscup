@@ -207,6 +207,15 @@ export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
 export const HintReplySchema = DuelHintSchema.extend({ recorded: z.boolean() });
 export type HintReply = z.infer<typeof HintReplySchema>;
 
+/**
+ * POST /api/daily/pick reply: the round's result as the server scored it, plus whether it was
+ * scored now (`replayed: false`) or is the stored result of an earlier pick of the same round
+ * (`replayed: true`, even when the repeat named the other letter: the first pick is the one that
+ * counts). `crowd` is live, so it can differ between a pick and its replay.
+ */
+export const PickReplySchema = PickResultSchema.extend({ replayed: z.boolean() });
+export type PickReply = z.infer<typeof PickReplySchema>;
+
 /** Error codes of the game routes (`{ ok: false, error: { code } }`). */
 export const GAME_ERROR_CODES = [
   'bad_request', 'too_large', 'rate_limited', 'unavailable',

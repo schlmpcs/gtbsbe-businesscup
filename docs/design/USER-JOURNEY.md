@@ -307,7 +307,7 @@ Pro lists only what works (D-5): goal + monthly check-in, saved life, saved tool
 
 **Game**
 - [ ] `GET /api/daily` returns 5 duels by New York date (keep slider shape behind a flag)
-- [ ] `POST /api/daily/pick` (one pick per round per anonId, server-scored, stores `resultId`)
+- [x] `POST /api/daily/pick` (one pick per round per anonId, server-scored, stores `resultId`)
 - [ ] `POST /api/daily/hint` (hint log, −10% per hint, floor 50%)
 - [ ] Duel pairing: card pairs per day, gap ladder from easy to close
 - [ ] `decidedBy` + lesson templates + blind-spot template (code, not LLM)
