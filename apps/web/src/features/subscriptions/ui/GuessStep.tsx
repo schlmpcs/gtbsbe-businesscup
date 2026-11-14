@@ -12,7 +12,7 @@ export function GuessStep({ guess, onNext }: GuessStepProps) {
     <Card title={t.guess.title}>
       <Stack gap="lg">
         <Field label={t.guess.label} hint={t.guess.hint}>
-          <NumberInput value={guess.value} onValueChange={guess.set} max={100_000} prefix="$" suffix="/mo" />
+          <NumberInput value={guess.value} onValueChange={guess.set} max={100_000} prefix={t.guess.prefix} suffix={t.guess.suffix} />
         </Field>
         <Stack gap="xs">
           <p className="text-sm text-text-muted">{t.guess.presets}</p>

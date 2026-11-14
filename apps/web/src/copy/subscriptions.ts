@@ -39,6 +39,8 @@ export const subscriptions = {
   guess: {
     title: 'How much do you think you spend on subscriptions each month?',
     label: 'Monthly guess',
+    prefix: '$',
+    suffix: '/mo',
     hint: 'Streaming, apps, gyms, memberships. A rough number is fine.',
     presets: 'Quick picks',
     next: 'Next: tick what you pay for',
@@ -66,6 +68,8 @@ export const subscriptions = {
     /** What a yearly or quarterly plan comes to per month. */
     perMonth: (amount: string) => `about ${amount} a month`,
     planLabel: (service: string) => `Plan for ${service}`,
+    /** After a price in the list. */
+    cadenceShort: { monthly: '/mo', yearly: '/yr', quarterly: '/qtr' } satisfies Record<Cadence, string>,
     totalTitle: 'Your ticks',
     count: (n: number) => plural(n, 'service ticked', 'services ticked'),
     totalMonthly: (amount: string) => `${amount} a month`,
@@ -99,6 +103,7 @@ export const subscriptions = {
       over2: 'more than double the total',
     } satisfies Record<MissBucket, string>,
     noGuess: 'You skipped the guess, so here is the total on its own.',
+    noValue: '—',
     noTotal: 'The total is $0, so there is nothing to compare a guess with.',
     survey: (guessed: string, itemized: string) =>
       `In a survey, people guessed about ${guessed} a month on subscriptions. When they added them up, it came to ${itemized}.`,
@@ -159,6 +164,7 @@ export const subscriptions = {
     dismissed: (n: number) => `${plural(n, 'charge', 'charges')} hidden`,
     restore: 'Show them again',
     markToCancel: 'Mark to cancel',
+    unknownMonth: '—',
     next: 'Make a cancel plan',
     planWaits: 'Nothing is counted yet. Answer the charges above, or tick a service, and the plan opens.',
   },
@@ -193,6 +199,9 @@ export const subscriptions = {
     title: 'Use this in my plan',
     description: 'Nothing changes until you confirm.',
     field: 'Subscriptions per month',
+    /** Between the two values; read as `arrowSr` by a screen reader. */
+    arrow: '→',
+    arrowSr: 'changes to',
     estimate: 'estimate',
     measured: 'measured',
     /** `from` → `to`, each with its tag. */
@@ -226,16 +235,25 @@ export const subscriptions = {
   keep: {
     title: 'What we keep',
     tag: 'Stays in this browser',
-    gist: 'This tool keeps your guess, your ticks, your choices and the findings from your statement in this browser only.',
-    details: 'Exactly what we keep',
-    items: [
-      'Your guess and the services you ticked, with the plan you picked.',
-      'The charges found in your statement: the merchant name as it appears on the statement, the amount, the day and how often. Your choices about them (yes, no, mark to cancel).',
-    ],
-    notKept: 'The statement file and its lines are read on this device and dropped. They are never saved.',
-    sent: 'To sort the lines, only masked merchant names, amounts, months and days are sent, and nothing is stored there.',
+    gist: 'This tool saves your guess, your ticks, your choices and the findings from your statement in this browser only. You can clear them at any time.',
     none: 'Nothing saved yet.',
-    clear: 'Clear what this tool kept',
+    details: 'Exactly what we keep',
+    savedTitle: 'Saved in this browser:',
+    saved: [
+      'your guess, and the services you ticked with the plan you picked',
+      'the recurring charges found in your statement: the merchant name as it appears there, the amount, the day, how often, and when the next one is expected',
+      'your choices about them: confirmed, not a subscription, marked to cancel',
+    ],
+    savedWhere: 'These stay on this device. The saved findings are never sent to our server.',
+    neverTitle: 'We never save:',
+    never: ['the statement file or its lines', 'account numbers or personal names'],
+    sentTitle: 'What leaves your browser to find them:',
+    sent: 'only each line’s merchant label (account numbers masked, and personal names on payment-app and transfer lines), amount, month and day of month, to sort it into categories. We don’t store the labels or the lines. Only the labels, without amounts or dates, may go on to our AI provider, Anthropic, just to sort them; it doesn’t use API data to train its models.',
+    forecastSent:
+      'When you use the cancel plan, the numbers in your profile and the change you marked (no names or account numbers) go to our AI provider, Anthropic, to work out the 10-year number. It doesn’t use API data to train its models.',
+    kept: '✓',
+    notKeptMark: '✕',
+    clear: 'Clear what this tool saved',
     cleared: 'Cleared.',
   },
 } as const;

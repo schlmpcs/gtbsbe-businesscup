@@ -17,7 +17,7 @@ export function RevealCard({ reveal, onFindForgotten, onBack }: RevealCardProps)
         <div className="grid grid-cols-1 gap-lg sm:grid-cols-2">
           <Stat
             label={t.reveal.guessed}
-            value={reveal.guess === null ? '—' : <Money value={reveal.guess} />}
+            value={reveal.guess === null ? t.reveal.noValue : <Money value={reveal.guess} />}
             hint={reveal.guess === null ? undefined : t.reveal.perMonth(formatMoney(reveal.guess))}
           />
           <Stat

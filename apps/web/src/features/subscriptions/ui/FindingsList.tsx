@@ -100,7 +100,7 @@ function flagTexts(f: FindingVM): string[] {
       case 'overlap':
         return t.findings.flag.overlap(f.overlapCount);
       case 'seenOnce':
-        return t.findings.flag.seenOnce(f.cadence, f.lastCharge ? formatMonth(f.lastCharge.month) : '—');
+        return t.findings.flag.seenOnce(f.cadence, f.lastCharge ? formatMonth(f.lastCharge.month) : t.findings.unknownMonth);
     }
   });
 }

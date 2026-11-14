@@ -84,7 +84,7 @@ function TickRow({ service, toggle }: { service: TickServiceVM; toggle: TicksVM[
         </div>
         <p className="shrink-0 text-right text-sm tabular-nums">
           {formatMoney(plan.price, { cents: true })}
-          <span className="text-text-muted"> {plan.cadence === 'monthly' ? '/mo' : plan.cadence === 'yearly' ? '/yr' : '/qtr'}</span>
+          <span className="text-text-muted"> {t.ticks.cadenceShort[plan.cadence]}</span>
         </p>
       </Row>
       <div className="flex flex-wrap items-center gap-sm pl-2xl text-xs text-text-muted">

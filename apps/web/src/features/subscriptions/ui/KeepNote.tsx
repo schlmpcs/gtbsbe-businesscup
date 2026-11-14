@@ -1,7 +1,9 @@
 'use client';
 
 // "What we keep": what this tool saves in the browser, what it never saves, what is sent to sort the
-// lines, and a button to clear it. Stays on screen under every step.
+// lines and to whom, what the cancel plan's forecast sends, and a button to clear it. It follows the
+// privacy design (docs/ARCHITECTURE.md): labels pass through the language-model provider only to be
+// sorted and are not stored. Stays on screen under every step.
 import { subscriptions as t } from '@/copy';
 import { Button, Card, Stack, Tag } from '@/ui-kit';
 
@@ -14,24 +16,38 @@ export function KeepNote({ hasLocalData, onClear }: KeepNoteProps) {
         <p className="text-text-muted">{hasLocalData ? t.keep.gist : t.keep.none}</p>
         <details className="text-xs">
           <summary className="cursor-pointer font-medium text-text-muted">{t.keep.details}</summary>
-          <Stack gap="sm" className="mt-sm">
-            <ul className="flex flex-col gap-xs">
-              {t.keep.items.map((item) => (
-                <li key={item} className="flex gap-sm">
-                  <span aria-hidden="true" className="shrink-0 font-bold text-positive">
-                    ✓
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <p className="flex gap-sm">
-              <span aria-hidden="true" className="shrink-0 font-bold text-primary">
-                ✕
-              </span>
-              {t.keep.notKept}
+          <Stack gap="md" className="mt-sm">
+            <div>
+              <p className="font-semibold">{t.keep.savedTitle}</p>
+              <ul className="mt-xs flex flex-col gap-xs">
+                {t.keep.saved.map((item) => (
+                  <li key={item} className="flex gap-sm">
+                    <span aria-hidden="true" className="shrink-0 font-bold text-positive">
+                      {t.keep.kept}
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-xs text-text-muted">{t.keep.savedWhere}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{t.keep.neverTitle}</p>
+              <ul className="mt-xs flex flex-col gap-xs">
+                {t.keep.never.map((item) => (
+                  <li key={item} className="flex gap-sm">
+                    <span aria-hidden="true" className="shrink-0 font-bold text-primary">
+                      {t.keep.notKeptMark}
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="rounded-md bg-bg p-md">
+              <span className="font-semibold">{t.keep.sentTitle}</span> {t.keep.sent}
             </p>
-            <p className="rounded-md bg-bg p-md">{t.keep.sent}</p>
+            <p className="rounded-md bg-bg p-md">{t.keep.forecastSent}</p>
           </Stack>
         </details>
         {hasLocalData && (

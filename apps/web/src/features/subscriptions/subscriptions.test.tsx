@@ -256,6 +256,34 @@ describe('SubscriptionsScreen: the statement, the findings and the plan', () => 
   });
 });
 
+describe('SubscriptionsScreen: privacy copy says what the privacy design says', () => {
+  it('names what is saved here, what leaves the browser and to whom, that it is not stored, and what the plan’s forecast sends', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    const keep = screen.getByRole('heading', { name: t.keep.title }).closest('section')!;
+    const text = keep.textContent ?? '';
+    // Saved in this browser only, and clearable.
+    expect(text).toMatch(/guess/i);
+    expect(text).toMatch(/ticked/i);
+    expect(text).toMatch(/merchant name/i);
+    expect(text).toMatch(/choices/i);
+    expect(text).toMatch(/never sent to our server/i);
+    // What is sent to find the findings: masked label, amount, month, day; to our provider only the labels; not stored.
+    expect(within(keep).getByText(t.keep.sent, { exact: false })).toHaveTextContent(/merchant label/);
+    expect(t.keep.sent).toMatch(/amount, month and day of month/);
+    expect(t.keep.sent).toMatch(/don’t store the labels or the lines/);
+    expect(t.keep.sent).toMatch(/Anthropic/);
+    // The cancel plan's forecast request carries the profile numbers.
+    expect(within(keep).getByText(t.keep.forecastSent)).toBeInTheDocument();
+    expect(t.keep.forecastSent).toMatch(/numbers in your profile/);
+    expect(t.keep.forecastSent).toMatch(/cancel plan/);
+    expect(t.keep.forecastSent).toMatch(/Anthropic/);
+    // Never saved.
+    expect(text).toMatch(/statement file or its lines/);
+  });
+});
+
 describe('SubscriptionsScreen: what we keep', () => {
   it('says what stays in the browser and clears it on request', async () => {
     const user = userEvent.setup();

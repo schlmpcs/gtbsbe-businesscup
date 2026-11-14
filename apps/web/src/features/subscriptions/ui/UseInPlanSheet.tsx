@@ -37,8 +37,8 @@ export function UseInPlanSheet({ open, apply, onClose, onConfirm }: UseInPlanShe
         <p className="text-sm text-text-muted">{t.apply.field}</p>
         <p className="flex flex-wrap items-center gap-sm text-base">
           <Value value={apply.from} />
-          <span aria-hidden="true">→</span>
-          <span className="sr-only">to</span>
+          <span aria-hidden="true">{t.apply.arrow}</span>
+          <span className="sr-only">{t.apply.arrowSr}</span>
           <Value value={apply.to} />
         </p>
         <p className="text-xs text-text-muted">{apply.to.isEstimate ? t.apply.toNote.estimate : t.apply.toNote.measured}</p>
