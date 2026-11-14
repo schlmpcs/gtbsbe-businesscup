@@ -1,0 +1,21 @@
+# OS / editor
+.DS_Store
+
+# Dependencies and builds
+node_modules/
+.next/
+.vercel/
+.turbo/
+*.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+
+# Secrets (commit .env.example only)
+.env
+.env.*
+!.env.example
+
+# Local only
+graphify-out/
+docs/lifeguessr-docs.zip
