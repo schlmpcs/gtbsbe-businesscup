@@ -8,11 +8,11 @@
 //   save may keep or remove saved purchases but not add one; items saved earlier stay.
 // - Each save bumps `revision`, under the row lock, so concurrent saves for one id apply one
 //   after the other and the result is always exactly one request's fields.
-import { ProfileSchema, PurchaseSchema, type Profile, type Purchase, type SessionState } from '@lifeguessr/types';
+import { GoalSchema, type Goal, ProfileSchema, PurchaseSchema, type Profile, type Purchase, type SessionState } from '@lifeguessr/types';
 
 export type { SessionState } from '@lifeguessr/types';
 
-export type SessionUpdate = { profile?: Profile; wishlist?: Purchase[] };
+export type SessionUpdate = { goal?: Goal | null; profile?: Profile; wishlist?: Purchase[] };
 
 export type SaveOptions = {
   /** True for a Pro user: the wishlist may grow. Otherwise it may only keep or drop items. */
@@ -60,7 +60,7 @@ export function addsToWishlist(saved: readonly Purchase[], next: readonly Purcha
 
 /** The pure state transition of a save. `now` is an ISO timestamp. */
 export function applySessionUpdate(current: SessionState, update: SessionUpdate, opts: SaveOptions, now: string): SaveResult {
-  if (update.profile === undefined && update.wishlist === undefined) return { ok: true, session: current };
+  if (update.profile === undefined && update.wishlist === undefined && update.goal === undefined) return { ok: true, session: current };
   if (update.wishlist !== undefined && !opts.mayAddToWishlist && addsToWishlist(current.wishlist, update.wishlist)) {
     return { ok: false, reason: 'wishlist_locked' };
   }
@@ -68,6 +68,7 @@ export function applySessionUpdate(current: SessionState, update: SessionUpdate,
   return {
     ok: true,
     session: {
+      ...(update.goal !== undefined ? {goal:update.goal} : current.goal !== undefined ? {goal:current.goal} : {}),
       ...(profile !== undefined && { profile }),
       wishlist: update.wishlist ?? current.wishlist,
       revision: current.revision + 1,
@@ -81,7 +82,7 @@ export function applySessionUpdate(current: SessionState, update: SessionUpdate,
  * that no longer parses is dropped (the browser keeps its own copy), and so is a broken wishlist
  * item; neither turns a load into an error.
  */
-export function decodeStored(profile: unknown, wishlist: unknown): Pick<SessionState, 'profile' | 'wishlist'> {
+export function decodeStored(profile: unknown, wishlist: unknown, goal?: unknown): Pick<SessionState, 'profile' | 'wishlist' | 'goal'> {
   const parsedProfile = profile == null ? undefined : ProfileSchema.safeParse(profile);
   if (parsedProfile && !parsedProfile.success) console.warn('[store] a saved profile no longer matches the Profile contract; ignoring it');
   const items = Array.isArray(wishlist) ? wishlist : [];
@@ -89,7 +90,9 @@ export function decodeStored(profile: unknown, wishlist: unknown): Pick<SessionS
     const parsed = PurchaseSchema.safeParse(item);
     return parsed.success ? [parsed.data] : [];
   });
+  const parsedGoal = GoalSchema.nullable().safeParse(goal);
   return {
+    ...(parsedGoal.success && parsedGoal.data !== null && {goal:parsedGoal.data}),
     ...(parsedProfile?.success && { profile: parsedProfile.data }),
     wishlist: purchases,
   };

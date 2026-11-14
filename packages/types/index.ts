@@ -1,3 +1,4 @@
+import type { Goal } from './goal';
 import type { TOOL_IDS } from './constants';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
 // Change only together (Amir + Aibek): update this file, the zod schemas in ./schemas.ts,
@@ -164,7 +165,7 @@ export type ProErrorCode =
 // ----- Sessions (T4): POST /api/session ----------------------------------------------------
 // The profile and wishlist saved under the anonymous id, so a reload restores them without an
 // account. `revision` counts saves (0 = nothing saved yet); `updatedAt` is ISO 8601 UTC.
-export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
+export type SessionState = { goal?: Goal | null; profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
 export type SessionErrorCode =
   | 'bad_request' | 'too_large' | 'rate_limited'
   | 'unavailable'         // the store is not configured or cannot be reached (503)
@@ -178,6 +179,9 @@ export type SessionErrorCode =
 export type ToolId = (typeof TOOL_IDS)[number];
 export type MissBucket = 'under0.5'|'0.5to0.8'|'0.8to1.25'|'1.25to2'|'over2';
 export type ClientFunnelEvent =
+  | {name:'goal_set';props:{years:number}}
+  | {name:'goal_verdict_shown';props:{verdict:'onTrack'|'withinRange'|'behind'}}
+  | {name:'goal_cleared'}
   | { name: 'tool_opened'; props: { tool: ToolId } }
   | { name: 'subs_started'; props: { path: 'tickList'|'statement' } }
   | { name: 'subs_revealed'; props: { miss: MissBucket } }
@@ -235,6 +239,7 @@ export type FunnelReport = {
 
 export * from './constants';
 export * from './schemas';
+export * from './goal';
 export * from './tools';
 export * from './payoff';
 export * from './overpaying';

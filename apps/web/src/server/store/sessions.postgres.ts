@@ -5,13 +5,13 @@ import {
   applySessionUpdate, decodeStored, emptySession, type SaveResult, type SessionState, type SessionStore,
 } from './sessions';
 
-type Row = { profile: unknown; wishlist: unknown; revision: number; updated_at: Date | null };
+type Row = { goal: unknown; profile: unknown; wishlist: unknown; revision: number; updated_at: Date | null };
 
-const COLUMNS = 'profile, wishlist, revision, updated_at';
+const COLUMNS = 'profile, wishlist, goal, revision, updated_at';
 
 function fromRow(row: Row | undefined): SessionState {
   if (!row || row.revision === 0) return emptySession();
-  return { ...decodeStored(row.profile, row.wishlist), revision: row.revision, updatedAt: row.updated_at?.toISOString() ?? null };
+  return { ...decodeStored(row.profile, row.wishlist, row.goal), revision: row.revision, updatedAt: row.updated_at?.toISOString() ?? null };
 }
 
 /** Thrown inside the transaction to roll it back (and drop the row it may have created). */
@@ -31,7 +31,7 @@ export function createPostgresSessionStore(db: Db): SessionStore {
     load,
 
     async save(anonId, update, opts) {
-      if (update.profile === undefined && update.wishlist === undefined) return { ok: true, session: await load(anonId) };
+      if (update.profile === undefined && update.wishlist === undefined && update.goal === undefined) return { ok: true, session: await load(anonId) };
       const key = anonKey(anonId);
       try {
         return await db.transaction(async (tx) => {
@@ -41,14 +41,14 @@ export function createPostgresSessionStore(db: Db): SessionStore {
           const { rows } = await tx.query<Row>(`SELECT ${COLUMNS} FROM sessions WHERE anon_key = $1 FOR UPDATE`, [key]);
           const result = applySessionUpdate(fromRow(rows[0]), update, opts, new Date().toISOString());
           if (!result.ok) throw new Rejected(result);
-          const { profile, wishlist, revision, updatedAt } = result.session;
+          const { profile, wishlist, goal, revision, updatedAt } = result.session;
           await tx.query(
             `UPDATE sessions
-                SET profile = $2::jsonb, wishlist = $3::jsonb, revision = $4, updated_at = $5::timestamptz
+                SET profile = $2::jsonb, wishlist = $3::jsonb, revision = $4, updated_at = $5::timestamptz, goal = $6::jsonb
               WHERE anon_key = $1`,
             // jsonb parameters are passed as JSON text: node-postgres would turn a JS array into a
             // Postgres array literal, not JSON.
-            [key, profile === undefined ? null : JSON.stringify(profile), JSON.stringify(wishlist), revision, updatedAt],
+            [key, profile === undefined ? null : JSON.stringify(profile), JSON.stringify(wishlist), revision, updatedAt, goal == null ? null : JSON.stringify(goal)],
           );
           return result;
         });

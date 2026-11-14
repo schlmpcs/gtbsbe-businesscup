@@ -63,7 +63,7 @@ export const CLIENT_EVENT_NAMES = [
   'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared',
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
-  'paywall_viewed',
+  'paywall_viewed', 'goal_set', 'goal_verdict_shown', 'goal_cleared',
   'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked',
   'renewals_exported', 'overpaying_checked', 'payoff_planned',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
@@ -90,5 +90,7 @@ export const FUNNEL_MAX_DAYS = 90;
 /** Most homes in one day's set: the bound on `home` in event props. */
 export const EVENT_HOMES_MAX = 10;
 
+export const GOAL_MIN_YEARS=1;
+export const GOAL_MAX_YEARS=30;
 /** Independent tools; never inserted into the main funnel. */
 export const TOOL_IDS = ['subscriptions','overpaying','payoff'] as const;

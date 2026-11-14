@@ -11,6 +11,7 @@ import {
   type CategoryTotals, type CostCategory, type Money, type Move, type Profile, type ProfilePatch, type Purchase,
 } from '@lifeguessr/types';
 import { z } from 'zod';
+import { GoalSchema, type Goal } from '@lifeguessr/types';
 import { ToolsStateSchema, type ToolsState } from '@lifeguessr/types';
 import { restoreTools } from './tools';
 import { create } from 'zustand';
@@ -28,6 +29,7 @@ export type ProfileOrigin = 'demo' | 'closestLife' | 'user';
 export type WishlistItem = { id: string; purchase: Purchase; addedAt: string /* ISO timestamp */ };
 
 export type AppData = {
+  goal: Goal | null;
   tools: ToolsState;
   profile: Profile;
   profileOrigin: ProfileOrigin;
@@ -45,6 +47,8 @@ export type AppData = {
 };
 
 export type AppActions = {
+  setGoal: (goal:Goal) => void;
+  clearGoal: () => void;
   setTool: <K extends keyof ToolsState>(key: K, value: ToolsState[K]) => void;
   clearTool: (key: keyof ToolsState) => void;
   /** Replace the whole profile (e.g. restored from the server session). */
@@ -78,6 +82,7 @@ export const APP_STORE_KEY = 'lifeguessr.app';
 
 export function initialAppData(): AppData {
   return {
+    goal: null,
     tools: {},
     profile: cloneProfileDemo(),
     profileOrigin: 'demo',
@@ -109,6 +114,7 @@ const WishlistItemSchema = z.object({ id: z.string().min(1), purchase: PurchaseS
 
 /** Saved state is validated field by field; a field that fails keeps its default. */
 const persistedFields = {
+  goal: GoalSchema.nullable(),
   tools: z.unknown().transform(restoreTools),
   profile: ProfileSchema,
   profileOrigin: z.enum(['demo', 'closestLife', 'user']),
@@ -194,6 +200,8 @@ export const useAppStore = create<AppState>()(
           delete profile.committedMoveId;
           return { profile, committedMove: null };
         }),
+      setGoal: goal => set({goal:GoalSchema.parse(goal)}),
+      clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
       clearTool: key => set(s=>{const tools={...s.tools};delete tools[key];return {tools};}),
       reset: () => set(initialAppData()),
@@ -204,6 +212,7 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => safeStateStorage),
       skipHydration: true,
       partialize: (s): AppData => ({
+        goal: s.goal,
         tools: s.tools,
         profile: s.profile,
         profileOrigin: s.profileOrigin,
