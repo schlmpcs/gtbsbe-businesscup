@@ -87,6 +87,19 @@ describe('StatementUpload (S9)', () => {
     expect(screen.getByRole('region', { name: ladder.upload.keep.title })).toHaveTextContent(ladder.upload.keep.forecastSent);
   });
 
+  it('does not call the profile “not stored” when the same panel says it is saved on our server', () => {
+    const vm = uploadVM({
+      whatWeKeep: { months: ['2026-10'], categories: [...COST_CATEGORIES], takeHomePay: true, savedProfileToServer: true },
+    });
+    render(<StatementUpload vm={vm} progress={progress} />);
+    const keep = screen.getByRole('region', { name: ladder.upload.keep.title });
+    expect(keep).toHaveTextContent(ladder.upload.keep.server);
+    expect(ladder.upload.keep.forecastSent).not.toMatch(/not stored|n’t store/i);
+    // The provider does not train on API data; zero data retention is not enabled, so no copy claims it.
+    expect(ladder.upload.keep.forecastSent).toMatch(/(does not|doesn’t) use API data to train/i);
+    expect(ladder.upload.keep.forecastSent).not.toMatch(/retention|keep them/i);
+  });
+
   it('offers connecting a bank app as coming soon, not as a working option', () => {
     render(<StatementUpload vm={uploadVM()} progress={progress} />);
     const connect = screen.getByRole('button', { name: `${ladder.upload.bank.button} · ${ladder.upload.bank.soon}` });

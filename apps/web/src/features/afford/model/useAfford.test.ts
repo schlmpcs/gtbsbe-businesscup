@@ -42,6 +42,7 @@ describe('useAfford (S11)', () => {
       baselineFails: expected.baselineFails,
       cheapestWay: expected.cheapestWay,
       todaysDollars: false,
+      forecastSource: 'rules',
       waitMonths: expected.waitMonths ?? null,
       failsOn: expected.failsOn ?? null,
     });

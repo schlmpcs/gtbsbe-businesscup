@@ -108,6 +108,11 @@ export function useForecastBundle(
   // This key's remembered answer, whoever's request settled it and whenever it did.
   const remembered = useSyncExternalStore(subscribeToMemory, () => memory.get(key), () => undefined);
 
+  // Whether the model's answer for this key is remembered. The request effect depends on it: when this
+  // key's AI answer is lost while mounted (evicted, or forgotten by a reset) the effect asks again
+  // instead of leaving the view on an answer nothing will refresh; when one lands, it stops asking.
+  const hasRememberedAi = remembered !== undefined && isAi(remembered);
+
   // A new request key opens a new view (adjusting state while rendering: React re-renders at once, so
   // the screen never shows the old key's view under the new key).
   let current = view;
@@ -116,7 +121,7 @@ export function useForecastBundle(
     setView(current);
   }
 
-  // The effect below runs when the key changes, not on every render: it reads the rest from here.
+  // The effect below runs when the key or `hasRememberedAi` changes, not on every render: it reads the rest from here.
   const latest = useRef({ profile, candidates, request, hasPrevious: false });
   useEffect(() => {
     latest.current = { profile, candidates, request, hasPrevious: current.before !== null };
@@ -187,7 +192,7 @@ export function useForecastBundle(
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [ready, key]);
+  }, [ready, key, hasRememberedAi]);
 
   return useMemo((): ForecastState => {
     if (!ready) return LOADING;

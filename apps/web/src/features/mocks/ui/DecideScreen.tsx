@@ -4,9 +4,9 @@
 // number comes from useDecide() (the user's profile through the engine's forecast / simulate; the
 // lease terms are the user's, starting from an illustrative fixture).
 import type { ReactNode } from 'react';
-import { mocks } from '@/copy';
+import { forecast, mocks } from '@/copy';
 import {
-  Art, Button, Card, EstimateTag, Field, formatMoney, Money, NumberInput, Scoreboard, Sticker, type ArtName,
+  Art, Button, Card, EstimateTag, Field, formatMoney, Money, NumberInput, Scoreboard, Sticker, Tag, type ArtName,
 } from '@/ui-kit';
 import type { DecideResultVM, DecideVM, LeaseField } from '../model/types';
 import { PreviewBadge } from './PreviewBadge';
@@ -133,6 +133,9 @@ function Result({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
       />
       <p className="flex flex-wrap items-center gap-sm text-xs text-text-muted">
         {t.footnote(vm.horizonYear)}
+        <Tag data-testid="decide-forecast-source" data-source={r.forecastSource}>
+          {forecast.source[r.forecastSource]}
+        </Tag>
         {r.isEstimate && <EstimateTag />}
       </p>
     </div>

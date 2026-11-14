@@ -1,7 +1,7 @@
 // Strings for the AI helpers (/api/ai/parse, /api/ai/explain). Owner: Amir (Y12).
 // The explain templates are the deterministic fallback when the model is unavailable or its
 // sentence fails a guard. They take numbers already formatted by src/lib/format.ts.
-import type { CostCategory, MoveKind } from '@lifeguessr/types';
+import type { CostCategory, ForecastSource, MoveKind } from '@lifeguessr/types';
 
 const categoryLabels: Record<CostCategory, string> = {
   rentUtilities: 'rent and utilities',
@@ -27,18 +27,38 @@ const moveSentence: Record<MoveKind, (category?: CostCategory) => string> = {
   reshopInsurance: () => 'This move compares car insurance quotes to lower your premium.',
 };
 
+/** Second sentence of a move explanation: the 10-year effect, worded by where the number came from. */
+const moveEffect = {
+  simulation: {
+    gain: (amount: string) => `In our simulation it adds about ${amount} to your net worth in 10 years.`,
+    loss: (amount: string) => `In our simulation it lowers your net worth by about ${amount} in 10 years.`,
+  },
+  ai: {
+    gain: (amount: string) => `Our AI estimate is that it adds about ${amount} to your net worth in 10 years.`,
+    loss: (amount: string) => `Our AI estimate is that it lowers your net worth by about ${amount} in 10 years.`,
+  },
+} as const;
+
 export const ai = {
   /** Plain-language category names (also given to the model as facts). */
   categoryLabels,
   /** One sentence describing a move (also given to the model as the move's description). */
   moveSummary: (kind: MoveKind, category?: CostCategory) => moveSentence[kind](category),
   explain: {
-    move: (kind: MoveKind, category: CostCategory | undefined, effect10y: string, positive: boolean) =>
-      `${moveSentence[kind](category)} ${
-        positive
-          ? `In our simulation it adds about ${effect10y} to your net worth in 10 years.`
-          : `In our simulation it lowers your net worth by about ${effect10y} in 10 years.`
-      }`,
+    /**
+     * `source` says where the 10-year number came from: 'ai' (the model's estimate, checked against
+     * our rules) is named as such; 'rules' or none is the deterministic simulation.
+     */
+    move: (
+      kind: MoveKind,
+      category: CostCategory | undefined,
+      effect10y: string,
+      positive: boolean,
+      source?: ForecastSource,
+    ) => {
+      const sentences = source === 'ai' ? moveEffect.ai : moveEffect.simulation;
+      return `${moveSentence[kind](category)} ${positive ? sentences.gain(effect10y) : sentences.loss(effect10y)}`;
+    },
     loan: (monthly: string, totalInterest: string, payoff: string | null) =>
       `This loan costs ${monthly} a month and ${totalInterest} in interest in total. ${
         payoff === null

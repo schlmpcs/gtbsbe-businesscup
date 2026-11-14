@@ -61,7 +61,7 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
       },
     },
     in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, in10yBandKind: 'inputs',
-    forecastStatus: 'ready', forecastError: null, source: 'rules', actionsDisabled: false, committedMove: null,
+    forecastStatus: 'ready', forecastError: null, source: 'rules', isRefreshing: false, actionsDisabled: false, committedMove: null,
     markCommittedDone: () => {}, topMove: { status: 'ready', data: null },
     game: { date: null, played: 0, total: 0, finished: false, homes: [] },
     ...over,
@@ -144,6 +144,27 @@ describe('TodayScreen (S1)', () => {
     expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeEnabled();
     rerender(<TodayScreen vm={todayVm({ committedMove: committed, actionsDisabled: true })} links={links} screens={[]} Link={A} />);
     expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeDisabled();
+  });
+
+  it('says the forecast is updating, politely, while the number on the card is the previous answer', async () => {
+    render(<Today />);
+    const card = await screen.findByTestId('in10y');
+    await waitFor(() => expect(within(card).getByText(t.netWorthIn10y)).toBeInTheDocument());
+    const status = within(card).getByTestId('forecast-refreshing');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toBeEmptyDOMElement();
+
+    act(() => useAppStore.getState().setSpending('eatingOut', 100));
+    expect(status).toHaveTextContent(t.future.refreshing);
+    expect(within(card).getByText(t.netWorthIn10y)).toBeInTheDocument(); // still the previous answer
+    await waitFor(() => expect(status).toBeEmptyDOMElement(), { timeout: FORECAST_DEBOUNCE_MS + 1_000 });
+  });
+
+  it('shows the updating line from the view-model flag only', () => {
+    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument();
+    rerender(<TodayScreen vm={todayVm({ isRefreshing: true })} links={links} screens={[]} Link={A} />);
+    expect(within(screen.getByTestId('in10y')).getByText(t.future.refreshing)).toBeInTheDocument();
   });
 
   it('shows drift flags when the view-model has an average', async () => {
@@ -295,6 +316,39 @@ describe('FutureScreen (S10)', () => {
     const how = screen.getByTestId('how-we-calculate');
     expect(within(how).getByText(t.how.introAi)).toBeInTheDocument();
     expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
+  });
+
+  it('names the band’s source in the chart legend: the model’s uncertainty for an AI answer, the inputs for rules', async () => {
+    const rules = render(<Future />);
+    const rulesChart = await screen.findByRole('figure', { name: t.future.chartTitle });
+    expect(within(screen.getByTestId('in10y')).getByTestId('forecast-source')).toHaveAttribute('data-source', 'rules');
+    expect(within(rulesChart).getByText(t.band.label)).toBeInTheDocument();
+    expect(within(rulesChart).queryByText(t.band.model.label)).not.toBeInTheDocument();
+    rules.unmount();
+    resetClientState();
+
+    route = mockForecastRoute((body) => aiAnswer(body));
+    render(<Future />);
+    const headline = await screen.findByTestId('in10y');
+    await waitFor(() => expect(within(headline).getByTestId('forecast-source')).toHaveAttribute('data-source', 'ai'));
+    const aiChart = screen.getByRole('figure', { name: t.future.chartTitle });
+    expect(within(aiChart).getByText(t.band.model.label)).toBeInTheDocument();
+    expect(within(aiChart).queryByText(t.band.label)).not.toBeInTheDocument();
+  });
+
+  it('shows a neutral “How we calculate” intro, naming no source, until the first answer is in', async () => {
+    let release!: () => void;
+    route = mockForecastRoute((body) => new Promise((resolve) => (release = () => resolve(aiAnswer(body)))));
+    render(<Future />);
+    const how = screen.getByTestId('how-we-calculate');
+    expect(within(how).getByText(t.how.introPending)).toBeInTheDocument();
+    expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
+    expect(within(how).queryByText(t.how.introAi)).not.toBeInTheDocument();
+
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    act(() => release());
+    await waitFor(() => expect(within(how).getByText(t.how.introAi)).toBeInTheDocument());
+    expect(within(how).queryByText(t.how.introPending)).not.toBeInTheDocument();
   });
 
   it('says the forecast is updating while a new answer is on its way', async () => {

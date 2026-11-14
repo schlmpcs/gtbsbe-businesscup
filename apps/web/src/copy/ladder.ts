@@ -311,7 +311,7 @@ export const ladder = {
       sentTitle: 'What leaves your browser:',
       sent: 'only each line’s merchant label (account numbers masked, and personal names on payment-app and transfer lines), amount, month and day of month, to sort it into categories. We don’t store the labels or the lines. Only the labels, without amounts or dates, may go on to our AI provider, Anthropic, just to sort them; it doesn’t use API data to train its models.',
       forecastSent:
-        'For the 10-year forecast, the numbers in your profile (no names or account numbers) go to our AI provider, Anthropic. It doesn’t use API data to train its models. We don’t store them.',
+        'For the 10-year forecast, the numbers in your profile (no names or account numbers) go to our AI provider, Anthropic. It doesn’t use API data to train its models.',
     },
   },
 } as const;

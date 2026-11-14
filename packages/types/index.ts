@@ -110,7 +110,8 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
 // to measure it against (the engine's Infinity) is sent as null and said in words, never as a number.
 export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
   debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
-export type ExplainRequest = { move?: Move; loanResult?: ExplainLoanResult };
+// `move.source` = the forecast its `effect10y` came from; the server words the sentence by it.
+export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult };
 export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence

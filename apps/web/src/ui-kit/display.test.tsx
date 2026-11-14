@@ -191,6 +191,14 @@ describe('ForecastChart', () => {
     expect(within(lastRow).getByText('$60K')).toBeInTheDocument();
   });
 
+  it('names the band with `bandLabel`, and with the default label when none is given', () => {
+    const { rerender } = render(<ForecastChart title="Band" series={{ label: 'Plan', points }} />);
+    expect(screen.getByText(common.kit.chart.rangeLegend)).toBeInTheDocument();
+    rerender(<ForecastChart title="Band" series={{ label: 'Plan', points }} bandLabel="Range from the model" />);
+    expect(screen.getByText('Range from the model')).toBeInTheDocument();
+    expect(screen.queryByText(common.kit.chart.rangeLegend)).not.toBeInTheDocument();
+  });
+
   it('can hide the bands', () => {
     render(<ForecastChart title="No band" series={{ label: 'Plan', points }} showBand={false} />);
     expect(screen.queryByText(common.kit.chart.rangeLegend)).not.toBeInTheDocument();

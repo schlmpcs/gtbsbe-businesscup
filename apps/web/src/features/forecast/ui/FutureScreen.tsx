@@ -122,6 +122,7 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
             series={{ label: f.seriesLabel, points: vm.points }}
             compare={vm.withMove ? { label: f.withMoveLabel(compareTitle), points: vm.withMove.points } : undefined}
             showBand={!vm.band.isZero}
+            bandLabel={band.label}
           />
           {/* The band's label stays visible as the summary; what it means opens on tap. */}
           <details className="group mt-md rounded-md bg-surface-strong p-md text-sm" data-testid="band-note">

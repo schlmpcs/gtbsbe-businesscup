@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { applyPatch, monthEnd, movesLevel, rankMoves, simulate } from '@lifeguessr/engine';
-import type { CategoryTotals, CostCategory } from '@lifeguessr/types';
-import { act, renderHook } from '@testing-library/react';
+import type { CategoryTotals, CostCategory, ForecastBundle } from '@lifeguessr/types';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { cloneProfileDemo, statementTotalsSample } from '@/fixtures';
 import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
+import { aiAnswer, mockForecastRoute, rulesAnswer } from '@/test/forecastApi';
 import { resetProState } from '@/test/pro';
 import { checkinMonthInputs, compareOf, daysInMonth, moveProgress, nextMonth, TILE_CATEGORIES, useCheckin } from './useCheckin';
 
@@ -27,6 +28,8 @@ const monthOf = (month: string, over?: Partial<Record<CostCategory, number>>): C
 async function ready() {
   const hook = renderHook(() => useCheckin({ now: NOW }));
   await waitForReady(hook.result);
+  // The ranked moves come from the forecast answer: wait for it, so the move buttons are live.
+  await waitFor(() => expect(hook.result.current.move.actionsDisabled).toBe(false));
   return hook;
 }
 
@@ -166,6 +169,57 @@ describe('useCheckin (S14)', () => {
     expect(s.committedMove).toBeNull();
     expect(result.current.move).toMatchObject({ answer: 'done', committed: null, level: 2 });
     expect(result.current.move.doneMove?.id).toBe(first.id);
+  });
+
+  it('shows the committed move as ranked now, with its source, and measures progress on the stored move', async () => {
+    mockForecastRoute((body) => aiAnswer(body));
+    const { result } = await ready();
+    const p = cloneProfileDemo();
+    const card = rankMoves(p, { rates }).find((m) => m.kind === 'payCardFirst')!;
+    // Stored at commit time with another number and a larger extra payment than the ranking has now.
+    const stored = {
+      ...card,
+      effect10y: 1,
+      patch: { debts: card.patch.debts!.map((d) => ({ ...d, extraPayment: (d.extraPayment ?? 0) + 50 })) },
+    };
+    act(() => useAppStore.getState().commitMove(stored));
+    await waitFor(() => expect(result.current.move.committed?.id).toBe(card.id));
+    const { committed, progress } = result.current.move;
+    expect(committed).toMatchObject({ id: card.id, source: 'ai', isCommitted: true });
+    expect(committed?.effect10y).not.toBe(1); // the current ranked number, not the stored one
+    expect(committed?.patch).toEqual(card.patch); // the ranked move's patch...
+    const review = { latest: statementTotalsSample[3]!, inProgress: false, source: 'sample' as const };
+    const storedProgress = moveProgress(useAppStore.getState().profile, stored, review);
+    expect(storedProgress).not.toEqual(moveProgress(useAppStore.getState().profile, card, review));
+    expect(progress).toEqual({ status: 'ready', data: storedProgress }); // ...but progress uses the stored patch
+  });
+
+  it('a committed move that is not on the ranked list is shown as stored, without a source', async () => {
+    const { result } = await ready();
+    const stored = { ...rankMoves(cloneProfileDemo(), { rates })[0]!, id: 'cutCategory:gone', kind: 'cutCategory' as const };
+    act(() => useAppStore.getState().commitMove(stored));
+    await waitFor(() => expect(result.current.move.committed?.id).toBe('cutCategory:gone'));
+    expect(result.current.move.committed).toMatchObject({ source: null, effect10y: stored.effect10y });
+  });
+
+  it('"I did it" waits for the forecast answer, like S1', async () => {
+    let release: (() => void) | undefined;
+    mockForecastRoute((body) => new Promise<ForecastBundle>((resolve) => (release = () => resolve(rulesAnswer(body)))));
+    const { result } = renderHook(() => useCheckin({ now: NOW }));
+    await waitForReady(result);
+    await waitFor(() => expect(release).toBeDefined());
+    expect(result.current.move.actionsDisabled).toBe(true);
+    const first = rankMoves(cloneProfileDemo(), { rates })[0]!;
+    act(() => useAppStore.getState().commitMove(first));
+    act(() => result.current.move.markDone());
+    expect(useAppStore.getState().profile.doneMoveIds).toEqual([]);
+    expect(result.current.move.answer).toBe('none');
+
+    await act(async () => release?.());
+    await waitFor(() => expect(result.current.move.actionsDisabled).toBe(false));
+    act(() => result.current.move.markDone());
+    expect(useAppStore.getState().profile.doneMoveIds).toEqual([first.id]);
+    expect(result.current.move.answer).toBe('done');
   });
 
   it('links the preview note to Pro', async () => {

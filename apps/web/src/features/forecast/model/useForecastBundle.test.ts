@@ -328,6 +328,21 @@ describe('useForecastBundle: when it asks', () => {
     await waitFor(() => expect(again.result.current.status).toBe('ready'));
   });
 
+  it('asks again when the remembered AI answer of the key it is on is lost while mounted', async () => {
+    const route = mockForecastRoute((body) => aiAnswer(body));
+    const { result } = renderBundle();
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(route.calls).toHaveLength(1);
+
+    act(() => resetForecastMemory()); // eviction or reset under a mounted screen
+    await waitFor(() => expect(route.calls).toHaveLength(2));
+    expect(result.current.status).toBe('ready'); // no skeleton: what was settled stays on screen meanwhile
+    await waitFor(() => expect(result.current).toMatchObject({ status: 'ready', source: 'ai', isRefreshing: false }));
+    // and the new answer is remembered again: no third request
+    await act(async () => {});
+    expect(route.calls).toHaveLength(2);
+  });
+
   it('keeps at most 20 answers, dropping the oldest first', async () => {
     const settle = useFakeClock();
     const route = mockForecastRoute((body) => aiAnswer(body));

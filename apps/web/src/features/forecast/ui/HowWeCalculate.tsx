@@ -45,6 +45,12 @@ function Group({ title, items }: { title: string; items: AssumptionVM[] }) {
   );
 }
 
+/** The panel's opening sentence by who made the numbers; neutral until there is an answer. */
+function introText(source: ForecastSource | null): string {
+  if (source === null) return t.how.introPending;
+  return source === 'ai' ? t.how.introAi : t.how.intro;
+}
+
 export function HowWeCalculate({
   vm,
   source,
@@ -62,7 +68,7 @@ export function HowWeCalculate({
           ▾
         </span>
       </summary>
-      <p className="mt-sm text-sm text-text-muted">{source === 'ai' ? t.how.introAi : t.how.intro}</p>
+      <p className="mt-sm text-sm text-text-muted">{introText(source)}</p>
       <div className="mt-md flex flex-col gap-lg">
         <Group title={t.how.forecastTitle} items={vm.forecast} />
         <Group title={t.how.movesTitle} items={vm.moves} />

@@ -72,6 +72,7 @@ describe('useDecide (S13)', () => {
     expect(r.better).toBe(r.keepAdvantage10y >= 0 ? 'keep' : 'lease');
     expect(r.monthlySavingAfterPayoff).toBe(leaseScenarioSample.monthly + leaseScenarioSample.running - p.spending.car.value);
     expect(r.isEstimate).toBe(true);
+    expect(r.forecastSource).toBe('rules'); // forecast() here, never the AI model
     expect(r).toEqual(evaluateDecision(p, leaseScenarioSample, true));
   });
 

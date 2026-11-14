@@ -38,6 +38,9 @@ const loanResult: LoanResult = {
 
 const GOOD = 'Putting an extra $250 a month on your credit card clears the most expensive debt first. In our simulation that adds about $48,214 to your net worth in 10 years.';
 const INVENTED = 'Putting an extra $250 a month on your card saves you $3,100 in interest. In our simulation that adds about $48,214 to your net worth in 10 years.';
+// The same two answers for a move whose 10-year number is the model's estimate.
+const GOOD_AI = 'Putting an extra $250 a month on your credit card clears the most expensive debt first. Our AI estimate is that it adds about $48,214 to your net worth in 10 years.';
+const INVENTED_AI = 'Putting an extra $250 a month on your card saves you $3,100 in interest. Our AI estimate is that it adds about $48,214 to your net worth in 10 years.';
 
 beforeEach(() => {
   create.mockReset();
@@ -153,6 +156,130 @@ describe('POST /api/ai/explain', () => {
   });
 
   it.each([
+    ['no source', undefined],
+    ['source rules', 'rules'],
+  ] as const)('keeps the simulation wording for a move with %s', async (_name, source) => {
+    create.mockResolvedValueOnce(reply(GOOD));
+    const body = await (await post({ move: { ...move, ...(source ? { source } : {}) } })).json();
+    expect(body).toEqual({ text: GOOD, source: 'ai' });
+    expect(create).toHaveBeenCalledTimes(1);
+    const params = create.mock.calls[0][0];
+    const content = params.messages[0].content as string;
+    expect(content).toContain('Change in net worth after 10 years: +$48,214');
+    expect(content).not.toMatch(/AI estimate/i);
+    expect(params.system).toMatch(/come from the simulation/);
+    expect(params.system).not.toMatch(/AI estimate/i);
+  });
+
+  it('sends the model the system prompt and facts it always sent when there is no source, or the rules source', async () => {
+    create.mockResolvedValue(reply(GOOD));
+    await post({ move });
+    await post({ move: { ...move, source: 'rules' } });
+    const [withNone, withRules] = [create.mock.calls[0][0], create.mock.calls[1][0]];
+    expect(withNone.system).toBe(`You explain one result of an educational budget simulator to a US adult in plain words.
+Rules:
+- Write exactly two short sentences, plain text, no lists or markdown.
+- Use only the numbers in the facts you are given, written as given. Do not compute, round differently, add, compare or invent any other number, date, rate or duration.
+- Explain what the move or loan means for the person; the numbers come from the simulation.
+- Never name or recommend a lender, bank, card issuer, investment, fund, stock or other security, and give no tax advice.
+- This is an educational simulation, not financial advice; don't promise outcomes.`);
+    expect(withNone.messages[0].content).toBe(`Facts:
+- Move: This move puts your extra money toward your credit card balance first.
+- Change in net worth after 10 years: +$48,214
+- Extra monthly payment on a debt: $250`);
+    expect(withRules.system).toBe(withNone.system);
+    expect(withRules.messages).toEqual(withNone.messages);
+  });
+
+  describe('a move whose number is an AI estimate', () => {
+    const aiMove = { ...move, source: 'ai' as const };
+
+    it('tells the model the 10-year figure is an AI estimate, not a simulation result', async () => {
+      create.mockResolvedValueOnce(reply(GOOD_AI));
+      const res = await post({ move: aiMove });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ text: GOOD_AI, source: 'ai' });
+
+      const params = create.mock.calls[0][0];
+      const content = params.messages[0].content as string;
+      expect(content).toContain('Change in net worth after 10 years (AI estimate, checked against our rules): +$48,214');
+      expect(params.system).toMatch(/AI estimate/);
+      expect(params.system).not.toMatch(/come from the simulation/i);
+      expect(params.system).toMatch(/exactly two/i); // the rest of the rules are unchanged
+      expect(params.system).toMatch(/educational simulation, not financial advice/); // golden rule 7
+    });
+
+    it('rejects an answer that credits the simulation, retries once and accepts the AI wording', async () => {
+      create.mockResolvedValueOnce(reply(GOOD)).mockResolvedValueOnce(reply(GOOD_AI));
+      const res = await post({ move: aiMove });
+      expect(await res.json()).toEqual({ text: GOOD_AI, source: 'ai' });
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(create.mock.calls[1][0].messages[0].content).toContain('AI estimate');
+      expect(create.mock.calls[1][0].messages[0].content).toMatch(/simulation/);
+    });
+
+    it.each([
+      'In our simulation it adds about $48,214 to your net worth in 10 years. That is the main benefit.',
+      'The simulation says it adds about $48,214 to your net worth in 10 years. That is the main benefit.',
+      'This simulation shows it adds about $48,214 to your net worth in 10 years. That is the main benefit.',
+    ])('falls back to the AI-worded template when the answer keeps crediting the simulation: %s', async (text) => {
+      create.mockResolvedValue(reply(text));
+      const body = await (await post({ move: aiMove })).json();
+      expect(body).toEqual({ text: templateExplanation({ move: aiMove }), source: 'template' });
+      expect(body.text).toContain('Our AI estimate');
+      expect(body.text).not.toMatch(/simulation/i);
+      expect(create).toHaveBeenCalledTimes(2);
+    });
+
+    it('still rejects a number that is not in the facts', async () => {
+      create.mockResolvedValueOnce(reply(INVENTED_AI)).mockResolvedValueOnce(reply(GOOD_AI));
+      const body = await (await post({ move: aiMove })).json();
+      expect(body).toEqual({ text: GOOD_AI, source: 'ai' });
+      expect(create.mock.calls[1][0].messages[0].content).toContain('these numbers are not in the facts: 3,100');
+
+      create.mockReset();
+      create.mockResolvedValue(reply(INVENTED_AI));
+      const fallback = await (await post({ move: aiMove })).json();
+      expect(fallback).toEqual({ text: templateExplanation({ move: aiMove }), source: 'template' });
+    });
+
+    it('still applies the other guards (sentence count, lenders, advice)', async () => {
+      for (const text of [
+        `${GOOD_AI} Keep it up.`,
+        'Refinancing with SoFi lowers your rate. Our AI estimate is that it adds about $48,214 in 10 years.',
+        'Put the money in an index fund instead. Our AI estimate is that it adds about $48,214 in 10 years.',
+        'The interest is tax deductible. Our AI estimate is that it adds about $48,214 in 10 years.',
+      ]) {
+        create.mockReset();
+        create.mockResolvedValue(reply(text));
+        expect((await (await post({ move: aiMove })).json()).source).toBe('template');
+        expect(create).toHaveBeenCalledTimes(2);
+      }
+    });
+
+    it('uses the AI-worded template without an API key and never calls the provider', async () => {
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      const body = await (await post({ move: aiMove })).json();
+      expect(body.source).toBe('template');
+      expect(body.text).toContain('Our AI estimate');
+      expect(body.text).toContain('$48,214');
+      expect(create).not.toHaveBeenCalled();
+    });
+  });
+
+  it('accepts a body with and without a source, and rejects a source that is neither ai nor rules', async () => {
+    create.mockResolvedValue(reply(GOOD));
+    expect((await post({ move })).status).toBe(200);
+    expect((await post({ move: { ...move, source: 'ai' } })).status).toBe(200);
+    expect((await post({ move: { ...move, source: 'rules' } })).status).toBe(200);
+    for (const source of ['model', 'AI', '', null, 1]) {
+      const res = await post({ move: { ...move, source } });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error.code).toBe('bad_request');
+    }
+  });
+
+  it.each([
     ['an empty body', {}],
     ['an unknown move kind', { move: { ...move, kind: 'buyStocks' } }],
     ['a percent APR in the move patch', { move: { ...move, patch: { debts: [{ id: 'card-1', apr: 22.8 }] } } }],
@@ -176,6 +303,47 @@ describe('templates', () => {
       const text = templateExplanation({ move: m });
       expect(explanationIssues(text, allowedForms([effect10y, 10]))).toEqual([]);
     }
+  });
+
+  it.each(MOVE_KINDS)('the %s template for an AI estimate says so, in two sentences with only input numbers', (kind) => {
+    for (const effect10y of [48_213.77, -1_250.4]) {
+      const m = { ...move, kind, category: 'eatingOut' as const, effect10y, source: 'ai' as const };
+      const text = templateExplanation({ move: m });
+      expect(explanationIssues(text, allowedForms([effect10y, 10]), 'ai')).toEqual([]);
+      expect(text).toContain('AI estimate');
+      expect(text).not.toMatch(/simulation/i);
+    }
+  });
+
+  it('words a gain and a loss by source, and keeps the simulation sentence for rules and no source', () => {
+    const gain = { ...move, effect10y: 48_213.77 };
+    const loss = { ...move, effect10y: -1_250.4 };
+    expect(templateExplanation({ move: { ...gain, source: 'ai' } })).toMatch(
+      / Our AI estimate is that it adds about \$48,214 to your net worth in 10 years\.$/,
+    );
+    expect(templateExplanation({ move: { ...loss, source: 'ai' } })).toMatch(
+      / Our AI estimate is that it lowers your net worth by about \$1,250 in 10 years\.$/,
+    );
+    for (const source of [undefined, 'rules'] as const) {
+      expect(templateExplanation({ move: { ...gain, ...(source ? { source } : {}) } })).toMatch(
+        / In our simulation it adds about \$48,214 to your net worth in 10 years\.$/,
+      );
+      expect(templateExplanation({ move: { ...loss, ...(source ? { source } : {}) } })).toMatch(
+        / In our simulation it lowers your net worth by about \$1,250 in 10 years\.$/,
+      );
+    }
+  });
+
+  it('only an AI estimate may not credit the simulation (D5)', () => {
+    const allowed = allowedForms([48_213.77, 10]);
+    const text = 'It helps. In our simulation it adds about $48,214 in 10 years.';
+    expect(explanationIssues(text, allowed)).toEqual([]);
+    expect(explanationIssues(text, allowed, 'rules')).toEqual([]);
+    expect(explanationIssues(text, allowed, 'ai')).toHaveLength(1);
+    expect(explanationIssues('It helps. This simulation adds about $48,214 in 10 years.', allowed, 'ai')).toHaveLength(1);
+    expect(explanationIssues('It helps. The simulation adds about $48,214 in 10 years.', allowed, 'ai')).toHaveLength(1);
+    // Other uses of the word are not "the number comes from the simulation".
+    expect(explanationIssues('It helps. Our AI estimate is $48,214 in 10 years, not a promise from a simulator.', allowed, 'ai')).toEqual([]);
   });
 
   it('the loan templates are two sentences with only input numbers', () => {

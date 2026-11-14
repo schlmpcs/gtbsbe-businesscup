@@ -199,6 +199,8 @@ export const forecast = {
     title: 'How we calculate',
     /** The rules forecast: every number is the engine's. */
     intro: 'One month-by-month simulation: same inputs, same answer. Its rates and rules:',
+    /** Before the first answer: it is not yet known who made the numbers. */
+    introPending: 'Your forecast is loading; once it is in, this says who made its numbers. The simulation’s rates and rules:',
     /** The AI forecast: the model writes the numbers, code checks them against the simulation. */
     introAi:
       'An AI model writes the 10-year numbers and code checks them against our month-by-month simulation; an answer that strays too far is replaced by the simulation’s, labeled. Everything else is our own rules. The simulation’s rates and rules:',

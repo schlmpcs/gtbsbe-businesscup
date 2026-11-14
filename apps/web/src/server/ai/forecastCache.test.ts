@@ -7,14 +7,18 @@ import { createForecastCache, forecastKey } from './forecastCache';
 import type { ForecastRequest } from './schemas';
 import { DEMO_SCENARIOS } from './testUtils';
 
-// `PROMPT_VERSION` is a constant; this lets one test pretend it was bumped.
-const bump = vi.hoisted(() => ({ by: 0 }));
+// `PROMPT_VERSION` and `PROMPT_FINGERPRINT` are constants; this lets one test pretend one of them changed
+// (the version was bumped, or the prompt or the output schema was edited without a bump).
+const bump = vi.hoisted(() => ({ by: 0, edited: false }));
 vi.mock('./forecast', async (importOriginal) => {
-  const real = await importOriginal<{ PROMPT_VERSION: number }>();
+  const real = await importOriginal<{ PROMPT_VERSION: number; PROMPT_FINGERPRINT: string }>();
   return {
     ...real,
     get PROMPT_VERSION() {
       return real.PROMPT_VERSION + bump.by;
+    },
+    get PROMPT_FINGERPRINT() {
+      return bump.edited ? `${real.PROMPT_FINGERPRINT}-edited` : real.PROMPT_FINGERPRINT;
     },
   };
 });
@@ -109,6 +113,17 @@ describe('forecastKey', () => {
       expect(forecastKey(request(), MODEL)).not.toBe(before);
     } finally {
       bump.by = 0;
+    }
+    expect(forecastKey(request(), MODEL)).toBe(before);
+  });
+
+  it('changes with the prompt fingerprint, so an edit to the prompt or the schema without a version bump cannot serve old answers', () => {
+    const before = forecastKey(request(), MODEL);
+    bump.edited = true;
+    try {
+      expect(forecastKey(request(), MODEL)).not.toBe(before);
+    } finally {
+      bump.edited = false;
     }
     expect(forecastKey(request(), MODEL)).toBe(before);
   });

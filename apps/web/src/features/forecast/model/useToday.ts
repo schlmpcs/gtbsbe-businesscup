@@ -84,6 +84,7 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     in10y: shown.in10y,
     in10yBandIsZero: shown.band.isZero,
     in10yBandKind: shown.band.kind,
+    isRefreshing: forecast.status === 'ready' && forecast.isRefreshing,
     committedMove: committed,
     markCommittedDone: () => {
       if (committedMove && !nextMoves.actionsDisabled) markMoveDone(committedMove);

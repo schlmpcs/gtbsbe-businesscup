@@ -54,6 +54,8 @@ export type DecideResultVM = {
   betterBy10y: Money;
   /** Some input behind the two forecasts is an estimate. */
   isEstimate: boolean;
+  /** Who made the two 10-year numbers: always the rules engine (`forecast`), never the AI model, so they can differ from S10's. */
+  forecastSource: 'rules';
 };
 
 export type DecideVM = {
@@ -148,7 +150,7 @@ export type CheckinMoveVM = {
   progress: Loadable<MoveProgressVM | null> | null;
   /** Ranked moves to commit to when there is none (the forecast's ranking; each carries who made its number). */
   suggestions: Loadable<MoveVM[]>;
-  /** True while the list on screen is a previous profile's answer: committing waits for the new one. */
+  /** True while the list on screen is a previous profile's answer: committing and "I did it" wait for the new one. */
   actionsDisabled: boolean;
   answer: CheckinMoveAnswer;
   /** The move marked done in this check-in. */

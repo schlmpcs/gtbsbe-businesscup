@@ -1,6 +1,6 @@
 // "Why?" on a Next Move: POST /api/ai/explain for one move, kept per move until the move changes.
 // The server writes the two sentences (or its template fallback); no number comes from the model.
-import type { ForecastSource, Move } from '@lifeguessr/types';
+import type { ForecastSource } from '@lifeguessr/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { explainResult, type ExplainInput, type ExplainOptions, type ExplainResult } from '@/lib/api/aiExplain';
 import { toVMError } from '@/lib/model/errors';
@@ -12,8 +12,8 @@ export type ExplainFn = (input: ExplainInput, opts: ExplainOptions) => Promise<E
 
 type Entry = { effect10y: number; source: ForecastSource | null; state: Loadable<ExplanationVM> };
 
-/** A move with the forecast it was measured by (the VMs of S10 carry it). */
-type ExplainableMove = Move & { source?: ForecastSource | null };
+/** A move with the forecast it was measured by (the VMs of S10 carry it): the server words the sentence by it. */
+type ExplainableMove = NonNullable<ExplainInput['move']>;
 
 /**
  * Explanations by move id. An entry counts only while the move it was asked for is unchanged (same

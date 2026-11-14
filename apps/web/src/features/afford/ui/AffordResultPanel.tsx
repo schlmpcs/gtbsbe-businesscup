@@ -1,7 +1,7 @@
 'use client';
 
-import { afford as t } from '@/copy';
-import { Art, Card, cx, ForecastChart, formatRate, Money, Scoreboard, Stack, Sticker } from '@/ui-kit';
+import { afford as t, forecast } from '@/copy';
+import { Art, Card, cx, ForecastChart, formatRate, Money, Scoreboard, Stack, Sticker, Tag } from '@/ui-kit';
 import type { AffordResultVM, AffordRulesVM, AffordVM, PayWithChoice, VMError } from '../model/types';
 import { Skeleton } from './controls';
 
@@ -69,6 +69,15 @@ function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }
           reason && <p className={body}>{reason}</p>
         ))}
     </Stack>
+  );
+}
+
+/** Who made the with / without numbers ("Rules-based estimate"): S10 may show another number from the AI model. */
+function SourceLabel({ source, className }: { source: AffordResultVM['forecastSource']; className?: string }) {
+  return (
+    <Tag data-testid="afford-forecast-source" className={className}>
+      {forecast.source[source]}
+    </Tag>
   );
 }
 
@@ -188,7 +197,9 @@ export function AffordEffects({ result, purchaseLabel }: Pick<AffordResultPanelP
   return (
     <Stack gap="lg">
       {data.horizons.length > 0 && (
-        <Scoreboard
+        <div data-testid="afford-horizons" className="flex flex-col gap-sm">
+          <SourceLabel source={data.forecastSource} className="self-start" />
+          <Scoreboard
             label={t.result.effectsLabel}
             items={data.horizons.map((h, i) => ({
               id: String(h.month),
@@ -196,9 +207,11 @@ export function AffordEffects({ result, purchaseLabel }: Pick<AffordResultPanelP
               label: t.result.effects[h.month],
               tone: h.deltaMid > 0 ? 'positive' : i === 0 ? 'primary' : 'default',
             }))}
-        />
+          />
+        </div>
       )}
-      <Card>
+      <Card data-testid="afford-chart">
+        <SourceLabel source={data.forecastSource} className="mb-sm" />
         <ForecastChart
           title={t.result.chartTitle(purchaseLabel)}
           series={{ label: t.result.chartWith(purchaseLabel), points: data.withPoints }}

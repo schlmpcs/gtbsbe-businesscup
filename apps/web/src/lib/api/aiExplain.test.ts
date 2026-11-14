@@ -36,6 +36,27 @@ describe('explainResult', () => {
     expect(new Headers(init.headers).get('x-anon-id')).toBe('a');
   });
 
+  it('posts the forecast source of a move when it is ai or rules', async () => {
+    const fetchMock = stubFetch(200, { text: 'One. Two.', source: 'template' });
+    for (const source of ['ai', 'rules'] as const) {
+      await explainResult({ move: { ...move, source, isCommitted: true } as Move & { source: typeof source } });
+      const posted = JSON.parse(fetchMock.mock.calls.at(-1)![1].body as string);
+      expect(posted).toEqual({ move: { ...move, source } });
+      expect(posted.move.source).toBe(source);
+    }
+  });
+
+  it('posts no source key for a null source or none', async () => {
+    const fetchMock = stubFetch(200, { text: 'One. Two.', source: 'template' });
+    await explainResult({ move: { ...move, source: null } });
+    await explainResult({ move });
+    for (const [, init] of fetchMock.mock.calls) {
+      const posted = JSON.parse(init.body as string);
+      expect(posted).toEqual({ move });
+      expect('source' in posted.move).toBe(false);
+    }
+  });
+
   it('drops the loan schedule', async () => {
     const fetchMock = stubFetch(200, { text: 'One. Two.', source: 'template' });
     await explainResult({
