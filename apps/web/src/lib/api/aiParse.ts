@@ -1,25 +1,25 @@
 // Client for POST /api/ai/parse (Y12, apps/web/app/api/ai/parse/route.ts):
-//   { kind: 'life' | 'purchase' | 'loan', text, debts? }
+//   { kind: 'life' | 'purchase' | 'loan' | 'spend', text, debts? }
 //   → 200 { ok: true, kind, value, needsConfirmation: true, inferred: string[] }
 //   → 4xx/5xx { ok: false, error: { code, missing? }, fallback: 'manualForm' }
 // `value` is validated with the contract's zod schema here as well. It holds parsed *inputs* the
 // user must confirm before they are applied, never results.
 import {
-  DEBT_KINDS, LoanInputSchema, ProfilePatchSchema, PurchaseSchema,
-  type Debt, type LoanInput, type ProfilePatch, type Purchase,
+  DEBT_KINDS, LoanInputSchema, ProfilePatchSchema, PurchaseSchema, SpendItemSchema,
+  type Debt, type LoanInput, type ProfilePatch, type Purchase, type SpendItem,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { postJson } from './http';
 
-export type ParseKind = 'life' | 'purchase' | 'loan';
-export type ParseValueOf = { life: ProfilePatch; purchase: Purchase; loan: LoanInput };
+export type ParseKind = 'life' | 'purchase' | 'loan' | 'spend';
+export type ParseValueOf = { life: ProfilePatch; purchase: Purchase; loan: LoanInput; spend: SpendItem[] };
 export type ParseResult<K extends ParseKind> = {
   value: ParseValueOf[K];
   /** Paths not written literally in the text (e.g. 'termMonths', 'spending.eatingOut'). */
   inferred: string[];
 };
 
-const valueSchemas = { life: ProfilePatchSchema, purchase: PurchaseSchema, loan: LoanInputSchema } as const;
+const valueSchemas = { life: ProfilePatchSchema, purchase: PurchaseSchema, loan: LoanInputSchema, spend: z.array(SpendItemSchema) } as const;
 
 function responseSchema<K extends ParseKind>(kind: K) {
   return z.object({
@@ -32,6 +32,7 @@ function responseSchema<K extends ParseKind>(kind: K) {
 
 /** True when a parse found nothing to apply (an empty ProfilePatch). */
 export function isEmptyParse(kind: ParseKind, value: unknown): boolean {
+  if (kind === 'spend') return (value as SpendItem[]).length === 0;
   if (kind !== 'life') return false;
   const p = value as ProfilePatch;
   return Object.keys(p.spending ?? {}).length === 0 && (p.debts ?? []).length === 0 && p.retirementShare === undefined;

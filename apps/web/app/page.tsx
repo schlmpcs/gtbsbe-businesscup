@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { duel } from '@/copy';
 import { useToday } from '@/features/forecast/model/useToday';
 import { TodayScreen, type TodayLinks } from '@/features/forecast/ui/TodayScreen';
+import { useQuickAdd } from '@/features/spend/model/useQuickAdd';
+import { QuickAdd } from '@/features/spend/ui/QuickAdd';
 import { gameMode } from '@/lib/config';
 import { linkedScreenIds, SCREEN_ROUTES } from '@/lib/screens';
 
@@ -24,9 +26,11 @@ const links: TodayLinks = {
   checkin: SCREEN_ROUTES.S14,
   profile: SCREEN_ROUTES.S5,
   upload: SCREEN_ROUTES.S9,
+  spend: '/spend',
 };
 
 export default function TodayPage() {
   const vm = useToday();
-  return <TodayScreen vm={vm} links={links} screens={screens} Link={Link} />;
+  const quickAdd = useQuickAdd({ ready: vm.status === 'ready' });
+  return <TodayScreen vm={vm} links={links} screens={screens} Link={Link} quickAdd={<QuickAdd vm={quickAdd} />} />;
 }

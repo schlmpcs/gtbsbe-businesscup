@@ -137,3 +137,10 @@ export const SUBSCRIPTION_TICKS_MAX = 200;
 export { AVATAR_ROUND_BALANCE,AVATAR_ROUND_MONTHLY,AVATAR_RENT_SHARE_STEP,AVATAR_BOUNDS,AVATAR_TTL_DAYS,AVATAR_MIN_POOL,AVATAR_MIN_PICKS } from './avatar';
 
 /** Exact integer mask capacity shared by JavaScript arithmetic and Postgres bigint queries. */
+
+// ----- Daily spending log (/spend) -------------------------------------------------------------
+
+/** Categories a logged purchase can go in: every CostCategory but the informational debtPayments. */
+export const SPEND_ITEM_CATEGORIES = [
+  'rentUtilities', 'car', 'childcare', 'groceries', 'eatingOut', 'subscriptions', 'other',
+] as const satisfies readonly Exclude<CostCategory, 'debtPayments'>[];

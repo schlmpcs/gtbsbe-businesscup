@@ -184,6 +184,15 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 // a transfer), i.e. how far into the month the statement goes. Month-end projects the month in
 // progress from it. Absent on data saved before it existed: the app then falls back to today.
 
+// Daily spending log (/spend and the Home quick-add). Kept in the browser only (app store). Only a
+// line the local parser can't read goes to /api/ai/parse (kind 'spend'), and it is not stored there.
+// `label` is what the user typed ("coffee"), `amount` one purchase in dollars.
+/** One line of the daily log, without its id and date: what the parser (local or AI) returns. */
+export type SpendItem = { category: CostCategory; amount: Money; label?: string };
+export type DailyEntry = { id: string; date: string /* YYYY-MM-DD, local */; category: CostCategory;
+  amount: Money;                 // one purchase, > 0
+  label?: string };
+
 // How the server sorted one statement line (labels only; every sum is done in code). A CostCategory
 // is spending in that category when money goes out, or a refund from that kind of merchant when it
 // comes in. 'pay' = take-home pay coming in. 'transfer' = money moved between the user's own

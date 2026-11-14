@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { ANON_ID_KEY, getAnonId } from './anonId';
 import { useHydrated } from './hydration';
+import { entriesInMonth } from './daily';
 import { APP_STORE_KEY, initialAppData, isSampleActive, useAppStore } from './store';
 
 const totals = (over: Partial<Record<CostCategory, number>>) =>
@@ -133,6 +134,53 @@ describe('app store', () => {
     expect(useAppStore.getState().wishlist.map((w) => w.id)).toEqual([id]);
     useAppStore.getState().removeFromWishlist(id);
     expect(useAppStore.getState().wishlist).toEqual([]);
+  });
+
+  it('daily log: add, list by month (newest first), undo, persisted, cleared by reset', () => {
+    const s = () => useAppStore.getState();
+    const [coffee] = s().addDailyEntries([{ category: 'eatingOut', amount: 5, label: 'coffee' }], '2026-11-02');
+    const ids = s().addDailyEntries(
+      [{ category: 'other', amount: 18, label: 'taxi' }, { category: 'groceries', amount: 64 }],
+      '2026-11-14',
+    );
+    s().addDailyEntries([{ category: 'groceries', amount: 99 }], '2026-10-30');
+    expect(ids).toHaveLength(2);
+    expect(entriesInMonth(s().dailyEntries, '2026-11').map((e) => e.amount)).toEqual([64, 18, 5]);
+    expect(entriesInMonth(s().dailyEntries, '2026-10').map((e) => e.amount)).toEqual([99]);
+    expect(JSON.parse(localStorage.getItem(APP_STORE_KEY)!).state.dailyEntries).toHaveLength(4);
+
+    s().removeDailyEntries(ids); // undo of the second add
+    expect(entriesInMonth(s().dailyEntries, '2026-11').map((e) => e.id)).toEqual([coffee]);
+
+    expect(() => s().addDailyEntries([{ category: 'other', amount: -1 }], '2026-11-14')).toThrow();
+    expect(() => s().addDailyEntries([{ category: 'other', amount: 1 }], '2026-11-31')).toThrow();
+    expect(s().dailyEntries).toHaveLength(2);
+
+    s().reset();
+    expect(s().dailyEntries).toEqual([]);
+  });
+
+  it('a version 1 save (before the daily log) restores everything, with an empty log', async () => {
+    useAppStore.getState().setSelfGuess(4100);
+    const stored = JSON.parse(localStorage.getItem(APP_STORE_KEY)!);
+    expect(stored.version).toBe(2);
+    delete stored.state.dailyEntries;
+    stored.version = 1;
+    useAppStore.setState({ selfGuess: null, dailyEntries: [] });
+    localStorage.setItem(APP_STORE_KEY, JSON.stringify(stored));
+    await useAppStore.persist.rehydrate();
+    expect(useAppStore.getState().selfGuess).toBe(4100);
+    expect(useAppStore.getState().dailyEntries).toEqual([]);
+  });
+
+  it('a broken saved log entry is dropped, the others kept', async () => {
+    useAppStore.getState().addDailyEntries([{ category: 'other', amount: 7 }], '2026-11-03');
+    const stored = JSON.parse(localStorage.getItem(APP_STORE_KEY)!);
+    stored.state.dailyEntries.push({ id: 'bad', date: 'yesterday', category: 'other', amount: 3 });
+    useAppStore.setState({ dailyEntries: [] });
+    localStorage.setItem(APP_STORE_KEY, JSON.stringify(stored));
+    await useAppStore.persist.rehydrate();
+    expect(useAppStore.getState().dailyEntries.map((e) => e.amount)).toEqual([7]);
   });
 });
 

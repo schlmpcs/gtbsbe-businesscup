@@ -9,6 +9,7 @@ import { localMonthDay, usEasternDate } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import { isSampleActive, useAppReady, useAppStore, useGameStore } from '@/state';
+import { spendSummary } from '@/features/spend/model/summary';
 import { shownForecast } from './forecastAnswer';
 import type { Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
 import { toMoveVM, useNextMoves } from './useNextMoves';
@@ -28,6 +29,7 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
   const isSampleFlag = useAppStore((s) => s.isSample);
   const selfGuess = useAppStore((s) => s.selfGuess);
   const savedGoal = useAppStore((s) => s.goal);
+  const dailyEntries = useAppStore((s) => s.dailyEntries);
   const gameDate = useGameStore((s) => s.date);
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);
@@ -67,6 +69,12 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
       },
     };
   }, [profile, statementMonths, now]);
+
+  // The daily log's month so far (Home quick-add card): engine numbers, see features/spend/model/summary.ts.
+  const daily = useMemo(
+    () => spendSummary(profile, statementMonths, dailyEntries, localMonthDay(now)),
+    [profile, statementMonths, dailyEntries, now],
+  );
 
   // The number at the picked year in today's dollars, from the answer (S10 can also show nominal; S1 never does).
   const shown = useMemo(() => shownForecast(forecast, true, horizonYears), [forecast, horizonYears]);
@@ -128,6 +136,7 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
     committedMove === null &&
     profile.doneMoveIds.length === 0 &&
     played === 0 &&
+    dailyEntries.length === 0 &&
     (mode === 'duel' || Object.keys(reveals).length === 0);
 
   return {
@@ -157,5 +166,6 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
     goal,
     hasEstimates,
     game,
+    daily,
   };
 }

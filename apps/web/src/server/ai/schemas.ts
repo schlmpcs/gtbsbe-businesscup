@@ -8,6 +8,7 @@ import {
   COST_CATEGORIES, CostCategorySchema, DEBT_KINDS, ForecastSourceSchema, HorizonYearsSchema, MOVE_KINDS, ProfilePatchSchema,
   ProfileSchema,
 } from '@lifeguessr/types';
+import { SPEND_ITEM_CATEGORIES } from '@lifeguessr/types';
 import { z } from 'zod';
 
 // ----- limits --------------------------------------------------------------------------------
@@ -21,7 +22,7 @@ export const MAX_FORECAST_BODY_BYTES = 32 * 1024; // a profile plus up to 8 cand
 
 // ----- /api/ai/parse -------------------------------------------------------------------------
 
-export const PARSE_KINDS = ['life', 'purchase', 'loan'] as const;
+export const PARSE_KINDS = ['life', 'purchase', 'loan', 'spend'] as const;
 export type ParseKind = (typeof PARSE_KINDS)[number];
 
 export const ParseRequestSchema = z.object({
@@ -70,6 +71,14 @@ export const WIRE_SCHEMAS = {
     loan: WireLoanSchema.nullable().describe('Loan terms when payWith is "loan", otherwise null.'),
   }),
   loan: WireLoanSchema,
+  // Daily log (/spend): only lines the browser's keyword parser could not read come here.
+  spend: z.object({
+    items: z.array(z.object({
+      label: z.string().describe('What was bought, as the user wrote it, e.g. "coffee" or "uber".'),
+      category: z.enum(SPEND_ITEM_CATEGORIES),
+      amount: nullableMoney.describe('The amount paid in US dollars exactly as written; null if the text gives none.'),
+    })).describe('One item per purchase, in the order written; empty when the text names no purchase.'),
+  }),
 } as const;
 
 export type WireOutput<K extends ParseKind> = z.infer<(typeof WIRE_SCHEMAS)[K]>;

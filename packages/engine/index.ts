@@ -27,7 +27,7 @@ export {
   DISCRETIONARY_CATEGORIES, type MoveCandidate, type RankMovesOptions,
 } from './moves';
 export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordOptions } from './afford';
-export { monthEnd, type CurrentMonth } from './month';
+export { monthEnd, usualMonthSpend, type CurrentMonth, type UsualMonth } from './month';
 export { statementTotals, merchantKey, type ClassifiedStatementItem } from './statement';
 export { detectSubscriptions, auditTotals, type DetectSubscriptionsOptions } from './subscriptions';
 export {
@@ -42,3 +42,4 @@ export {
 export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';
 export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';
+export { dailyMonthToDate, dailyTotalsByDay, safeToSpendToday, type SafeToSpend } from './daily';

@@ -15,6 +15,8 @@ import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
 import { ToolsStateSchema, type ToolsState } from '@lifeguessr/types';
 import { restoreTools } from './tools';
+import type { DailyEntry, SpendItem } from '@lifeguessr/types';
+import { appendEntries, restoreDailyEntries, withoutEntries } from './daily';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { cloneProfileDemo } from '@/fixtures';
@@ -56,6 +58,8 @@ export type AppData = {
    * profile is still the demo one (`isSampleActive`): any edit makes the life the user's own.
    */
   isSample: boolean;
+  /** The daily spending log (/spend, Home quick-add), oldest first. Browser only, never synced. */
+  dailyEntries: DailyEntry[];
 };
 
 export type AppActions = {
@@ -97,6 +101,10 @@ export type AppActions = {
   loadSample: () => boolean;
   /** Stop showing the sample life as such ("Use mine"); the profile is left as it is. */
   clearSample: () => void;
+  /** Log purchases on `date` ('YYYY-MM-DD', local); returns the new entry ids (for undo). */
+  addDailyEntries: (items: SpendItem[], date: string) => string[];
+  /** Remove log entries (undo of an add, or a delete). */
+  removeDailyEntries: (ids: string[]) => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -119,6 +127,7 @@ export function initialAppData(): AppData {
     committedMove: null,
     horizonYears: 10,
     isSample: false,
+    dailyEntries: [],
   };
 }
 
@@ -158,6 +167,7 @@ const persistedFields = {
   committedMove: MoveSchema.nullable(),
   horizonYears: HorizonYearsSchema,
   isSample: z.boolean(),
+  dailyEntries: z.unknown().transform(restoreDailyEntries),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -251,11 +261,19 @@ export const useAppStore = create<AppState>()(
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
       clearTool: key => set(s=>{const tools={...s.tools};delete tools[key];return {tools};}),
+      addDailyEntries: (items, date) => {
+        const { entries, added } = appendEntries(get().dailyEntries, items, date, newId);
+        set({ dailyEntries: entries });
+        return added.map((e) => e.id);
+      },
+      removeDailyEntries: (ids) => set((s) => ({ dailyEntries: withoutEntries(s.dailyEntries, ids) })),
       reset: () => set(initialAppData()),
     }),
     {
       name: APP_STORE_KEY,
-      version: 1,
+      // v2: + dailyEntries. A v1 save has none; merge then keeps the default (an empty log).
+      version: 2,
+      migrate: (saved) => saved as AppState,
       storage: createJSONStorage(() => safeStateStorage),
       skipHydration: true,
       partialize: (s): AppData => ({
@@ -271,6 +289,7 @@ export const useAppStore = create<AppState>()(
         committedMove: s.committedMove,
         horizonYears: s.horizonYears,
         isSample: s.isSample,
+        dailyEntries: s.dailyEntries,
       }),
       merge: mergePersisted,
     },
