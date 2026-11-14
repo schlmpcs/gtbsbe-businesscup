@@ -89,12 +89,18 @@ export type BenchmarkRowVM = {
   /** The range is partly assumed (or approximate, nearest metro): shown with the estimate tag. */
   isEstimate: boolean;
   position: Position;
+  /** Yours minus the TOP of the range; 0 unless above. */
   gapPerMonth: Money;
   gapPerYear: Money;
   /**
-   * What closing the gap to the middle of the range is projected to be worth over 10 years, in today's
-   * dollars (rules-based forecast of your profile). null unless the line is above the range, a profile of
-   * the person's own was used and it can absorb the change; a real effect is always above zero.
+   * Yours minus the MIDDLE of the range, per month: the change `effect10y` is for. Different from the gap
+   * (which stops at the top of the range), so the screen says it next to the effect. null unless above.
+   */
+  toMiddlePerMonth: Money | null;
+  /**
+   * What a cost at the middle of the range instead of yours is projected to be worth over 10 years, in
+   * today's dollars (rules-based forecast of your profile). null unless the line is above the range, a
+   * profile of the person's own was used and it can absorb the change; a real effect is always above zero.
    */
   effect10y: Money | null;
   bar: RangeBarVM;
@@ -110,8 +116,14 @@ export type OverpayingSummaryVM = {
   above: number;
   /** Total gap per year over the lines above the range. */
   gapPerYear: Money;
-  /** Total 10-year effect over the lines that have one; null when none does. */
+  /** The 10-year effects added up, only when EVERY line above the range has one; never a partial sum. */
   effect10y: Money | null;
+  /**
+   * Why `effect10y` is or is not there: total (shown), partial (some lines above the range have an effect and
+   * some do not: only the lines show theirs), none (none does), needsProfile (no profile of the person's own),
+   * notApplicable (no line is above the range).
+   */
+  effectStatus: 'total' | 'partial' | 'none' | 'needsProfile' | 'notApplicable';
 };
 
 export type OverpayingResultVM = {

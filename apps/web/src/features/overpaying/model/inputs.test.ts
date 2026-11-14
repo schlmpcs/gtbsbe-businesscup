@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import {
   DEFAULT_ADULTS, DEFAULT_BEDROOMS, KIDS_PER_BAND_MAX, clampAdults, clampBedrooms, clampKidCount, emptyInputs,
-  initialDraft, parseZip, toCheckInput, toToolState,
+  initialDraft, parseZip, sameZip, toCheckInput, toToolState,
 } from './inputs';
 
 describe('parseZip', () => {
@@ -20,6 +20,19 @@ describe('parseZip', () => {
     for (const text of ['7520', '752066', '75206-12', 'SW1A 1AA', 'M5V 2T6', '7520a', 'Москва', '٧٥٢٠٦']) {
       expect(parseZip(text), JSON.stringify(text)).toEqual({ kind: 'invalid' });
     }
+  });
+});
+
+describe('sameZip', () => {
+  it('is the same ZIP however it was typed, and different otherwise', () => {
+    expect(sameZip('75206', ' 75206-1234 ')).toBe(true);
+    expect(sameZip('752 06', '752061234')).toBe(true);
+    expect(sameZip('', '   ')).toBe(true); // both empty
+    expect(sameZip('abc', 'SW1A 1AA')).toBe(true); // both not a ZIP: nothing was chosen for either
+    expect(sameZip('75206', '75216')).toBe(false);
+    expect(sameZip('75206', '7520')).toBe(false); // deleting a digit is a change
+    expect(sameZip('', '75206')).toBe(false);
+    expect(sameZip('99999', 'abc')).toBe(false);
   });
 });
 

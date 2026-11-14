@@ -89,8 +89,14 @@ export function BenchmarkRow({ row, effectAvailable, profileHref }: { row: Bench
           <p data-testid="gap" className="font-semibold">
             {t.result.gap(formatMoney(row.gapPerMonth), formatMoney(row.gapPerYear))}
           </p>
-          {row.effect10y !== null ? (
-            <p data-testid="effect10y">{t.result.effect(formatMoney(row.effect10y))}</p>
+          {row.effect10y !== null && row.toMiddlePerMonth !== null ? (
+            <p data-testid="effect10y" className="flex flex-wrap items-center gap-x-sm gap-y-xs">
+              <span>{t.result.effect(formatMoney(row.toMiddlePerMonth), formatMoney(row.effect10y))}</span>
+              <Tag variant="dashed" title={t.result.effectEstimateWhy}>
+                {t.result.estimate}
+                <span className="sr-only">: {t.result.effectEstimateWhy}</span>
+              </Tag>
+            </p>
           ) : effectAvailable ? (
             <p className="text-text-muted">{t.result.effectUnavailable}</p>
           ) : (

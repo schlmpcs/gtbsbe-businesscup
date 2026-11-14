@@ -41,6 +41,13 @@ export function parseZip(text: string): ZipParse {
   return m ? { kind: 'zip', zip: m[1]! } : { kind: 'invalid' };
 }
 
+/** Whether two typed ZIPs mean the same ZIP ("75206" and " 75206-1234 " do; so do two that are both empty or both invalid). */
+export function sameZip(a: string, b: string): boolean {
+  const x = parseZip(a);
+  const y = parseZip(b);
+  return x.kind === y.kind && (x.kind !== 'zip' || (y.kind === 'zip' && x.zip === y.zip));
+}
+
 // ----- clamps ------------------------------------------------------------------------------------
 
 function clampWhole(n: number, min: number, max: number, fallback: number): number {

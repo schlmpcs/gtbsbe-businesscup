@@ -4,7 +4,7 @@
 // Wording guardrails (docs/design/11-overpaying-check.md): the screen says where a cost sits against a
 // typical range and what a gap is worth. It never says "overpaying", "too much" or "ripped off", never
 // tells anyone to move, switch, cancel or negotiate, and never names a provider. "Below" is neutral.
-// overpaying.test.ts checks every string against a list of banned words.
+// overpayingCopy.test.ts checks every string against a list of banned words.
 import type { BenchmarkLine, KidAge } from '@lifeguessr/types';
 
 type Position = 'below' | 'inRange' | 'above';
@@ -96,8 +96,11 @@ export const overpaying = {
     gapPerYear: 'Gap per year',
     gapPerYearHint: 'Added up over the lines above the range.',
     effect10y: 'Over 10 years',
-    effectHint: 'Projected value of closing each gap to the middle of the range, in today’s dollars. Based on your inputs.',
+    effectHint:
+      'Projected, based on your inputs: the 10-year value of a cost at the middle of the typical range instead of yours, added up over every line above the range, in today’s dollars.',
+    effectPartial: 'Not added up: the 10-year figure could not be worked out for every line above the range. Each line shows its own where it can.',
     effectNone: 'Not available',
+    effectNoneAbove: 'The 10-year figure could not be worked out from your profile for the lines above the range.',
     summaryLine: (compared: number, above: number) =>
       compared === 1
         ? above === 1
@@ -120,13 +123,15 @@ export const overpaying = {
     barHigh: 'High',
     yourMarker: 'You',
     gap: (perMonth: string, perYear: string) => `${perMonth} a month above the range, ${perYear} a year`,
-    effect: (value: string) =>
-      `Projected: closing the gap to the middle of the range is worth about ${value} over 10 years, in today’s dollars.`,
+    /** `perMonth`: yours minus the middle of the range (not the gap, which stops at the top of it). */
+    effect: (perMonth: string, value: string) =>
+      `Projected, based on your inputs: a cost at the middle of the typical range would be ${perMonth} a month lower than yours, worth about ${value} over 10 years, in today’s dollars.`,
     effectNeedsProfile: 'The 10-year effect needs your own numbers.',
     effectNeedsProfileLink: 'Add your balance sheet',
     effectUnavailable: 'The 10-year effect could not be worked out from your profile for this line.',
     estimate: 'estimate',
     estimateWhy: 'Part of this range is assumed, or approximate for a nearby metro.',
+    effectEstimateWhy: 'A projection from your inputs with our rules-based forecast, not a measured figure.',
     skippedTitle: 'Not compared',
     skipped: {
       notEntered: (line: string) => `${line}: left blank.`,

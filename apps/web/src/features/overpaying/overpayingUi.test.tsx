@@ -132,13 +132,47 @@ describe('with a profile of the person\'s own', () => {
     expect(amountBox('groceries')).toHaveValue('520');
     expect(amountBox('carInsurance')).toHaveValue(''); // car insurance is always asked
     const rows = await screen.findAllByTestId('benchmark-row');
-    expect(within(rows[0]!).getByTestId('effect10y')).toHaveTextContent(t.result.effect('$40,000'));
-    expect(within(await screen.findByTestId('overpaying-summary')).getByText('$49,000')).toBeInTheDocument();
+    // The gap is yours minus the top of the range ($3,000 − $2,676 = $324); the effect is for the middle ($3,000 − $2,230 = $770).
+    expect(within(rows[0]!).getByTestId('gap')).toHaveTextContent(t.result.gap('$324', '$3,888'));
+    expect(within(rows[0]!).getByTestId('effect10y')).toHaveTextContent(t.result.effect('$770', '$40,000'));
+    expect(within(rows[0]!).getByTestId('effect10y')).toHaveTextContent('$770'); // the monthly figure the effect is for is on screen
+    expect(within(within(rows[0]!).getByTestId('effect10y')).getByText(t.result.estimate)).toBeInTheDocument(); // a projection carries the estimate tag
+    const summary = await screen.findByTestId('overpaying-summary');
+    expect(within(summary).getByText('$49,000')).toBeInTheDocument(); // both lines above the range have an effect: the total is of both
+    expect(within(summary).getByText(t.result.estimate)).toBeInTheDocument(); // and the total carries the tag too
 
     await user.clear(amountBox('rent'));
     await user.type(amountBox('rent'), '2400');
     expect(amountBox('rent')).not.toHaveAccessibleDescription(t.form.fromProfile);
     expect(profile).toEqual(copy);
+  });
+});
+
+describe('a 10-year total that is not of every line above the range', () => {
+  it('is not shown: no partial sum, and each line keeps its own effect', async () => {
+    const result = sampleOverpayingResult();
+    result.lines[3]!.effect10y = 0; // childcare is above the range, but the profile cannot take the change
+    await open({ profile: cloneProfileDemo(), deps: fakeDeps({ result }) });
+    const summary = await screen.findByTestId('overpaying-summary');
+    expect(within(summary).queryByText('$40,000')).toBeNull();
+    expect(within(summary).queryByText('$49,000')).toBeNull();
+    expect(within(summary).getByText(t.result.effectNone)).toBeInTheDocument();
+    expect(within(summary).getByText(t.result.effectPartial)).toBeInTheDocument();
+    const rows = await screen.findAllByTestId('benchmark-row');
+    expect(within(rows[0]!).getByTestId('effect10y')).toHaveTextContent('$40,000');
+    expect(within(rows[3]!).queryByTestId('effect10y')).toBeNull();
+  });
+});
+
+describe('a 10-year figure nobody could work out', () => {
+  it('says so for the lines above the range instead of showing $0', async () => {
+    const result = sampleOverpayingResult();
+    result.lines[0]!.effect10y = 0;
+    result.lines[3]!.effect10y = 0;
+    await open({ profile: cloneProfileDemo(), deps: fakeDeps({ result }) });
+    const summary = await screen.findByTestId('overpaying-summary');
+    expect(within(summary).getByText(t.result.effectNoneAbove)).toBeInTheDocument();
+    expect(screen.queryByTestId('effect10y')).toBeNull();
   });
 });
 

@@ -2,7 +2,8 @@
 // The overpaying check's view-model against fake engine, areas and events built on areaData.sample.json
 // (testUtils.ts). Nothing here calls the real overpayingCheck; see the `todo`s at the end.
 import type { ClientFunnelEvent, Profile } from '@lifeguessr/types';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { areaDataSample, cloneProfileDemo } from '@/fixtures';
 import { useAppStore } from '@/state';
@@ -168,6 +169,47 @@ describe('useOverpaying: a profile', () => {
   });
 });
 
+// The store round trip M2 gives: onStore writes the inputs, and the next render reads them back as `stored`.
+function useRoundTrip(profile: Profile | null, deps: OverpayingDeps, saved?: OverpayingToolState) {
+  const [stored, setStored] = useState<OverpayingToolState | undefined>(saved);
+  return { vm: useOverpaying(profile, { deps, stored, onStore: setStored }), stored };
+}
+
+describe('useOverpaying: where a prefilled value came from, across the store round trip', () => {
+  const FROM_PROFILE = { zip: true, amounts: { rent: 'profile', carInsurance: null, groceries: 'profileEstimate', childcare: null } };
+
+  it('is still shown after the first edit has been saved and read back', async () => {
+    const profile = cloneProfileDemo();
+    const rendered = renderHook(() => useRoundTrip(profile, fakeDeps()));
+    await waitFor(() => expect(rendered.result.current.vm.status).toBe('ready'));
+    expect(rendered.result.current.vm.prefill).toEqual(FROM_PROFILE);
+    expect(rendered.result.current.stored).toBeUndefined();
+
+    act(() => rendered.result.current.vm.setAdults(2));
+    expect(rendered.result.current.stored).toMatchObject({ adults: 2, zip: '75206', rent: 1950, groceries: 520 }); // really round-tripped
+    expect(rendered.result.current.vm.inputs.amounts).toMatchObject({ rent: 1950, groceries: 520 }); // same values as before
+    expect(rendered.result.current.vm.prefill).toEqual(FROM_PROFILE); // and still labelled as the profile's
+
+    act(() => rendered.result.current.vm.setAmount('groceries', 640)); // typed over: no longer the profile's
+    expect(rendered.result.current.vm.prefill.amounts).toEqual({ rent: 'profile', carInsurance: null, groceries: null, childcare: null });
+  });
+
+  it('is still shown after a reload, while the saved values are the profile\'s', async () => {
+    const profile = cloneProfileDemo();
+    const saved: OverpayingToolState = { zip: '75206', bedrooms: 2, adults: 2, kids: [], rent: 1950, groceries: 520 };
+    const rendered = renderHook(() => useRoundTrip(profile, fakeDeps(), saved));
+    await waitFor(() => expect(rendered.result.current.vm.status).toBe('ready'));
+    expect(rendered.result.current.vm.prefill).toEqual(FROM_PROFILE);
+  });
+
+  it('is not claimed for saved values that are not the profile\'s', async () => {
+    const saved: OverpayingToolState = { zip: '75216', bedrooms: 1, adults: 1, kids: [], rent: 1700 };
+    const rendered = renderHook(() => useRoundTrip(cloneProfileDemo(), fakeDeps(), saved));
+    await waitFor(() => expect(rendered.result.current.vm.status).toBe('ready'));
+    expect(rendered.result.current.vm.prefill).toEqual({ zip: false, amounts: { rent: null, carInsurance: null, groceries: null, childcare: null } });
+  });
+});
+
 describe('useOverpaying: a ZIP we do not cover', () => {
   it('shows the metro picker and no result until one is chosen; the result is then flagged approximate (metro)', async () => {
     const { vm, deps } = await setup();
@@ -205,6 +247,36 @@ describe('useOverpaying: a ZIP we do not cover', () => {
     expect(vm().metroPicker).toMatchObject({ metro: 'Boise, ID', tier: 'mid' });
     act(() => vm().metroPicker!.setMetro(null));
     expect(vm().metroPicker).toMatchObject({ metro: null, tier: null, tiers: [] });
+  });
+
+  it('a metro chosen for one ZIP is forgotten when the ZIP changes to a different one', async () => {
+    const onStore = vi.fn();
+    const { vm, deps } = await setup(null, { onStore });
+    act(() => {
+      vm().setZip(UNCOVERED_ZIP);
+      vm().setAmount('rent', 2000);
+    });
+    act(() => vm().metroPicker!.setMetro(SAMPLE_METRO));
+    expect(vm().coverage.kind).toBe('metro');
+    expect(deps.check).toHaveBeenCalledTimes(1);
+
+    act(() => vm().setZip('12345')); // another ZIP we do not have
+    expect(vm().coverage).toEqual({ kind: 'none', zip: '12345' });
+    expect(vm().needs).toBe('metro'); // asked again
+    expect(vm().result).toBeNull();
+    expect(vm().metroPicker).toMatchObject({ metro: null, tier: null, tiers: [] });
+    expect(deps.check).toHaveBeenCalledTimes(1); // nothing was compared against Dallas for 12345
+    expect(onStore.mock.calls.at(-1)![0]).not.toHaveProperty('metro');
+    expect(onStore.mock.calls.at(-1)![0]).not.toHaveProperty('tier');
+  });
+
+  it('the same ZIP typed another way keeps the metro chosen for it', async () => {
+    const { vm } = await setup();
+    act(() => vm().setZip(UNCOVERED_ZIP));
+    act(() => vm().metroPicker!.setMetro(SAMPLE_METRO));
+    act(() => vm().setZip(` ${UNCOVERED_ZIP}-0001 `)); // ZIP+4 and spaces: the same ZIP
+    expect(vm().metroPicker).toMatchObject({ metro: SAMPLE_METRO, tier: 'mid' });
+    expect(vm().coverage.kind).toBe('metro');
   });
 
   it('no picker for a covered ZIP, an empty one or a bad one', async () => {

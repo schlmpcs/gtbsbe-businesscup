@@ -3,7 +3,7 @@
 // S23 Overpaying check (placeholder UI; the designer's frames replace it). All data and actions come
 // from useOverpaying(); nothing is computed here.
 import { overpaying as t } from '@/copy';
-import { Card, Money, PageHeader, Stack, Stat, buttonClassName, cx } from '@/ui-kit';
+import { Card, Money, PageHeader, Stack, Stat, Tag, buttonClassName, cx } from '@/ui-kit';
 import type { OverpayingResultVM, OverpayingVM, VMError } from '../model/types';
 import { BenchmarkRow } from './BenchmarkRow';
 import { CoverageNotice } from './CoverageNotice';
@@ -27,6 +27,25 @@ function errorText(error: VMError): string {
   return t.errors.unknown;
 }
 
+/** The note under the 10-year figure when there is no total. */
+function EffectNote({ data, profileHref }: { data: OverpayingResultVM; profileHref: string }) {
+  switch (data.summary.effectStatus) {
+    case 'partial':
+      return <>{t.result.effectPartial}</>;
+    case 'none':
+      return <>{t.result.effectNoneAbove}</>;
+    default:
+      return (
+        <>
+          {t.result.effectNeedsProfile}{' '}
+          <a href={profileHref} className="underline underline-offset-2">
+            {t.result.effectNeedsProfileLink}
+          </a>
+        </>
+      );
+  }
+}
+
 function Summary({ data, profileHref }: { data: OverpayingResultVM; profileHref: string }) {
   const { summary } = data;
   return (
@@ -40,24 +59,23 @@ function Summary({ data, profileHref }: { data: OverpayingResultVM; profileHref:
               value={<Money value={summary.gapPerYear} />}
               hint={t.result.gapPerYearHint}
             />
-            <Stat
-              label={t.result.effect10y}
-              value={summary.effect10y === null ? t.result.effectNone : <Money value={summary.effect10y} />}
-              hint={
-                summary.effect10y !== null ? (
-                  t.result.effectHint
-                ) : data.effectAvailable ? (
-                  t.result.effectUnavailable
-                ) : (
+            {summary.effect10y !== null ? (
+              <Stat
+                label={
                   <>
-                    {t.result.effectNeedsProfile}{' '}
-                    <a href={profileHref} className="underline underline-offset-2">
-                      {t.result.effectNeedsProfileLink}
-                    </a>
+                    {t.result.effect10y}{' '}
+                    <Tag variant="dashed" title={t.result.effectEstimateWhy}>
+                      {t.result.estimate}
+                      <span className="sr-only">: {t.result.effectEstimateWhy}</span>
+                    </Tag>
                   </>
-                )
-              }
-            />
+                }
+                value={<Money value={summary.effect10y} />}
+                hint={t.result.effectHint}
+              />
+            ) : (
+              <Stat label={t.result.effect10y} value={t.result.effectNone} hint={<EffectNote data={data} profileHref={profileHref} />} />
+            )}
           </div>
         )}
       </Stack>

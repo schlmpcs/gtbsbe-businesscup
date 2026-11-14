@@ -65,7 +65,21 @@ describe('toResultVM', () => {
     expect(vm.summary.above).toBe(2);
     expect(vm.summary.gapPerYear).toBeCloseTo(9782.352, 6);
     expect(vm.summary.effect10y).toBe(49_000);
+    expect(vm.summary.effectStatus).toBe('total'); // both lines above have an effect, so the total is of both
     expect(vm.effectAvailable).toBe(true);
+  });
+
+  it('says what the 10-year effect is for: the monthly difference between yours and the middle of the range', () => {
+    const vm = toResultVM(sampleOverpayingResult(), { profileUsed: true, kidCount: 1 });
+    // The gap is yours minus the TOP of the range (324); the effect is for the MIDDLE: 3000 − 2230 = 770 a month.
+    expect(vm.rows[0]!.gapPerMonth).toBe(324);
+    expect(vm.rows[0]!.toMiddlePerMonth).toBe(770);
+    // Childcare: 1500 − 840.67 = 659.33 a month (the gap is 491.196).
+    expect(vm.rows[3]!.gapPerMonth).toBeCloseTo(491.196, 6);
+    expect(vm.rows[3]!.toMiddlePerMonth).toBeCloseTo(659.33, 6);
+    // Not above the range: nothing to say.
+    expect(vm.rows[1]!.toMiddlePerMonth).toBeNull();
+    expect(vm.rows[2]!.toMiddlePerMonth).toBeNull();
   });
 
   it('shows no 10-year effect for lines that are not above the range', () => {
@@ -80,6 +94,7 @@ describe('toResultVM', () => {
     const vm = toResultVM(result, { profileUsed: false, kidCount: 1 });
     expect(vm.rows.map((r) => r.effect10y)).toEqual([null, null, null, null]);
     expect(vm.summary.effect10y).toBeNull();
+    expect(vm.summary.effectStatus).toBe('needsProfile');
     expect(vm.effectAvailable).toBe(false);
     expect(vm.summary.gapPerYear).toBeCloseTo(9782.352, 6); // the gap does not need a profile
   });
@@ -96,7 +111,29 @@ describe('toResultVM', () => {
     result.lines[3]!.effect10y = 0;
     const vm = toResultVM(result, { profileUsed: true, kidCount: 1 });
     expect(vm.rows[3]!.effect10y).toBeNull();
-    expect(vm.summary.effect10y).toBe(40_000); // only the lines that have one
+    expect(vm.rows[0]!.effect10y).toBe(40_000); // the line that has one keeps it
+  });
+
+  it('never adds up a partial total: with an effect for only one of two lines above the range, there is no total', () => {
+    // (This replaces a test that locked in the old behaviour: summary.effect10y was 40 000, the one line's effect, under "closing each gap".)
+    const result = sampleOverpayingResult();
+    result.lines[3]!.effect10y = 0; // childcare above the range, but the profile cannot take it
+    const vm = toResultVM(result, { profileUsed: true, kidCount: 1 });
+    expect(vm.summary.above).toBe(2);
+    expect(vm.summary.effect10y).toBeNull();
+    expect(vm.summary.effectStatus).toBe('partial');
+  });
+
+  it('says so when no line above the range has an effect, or when no line is above it', () => {
+    const none = sampleOverpayingResult();
+    none.lines[0]!.effect10y = 0;
+    none.lines[3]!.effect10y = 0;
+    const a = toResultVM(none, { profileUsed: true, kidCount: 1 });
+    expect([a.summary.effect10y, a.summary.effectStatus]).toEqual([null, 'none']);
+
+    const inRange = onlyLines(sampleOverpayingResult(), ['carInsurance', 'groceries']); // below and in range
+    const b = toResultVM(inRange, { profileUsed: true, kidCount: 1 });
+    expect([b.summary.above, b.summary.effect10y, b.summary.effectStatus]).toEqual([0, null, 'notApplicable']);
   });
 
   it('keeps the source and estimate flag with each row', () => {
@@ -126,6 +163,6 @@ describe('toResultVM', () => {
     const empty = { ...sampleOverpayingResult(), lines: [], skipped: [{ line: 'childcare' as const, reason: 'noData' as const }] };
     const vm = toResultVM(empty, { profileUsed: true, kidCount: 1 });
     expect(vm.rows).toEqual([]);
-    expect(vm.summary).toEqual({ compared: 0, above: 0, gapPerYear: 0, effect10y: null });
+    expect(vm.summary).toEqual({ compared: 0, above: 0, gapPerYear: 0, effect10y: null, effectStatus: 'notApplicable' });
   });
 });

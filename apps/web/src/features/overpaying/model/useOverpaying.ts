@@ -10,7 +10,7 @@ import { useAppReady } from '@/state';
 import { computeOverpaying } from './compute';
 import { defaultOverpayingDeps } from './deps';
 import {
-  ADULTS_MAX, BEDROOMS_MAX, KIDS_PER_BAND_MAX, clampAdults, clampBedrooms, clampKidCount, initialDraft, toToolState, type Draft,
+  ADULTS_MAX, BEDROOMS_MAX, KIDS_PER_BAND_MAX, clampAdults, clampBedrooms, clampKidCount, initialDraft, sameZip, toToolState, type Draft,
 } from './inputs';
 import type {
   AreaTier, BenchmarkLine, KidAge, MetroPickerVM, Money, OverpayingOptions, OverpayingVM, PrefillVM,
@@ -31,6 +31,9 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
 
   // What the form starts as; once the person changes anything, their draft replaces it whole.
   const initial = useMemo(() => initialDraft(profile, stored), [profile, stored]);
+  // What the profile alone gives. Where a value came from is judged against this, never against the saved
+  // inputs: those change on every edit (the store round trip) and would otherwise erase the labels.
+  const fromProfile = useMemo(() => initialDraft(profile, undefined), [profile]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const current = draft ?? initial.draft;
   const edit = useCallback((change: (d: Draft) => Draft) => setDraft((prev) => change(prev ?? initial.draft)), [initial]);
@@ -47,7 +50,12 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
   );
 
   // ----- setters -----
-  const setZip = useCallback((zip: string) => edit((d) => ({ ...d, inputs: { ...d.inputs, zip } })), [edit]);
+  // A metro is chosen for the ZIP that had none; a different ZIP is asked again.
+  const setZip = useCallback(
+    (zip: string) =>
+      edit((d) => ({ ...d, inputs: { ...d.inputs, zip }, ...(sameZip(d.inputs.zip, zip) ? {} : { metro: null, tier: null }) })),
+    [edit],
+  );
   const setBedrooms = useCallback((n: number) => edit((d) => ({ ...d, inputs: { ...d.inputs, bedrooms: clampBedrooms(n) } })), [edit]);
   const setAdults = useCallback((n: number) => edit((d) => ({ ...d, inputs: { ...d.inputs, adults: clampAdults(n) } })), [edit]);
   const setKidCount = useCallback(
@@ -113,14 +121,14 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
 
   // ----- what the screen gets -----
   const prefill: PrefillVM = {
-    zip: initial.prefill.zip && current.inputs.zip === initial.draft.inputs.zip,
+    zip: fromProfile.prefill.zip && current.inputs.zip === fromProfile.draft.inputs.zip,
     amounts: {
       rent: null, carInsurance: null, groceries: null, childcare: null,
     },
   };
   for (const line of Object.keys(prefill.amounts) as BenchmarkLine[]) {
-    const from = initial.prefill.amounts[line];
-    if (from !== null && current.inputs.amounts[line] === initial.draft.inputs.amounts[line]) prefill.amounts[line] = from;
+    const from = fromProfile.prefill.amounts[line];
+    if (from !== null && current.inputs.amounts[line] === fromProfile.draft.inputs.amounts[line]) prefill.amounts[line] = from;
   }
 
   const coverage = computed?.coverage ?? { kind: 'empty' as const };

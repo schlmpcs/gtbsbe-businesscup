@@ -57,7 +57,7 @@ describe.skipIf(!check)('useOverpaying on the real overpayingCheck (areaData.sam
     expect(data.rows[0]!.gapPerYear).toBeCloseTo(324 * 12, 6); // 3 888
     expect(data.rows[3]!.gapPerYear).toBeCloseTo(491.196 * 12, 6); // 5 894.352
     expect(data.rows.map((r) => r.isEstimate)).toEqual([true, true, true, true]); // no Census ratio for this sample ZIP: assumed spreads
-    expect(data.summary).toMatchObject({ compared: 4, above: 2, effect10y: null });
+    expect(data.summary).toMatchObject({ compared: 4, above: 2, effect10y: null, effectStatus: 'needsProfile' });
     expect(data.summary.gapPerYear).toBeCloseTo(9782.352, 6);
     expect(data.effectAvailable).toBe(false);
   });
@@ -74,9 +74,11 @@ describe.skipIf(!check)('useOverpaying on the real overpayingCheck (areaData.sam
     const rent = data.rows.find((r) => r.line === 'rent')!;
     expect(rent.effect10y).toBeGreaterThan(92_400 * 0.85);
     expect(rent.effect10y).toBeLessThan(92_400 * 1.15);
+    expect(rent.toMiddlePerMonth).toBeCloseTo(770, 6); // the monthly figure that effect is for: 3000 − 2230
     // Childcare: the profile has $0 of it, so a $659 change cannot come out of it: no effect to show.
     expect(data.rows.find((r) => r.line === 'childcare')!.effect10y).toBeNull();
-    expect(data.summary.effect10y).toBe(rent.effect10y);
+    // Two lines are above the range and only one has an effect: no total, rather than a partial sum.
+    expect(data.summary).toMatchObject({ above: 2, effect10y: null, effectStatus: 'partial' });
     expect(data.effectAvailable).toBe(true);
   });
 

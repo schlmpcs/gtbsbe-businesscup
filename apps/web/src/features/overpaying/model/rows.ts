@@ -37,18 +37,33 @@ function rowOf(b: Benchmark, profileUsed: boolean): BenchmarkRowVM {
     position: b.position,
     gapPerMonth: b.gapPerMonth,
     gapPerYear: b.gapPerYear,
+    toMiddlePerMonth: b.position === 'above' ? b.yours - b.typical.mid : null,
     effect10y,
     bar: rangeBar(b.yours, b.typical),
   };
 }
 
-function summaryOf(rows: BenchmarkRowVM[]): OverpayingSummaryVM {
-  const withEffect = rows.filter((r) => r.effect10y !== null);
+function summaryOf(rows: BenchmarkRowVM[], profileUsed: boolean): OverpayingSummaryVM {
+  const above = rows.filter((r) => r.position === 'above');
+  const withEffect = above.filter((r) => r.effect10y !== null);
+  // A total is only a total when it covers every line above the range; with some missing it would read as
+  // the whole and be too small, so each line shows its own instead.
+  const effectStatus: OverpayingSummaryVM['effectStatus'] =
+    above.length === 0
+      ? 'notApplicable'
+      : !profileUsed
+        ? 'needsProfile'
+        : withEffect.length === above.length
+          ? 'total'
+          : withEffect.length === 0
+            ? 'none'
+            : 'partial';
   return {
     compared: rows.length,
-    above: rows.filter((r) => r.position === 'above').length,
+    above: above.length,
     gapPerYear: rows.reduce((sum, r) => sum + r.gapPerYear, 0),
-    effect10y: withEffect.length > 0 ? withEffect.reduce((sum, r) => sum + r.effect10y!, 0) : null,
+    effect10y: effectStatus === 'total' ? withEffect.reduce((sum, r) => sum + r.effect10y!, 0) : null,
+    effectStatus,
   };
 }
 
@@ -62,5 +77,5 @@ export function toResultVM(result: OverpayingResult, ctx: { profileUsed: boolean
     line,
     reason: reason === 'noData' && line === 'childcare' && ctx.kidCount === 0 ? 'noKids' : reason,
   }));
-  return { rows, skipped, summary: summaryOf(rows), effectAvailable: ctx.profileUsed };
+  return { rows, skipped, summary: summaryOf(rows, ctx.profileUsed), effectAvailable: ctx.profileUsed };
 }
