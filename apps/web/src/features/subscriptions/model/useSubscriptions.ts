@@ -17,7 +17,7 @@ import {
   type StatementClass, type SubscriptionFinding,
 } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { answerDollars, forecastIsBusy } from '@/features/forecast/model/forecastAnswer';
+import { answerDollars, forecastIsBusy, patchesEqual } from '@/features/forecast/model/forecastAnswer';
 import { useForecastBundle } from '@/features/forecast/model/useForecastBundle';
 import { categorizeStatement } from '@/lib/api/statement';
 import { downloadRenewalsCalendar } from '@/lib/download';
@@ -77,6 +77,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const profileOrigin = useAppStore((s) => s.profileOrigin);
   const subscriptionsDetected = useAppStore((s) => s.subscriptionsDetected);
   const commitMove = useAppStore((s) => s.commitMove);
+  const committedMove = useAppStore((s) => s.committedMove);
   const applySubscriptionsAudit = useAppStore((s) => s.applySubscriptionsAudit);
 
   // ----- saved state ------------------------------------------------------------------------------
@@ -409,6 +410,10 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   }, [moveToAdd, busy, commitMove, emit]);
 
   const profileSubscriptions = profile.spending.subscriptions;
+  // The committed move is a snapshot: its patch is absolute and was sized for the marks and the subscriptions
+  // line of that moment. It is "added" only while the plan would commit the same patch today.
+  const cancelPlanCommitted = profile.committedMoveId === CANCEL_MOVE_ID && committedMove?.id === CANCEL_MOVE_ID;
+  const moveAdded = cancelPlanCommitted && candidate !== null && patchesEqual(committedMove.patch, candidate.patch);
   const plan: PlanVM = {
     options: findingsView.active.concat(findingsView.tickedOnly).filter((f) => f.counted),
     markedCount: marked.length,
@@ -421,7 +426,8 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     markCancel,
     unmarkCancel,
     canAddAsMove: moveToAdd !== null && !busy,
-    moveAdded: profile.committedMoveId === CANCEL_MOVE_ID,
+    moveAdded,
+    moveOutdated: cancelPlanCommitted && !moveAdded,
     addAsMove,
   };
 

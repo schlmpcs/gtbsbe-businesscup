@@ -193,8 +193,10 @@ export type PlanVM = {
   markCancel: (id: string) => void;
   unmarkCancel: (id: string) => void;
   canAddAsMove: boolean;
-  /** The cancel plan is the committed move. */
+  /** The committed move is this cancel plan, exactly as it stands now (same marks, same subscriptions line). */
   moveAdded: boolean;
+  /** The committed move is an earlier version of this cancel plan: the marks or the profile's line changed since. Add it again to update it. */
+  moveOutdated: boolean;
   addAsMove: () => void;
 };
 

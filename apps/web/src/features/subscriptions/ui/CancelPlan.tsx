@@ -69,13 +69,14 @@ export function CancelPlan({ plan, apply, renewals }: CancelPlanProps) {
             </p>
           )}
           {plan.saving !== null && plan.isSampleProfile && <p className="text-xs text-text-muted">{t.plan.sampleProfile}</p>}
+          {plan.moveOutdated && <p role="note" className="text-xs text-text-muted">{t.plan.moveOutdated}</p>}
 
           <Row gap="sm">
             {plan.moveAdded ? (
               <Tag>{t.plan.moveAdded}</Tag>
             ) : (
               <Button disabled={!plan.canAddAsMove} onClick={plan.addAsMove}>
-                {t.plan.addAsMove}
+                {plan.moveOutdated ? t.plan.updateMove : t.plan.addAsMove}
               </Button>
             )}
             {apply.inPlan ? (

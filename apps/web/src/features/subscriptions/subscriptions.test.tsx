@@ -87,6 +87,30 @@ describe('SubscriptionsScreen: the cold path', () => {
   });
 });
 
+describe('SubscriptionsScreen: the next move follows the plan', () => {
+  it('marking more after adding the move offers to update it', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(screen.getByRole('checkbox', { name: 'Netflix' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
+    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
+    const plan = screen.getByRole('heading', { name: t.plan.title }).closest('section')!;
+    await user.click(within(plan).getByRole('checkbox', { name: t.plan.mark('Netflix') }));
+    await waitFor(() => expect(within(plan).getByRole('button', { name: t.plan.addAsMove })).toBeEnabled());
+    await user.click(within(plan).getByRole('button', { name: t.plan.addAsMove }));
+    expect(within(plan).getByText(t.plan.moveAdded)).toBeInTheDocument();
+
+    await user.click(within(plan).getByRole('checkbox', { name: t.plan.mark('Spotify') }));
+    expect(within(plan).queryByText(t.plan.moveAdded)).not.toBeInTheDocument();
+    expect(within(plan).getByText(t.plan.moveOutdated)).toBeInTheDocument();
+    await waitFor(() => expect(within(plan).getByRole('button', { name: t.plan.updateMove })).toBeEnabled());
+    await user.click(within(plan).getByRole('button', { name: t.plan.updateMove }));
+    expect(within(plan).getByText(t.plan.moveAdded)).toBeInTheDocument();
+    expect(within(plan).queryByText(t.plan.moveOutdated)).not.toBeInTheDocument();
+  });
+});
+
 describe('SubscriptionsScreen: estimate tags', () => {
   it('every tick price is tagged an estimate, a checked catalogue price included, on a catalogue shaped like the real one', async () => {
     const user = userEvent.setup();

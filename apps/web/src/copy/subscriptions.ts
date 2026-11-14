@@ -191,6 +191,8 @@ export const subscriptions = {
       `Your plan holds ${held} a month for subscriptions, so the 10-year number counts at most that. Use this in my plan to include all of it.`,
     addAsMove: 'Add as my next move',
     moveAdded: 'Added as your next move.',
+    updateMove: 'Update my next move',
+    moveOutdated: 'Your next move still holds an earlier version of this plan. Update it to match.',
     useInPlan: 'Use this in my plan',
     inPlan: 'This is in your plan.',
   },

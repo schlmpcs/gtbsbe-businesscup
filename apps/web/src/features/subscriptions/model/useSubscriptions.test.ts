@@ -671,6 +671,60 @@ describe('cancel plan', () => {
     expect(track).toHaveBeenCalledWith({ name: 'move_committed', props: { kind: 'cancelSubscriptions' } });
   });
 
+  describe('the committed move follows the plan', () => {
+    /** The sample statement read, Netflix and Spotify marked ($17.99 + $11.99 = $29.98), the move added: patch $85 − $29.98 = $55.02. */
+    async function committed() {
+      const tool = renderTool();
+      await ready(tool);
+      await uploaded(tool);
+      act(() => tool.result.current.vm.plan.markCancel('netflix-com-ca'));
+      act(() => tool.result.current.vm.plan.markCancel('spotify-usa-ny'));
+      await waitFor(() => expect(tool.result.current.vm.plan.canAddAsMove).toBe(true));
+      act(() => tool.result.current.vm.plan.addAsMove());
+      expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 55.02 } });
+      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
+      return tool;
+    }
+
+    it('putting the total in the plan changes the line the move lowers, so the committed move is out of date until it is added again', async () => {
+      const tool = await committed();
+      act(() => tool.result.current.vm.apply.applyToProfile()); // the line goes $85 → $69.54
+      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: false, moveOutdated: true });
+      await waitFor(() => expect(tool.result.current.vm.plan.canAddAsMove).toBe(true));
+      act(() => tool.result.current.vm.plan.addAsMove());
+      // 69.54 − 29.98 = 39.56
+      expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 39.56 } });
+      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
+    });
+
+    it('marking another service after adding the move makes it out of date: $54.97 now, not $29.98', async () => {
+      const tool = await committed();
+      act(() => tool.result.current.vm.plan.markCancel('planet-fitness-club-fees')); // + $24.99
+      expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 54.97 });
+      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: false, moveOutdated: true });
+      expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 55.02 } }); // still the old one
+      await waitFor(() => expect(tool.result.current.vm.plan.canAddAsMove).toBe(true));
+      act(() => tool.result.current.vm.plan.addAsMove());
+      expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 30.03 } }); // 85 − 54.97
+      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
+    });
+
+    it('unmarking back to what was committed makes it current again', async () => {
+      const tool = await committed();
+      act(() => tool.result.current.vm.plan.markCancel('planet-fitness-club-fees'));
+      act(() => tool.result.current.vm.plan.unmarkCancel('planet-fitness-club-fees'));
+      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
+    });
+
+    it('another move committed (not this plan) is neither added nor out of date', async () => {
+      useAppStore.getState().commitMove({ id: 'cutCategory:eatingOut', kind: 'cutCategory', level: 1, category: 'eatingOut', effect10y: 5000, patch: { spending: { eatingOut: 272 } } });
+      const tool = renderTool();
+      await ready(tool);
+      await markTwo(tool);
+      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: false, moveOutdated: false });
+    });
+  });
+
   it('addAsMove does nothing while the forecast is still on its way', async () => {
     mockForecastRoute(() => new Promise(() => {})); // never answers
     const tool = renderTool();
