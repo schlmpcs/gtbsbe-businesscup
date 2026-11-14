@@ -3,7 +3,7 @@
 import { forecast as t } from '@/copy';
 import { Button, cx, formatMoney, Stack, Sticker } from '@/ui-kit';
 import type { ExplanationVM, Loadable, MoveVM, NextMovesVM } from '../model/types';
-import { ErrorNote, INK_BAND, moveDetail, moveTitle, Skeleton, SourceTag } from './shared';
+import { ErrorNote, moveDetail, moveTitle, Skeleton, SourceTag } from './shared';
 
 export type NextMovesProps = {
   vm: NextMovesVM;
@@ -167,15 +167,17 @@ function MoveItem({
 function LevelTwoPreview({ level, kinds }: { level: 1 | 2; kinds: NextMovesVM['level2Kinds'] }) {
   const l2 = t.moves.level2;
   return (
-    <div className={cx(INK_BAND, 'p-xl')} data-testid="level-2" data-locked={level < 2 ? 'true' : 'false'}>
-      <div className="flex flex-wrap items-center gap-sm">
-        <h3 className="font-display text-2xl font-extrabold">{l2.title}</h3>
-        <Sticker tone="primary" tilt={-4}>
-          {l2.preview}
-        </Sticker>
-      </div>
-      <p className="mt-xs text-sm text-text-muted">{level < 2 ? l2.locked : l2.unlocked}</p>
-      <ul className="mt-sm flex flex-col gap-xs text-sm text-text-muted">
+    // Closed by default: one muted line; the locked list opens on tap.
+    <details className="group text-sm text-text-muted" data-testid="level-2" data-locked={level < 2 ? 'true' : 'false'}>
+      <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-sm">
+        <LockIcon />
+        <span className="font-semibold">{l2.summary(kinds.length)}</span>
+        <span>· {level < 2 ? l2.locked : l2.unlocked}</span>
+        <span aria-hidden="true" className="transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <ul className="mt-xs flex flex-col gap-xs pl-lg">
         {kinds.map((kind) => (
           <li key={kind} className="flex items-center gap-sm">
             <LockIcon />
@@ -183,7 +185,7 @@ function LevelTwoPreview({ level, kinds }: { level: 1 | 2; kinds: NextMovesVM['l
           </li>
         ))}
       </ul>
-    </div>
+    </details>
   );
 }
 

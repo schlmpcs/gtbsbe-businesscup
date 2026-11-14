@@ -11,7 +11,7 @@ import { useFuture } from '@/features/forecast/model/useFuture';
 import { FutureScreen } from '@/features/forecast/ui/FutureScreen';
 import { SCREEN_ROUTES } from '@/lib/screens';
 
-const links = { today: SCREEN_ROUTES.S1, makeExact: SCREEN_ROUTES.S9 };
+const links = { makeExact: SCREEN_ROUTES.S9 };
 
 export default function FuturePage({ searchParams }: { searchParams: Promise<{ sample?: string | string[] }> }) {
   const { sample } = use(searchParams);

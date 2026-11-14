@@ -35,3 +35,27 @@ export type EventsSource = 'off' | 'api';
 export function eventsSource(): EventsSource {
   return process.env.NEXT_PUBLIC_EVENTS_SOURCE === 'api' ? 'api' : 'off';
 }
+
+/** Which daily game /play is. */
+export type GameMode = 'duel' | 'slider';
+
+/**
+ * `/play` is the duel ("Which life costs more?", S2/S3) by default. `NEXT_PUBLIC_GAME_MODE=slider`
+ * brings back the slider game ("guess the home's monthly cost", with S4 streamer mode at
+ * /play?stream=1) as the rollback. S1 Today, S5 and the screen list read the same flag, so they
+ * describe the game /play actually serves.
+ */
+export function gameMode(): GameMode {
+  return process.env.NEXT_PUBLIC_GAME_MODE === 'slider' ? 'slider' : 'duel';
+}
+
+/**
+ * Where the duel gets its pairs, picks and hints, separately from NEXT_PUBLIC_GAME_SOURCE (which the
+ * slider game, sessions plumbing and the leaderboard follow). Default `fixtures`: the duel is
+ * computed in the browser with the real engine, even in an API build. `NEXT_PUBLIC_DUEL_SOURCE=api`
+ * plays against the server routes; until they land (#115, switch-over #120) that build answers
+ * "unavailable".
+ */
+export function duelSource(): GameSource {
+  return process.env.NEXT_PUBLIC_DUEL_SOURCE === 'api' ? 'api' : 'fixtures';
+}

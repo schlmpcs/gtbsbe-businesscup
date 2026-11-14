@@ -39,8 +39,10 @@ const checkoutButton = () => screen.getByRole('button', { name: copy.checkout.bu
 const statusRegion = () => screen.getByRole('status');
 
 describe('Paywall', () => {
-  it('offer: demo label, tagged prices (yearly first and preselected), only what Pro unlocks, test card, promo and disclaimer', () => {
+  it('offer: demo label, tagged prices (yearly first and preselected), only what Pro unlocks, test card and promo', () => {
     render(<Paywall {...vm()} />);
+    // The headline is the page's only h1 (no screen ID).
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(copy.headline);
     expect(screen.getByText(copy.demoBadge.stripe)).toBeInTheDocument();
     const plans = screen.getByRole('group', { name: new RegExp(copy.plans.legend) });
     expect(within(plans).getByRole('radio', { name: /Yearly.*\$39\.99/ })).toBeChecked();
@@ -56,7 +58,8 @@ describe('Paywall', () => {
     expect(checkoutButton()).toBeEnabled();
     expect(screen.getByText(copy.checkout.testCardNumber)).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: copy.promo.label })).toHaveValue('JURY2026');
-    expect(screen.getAllByText(common.disclaimer).length).toBeGreaterThan(0);
+    // The disclaimer is in the app footer, not repeated here.
+    expect(screen.queryByText(common.disclaimer)).not.toBeInTheDocument();
   });
 
   it('sends events: plan, checkout, promo edits and submit', async () => {

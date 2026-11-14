@@ -10,7 +10,6 @@ import { ExtraPayment } from './ExtraPayment';
 import { LoanParse } from './LoanParse';
 import { LoanVerdict } from './LoanVerdict';
 import { OfferCompare } from './OfferCompare';
-import { OfferEditor } from './OfferEditor';
 import { PayoffOrder } from './PayoffOrder';
 import { PayoffPlanner } from './PayoffPlanner';
 
@@ -51,30 +50,27 @@ export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payo
           <Loading />
         ) : (
           <Stack gap="2xl">
-            {vm.offers.length > 0 && (
-              <Stack gap="xl">
-                <OfferCompare offers={vm.offers} selectedOfferId={vm.selectedOfferId} selectOffer={vm.selectOffer} />
-                <LoanVerdict offers={vm.offers} />
-              </Stack>
-            )}
+            <Stack gap="xl">
+              <OfferCompare
+                offers={vm.offers}
+                selectedOfferId={vm.selectedOfferId}
+                selectOffer={vm.selectOffer}
+                edit={{
+                  updateOffer: vm.updateOffer,
+                  removeOffer: vm.removeOffer,
+                  addOffer: vm.addOffer,
+                  canAddOffer: vm.canAddOffer,
+                }}
+              />
+              {vm.offers.length > 0 && <LoanVerdict offers={vm.offers} />}
+              <LoanParse parse={vm.parse} canAddOffer={vm.canAddOffer} />
+            </Stack>
             <DebtLoadGauges gauge={vm.gauge} selectedName={selectedName} />
             <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-2">
               <ExtraPayment extra={vm.extra} setExtraPayment={vm.setExtraPayment} selectedName={selectedName} />
               {payoff ? null : <PayoffOrder plan={vm.payoffPlan} selectedName={selectedName} />}
             </div>
             {payoff && <PayoffPlanner vm={payoff} selectedName={selectedName} Link={Link} />}
-            <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-2">
-              <OfferEditor
-                offers={vm.offers}
-                selectedOfferId={vm.selectedOfferId}
-                selectOffer={vm.selectOffer}
-                updateOffer={vm.updateOffer}
-                removeOffer={vm.removeOffer}
-                addOffer={vm.addOffer}
-                canAddOffer={vm.canAddOffer}
-              />
-              <LoanParse parse={vm.parse} canAddOffer={vm.canAddOffer} />
-            </div>
             <p className="text-xs text-text-muted">{t.footnote}</p>
           </Stack>
         )}

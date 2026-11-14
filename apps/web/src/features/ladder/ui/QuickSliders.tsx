@@ -1,8 +1,9 @@
 // S7 Quick sliders (Design v3, Figma 202:2004): one slider per spending category (a colored dot, the
-// label, an estimate tag, the value on the right) plus the retirement share in a white card on the
-// left; free text can fill the sliders after the user confirms. On the right an ink card: the S5
-// guess struck through, "Your month: $Y" in orange and how far off the guess was, with take-home
-// and what's left over; then the house under construction.
+// label, an estimate tag, the value on the right) in a white card on the left; the retirement share
+// sits under "More options" at the bottom of that card (its view-model is S7's, so it stays here).
+// Free text can fill the sliders after the user confirms; it is one text link until opened. On the
+// right an ink card: the S5 guess struck through, "Your month: $Y" in orange and how far off the
+// guess was, with take-home and what's left over; then the house under construction.
 import { common, ladder } from '@/copy';
 import { Art, cx, EstimateTag, formatMoney, formatRate, Slider, Sticker } from '@/ui-kit';
 import type { LadderProgressVM, QuickSlidersVM } from '../model/types';
@@ -97,7 +98,12 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
               />
             </li>
           ))}
-          <li className="border-t border-border pt-lg">
+        </ul>
+        <details className="mt-lg border-t border-border pt-md" open={savings.value > 0 || undefined}>
+          <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-text-muted hover:text-text">
+            {t.moreOptions}
+          </summary>
+          <div className="pt-md">
             <Slider
               label={<span className="text-base font-semibold">{t.savingsLabel}</span>}
               value={savings.value}
@@ -110,8 +116,8 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
               onValueChange={vm.setSavingsShare}
               className="[&_output]:font-display [&_output]:text-xl [&_output]:font-extrabold"
             />
-          </li>
-        </ul>
+          </div>
+        </details>
       </div>
       <DescribeLife parse={vm.parse} rows={vm.parsedRows} />
     </LadderShell>

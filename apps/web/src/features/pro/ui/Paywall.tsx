@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { common, pro as copy } from '@/copy';
+import { pro as copy } from '@/copy';
 import { Art, Button, cx, Sticker } from '@/ui-kit';
 import type { CheckoutMode, PaywallError, PaywallVM } from '../model/types';
 import { CheckoutBlock, TestCardNote } from './CheckoutBlock';
@@ -45,9 +45,9 @@ export function Paywall(vm: PaywallProps) {
   return (
     <div className={cx('mt-xl grid grid-cols-1 items-start gap-2xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]', WIDE)}>
       <div className="flex flex-col gap-lg">
-        <h2 className="font-display text-display font-extrabold leading-display lg:text-[length:calc(var(--text-display)*1.4)]">
+        <h1 className="font-display text-display font-extrabold leading-display lg:text-[length:calc(var(--text-display)*1.4)]">
           {copy.headline}
-        </h2>
+        </h1>
         <p className="max-w-prose text-lg text-text-muted">{copy.lead}</p>
         <Art name="house-blueprint" className="mx-auto w-1/2 max-w-(--container-md) sm:w-3/4 lg:w-full" />
       </div>
@@ -117,7 +117,7 @@ export function Paywall(vm: PaywallProps) {
           </>
         )}
 
-        <p className="text-xs text-text-muted">{common.disclaimer}</p>
+        {/* The "not financial advice" disclaimer is in the app footer on every page. */}
       </div>
     </div>
   );

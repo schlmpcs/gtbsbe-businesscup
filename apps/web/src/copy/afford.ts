@@ -46,7 +46,7 @@ export const afford = {
       payWith: 'Check the payment details.',
     } as Record<string, string>,
     /** Example chips: tapping one fills the form (name + price). Inputs, not results. */
-    examplesTitle: 'Or try one',
+    examplesTitle: 'Try one',
     examples: [
       { label: 'New phone', amount: 999 },
       { label: 'Trip', amount: 1200 },
@@ -60,6 +60,9 @@ export const afford = {
   },
 
   parse: {
+    /** The link under the form that opens the one-sentence box (the fields stay the main path). */
+    open: 'Or type it in one sentence',
+    close: 'Hide the sentence box',
     label: 'Describe the purchase',
     placeholder: 'A $1,800 laptop, on my card',
     submit: 'Check',

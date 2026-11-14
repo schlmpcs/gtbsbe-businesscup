@@ -49,6 +49,15 @@ describe('/afford (S11)', () => {
     for (const tag of screen.getAllByTestId('afford-forecast-source')) expect(tag).toHaveTextContent(forecast.source.rules);
   });
 
+  it('an example chip fills the fields', async () => {
+    const user = await renderReady();
+    const ex = t.form.examples[1];
+    await user.click(screen.getByRole('button', { name: t.form.example(ex.label, '$1,200') }));
+    expect((screen.getByRole('textbox', { name: t.form.label }) as HTMLInputElement).value).toBe(ex.label);
+    expect((screen.getByRole('textbox', { name: t.form.amount }) as HTMLInputElement).value).toBe('1,200');
+    await waitFor(() => expect(verdict()).toBeTruthy());
+  });
+
   it('a $15,000 card purchase is a no, with the reason in plain words', async () => {
     const user = await renderReady();
     await user.type(screen.getByRole('textbox', { name: t.form.amount }), '15000');
@@ -73,6 +82,9 @@ describe('/afford (S11)', () => {
     const parsed: Purchase = { label: 'Gym', amount: 60, recurring: 'monthly', payWith: 'card' };
     parseText.mockResolvedValue({ value: parsed, inferred: ['payWith'] });
     const user = await renderReady();
+    // The fields are the main path; the sentence box opens from a small link under them.
+    expect(screen.queryByRole('textbox', { name: t.parse.label })).toBeNull();
+    await user.click(screen.getByRole('button', { name: t.parse.open }));
     await user.type(screen.getByRole('textbox', { name: t.parse.label }), 'gym 60 a month on my card');
     await user.click(screen.getByRole('button', { name: t.parse.submit }));
     const confirm = await screen.findByRole('region', { name: t.parse.confirmTitle });
@@ -88,8 +100,13 @@ describe('/afford (S11)', () => {
     expect(screen.getByRole('button', { name: t.wishlist.loadLabel('Gym') })).toBeTruthy();
   });
 
-  it('a free user sees a link to Pro instead of the wishlist save button', async () => {
-    await renderReady();
+  it('a free user sees a link to Pro instead of the wishlist save button, once there is a verdict', async () => {
+    const user = await renderReady();
+    // Before a verdict: no Pro card, and no empty wishlist section.
+    expect(screen.queryByText(pro.lock.wishlistBody)).toBeNull();
+    expect(screen.queryByRole('region', { name: t.wishlist.title })).toBeNull();
+    await user.type(screen.getByRole('textbox', { name: t.form.amount }), '300');
+    await waitFor(() => expect(verdict().dataset.verdict).toBe('fits'));
     const note = await screen.findByRole('note');
     expect(within(note).getByText(pro.lock.wishlistBody)).toBeTruthy();
     expect(within(note).getByRole('link', { name: pro.lock.cta }).getAttribute('href')).toBe('/pro');
@@ -99,6 +116,7 @@ describe('/afford (S11)', () => {
   it('a parser failure falls back to the form', async () => {
     parseText.mockRejectedValue(new Error('boom'));
     const user = await renderReady();
+    await user.click(screen.getByRole('button', { name: t.parse.open }));
     await user.type(screen.getByRole('textbox', { name: t.parse.label }), 'something');
     await user.click(screen.getByRole('button', { name: t.parse.submit }));
     const alert = await screen.findByRole('alert');

@@ -13,7 +13,8 @@ export type GoalCardProps = {
   className?: string;
 };
 
-const VERDICT_TONE = { onTrack: 'positive', withinRange: 'primary', behind: 'primary' } as const;
+const MAX_TARGET_PRESETS = 3;
+const VERDICT_TONE ={ onTrack: 'positive', withinRange: 'primary', behind: 'primary' } as const;
 
 export function GoalCard({ vm, makeExactHref, Link, className }: GoalCardProps) {
   const target = vm.goal?.target ?? vm.presets.targets[1]!;
@@ -40,16 +41,18 @@ export function GoalCard({ vm, makeExactHref, Link, className }: GoalCardProps) 
           />
         </label>
       </div>
-      <div className="flex flex-wrap gap-sm">
-        {vm.presets.targets.map((value) => (
-          <Button key={value} variant="secondary" size="sm" onClick={() => vm.setGoal({ target: value, years })}>
+      {/* Light chips: a few target presets (the years stay in their input). */}
+      <div className="flex flex-wrap gap-xs">
+        {vm.presets.targets.slice(0, MAX_TARGET_PRESETS).map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={value === vm.goal?.target}
+            onClick={() => vm.setGoal({ target: value, years })}
+            className="min-h-11 rounded-full border border-border px-md text-sm font-semibold tabular-nums text-text-muted transition-colors hover:border-primary hover:text-text aria-pressed:border-primary aria-pressed:bg-primary-soft aria-pressed:text-text"
+          >
             {formatMoney(value)}
-          </Button>
-        ))}
-        {vm.presets.years.map((value) => (
-          <Button key={value} variant="secondary" size="sm" onClick={() => vm.setGoal({ target, years: value })}>
-            {value} {t.years}
-          </Button>
+          </button>
         ))}
       </div>
     </div>

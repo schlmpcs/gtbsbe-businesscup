@@ -18,7 +18,7 @@ import type { DuelCopyStatus, DuelShareStatus, DuelVM } from './types';
 export const DUEL_VIEW_KEY = 'lifeguessr.duelView';
 
 export type UseDuelOptions = {
-  /** Data source override (tests). Default: NEXT_PUBLIC_GAME_SOURCE. */
+  /** Data source override (tests). Default: NEXT_PUBLIC_DUEL_SOURCE (lib/config duelSource). */
   client?: DuelClient;
   /** Opened from a friend's challenge link (/duel?c=…). */
   challenged?: boolean;

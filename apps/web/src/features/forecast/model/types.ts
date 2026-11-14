@@ -3,7 +3,7 @@
 // Hooks: useToday (S1) in ./useToday.ts, useFuture (S10) in ./useFuture.ts.
 import type { MoveCandidate } from '@lifeguessr/engine';
 import type {
-  Goal, GoalStatus, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, HorizonYears, Money, Move, MoveKind, Profile, Rate, Source,
+  Goal, GoalStatus, GoalVerdict, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, HorizonYears, Money, Move, MoveKind, Profile, Rate, Source,
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 import type { ProfileOrigin } from '@/state';
@@ -172,13 +172,29 @@ export type TodayVM = {
   actionsDisabled: boolean;
   /** Best move right now at the chosen year (first of the ranking), or why there is none. */
   topMove: Loadable<MoveVM | null>;
+  /** Add a ranked move to the plan (same action as S10). Does nothing while `actionsDisabled`. */
+  commit: (moveId: string) => void;
+  /** Take the committed move out of the plan. */
+  uncommit: () => void;
+  /**
+   * The saved net worth goal and its verdict (engine goalStatus, the rules forecast in today's dollars,
+   * same as S10's goal card). Null without a goal, or when it could not be computed.
+   */
+  goal: { target: Money; years: number; verdict: GoalVerdict } | null;
+  /** At least one input the forecast reads is an estimate (the "Make it exact" nudge). */
+  hasEstimates: boolean;
   /** Daily game call to action. */
   game: {
+    /** Which game /play is: the duel (rounds; the default) or the slider (homes). Picks the copy. */
+    kind: 'duel' | 'slider';
     date: string | null;
     played: number;
     total: number;
     finished: boolean;
-    /** Today's homes in play order, once the day is loaded (empty before the first visit to /play). */
+    /**
+     * Today's homes in play order, once the day is loaded (empty before the first visit to /play).
+     * Always empty for the duel: its rounds are pairs of lives, not homes.
+     */
     homes: TodayHomeVM[];
   };
 };

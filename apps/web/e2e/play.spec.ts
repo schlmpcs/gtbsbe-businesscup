@@ -1,5 +1,8 @@
-// /play (S2–S4) in a real browser on the fixture game: explore the house + clues + guess → reveal → summary,
-// and streamer mode's countdown. Runs on the phone and desktop projects.
+// /play (S2–S4) as the slider game in a real browser on the fixture game: explore the house + clues
+// + guess → reveal → summary, and streamer mode's countdown. Runs on the phone and desktop projects.
+// The slider is the rollback (NEXT_PUBLIC_GAME_MODE=slider, read at build time): by default /play is
+// the duel (duel.spec.ts, demo-path.spec.ts), so these run only on a slider build:
+//   NEXT_PUBLIC_GAME_MODE=slider pnpm e2e
 import { expect, test, type Page } from '@playwright/test';
 import { common } from '../src/copy/common';
 import { game as t } from '../src/copy/game';
@@ -29,6 +32,8 @@ async function expectNoSideScroll(page: Page) {
 }
 
 const h1 = (page: Page) => page.getByRole('heading', { level: 1 });
+
+test.skip(process.env.NEXT_PUBLIC_GAME_MODE !== 'slider', '/play is the duel in this build (NEXT_PUBLIC_GAME_MODE=slider plays the slider)');
 const lockIn = (page: Page) => page.getByRole('button', { name: /^Lock in/ });
 
 test('play 3 homes with clues, see each reveal, finish the day and share', async ({ page, isMobile }) => {

@@ -42,7 +42,6 @@ export function AffordScreen({ vm }: { vm: AffordVM }) {
                 <h2 id={formTitleId} className="text-xl font-bold leading-tight">
                   {t.form.title}
                 </h2>
-                <PurchaseParse parse={vm.parse} />
                 <PurchaseExamples setLabel={vm.setLabel} setAmount={vm.setAmount} />
                 <PurchaseForm
                   form={vm.form}
@@ -53,6 +52,7 @@ export function AffordScreen({ vm }: { vm: AffordVM }) {
                   setPayWith={vm.setPayWith}
                   setLoan={vm.setLoan}
                 />
+                <PurchaseParse parse={vm.parse} />
               </section>
             </Stack>
             <Stack gap="xl" className="min-w-0">
@@ -62,25 +62,30 @@ export function AffordScreen({ vm }: { vm: AffordVM }) {
                 invalidFields={vm.invalidFields}
                 chosenWay={vm.form.payWith}
               />
-              <WishlistActions
-                addToWishlist={vm.addToWishlist}
-                wishlistLocked={vm.wishlistLocked}
-                proHref={vm.proHref}
-                setPayWith={vm.setPayWith}
-                canAdd={vm.purchase !== null}
-                justAdded={justAdded}
-                onAdded={setJustAdded}
-                cheaperWay={cheaperWay}
-              />
+              {/* Saving (and the Pro lock) only makes sense once there is a verdict to save. */}
+              {ready && (
+                <WishlistActions
+                  addToWishlist={vm.addToWishlist}
+                  wishlistLocked={vm.wishlistLocked}
+                  proHref={vm.proHref}
+                  setPayWith={vm.setPayWith}
+                  canAdd={vm.purchase !== null}
+                  justAdded={justAdded}
+                  onAdded={setJustAdded}
+                  cheaperWay={cheaperWay}
+                />
+              )}
             </Stack>
           </div>
           <AffordEffects result={vm.result} purchaseLabel={vm.purchase?.label ?? t.defaultPurchaseLabel} />
-          <Wishlist
-            wishlist={vm.wishlist}
-            removeFromWishlist={vm.removeFromWishlist}
-            loadFromWishlist={vm.loadFromWishlist}
-            onLoad={() => setJustAdded(false)}
-          />
+          {vm.wishlist.length > 0 && (
+            <Wishlist
+              wishlist={vm.wishlist}
+              removeFromWishlist={vm.removeFromWishlist}
+              loadFromWishlist={vm.loadFromWishlist}
+              onLoad={() => setJustAdded(false)}
+            />
+          )}
           <p className="text-xs text-text-muted">{t.footnote}</p>
         </Stack>
       )}

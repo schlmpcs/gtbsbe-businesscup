@@ -55,6 +55,21 @@ describe('app store', () => {
     expect(localStorage.getItem(APP_STORE_KEY)).not.toContain('BEST BUY');
   });
 
+  it('the subscription audit sets the subscriptions line and turns the detected flag on', () => {
+    expect(useAppStore.getState().subscriptionsDetected).toBe(false);
+    useAppStore.getState().applySubscriptionsAudit(69.54, true);
+    let s = useAppStore.getState();
+    expect(s.profile.spending.subscriptions).toEqual({ value: 69.54, isEstimate: false });
+    expect(s.subscriptionsDetected).toBe(true);
+    expect(s.profileOrigin).toBe('user');
+
+    useAppStore.getState().applySubscriptionsAudit(54.97, false); // ticks only: a catalogue estimate
+    s = useAppStore.getState();
+    expect(s.profile.spending.subscriptions).toEqual({ value: 54.97, isEstimate: true });
+    expect(s.profile.spending.groceries.value).toBe(520); // nothing else moves
+    expect(JSON.parse(localStorage.getItem(APP_STORE_KEY)!).state.subscriptionsDetected).toBe(true);
+  });
+
   it('commit then done applies the move patch and clears the commitment', () => {
     useAppStore.getState().commitMove(move);
     expect(useAppStore.getState().profile.committedMoveId).toBe(move.id);

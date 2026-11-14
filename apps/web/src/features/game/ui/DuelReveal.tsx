@@ -1,81 +1,88 @@
 import { useId } from 'react';
 import { common, duel as t } from '@/copy';
-import { Card, SourceNote, cx, formatMoney, formatRate } from '@/ui-kit';
+import { Button, SourceNote, cx, formatMoney, formatRate } from '@/ui-kit';
 import type { DuelRevealVM } from '../model/types';
-import { CATEGORY_COLOR } from './CategoryBar';
+import { DuelIcon } from './DuelIcons';
 
-/** S3 top: the result pill (green when right, neutral gray when not, never red) and the headline. */
-export function DuelRevealHeader({ reveal }: { reveal: DuelRevealVM }) {
+/**
+ * S3 top (Figma Design v3 reveal): the result sticker (green when right, white when not, never red),
+ * the round line and the headline.
+ */
+export function DuelRevealHeader({ reveal, totalRounds }: { reveal: DuelRevealVM; totalRounds: number }) {
   return (
     <div className="flex flex-col items-center gap-md text-center">
-      <p
-        role="status"
-        className={cx(
-          'inline-flex items-center rounded-full px-lg py-sm text-base font-bold',
-          reveal.correct ? 'bg-positive text-on-primary' : 'bg-surface-strong text-text',
-        )}
-      >
-        {reveal.correct ? t.reveal.right(reveal.points.toLocaleString('en-US')) : t.reveal.wrong}
+      <p role="status">
+        <span
+          className={cx(
+            'inline-flex items-center rounded-full px-lg py-sm text-sm font-bold uppercase tracking-wide shadow-md sm:text-base',
+            reveal.correct ? 'bg-positive text-on-primary' : 'bg-surface text-text',
+          )}
+        >
+          {reveal.correct ? t.reveal.right(reveal.points.toLocaleString('en-US')) : t.reveal.wrong}
+        </span>
       </p>
-      <h2 className="font-display text-3xl font-extrabold leading-tight sm:text-4xl">
+      <p className="text-sm text-text-muted">{t.round(reveal.round, totalRounds)}</p>
+      <h2 className="font-display text-4xl font-extrabold leading-display tracking-tight text-balance sm:text-display lg:text-[length:calc(var(--text-display)*1.3)]">
         {reveal.costlier ? t.reveal.headline(reveal.costlier, formatMoney(reveal.difference)) : t.reveal.same}
       </h2>
     </div>
   );
 }
 
-export type DuelRevealProps = {
-  reveal: DuelRevealVM;
-};
-
-/** S3 below the cards: what decided it (with the lesson), the crowd and the sources. Next round sits under the headline. */
-export function DuelReveal({ reveal }: DuelRevealProps) {
+/**
+ * S3 ink band: what decided it (category, both amounts), the lesson, the crowd, and the next-round
+ * button, so the way forward shows without scrolling.
+ */
+export function DuelRevealBand({ reveal, onNext }: { reveal: DuelRevealVM; onNext: () => void }) {
   const decidedId = useId();
   const { decidedBy } = reveal;
-  const category = common.categories[decidedBy.category];
   return (
-    <div className="flex flex-col gap-lg">
-      <div className="grid grid-cols-1 gap-lg md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <section aria-labelledby={decidedId} className="flex flex-col gap-sm rounded-xl bg-surface p-xl shadow-md">
-          <h3 id={decidedId} className="text-sm font-bold text-text-muted">
-            {t.reveal.decidedHeading}
-          </h3>
-          <p className="flex items-center gap-sm font-display text-2xl font-extrabold leading-tight">
-            <span aria-hidden="true" className={cx('size-md shrink-0 rounded-full', CATEGORY_COLOR[decidedBy.category])} />
-            {t.reveal.decidedLine(category, formatMoney(decidedBy.amount))}
-          </p>
-          <p className="text-sm text-text-muted">{t.reveal.decidedVs(decidedBy.otherLetter, formatMoney(decidedBy.otherAmount))}</p>
-          <p className="text-lg font-semibold">{reveal.lesson}</p>
-        </section>
-
-        <Card tone="muted" className="flex flex-col justify-center gap-xs text-text">
-          <p className="text-base font-semibold">
-            {reveal.crowd
-              ? t.reveal.crowd(formatRate(reveal.crowd.share, 0), reveal.crowd.letter, reveal.crowd.total.toLocaleString('en-US'))
-              : t.reveal.crowdNone}
-          </p>
-          <p className="text-xs text-text-muted">{t.reveal.disclaimer}</p>
-        </Card>
+    <section
+      aria-labelledby={decidedId}
+      className="flex flex-col gap-lg rounded-xl bg-ink p-xl text-on-primary shadow-lg md:flex-row md:items-center md:gap-xl"
+    >
+      <DuelIcon name="bulb" className="hidden size-2xl shrink-0 text-primary md:block" />
+      <div className="flex min-w-0 flex-1 flex-col gap-xs">
+        <h3 id={decidedId} className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+          {t.reveal.decidedLine(
+            common.categories[decidedBy.category],
+            formatMoney(decidedBy.amount),
+            formatMoney(decidedBy.otherAmount),
+          )}
+        </h3>
+        <p className="text-base text-on-primary/85">{reveal.lesson}</p>
+        <p className="text-sm text-on-primary/70">
+          {reveal.crowd
+            ? t.reveal.crowd(formatRate(reveal.crowd.share, 0), reveal.crowd.letter, reveal.crowd.total.toLocaleString('en-US'))
+            : t.reveal.crowdNone}
+        </p>
       </div>
+      <Button size="lg" onClick={onNext} className="w-full shrink-0 shadow-lg md:w-auto">
+        {reveal.isLastRound ? t.reveal.finish : t.reveal.next}
+      </Button>
+    </section>
+  );
+}
 
-      <Card tone="default" className="text-sm text-text">
-        <details>
-          <summary className="cursor-pointer font-medium">{t.reveal.sources}</summary>
-          <dl className="mt-sm flex flex-col gap-sm">
-            {reveal.sources.map((c) => (
-              <div key={c.category} className="flex flex-col">
-                <dt className="font-medium">{common.categories[c.category]}</dt>
-                {c.sources.map((s, i) => (
-                  <dd key={`${s.name}-${s.year}-${i}`}>
-                    <SourceNote source={s} />
-                  </dd>
-                ))}
-              </div>
-            ))}
-          </dl>
-        </details>
-      </Card>
-
+/** S3 below the cards: every source behind both breakdowns (the page footer carries the disclaimer). */
+export function DuelReveal({ reveal }: { reveal: DuelRevealVM }) {
+  return (
+    <div className="flex flex-col items-center gap-sm text-center text-sm text-text-muted">
+      <details className="w-full max-w-(--container-2xl)">
+        <summary className="cursor-pointer font-medium text-text">{t.reveal.sources}</summary>
+        <dl className="mt-sm flex flex-col gap-sm rounded-xl bg-surface p-lg text-left text-text shadow-md">
+          {reveal.sources.map((c) => (
+            <div key={c.category} className="flex flex-col">
+              <dt className="font-medium">{common.categories[c.category]}</dt>
+              {c.sources.map((s, i) => (
+                <dd key={`${s.name}-${s.year}-${i}`}>
+                  <SourceNote source={s} />
+                </dd>
+              ))}
+            </div>
+          ))}
+        </dl>
+      </details>
     </div>
   );
 }

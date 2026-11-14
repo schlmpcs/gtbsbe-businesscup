@@ -23,7 +23,7 @@ function staticDir(files) {
 const HTTP_CLIENT = 'postJson(`${base}/api/daily/guess`,{anonId:e})';
 
 describe('check-client-bundle', () => {
-  const rules = bundleRules();
+  const rules = bundleRules({ duelSource: 'fixtures' }); // the default build
 
   it('reads every catalog card and both fixture client markers from the sources', () => {
     const labels = rules.forbidden.map((r) => r.label);
@@ -31,7 +31,8 @@ describe('check-client-bundle', () => {
     expect(labels).toContain('catalog card lc-001');
     expect(labels).toContain('fixture game client (FIXTURE_LOG_KEY)');
     expect(labels).toContain('fixture game client (its error message)');
-    expect(labels).toContain('fixture duel client (FIXTURE_DUEL_LOG_KEY)');
+    expect(labels).not.toContain('fixture duel client (its result id prefix)'); // the duel plays in the browser by default
+    expect(bundleRules({ duelSource: 'api' }).forbidden.map((r) => r.label)).toContain('fixture duel client (its result id prefix)');
   });
 
   it('passes an API build: HTTP client present, sample lives allowed, no catalog card, no fixture client', () => {
@@ -66,12 +67,14 @@ describe('check-client-bundle', () => {
     ]);
   });
 
-  it('finds the fixture duel client', () => {
+  it('finds the fixture duel client when the duel plays against the server (NEXT_PUBLIC_DUEL_SOURCE=api)', () => {
     const dir = staticDir({
       'chunks/a.js': HTTP_CLIENT,
-      'chunks/duel.js': 'const D="lifeguessr.fixtureDuel";',
+      'chunks/duel.js': 'const D="lifeguessr.fixtureDuel";const r=`fixture-duel-${t}-${u}`;',
     });
-    expect(scanChunks(dir, rules)).toEqual(['fixture duel client (FIXTURE_DUEL_LOG_KEY) is in chunks/duel.js']);
+    expect(scanChunks(dir, bundleRules({ duelSource: 'api' }))).toEqual(['fixture duel client (its result id prefix) is in chunks/duel.js']);
+    // By default (NEXT_PUBLIC_DUEL_SOURCE=fixtures) the duel plays in the browser on purpose.
+    expect(scanChunks(dir, bundleRules({ duelSource: 'fixtures' }))).toEqual([]);
   });
 
   it("fails a scan it can't trust: no build, no chunks, no HTTP game client", () => {

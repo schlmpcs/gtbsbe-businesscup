@@ -47,7 +47,7 @@ lifeguessr/
     data/             fetch scripts, normalized JSON, cards     [Aibek]
       fixtures/       canonical fixtures (engine tests + web)   [both]
   apps/web/
-    app/              routes (S3, S4 are states of /play)       [Amir]
+    app/              routes (S2/S3 are states of /play; S4 in the slider build)  [Amir]
     app/api/
       daily/ daily/clue/ daily/guess/ leaderboard/ share/       [Aibek]
       events/ session/ statement/                               [Aibek]
@@ -68,9 +68,9 @@ lifeguessr/
 | ID | Screen | Route | Feature folder | Build |
 | --- | --- | --- | --- | --- |
 | S1 | Today (first visit: Play / Try with sample data, no numbers; then month-end card, You in N years (the year picked on S10), play) | `/` | forecast | Real (drift flags need ≥ 3 uploaded months; before that the card shows the projection only) |
-| S2 | Game: explore the home (house scene, tap rooms for clues) + guess | `/play` | game | Real (falls back to a static card if the scene isn't ready) |
-| S3 | Reveal | `/play` (state) | game | Real |
-| S4 | Streamer mode | `/play?stream=1` | game | Real |
+| S2 | Game: the duel "Which life costs more?" (two composite lives, pick the costlier, optional hint). Also at `/duel`. Rollback: the slider game (explore the home, tap rooms for clues, guess) with `NEXT_PUBLIC_GAME_MODE=slider` | `/play` | game | Real (engine `costOfLife` + `dailyDuelPairs` + `scoreDuelPick`), computed in the browser until the duel routes land (#115; `NEXT_PUBLIC_DUEL_SOURCE`, switch-over #120) |
+| S3 | Duel reveal (both monthly totals by category, what decided it, sources) and day result (share, challenge link, bridge to S5); the slider's reveal and summary with `NEXT_PUBLIC_GAME_MODE=slider` | `/play` (state) | game | Real, browser source as S2 |
+| S4 | Streamer mode (slider game only: not linked while `/play` is the duel) | `/play?stream=1` with `NEXT_PUBLIC_GAME_MODE=slider` | game | Real (slider build only) |
 | S5 | Guess yourself | `/me/guess` | ladder | Real |
 | S6 | Closest life | `/me/closest` | ladder | Real |
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
@@ -82,6 +82,7 @@ lifeguessr/
 | S13 | Decision (car example) | `/decide` | mocks | Mock |
 | S14 | Monthly check-in | `/checkin` | mocks | Mock |
 | S15 | Paywall | `/pro` | pro | Simulated checkout (nothing charged; Stripe test mode instead when a key is set) + promo code, no real money |
+| S21 | Subscription audit | `/tools/subscriptions` | subscriptions | Guess, tick-list, reveal, statement, findings, cancel plan; cold-first, findings stay in the browser; hidden in streamer mode (no tools hub: its own entry in `lib/screens.ts`) |
 
 ## Contracts (`packages/types/index.ts`, draft)
 

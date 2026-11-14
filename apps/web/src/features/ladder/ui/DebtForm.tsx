@@ -46,7 +46,7 @@ export function DebtForm({ title, kinds, bounds, initial, onSave, onCancel }: De
   return (
     <form
       aria-label={title}
-      className="flex flex-col gap-md rounded-md border border-primary p-md"
+      className="flex flex-col gap-md rounded-md border border-border bg-bg p-md"
       onSubmit={(e) => {
         e.preventDefault();
         if (draft.balance === null || draft.apr === null) return;
@@ -89,10 +89,10 @@ export function DebtForm({ title, kinds, bounds, initial, onSave, onCancel }: De
         </Field>
       </Stack>
       <Row gap="sm">
-        <Button type="submit" disabled={!complete}>
+        <Button type="submit" variant="dark" disabled={!complete}>
           {t.save}
         </Button>
-        <Button variant="secondary" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           {t.cancel}
         </Button>
       </Row>

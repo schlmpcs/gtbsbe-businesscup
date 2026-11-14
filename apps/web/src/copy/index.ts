@@ -12,13 +12,18 @@ import { loan } from './loan';
 import { mocks } from './mocks';
 import { overpaying } from './overpaying';
 import { pro } from './pro';
+import { renewals } from './renewals';
+import { subscriptions } from './subscriptions';
+import { tools } from './tools';
 import { upload } from './upload';
 
-export { afford, ai, common, duel, forecast, game, kitShowcase, ladder, loan, mocks, overpaying, pro, upload };
+export { afford, ai, common, duel, forecast, game, kitShowcase, ladder, loan, mocks, overpaying, pro, renewals, subscriptions, tools, upload };
 
-export const copy = { common, game, duel, ladder, forecast, afford, loan, upload, mocks, overpaying, pro, ai, kitShowcase } as const;
+export const copy = {
+  common, game, duel, ladder, forecast, afford, loan, upload, mocks, overpaying, pro, tools, ai, kitShowcase, renewals, subscriptions,
+} as const;
 
-/** Every screen title by screen ID (S1–S15, S23), merged from the feature files. */
+/** Every screen title by screen ID (S1–S15, S21, S23), merged from the feature files. */
 export const screenTitles = {
   ...forecast.screens,
   ...game.screens,
@@ -27,6 +32,7 @@ export const screenTitles = {
   ...afford.screens,
   ...loan.screens,
   ...mocks.screens,
+  ...subscriptions.screens,
   ...overpaying.screens,
 } as const;
 

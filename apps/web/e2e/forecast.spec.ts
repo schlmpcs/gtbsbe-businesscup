@@ -56,19 +56,20 @@ test('first visit: Today explains the app; Try with sample data opens the foreca
   await page.reload();
   await expect(banner).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.title);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.home.title);
   await expect(banner).toBeVisible();
+  await expect(page.getByTestId('nudge')).toHaveCount(0); // the banner already says it is the sample
   await banner.getByRole('link', { name: common.sampleBanner.cta }).click();
   await expect(page).toHaveURL(/\/me\/guess$/);
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
 });
 
-test('Today shows the 10-year number with its range and links to /play and /future', async ({ page }) => {
-  // Past the first visit (the sample life is on), Today shows the numbers.
+test('Home shows the house (10-year number with its range) and links to /play, /future and What if?', async ({ page }) => {
+  // Past the first visit (the sample life is on), Home shows the numbers.
   await page.goto('/future?sample=1');
   await expect(page.getByTestId('sample-banner')).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.title);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.home.title);
 
   const atHorizon = page.getByTestId('at-horizon');
   await expect(atHorizon.getByRole('heading', { name: t.today.future.title(10) })).toBeVisible();
@@ -80,11 +81,13 @@ test('Today shows the 10-year number with its range and links to /play and /futu
   await expect(page.getByTestId('month-end-no-history')).toContainText(t.today.monthEnd.needHistory(0));
   await noSideScroll(page);
 
-  await page.getByRole('link', { name: t.today.play.cta }).click();
+  await expect(page.getByRole('region', { name: t.today.home.whatIf.title }).getByRole('link', { name: t.today.home.whatIf.all })).toHaveAttribute('href', '/tools');
+
+  await page.getByTestId('play').getByRole('link', { name: t.today.playDuel.cta }).click();
   await expect(page).toHaveURL(/\/play$/);
 
   await page.goto('/');
-  await page.getByRole('link', { name: t.today.future.cta }).click();
+  await page.getByRole('link', { name: t.today.home.openFuture }).click();
   await expect(page).toHaveURL(/\/future$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title(10));
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {
-  applyPatch, cardAprDefault, deflateForecast, estimateSpread, forecast, hasEstimates, inflationAnnualFallback,
+  applyPatch, cardAprDefault, deflateForecast, estimateSpread, forecast, goalStatus, hasEstimates, inflationAnnualFallback,
   inflationAnnualOf, monthEnd, moveCandidates, pointAt, rankMoves, returnAnnualNominal, type MoveCandidate,
 } from '@lifeguessr/engine';
 import type * as Engine from '@lifeguessr/engine';
@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api/http';
 import { getArea } from '@lifeguessr/data/areas';
 import { cloneProfileDemo } from '@/fixtures';
+import { FIXTURE_DUEL_LOG_KEY } from '@/features/game/model/duelProgress';
 import { useAppStore, useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute, rulesAnswer } from '@/test/forecastApi';
@@ -432,19 +433,84 @@ describe('useToday (S1)', () => {
       status: 'ready', data: { ...top, isCommitted: false, target: moveTarget(top), source: 'rules', effect: top.effect10y, horizonYears: 10 },
     });
     expect(result.current.committedMove).toBeNull();
-    expect(result.current.game).toEqual({ date: null, played: 0, total: 0, finished: false, homes: [] });
+    // The duel is /play by default: nothing picked today yet.
+    expect(result.current.game).toEqual({ kind: 'duel', date: null, played: 0, total: 5, finished: false, homes: [] });
   });
 
-  it('lists today’s homes in play order with which ones were guessed', async () => {
+  it('passes the goal verdict (engine goalStatus), the estimates flag and the plan actions through', async () => {
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitFor(() => expect(result.current.forecastStatus).toBe('ready'));
+    expect(result.current.goal).toBeNull();
+    expect(result.current.hasEstimates).toBe(hasEstimates(cloneProfileDemo()));
+
+    const goal = { target: 250_000, years: 10 };
+    act(() => useAppStore.getState().setGoal(goal));
+    expect(result.current.goal).toEqual({ ...goal, verdict: goalStatus(cloneProfileDemo(), goal, { rates }).verdict });
+
+    act(() => useAppStore.setState({ profile: measured(useAppStore.getState().profile) }));
+    expect(result.current.hasEstimates).toBe(false);
+  });
+
+  it('adds the top move to the plan from Today, and takes it out', async () => {
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitFor(() => expect(result.current.topMove.status).toBe('ready'));
+    const top = result.current.topMove.status === 'ready' ? result.current.topMove.data! : null;
+    act(() => result.current.commit(top!.id));
+    expect(useAppStore.getState().profile.committedMoveId).toBe(top!.id);
+    expect(result.current.committedMove?.id).toBe(top!.id);
+    act(() => result.current.uncommit());
+    expect(useAppStore.getState().profile.committedMoveId).toBeUndefined();
+    expect(result.current.committedMove).toBeNull();
+  });
+
+  it('counts today’s duel rounds from the duel log, with no home tiles', async () => {
+    const pick = { choice: 'A', result: {} };
+    localStorage.setItem(FIXTURE_DUEL_LOG_KEY, JSON.stringify({ date: '2026-11-14', resultId: 'r', picks: { 1: pick, 2: pick }, hints: {} }));
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14, 12) }));
+    await waitForReady(result);
+    expect(result.current.game).toEqual({ kind: 'duel', date: '2026-11-14', played: 2, total: 5, finished: false, homes: [] });
+    expect(result.current.firstVisit).toBe(false);
+  });
+
+  it('a duel log from another day counts as nothing played today; five picks finish the day', async () => {
+    const pick = { choice: 'B', result: {} };
+    localStorage.setItem(FIXTURE_DUEL_LOG_KEY, JSON.stringify({ date: '2026-11-13', resultId: 'r', picks: { 1: pick }, hints: {} }));
+    const first = renderHook(() => useToday({ now: new Date(2026, 10, 14, 12) }));
+    await waitForReady(first.result);
+    expect(first.result.current.game).toMatchObject({ played: 0, finished: false });
+    expect(first.result.current.firstVisit).toBe(true);
+    first.unmount();
+
+    const picks = Object.fromEntries([1, 2, 3, 4, 5].map((r) => [r, pick]));
+    localStorage.setItem(FIXTURE_DUEL_LOG_KEY, JSON.stringify({ date: '2026-11-14', resultId: 'r', picks, hints: {} }));
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14, 12) }));
+    await waitForReady(result);
+    expect(result.current.game).toMatchObject({ played: 5, total: 5, finished: true });
+  });
+
+  it('with the duel on the server (NEXT_PUBLIC_DUEL_SOURCE=api), reads no browser log', async () => {
+    vi.stubEnv('NEXT_PUBLIC_DUEL_SOURCE', 'api');
+    try {
+      const pick = { choice: 'A', result: {} };
+      localStorage.setItem(FIXTURE_DUEL_LOG_KEY, JSON.stringify({ date: '2026-11-14', resultId: 'r', picks: { 1: pick }, hints: {} }));
+      const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14, 12) }));
+      await waitForReady(result);
+      expect(result.current.game).toMatchObject({ kind: 'duel', played: 0 });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('slider game (NEXT_PUBLIC_GAME_MODE=slider): lists today’s homes in play order with which ones were guessed', async () => {
     const card = (id: string, metro: string) => ({ id, metro, layout: '1bed' as const, caption: '', decor: [] });
     act(() => {
       useGameStore.getState().startDay('2026-11-14', [card('a', 'Austin, TX'), card('b', 'Boise, ID')]);
       useGameStore.setState({ reveals: { a: {} as never } });
     });
-    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14), mode: 'slider' }));
     await waitForReady(result);
     expect(result.current.game).toEqual({
-      date: '2026-11-14', played: 1, total: 2, finished: false,
+      kind: 'slider', date: '2026-11-14', played: 1, total: 2, finished: false,
       homes: [{ id: 'a', metro: 'Austin, TX', played: true }, { id: 'b', metro: 'Boise, ID', played: false }],
     });
   });
@@ -466,13 +532,13 @@ describe('useToday (S1)', () => {
     expect(result.current.firstVisit).toBe(false);
   });
 
-  it('is not a first visit once a home was played today', async () => {
+  it('slider game: is not a first visit once a home was played today', async () => {
     const card = (id: string, metro: string) => ({ id, metro, layout: '1bed' as const, caption: '', decor: [] });
     act(() => {
       useGameStore.getState().startDay('2026-11-14', [card('a', 'Austin, TX'), card('b', 'Boise, ID')]);
       useGameStore.setState({ reveals: { a: {} as never } });
     });
-    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14), mode: 'slider' }));
     await waitForReady(result);
     expect(result.current.firstVisit).toBe(false);
   });

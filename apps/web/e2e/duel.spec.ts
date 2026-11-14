@@ -3,6 +3,7 @@
 // Selectors come from the copy file and roles. Runs on the phone and desktop projects.
 import { expect, test, type Page } from '@playwright/test';
 import { duel as t } from '../src/copy/duel';
+import { forecast } from '../src/copy/forecast';
 
 let pageErrors: string[] = [];
 
@@ -78,4 +79,22 @@ test('a hint, then the rest of the day, ends on the day result with the bridge t
   // A reload keeps today's result.
   await page.reload();
   await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
+});
+
+test('/play is the duel: one pick shows on S1 Today as rounds, not homes, with no streamer link', async ({ page }) => {
+  await page.goto('/play');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.title);
+  // Honest about where it is scored while the duel plays in the browser.
+  await expect(page.getByTestId('duel-footer')).toHaveText(`${t.footer.composite} ${t.footer.browser}`);
+  await pickA(page).click();
+  await expect(page.getByRole('button', { name: t.reveal.next })).toBeVisible();
+
+  await page.goto('/');
+  const p = forecast.today.playDuel;
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.today.home.title);
+  const game = page.getByTestId('play');
+  await expect(game).toContainText(forecast.today.duel.title);
+  await expect(game.getByRole('link', { name: p.continue(1, 5) })).toHaveAttribute('href', '/play');
+  await expect(page.getByText(/today’s homes/i)).toHaveCount(0);
+  await expect(page.locator('a[href*="stream=1"]')).toHaveCount(0);
 });

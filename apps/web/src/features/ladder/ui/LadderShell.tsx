@@ -1,12 +1,13 @@
 // The frame of every ladder rung (S5–S9), Design v3: the step pills with "← Back" on the right, a
 // huge display headline and its sub line on the left, the screen's content (with an optional right
-// column: art, an ink summary card), the 10-year preview strip, then the footer: one text action on
-// the left and the one orange CTA on the right.
+// column: art, an ink summary card), then the footer: one text action on the left and the one
+// orange CTA on the right. Each step has one task, so there is no 10-year strip on S5–S8; the last
+// step (S9) shows one short "You in 10 years" line above its CTA, which leads to the forecast.
 import type { ReactNode } from 'react';
 import { ladder, screenTitles } from '@/copy';
-import { buttonClassName, cx } from '@/ui-kit';
+import { buttonClassName, cx, EstimateTag, formatMoney } from '@/ui-kit';
 import type { LadderProgressVM, LadderScreen } from '../model/types';
-import { LadderPreview, LadderSteps } from './LadderProgress';
+import { LadderSteps } from './LadderProgress';
 import { LoadingState } from './LoadingState';
 
 const t = ladder.shell;
@@ -26,17 +27,41 @@ export type LadderShellProps = {
    * replace it (S5's "Lock my guess" button), or null for none (S6 before a life is picked).
    */
   primary?: ReactNode | null;
-  /** The text action on the left of the footer. Default per rung (S7 back, S8/S9 skip). */
+  /** The text action on the left of the footer. Default: skip this step (S8/S9: skip to the forecast). */
   secondary?: ReactNode | null;
   children: ReactNode;
 };
 
+const TEXT_ACTION = 'min-h-11 content-center text-base font-semibold text-text hover:text-primary';
+
 /** Link styled as the footer's text action ("← Back", "Skip, use estimates"). */
 export function LadderTextLink({ href, label }: LadderLink) {
   return (
-    <a href={href} className="min-h-11 content-center text-base font-semibold text-text hover:text-primary">
+    <a href={href} className={TEXT_ACTION}>
       {label}
     </a>
+  );
+}
+
+/** Button styled as the footer's text action ("Update my guess"). */
+export function LadderTextButton({
+  onClick,
+  disabled,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cx(TEXT_ACTION, 'text-left disabled:cursor-default disabled:text-text-muted disabled:hover:text-text-muted')}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -64,11 +89,11 @@ export function LadderShell({
       </a>
     );
   const defaultSecondary =
-    screen === 'S8' || screen === 'S9' ? (
-      <LadderTextLink href={progress.futureHref} label={t.skip[screen]} />
-    ) : screen === 'S7' && prev ? (
-      <LadderTextLink href={prev.href} label={t.back} />
-    ) : null;
+    screen === 'S8' || screen === 'S9' || !next ? (
+      <LadderTextLink href={progress.futureHref} label={t.skip[screen === 'S9' ? 'S9' : 'S8']} />
+    ) : (
+      <LadderTextLink href={next.href} label={t.skip.step} />
+    );
   const primaryNode = primary === undefined ? defaultPrimary : primary;
   const secondaryNode = secondary === undefined ? defaultSecondary : secondary;
 
@@ -107,19 +132,29 @@ export function LadderShell({
           </div>
         )}
 
-        <LadderPreview progress={progress} />
-
-        {(primaryNode || secondaryNode) && (
-          <div
-            className={cx(
-              'flex flex-col-reverse items-stretch gap-md sm:flex-row sm:items-center',
-              secondaryNode ? 'sm:justify-between' : 'sm:justify-end',
-            )}
-          >
-            {secondaryNode}
-            {primaryNode}
-          </div>
-        )}
+        <footer className="flex flex-col gap-md">
+          {screen === 'S9' && progress.status === 'ready' && (
+            <p
+              data-testid="ladder-in10y"
+              className="flex flex-wrap items-center gap-sm text-base text-text-muted sm:justify-end"
+            >
+              {t.in10yLabel}
+              <span className="font-bold text-text tabular-nums">{formatMoney(progress.in10y.mid)}</span>
+              {progress.estimates.left > 0 && <EstimateTag />}
+            </p>
+          )}
+          {(primaryNode || secondaryNode) && (
+            <div
+              className={cx(
+                'flex flex-col-reverse items-stretch gap-md sm:flex-row sm:items-center',
+                secondaryNode ? 'sm:justify-between' : 'sm:justify-end',
+              )}
+            >
+              {secondaryNode}
+              {primaryNode}
+            </div>
+          )}
+        </footer>
       </div>
     </main>
   );
