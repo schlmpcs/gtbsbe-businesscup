@@ -7,7 +7,6 @@ import { useId, type ReactNode } from 'react';
 import { common, forecast, mocks } from '@/copy';
 import { Art, Button, buttonClassName, Card, Choice, cx, formatMoney, formatRate, Money, Sticker, Tag } from '@/ui-kit';
 import type { CheckinCompareVM, CheckinMoveVM, CheckinVM, MoveProgressVM, MoveVM } from '../model/types';
-import { PreviewBadge } from './PreviewBadge';
 import { ErrorNote, Loading, type LinkComponent } from './shared';
 
 const t = mocks.checkin;
@@ -306,6 +305,32 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
   );
 }
 
+/**
+ * The one muted line under the headline: it is a preview, where the month comes from (the sample
+ * statement, when it is the sample) and, for a free user, a small link to Pro.
+ */
+function PreviewLine({ vm, Link }: { vm: CheckinVM; Link: LinkComponent }) {
+  const sample = vm.status === 'ready' && vm.month.source === 'sample';
+  const note = vm.pro.isPro ? mocks.preview.proNote : sample ? t.notSaved : mocks.preview.note;
+  return (
+    <p
+      role="note"
+      aria-label={mocks.preview.sticker}
+      data-testid="preview-note"
+      className="flex flex-wrap items-baseline gap-x-sm gap-y-xs text-sm text-text-muted"
+    >
+      <span className="text-xs font-bold uppercase tracking-wide text-primary">{mocks.preview.sticker}</span>
+      {sample && <span>{t.sampleNote}</span>}
+      <span>{note}</span>
+      {!vm.pro.isPro && (
+        <Link href={vm.pro.href} className="font-semibold text-primary underline-offset-2 hover:underline">
+          {mocks.preview.cta}
+        </Link>
+      )}
+    </p>
+  );
+}
+
 export function CheckinScreen({ vm, Link }: { vm: CheckinVM; Link: LinkComponent }) {
   const { month } = vm;
   const ready = vm.status === 'ready';
@@ -313,23 +338,23 @@ export function CheckinScreen({ vm, Link }: { vm: CheckinVM; Link: LinkComponent
   const lead = ready && month.month ? headline(vm) : null;
   return (
     <main className="mx-auto flex w-full max-w-(--container-7xl) flex-col gap-2xl px-lg py-xl">
-      <header className="flex flex-col gap-lg lg:flex-row lg:items-end lg:justify-between">
+      <header className="flex flex-col gap-lg">
         <div className="flex min-w-0 flex-col gap-sm">
           <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">{t.kicker}</span>
           <h1 className="font-display text-4xl font-extrabold leading-display sm:text-display lg:text-[length:calc(var(--text-display)*1.4)]">
             {title}
           </h1>
           {lead && <p className="max-w-prose text-xl font-semibold">{lead}</p>}
+          <PreviewLine vm={vm} Link={Link} />
         </div>
-        <PreviewBadge pro={vm.pro} Link={Link} />
       </header>
 
       {!ready ? (
         <Loading />
       ) : (
         <>
-          <div className="flex flex-col gap-md" data-testid="checkin-month">
-            {month.hasUploads ? (
+          {month.hasUploads && (
+            <div className="flex flex-col gap-md" data-testid="checkin-month">
               <Choice
                 legend={t.sourceLabel}
                 name="checkin-source"
@@ -340,13 +365,8 @@ export function CheckinScreen({ vm, Link }: { vm: CheckinVM; Link: LinkComponent
                 ]}
                 onChange={vm.setSource}
               />
-            ) : null}
-            {month.source === 'sample' && (
-              <p role="note" className="rounded-lg border-2 border-dashed border-border p-md text-sm text-text-muted">
-                {t.sampleNote}
-              </p>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
             <div className="flex min-w-0 flex-col gap-xl">

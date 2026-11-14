@@ -54,12 +54,16 @@ describe('/loan (S12)', () => {
     await user.click(screen.getByRole('button', { name: t.compare.select(t.offerName(2)) }));
     expect(screen.getByRole('meter', { name: t.gauge.after(t.offerName(2)) })).toBeTruthy();
     expect(screen.getByRole('slider', { name: t.extra.slider(t.offerName(2)) })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: t.offerName(2) }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('button', { name: t.compare.select(t.offerName(2)) }).getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('edits an offer (APR typed as a percent) and flags an emptied field', async () => {
+  it('edits an offer on its card (APR typed as a percent) and flags an emptied field', async () => {
     const user = await renderReady();
-    const panel = screen.getByRole('tabpanel', { name: t.offerName(1) });
+    expect(screen.queryByRole('group', { name: t.edit.fieldsLabel(t.offerName(1)) })).toBeNull();
+    const toggle = screen.getByRole('button', { name: t.edit.openLabel(t.offerName(1)) });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    await user.click(toggle);
+    const panel = screen.getByRole('group', { name: t.edit.fieldsLabel(t.offerName(1)) });
     const apr = within(panel).getByRole('textbox', { name: t.edit.apr });
     await user.clear(apr);
     expect(within(panel).getByText(t.edit.errors.apr!)).toBeTruthy();
@@ -68,29 +72,37 @@ describe('/loan (S12)', () => {
     await waitFor(() => expect(within(panel).queryByText(t.edit.errors.apr!)).toBeNull());
     // 0% APR: $28,000 / 36 months.
     expect(within(screen.getByRole('table', { name: t.compare.caption })).getByText('$778')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: t.edit.closeLabel(t.offerName(1)) }));
+    expect(screen.queryByRole('group', { name: t.edit.fieldsLabel(t.offerName(1)) })).toBeNull();
   });
 
-  it('removes and adds offers (up to 3)', async () => {
+  it('removes and adds offers (up to 3) from the cards', async () => {
     const user = await renderReady();
-    expect((screen.getByRole('button', { name: t.edit.add }) as HTMLButtonElement).disabled).toBe(true);
-    await user.click(screen.getByRole('tab', { name: t.offerName(3) }));
+    // Three offers: the list is full, so there is no "Add an offer" card.
+    expect(screen.queryByRole('button', { name: t.edit.add })).toBeNull();
+    await user.click(screen.getByRole('button', { name: t.edit.openLabel(t.offerName(3)) }));
     await user.click(screen.getByRole('button', { name: t.edit.remove(t.offerName(3)) }));
-    expect(screen.queryByRole('tab', { name: t.offerName(3) })).toBeNull();
+    expect(screen.queryByRole('button', { name: t.compare.select(t.offerName(3)) })).toBeNull();
     await user.click(screen.getByRole('button', { name: t.edit.add }));
-    expect(screen.getByRole('tab', { name: t.offerName(3) })).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.compare.select(t.offerName(3)) })).toBeTruthy();
+    // The new offer opens for editing.
+    expect(screen.getByRole('group', { name: t.edit.fieldsLabel(t.offerName(3)) })).toBeTruthy();
   });
 
   it('a typed offer is confirmed before it replaces the selected one (list full)', async () => {
     const parsed: LoanInput = { amount: 20000, apr: 0.05, termMonths: 48 };
     parseText.mockResolvedValue({ value: parsed, inferred: ['termMonths'] });
     const user = await renderReady();
+    expect(screen.queryByRole('textbox', { name: t.parse.label })).toBeNull();
+    await user.click(screen.getByRole('button', { name: t.parse.open }));
     await user.type(screen.getByRole('textbox', { name: t.parse.label }), '20k at 5% for 4 years');
     await user.click(screen.getByRole('button', { name: t.parse.submit }));
     const confirm = await screen.findByRole('region', { name: t.parse.confirmTitle });
     expect(within(confirm).getByText(t.parse.termMonths(48))).toBeTruthy();
     expect(within(confirm).getByText(`(${t.parse.guessed})`)).toBeTruthy();
     await user.click(within(confirm).getByRole('button', { name: t.parse.confirmReplace }));
-    const panel = screen.getByRole('tabpanel', { name: t.offerName(1) });
+    await user.click(screen.getByRole('button', { name: t.edit.openLabel(t.offerName(1)) }));
+    const panel = screen.getByRole('group', { name: t.edit.fieldsLabel(t.offerName(1)) });
     expect((within(panel).getByRole('textbox', { name: t.edit.amount }) as HTMLInputElement).value).toBe('20,000');
   });
 });

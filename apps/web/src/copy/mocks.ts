@@ -129,6 +129,8 @@ export const mocks = {
     sourceLabel: 'Statement months',
     sources: { uploads: 'My statements', sample: 'Sample statement' },
     sampleNote: 'Sample statement, not yours. Add your own to see your month.',
+    /** Ends the one muted line under the headline (after the sample note). */
+    notSaved: 'Nothing is saved yet.',
     /** The ink card with the month's totals (engine monthEnd). */
     valueCheck: 'Value check',
     valueCheckSoFar: 'Value check · so far',

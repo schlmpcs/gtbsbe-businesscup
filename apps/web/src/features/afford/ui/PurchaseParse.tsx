@@ -2,7 +2,7 @@
 
 import { afford as t } from '@/copy';
 import { Button, cx, formatMoney, formatRate, Row, Stack } from '@/ui-kit';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import type { ParseConfirmVM, Purchase, VMError } from '../model/types';
 
 function errorText(error: VMError | null): string {
@@ -66,59 +66,95 @@ function ParsedPurchase({ purchase, inferred }: { purchase: Purchase; inferred: 
   );
 }
 
-/** Free text → parsed purchase → user confirms → fills the form. Falls back to the form on any error. */
+/**
+ * The secondary input path: a small link under the form that opens a one-sentence box. Free text →
+ * parsed purchase → user confirms → fills the form. Falls back to the form on any error.
+ */
 export function PurchaseParse({ parse }: { parse: ParseConfirmVM<Purchase> }) {
   const inputId = useId();
+  const panelId = useId();
+  const [open, setOpen] = useState(false);
   const busy = parse.status === 'parsing';
+  const shown = open || parse.status !== 'idle';
   return (
     <Stack gap="md">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          parse.submit();
+      <button
+        type="button"
+        aria-expanded={shown}
+        aria-controls={panelId}
+        onClick={() => {
+          if (shown) parse.cancel();
+          setOpen(!shown);
         }}
-        className="flex flex-col gap-sm rounded-lg bg-bg p-sm sm:flex-row sm:items-center"
+        className="self-start text-sm font-semibold text-primary underline-offset-2 hover:underline"
       >
-        <label htmlFor={inputId} className="sr-only">
-          {t.parse.label}
-        </label>
-        <input
-          id={inputId}
-          type="text"
-          name="purchaseText"
-          value={parse.text}
-          onChange={(e) => parse.setText(e.target.value)}
-          placeholder={t.parse.placeholder}
-          className="min-w-0 flex-1 rounded-md bg-transparent px-sm py-sm text-lg font-semibold placeholder:font-normal placeholder:text-text-muted"
-        />
-        <Button type="submit" variant="dark" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
-          {busy ? t.parse.parsing : t.parse.submit}
-        </Button>
-      </form>
+        {shown ? t.parse.close : t.parse.open}
+      </button>
 
-      <div aria-live="polite">
-        {parse.status === 'confirming' && parse.parsed && (
-          <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg bg-bg p-lg">
-            <h3 className="text-base font-bold">{t.parse.confirmTitle}</h3>
-            <ParsedPurchase purchase={parse.parsed} inferred={parse.inferred} />
-            <Row>
-              <Button onClick={parse.confirm}>{t.parse.confirm}</Button>
-              <Button variant="ghost" onClick={parse.cancel}>
-                {t.parse.cancel}
-              </Button>
-            </Row>
-          </section>
-        )}
-        {parse.status === 'error' && (
-          <div role="alert" className="flex flex-col gap-sm rounded-lg bg-bg p-lg">
-            <p className="text-sm">{errorText(parse.error)}</p>
-            <Row>
-              <Button variant="ghost" size="sm" onClick={parse.cancel}>
-                {t.parse.useForm}
-              </Button>
-            </Row>
-          </div>
-        )}
+      <div id={panelId} hidden={!shown} className="flex flex-col gap-md">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            parse.submit();
+          }}
+          className="flex flex-col gap-sm rounded-lg bg-bg p-sm sm:flex-row sm:items-center"
+        >
+          <label htmlFor={inputId} className="sr-only">
+            {t.parse.label}
+          </label>
+          <input
+            id={inputId}
+            type="text"
+            name="purchaseText"
+            value={parse.text}
+            onChange={(e) => parse.setText(e.target.value)}
+            placeholder={t.parse.placeholder}
+            className="min-w-0 flex-1 rounded-md bg-transparent px-sm py-sm text-base font-semibold placeholder:font-normal placeholder:text-text-muted"
+          />
+          <Button type="submit" variant="secondary" size="sm" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
+            {busy ? t.parse.parsing : t.parse.submit}
+          </Button>
+        </form>
+
+        <div aria-live="polite">
+          {parse.status === 'confirming' && parse.parsed && (
+            <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg bg-bg p-lg">
+              <h3 className="text-base font-bold">{t.parse.confirmTitle}</h3>
+              <ParsedPurchase purchase={parse.parsed} inferred={parse.inferred} />
+              <Row>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    parse.confirm();
+                    setOpen(false);
+                  }}
+                >
+                  {t.parse.confirm}
+                </Button>
+                <Button variant="ghost" onClick={parse.cancel}>
+                  {t.parse.cancel}
+                </Button>
+              </Row>
+            </section>
+          )}
+          {parse.status === 'error' && (
+            <div role="alert" className="flex flex-col gap-sm rounded-lg bg-bg p-lg">
+              <p className="text-sm">{errorText(parse.error)}</p>
+              <Row>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    parse.cancel();
+                    setOpen(false);
+                  }}
+                >
+                  {t.parse.useForm}
+                </Button>
+              </Row>
+            </div>
+          )}
+        </div>
       </div>
     </Stack>
   );

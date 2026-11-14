@@ -71,8 +71,12 @@ export const loan = {
   neverPaysOff: (name: string) => `${name} never pays off: the payment doesn’t cover the interest.`,
 
   edit: {
-    title: 'Edit offers',
-    tabsLabel: 'Loan offers',
+    /** The small toggle on each offer card that opens its fields inline. */
+    open: 'Edit',
+    close: 'Done',
+    openLabel: (name: string) => `Edit ${name}`,
+    closeLabel: (name: string) => `Done editing ${name}`,
+    fieldsLabel: (name: string) => `${name} terms`,
     amount: 'Loan amount',
     apr: 'APR',
     termMonths: 'Term',
@@ -81,7 +85,6 @@ export const loan = {
     fees: 'Fees',
     feesHint: 'Rolled into the loan.',
     add: 'Add an offer',
-    full: 'Up to 3 offers.',
     remove: (name: string) => `Remove ${name}`,
     errors: {
       amount: 'Enter an amount of $0 or more.',
@@ -147,7 +150,9 @@ export const loan = {
   },
 
   parse: {
-    title: 'Or type an offer',
+    /** The link that opens the one-sentence box (editing on the cards stays the main path). */
+    open: 'Or type an offer in one sentence',
+    close: 'Hide the sentence box',
     label: 'Describe the loan',
     placeholder: '28k at 6.9% for 5 years, $495 fees',
     submit: 'Read it',

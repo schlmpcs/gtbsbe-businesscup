@@ -1,8 +1,8 @@
 'use client';
 
 import { loan as t } from '@/copy';
-import { Button, Card, cx, formatMoney, formatRate, Row, Stack } from '@/ui-kit';
-import { useId } from 'react';
+import { Button, cx, formatMoney, formatRate, Row, Stack } from '@/ui-kit';
+import { useId, useState } from 'react';
 import type { LoanInput, ParseConfirmVM, VMError } from '../model/types';
 
 function errorText(error: VMError | null): string {
@@ -55,46 +55,72 @@ function ParsedLoan({ input, inferred }: { input: LoanInput; inferred: readonly 
   );
 }
 
-/** Free text → parsed loan → user confirms → added as an offer (or replaces the selected one when full). */
+/**
+ * The secondary input path: a small link that opens a one-sentence box. Free text → parsed loan → user
+ * confirms → added as an offer (or replaces the selected one when the list is full).
+ */
 export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanInput>; canAddOffer: boolean }) {
   const inputId = useId();
+  const panelId = useId();
+  const [open, setOpen] = useState(false);
   const busy = parse.status === 'parsing';
+  const shown = open || parse.status !== 'idle';
+  const close = () => {
+    parse.cancel();
+    setOpen(false);
+  };
   return (
-    <Card title={t.parse.title}>
-      <Stack gap="md">
+    <Stack gap="md">
+      <button
+        type="button"
+        aria-expanded={shown}
+        aria-controls={panelId}
+        onClick={() => (shown ? close() : setOpen(true))}
+        className="self-start text-sm font-semibold text-primary underline-offset-2 hover:underline"
+      >
+        {shown ? t.parse.close : t.parse.open}
+      </button>
+
+      <div id={panelId} hidden={!shown} className="flex max-w-(--container-2xl) flex-col gap-md">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             parse.submit();
           }}
-          className="flex flex-col gap-sm"
+          className="flex flex-col gap-sm rounded-lg bg-surface p-sm shadow-sm sm:flex-row sm:items-center"
         >
           <label htmlFor={inputId} className="sr-only">
             {t.parse.label}
           </label>
-          <textarea
+          <input
             id={inputId}
+            type="text"
             name="loanText"
-            rows={2}
             value={parse.text}
             onChange={(e) => parse.setText(e.target.value)}
             placeholder={t.parse.placeholder}
-            className="w-full resize-y rounded-lg bg-bg px-md py-md text-lg font-semibold placeholder:font-normal placeholder:text-text-muted"
+            className="min-w-0 flex-1 rounded-md bg-transparent px-sm py-sm text-base font-semibold placeholder:font-normal placeholder:text-text-muted"
           />
-          <Row>
-            <Button type="submit" variant="secondary" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
-              {busy ? t.parse.parsing : t.parse.submit}
-            </Button>
-          </Row>
+          <Button type="submit" variant="secondary" size="sm" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
+            {busy ? t.parse.parsing : t.parse.submit}
+          </Button>
         </form>
 
         <div aria-live="polite">
           {parse.status === 'confirming' && parse.parsed && (
-            <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg bg-bg p-lg">
+            <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg bg-surface p-lg shadow-sm">
               <h3 className="text-base font-semibold">{t.parse.confirmTitle}</h3>
               <ParsedLoan input={parse.parsed} inferred={parse.inferred} />
               <Row>
-                <Button onClick={parse.confirm}>{canAddOffer ? t.parse.confirmAdd : t.parse.confirmReplace}</Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    parse.confirm();
+                    setOpen(false);
+                  }}
+                >
+                  {canAddOffer ? t.parse.confirmAdd : t.parse.confirmReplace}
+                </Button>
                 <Button variant="ghost" onClick={parse.cancel}>
                   {t.parse.cancel}
                 </Button>
@@ -102,17 +128,17 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
             </section>
           )}
           {parse.status === 'error' && (
-            <div role="alert" className="flex flex-col gap-sm rounded-lg bg-bg p-lg">
+            <div role="alert" className="flex flex-col gap-sm rounded-lg bg-surface p-lg shadow-sm">
               <p className="text-sm">{errorText(parse.error)}</p>
               <Row>
-                <Button variant="ghost" size="sm" onClick={parse.cancel}>
+                <Button variant="ghost" size="sm" onClick={close}>
                   {t.parse.useForm}
                 </Button>
               </Row>
             </div>
           )}
         </div>
-      </Stack>
-    </Card>
+      </div>
+    </Stack>
   );
 }
