@@ -5,7 +5,7 @@
 // canonical schemas from @lifeguessr/types. Those are the source of truth: they reject percent
 // rates (6.9 instead of 0.069), negative money and impossible terms.
 import {
-  COST_CATEGORIES, CostCategorySchema, DEBT_KINDS, MOVE_KINDS, ProfilePatchSchema,
+  COST_CATEGORIES, CostCategorySchema, DEBT_KINDS, MOVE_KINDS, ProfilePatchSchema, ProfileSchema,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 
@@ -16,6 +16,7 @@ export const MAX_PARSE_TEXT = 1_000;
 /** Request body caps in bytes, checked before JSON parsing. */
 export const MAX_PARSE_BODY_BYTES = 8 * 1024;
 export const MAX_EXPLAIN_BODY_BYTES = 128 * 1024; // a LoanResult may carry its schedule; we ignore it
+export const MAX_FORECAST_BODY_BYTES = 32 * 1024; // a profile plus up to 8 candidate patches is a few KB
 
 // ----- /api/ai/parse -------------------------------------------------------------------------
 
@@ -108,3 +109,54 @@ export const ExplainRequestSchema = z
   });
 export type ExplainRequest = z.infer<typeof ExplainRequestSchema>;
 
+// ----- /api/ai/forecast ----------------------------------------------------------------------
+
+/**
+ * Largest absolute money value (dollars) a forecast request may carry. The sanity envelope's
+ * tolerance grows with take-home pay: a finite but absurd pay (1e300) makes it Infinity, and then
+ * every answer passes. $1 billion is far beyond any real household and far below that.
+ */
+export const MAX_FORECAST_MONEY = 1e9;
+/** Candidate moves per request (Next Moves shows a handful; one model call answers them all). */
+export const MAX_FORECAST_SCENARIOS = 8;
+/** The id of the forecast of the profile as it is; a scenario cannot use it. */
+export const BASE_FORECAST_ID = 'base';
+
+const ForecastScenarioSchema = z.object({
+  id: z.string().min(1).max(64),
+  patch: ProfilePatchSchema,
+});
+
+/** Every number in `value` with its path, to bound them all without listing the money fields by hand. */
+function* numbersIn(value: unknown, path: readonly (string | number)[]): Generator<{ path: (string | number)[]; value: number }> {
+  if (typeof value === 'number') yield { path: [...path], value };
+  else if (Array.isArray(value)) for (const [i, v] of value.entries()) yield* numbersIn(v, [...path, i]);
+  else if (value && typeof value === 'object') for (const [k, v] of Object.entries(value)) yield* numbersIn(v, [...path, k]);
+}
+
+export const ForecastRequestSchema = z
+  .object({
+    profile: ProfileSchema,
+    /** The area's inflation. Above −100% (the rules engine cannot deflate by it otherwise) and a decimal, never a percent. */
+    rates: z.object({ inflationAnnual: z.number().gt(-1).max(1) }).optional(),
+    scenarios: z.array(ForecastScenarioSchema).max(MAX_FORECAST_SCENARIOS).default([]),
+  })
+  .superRefine((req, ctx) => {
+    const seen = new Set<string>();
+    req.scenarios.forEach((s, i) => {
+      const path = ['scenarios', i, 'id'];
+      if (s.id === BASE_FORECAST_ID) {
+        ctx.addIssue({ code: 'custom', path, message: `"${BASE_FORECAST_ID}" is reserved for the forecast of the profile as it is` });
+      } else if (seen.has(s.id)) {
+        ctx.addIssue({ code: 'custom', path, message: `duplicate scenario id "${s.id}"` });
+      }
+      seen.add(s.id);
+    });
+    // Every number, not only the money fields: the rest (age, rates, shares) are bounded far below this.
+    for (const n of numbersIn({ profile: req.profile, scenarios: req.scenarios }, [])) {
+      if (Math.abs(n.value) > MAX_FORECAST_MONEY) {
+        ctx.addIssue({ code: 'custom', path: n.path, message: `${n.value} is beyond the limit of ±${MAX_FORECAST_MONEY} dollars` });
+      }
+    }
+  });
+export type ForecastRequest = z.infer<typeof ForecastRequestSchema>;
