@@ -255,8 +255,12 @@ describe('usePlanMoves', () => {
 });
 
 describe('useAiLine', () => {
-  it('shows a labeled line from the fixture', () => {
-    const { result } = renderHook(() => useAiLine());
+  it('is off by default: no fixture line reaches a user as an AI estimate', () => {
+    expect(renderHook(() => useAiLine()).result.current).toEqual({ status: 'off', label: 'AI estimate' });
+  });
+
+  it('preview shown: a labeled line from the fixture', () => {
+    const { result } = renderHook(() => useAiLine({ status: 'shown' }));
     expect(result.current).toMatchObject({ status: 'shown', label: 'AI estimate' });
     expect(result.current.points).toHaveLength(59);
   });

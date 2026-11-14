@@ -60,8 +60,13 @@ afterEach(() => {
 const t = copy.screen;
 
 describe('PlanScreen', () => {
+  it('draws no AI estimate line by default', () => {
+    render(<Harness />);
+    expect(screen.queryByText(t.chart.aiNote)).toBeNull();
+  });
+
   it('shows the four rules-based KPIs, the chart with event markers and the AI estimate line', () => {
-    const { container } = render(<Harness />);
+    const { container } = render(<Harness ai={{ status: 'shown' }} />);
     expect(screen.getByRole('heading', { level: 1, name: t.title })).toBeTruthy();
     const kpis = container.querySelectorAll('[data-kpi]');
     expect(kpis).toHaveLength(4);

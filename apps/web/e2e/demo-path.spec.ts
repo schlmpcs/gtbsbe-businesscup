@@ -121,15 +121,11 @@ test('demo path: first visit → Play → 5 duels → own guess → statement �
   await own.focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
   const ownGuess = stored(page, 'own_guess_submitted');
-  await page.getByRole('button', { name: ladder.guess.submit }).click();
-  // Only the gut guess: nothing to compare it with before the spending is the user's own.
-  await expect(page.getByRole('link', { name: ladder.shell.cta.S5 })).toBeVisible();
-  await expect(page.getByTestId('guess-reveal')).toHaveCount(0);
-
+  // Locking the guess goes straight on (only the gut guess: nothing to compare it with yet).
+  await page.getByRole('link', { name: ladder.guess.submit }).click();
   await ownGuess;
 
   // ----- 3. About you (S6): the household and ZIP build the starting month for that area -----
-  await page.getByRole('link', { name: ladder.shell.cta.S5 }).click();
   await expect(page).toHaveURL(/\/me\/closest$/);
   await page.getByLabel(ladder.closest.about.zip).fill('75205');
   // The month built from the answers is preselected (JF13); tapping it starts from it.
@@ -146,7 +142,7 @@ test('demo path: first visit → Play → 5 duels → own guess → statement �
   await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('aria-current', 'step');
   await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'false');
   await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
-  await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).toBeVisible();
+  await expect(page.getByTestId('statement-summary')).toBeVisible();
   const applied = stored(page, 'statement_applied');
   await page.getByRole('button', { name: ladder.upload.apply }).click();
   await expect(page.getByText(ladder.upload.applied)).toBeVisible();

@@ -21,7 +21,7 @@ test('navigation: every page is reachable on this viewport, with the current pag
     await expect(page.getByRole('navigation', { name: t.moreLabel })).toHaveCount(0);
     // Nothing hides under the fixed tab bar: the disclaimer at the very bottom scrolls clear of it.
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    const disclaimer = await page.getByText(common.disclaimer).boundingBox();
+    const disclaimer = await page.getByText(common.disclaimer, { exact: true }).boundingBox();
     const bar = await tabs.boundingBox();
     expect(disclaimer!.y + disclaimer!.height).toBeLessThanOrEqual(bar!.y + 1);
   } else {

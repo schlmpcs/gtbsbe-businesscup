@@ -266,7 +266,6 @@ export const ladder = {
 
   balance: {
     fieldsTitle: 'About you',
-    payTitle: 'Age and take-home pay',
     savingsTitle: 'Savings',
     fields: {
       age: 'Your age',
@@ -279,7 +278,6 @@ export const ladder = {
       cash: 'checking + savings',
       retirement: '401k, IRA',
     },
-    estimatedHint: 'Typical amount. Type yours.',
     /** One line per block while any of its values is still our typical value. */
     estimatedNote: 'Grey amounts are typical values. Type yours.',
     /** Age and pay are asked once, on About you: here they are only shown. */
