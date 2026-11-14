@@ -45,9 +45,11 @@ export type ForecastCache = {
   /**
    * The cached AI bundle for `key`, or the result of `compute`. Calls that arrive while `compute`
    * is running share its promise (a rejection reaches every one of them and is not kept). The
-   * bundle is shared between callers, so it is deeply frozen: a write to it throws.
+   * bundle is shared between callers, so it is deeply frozen: a write to it throws. `ttlMs` overrides
+   * the cache's time to live for an answer this call computes and stores (the pre-warmed demo answer
+   * is kept for as long as the process runs: `Infinity`); a hit or a joined computation keeps its own.
    */
-  getOrCompute(key: string, compute: () => Promise<ForecastBundle>): Promise<ForecastBundle>;
+  getOrCompute(key: string, compute: () => Promise<ForecastBundle>, opts?: { ttlMs?: number }): Promise<ForecastBundle>;
   /** Forgets every stored answer and every computation in flight (their callers still get their answer; it is not stored). */
   clear(): void;
 };
@@ -72,14 +74,14 @@ export function createForecastCache(
   // `clear` bumps it; a computation that began under an older one must not store its answer.
   let generation = 0;
 
-  function store(key: string, bundle: ForecastBundle): void {
+  function store(key: string, bundle: ForecastBundle, ttl: number): void {
     stored.delete(key);
-    stored.set(key, { bundle, expiresAt: now() + ttlMs });
+    stored.set(key, { bundle, expiresAt: now() + ttl });
     while (stored.size > max) stored.delete(stored.keys().next().value!);
   }
 
   return {
-    getOrCompute(key, compute) {
+    getOrCompute(key, compute, opts = {}) {
       const hit = stored.get(key);
       if (hit) {
         stored.delete(key);
@@ -97,7 +99,7 @@ export function createForecastCache(
       const promise: Promise<ForecastBundle> = (async () => {
         // Every caller of this key gets this one object: freeze it, so none can change it for the others.
         const bundle = deepFreeze(await compute());
-        if (bundle.source === 'ai' && startedIn === generation) store(key, bundle);
+        if (bundle.source === 'ai' && startedIn === generation) store(key, bundle, opts.ttlMs ?? ttlMs);
         return bundle;
       })().finally(() => {
         // Settled either way. After a `clear`, the entry may by now be a newer computation's.

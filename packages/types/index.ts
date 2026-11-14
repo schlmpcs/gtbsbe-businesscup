@@ -142,7 +142,7 @@ export type StatementClass = CostCategory | 'pay' | 'transfer';
 // POST /api/statement/categorize. `categorizedBy`: who sorted the labels: the AI, the keyword
 // rules (no API key, provider failure or invalid output), or both (the AI skipped some labels).
 export type StatementCategorizeRequest = { items: StatementItem[] };
-export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed' };
+export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed'; classes?: { label: string; class: StatementClass }[] };
 
 // ----- Pro (S15): the paywall demo -----------------------------------------------------------
 // No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo_checkout` = the
@@ -225,3 +225,4 @@ export type FunnelReport = {
 export * from './constants';
 export * from './schemas';
 export * from './overpaying';
+export * from './subscriptions';
