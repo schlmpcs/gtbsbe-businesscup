@@ -14,6 +14,17 @@ export const loan = {
 
   offerName: (n: number) => `Offer ${n}`,
 
+  /** The big headline: the selected offer's amount (formatted) and how many offers are compared. */
+  headline: (amount: string) => `${amount} loan.`,
+  ways: (n: number) => (n === 1 ? 'One way.' : n === 2 ? 'Two ways.' : n === 3 ? 'Three ways.' : `${n} ways.`),
+  /** Chips with the selected offer's terms (values already formatted). */
+  terms: {
+    label: 'The selected offer',
+    price: (v: string) => `Price ${v}`,
+    down: (v: string) => `Down ${v}`,
+    fees: (v: string) => `Fees ${v}`,
+  },
+
   compare: {
     title: 'Side by side',
     caption: 'Loan offers compared',
@@ -34,6 +45,9 @@ export const loan = {
     failed: 'Can’t compute',
     select: (name: string) => `Show ${name}`,
     selected: 'Selected',
+    /** "36 months at 6.9%" (rate already formatted). */
+    offerTerms: (termMonths: number, apr: string) => `${months(termMonths)} at ${apr}`,
+    perMonth: 'a month',
   },
 
   neverPaysOff: (name: string) =>
@@ -73,11 +87,17 @@ export const loan = {
       `Rule of thumb lenders use: under ${yellow} is comfortable, above ${red} is risky. Guidance, not a hard limit.`,
     zones: { low: 'Comfortable', medium: 'Stretched', high: 'Risky' },
     noOffer: 'Pick a valid offer to see your debt load with it.',
+    arrow: '→',
+    caption: (name: string) => `of your take-home pay goes to debt with ${name}`,
+    captionToday: 'of your take-home pay goes to debt today',
+    /** Zone labels on the bar; `red` is already formatted. */
+    risky: (risky: string, red: string) => `${risky} · ${red}+`,
     unknown: 'We can’t compute a debt load without a take-home pay.',
   },
 
   extra: {
     title: 'Pay a little extra',
+    onTopOf: (amount: string) => `on top of ${amount} a month`,
     slider: (name: string) => `Extra each month on ${name}`,
     perMonth: '/mo',
     payoff: 'Paid off in',
@@ -89,6 +109,25 @@ export const loan = {
     noChange: 'No change yet. Slide to add an extra payment.',
     neverEvenWithExtra: 'Even with this extra payment, the loan never pays off.',
     noOffer: 'Pick a valid offer to try extra payments.',
+  },
+
+  payoffOrder: {
+    title: 'Pay off in this order',
+    kinds: {
+      card: 'Credit card',
+      auto: 'Car loan',
+      student: 'Student loan',
+      personal: 'Personal loan',
+      bnpl: 'Buy now, pay later',
+      mortgage: 'Mortgage',
+    } as Record<string, string>,
+    /** The selected offer, added as a new debt. */
+    newLoan: (name: string) => `${name} (new)`,
+    /** "Credit card · 24.4%" (rate already formatted). */
+    step: (label: string, apr: string) => `${label} · ${apr}`,
+    payoff: (n: number) => `Everything paid off in ${months(n)} with minimum payments.`,
+    never: 'At minimum payments, these debts never pay off.',
+    note: 'Highest rate first (the avalanche method): each paid-off debt’s payment rolls into the next.',
   },
 
   parse: {

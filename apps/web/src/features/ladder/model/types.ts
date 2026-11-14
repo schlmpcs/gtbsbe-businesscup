@@ -150,6 +150,8 @@ export type QuickSlidersVM = {
   /** Spending + debt payments: compare with the S5 guess. */
   monthlyCost: Money;
   selfGuess: Money | null;
+  /** monthlyCost − selfGuess (positive: the month costs more than guessed); null without a guess. */
+  guessGap: Money | null;
   /** Net worth in 10 years, today's dollars, with the range band. */
   in10y: ForecastPoint;
   setSpending: (category: CostCategory, value: Money) => void;

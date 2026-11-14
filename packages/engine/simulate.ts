@@ -30,10 +30,7 @@ import {
   minForecastMonths,
   returnAnnualNominal,
 } from './assumptions';
-import { MAX_SIMULATION_MONTHS, amortizedPayment } from './loan/index';
-
-/** Balances below this many dollars count as paid off (absorbs floating-point dust). */
-const PAID_OFF_EPSILON: Money = 1e-6;
+import { MAX_SIMULATION_MONTHS, PAID_OFF_EPSILON, amortizedPayment } from './loan/amortize';
 
 /** Id of the card debt the simulation opens when it needs a card and the profile has none. */
 export const SYNTHETIC_CARD_ID = 'card-synthetic';

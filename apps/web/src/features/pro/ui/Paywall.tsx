@@ -1,7 +1,9 @@
+import { useId } from 'react';
 import { common, pro as copy } from '@/copy';
-import { Button, Card, Stack } from '@/ui-kit';
+import { Button, cx, Sticker } from '@/ui-kit';
 import type { PaywallError, PaywallVM } from '../model/types';
-import { CheckoutBlock } from './CheckoutBlock';
+import { FULL_BLEED_PRIMARY, ON_ARENA } from './arena';
+import { CheckoutBlock, TestCardNote } from './CheckoutBlock';
 import { errorText } from './errorText';
 import { IncludesList } from './IncludesList';
 import { PlanPicker } from './PlanPicker';
@@ -12,48 +14,64 @@ export type PaywallProps = PaywallVM;
 
 const errorIn = (error: PaywallError | null, ...where: PaywallError['where'][]) => (error && where.includes(error.where) ? error : null);
 
-/** S15 Pro paywall (demo). Placeholder styling until the Figma frame lands. */
+/** S15 Pro paywall (demo): an orange band with the plans and checkout, then the judges' promo code. */
 export function Paywall(vm: PaywallProps) {
+  const testCardId = useId();
   const locked = vm.busy !== null || vm.coolingDown;
   const pageError = errorIn(vm.error, 'status', 'confirm');
   const message =
     vm.view === 'confirming' ? copy.confirming : vm.cancelled ? copy.cancelled : vm.view === 'loading' ? copy.loading : null;
+  const offer = vm.view === 'offer';
 
   return (
-    <Stack gap="lg" className="mt-lg">
-      <p className="self-start rounded-full border border-warning px-md py-xs text-xs font-semibold">{copy.demoBadge}</p>
+    <div className="mt-lg flex flex-col gap-xl">
+      <div className={cx(FULL_BLEED_PRIMARY, ON_ARENA, 'flex flex-col items-center gap-xl py-2xl text-center sm:py-3xl')}>
+        <Sticker tone="ink" tilt={-2}>
+          {copy.demoBadge}
+        </Sticker>
 
-      {/* One polite live region for every status change on the screen (loading, Stripe return, errors). */}
-      <div role="status" aria-live="polite" className="flex flex-col items-start gap-sm">
-        {message && <p>{message}</p>}
-        {pageError && <p className="font-medium text-negative">{errorText(pageError)}</p>}
-        {pageError && vm.retry && (
-          <Button variant="secondary" size="sm" onClick={vm.retry}>
-            {copy.retry}
-          </Button>
+        {offer && (
+          <div className="flex flex-col items-center gap-lg">
+            <h2 className="font-display text-display leading-display font-extrabold sm:text-7xl sm:leading-display">{copy.headline}</h2>
+            <p className="max-w-(--container-lg) text-lg">{copy.intro}</p>
+          </div>
+        )}
+
+        {/* One polite live region for every status change on the screen (loading, Stripe return, errors). */}
+        <div role="status" aria-live="polite" className="flex flex-col items-center gap-sm">
+          {message && <p className="text-lg font-semibold">{message}</p>}
+          {pageError && <p className="font-semibold text-negative">{errorText(pageError)}</p>}
+          {pageError && vm.retry && (
+            <Button variant="dark" size="sm" onClick={vm.retry}>
+              {copy.retry}
+            </Button>
+          )}
+        </div>
+
+        {vm.pro && (vm.view === 'success' || vm.view === 'pro') && (
+          <ProActive pro={vm.pro} justUnlocked={vm.view === 'success'} continueHref={vm.continueHref} />
+        )}
+
+        {offer && (
+          <>
+            <PlanPicker plans={vm.plans} onSelect={vm.selectPlan} disabled={locked} />
+            <IncludesList />
+            <CheckoutBlock
+              available={vm.checkoutAvailable}
+              busy={vm.busy === 'checkout'}
+              disabled={locked}
+              error={errorIn(vm.error, 'checkout')}
+              onCheckout={vm.startCheckout}
+              testCardId={testCardId}
+            />
+            <p className="text-xs">{common.disclaimer}</p>
+          </>
         )}
       </div>
 
-      {vm.pro && (vm.view === 'success' || vm.view === 'pro') && (
-        <ProActive pro={vm.pro} justUnlocked={vm.view === 'success'} continueHref={vm.continueHref} />
-      )}
-
-      {vm.view === 'offer' && (
-        <>
-          <p>{copy.intro}</p>
-          <IncludesList />
-          <Card>
-            <Stack gap="lg">
-              <PlanPicker plans={vm.plans} onSelect={vm.selectPlan} disabled={locked} />
-              <CheckoutBlock
-                available={vm.checkoutAvailable}
-                busy={vm.busy === 'checkout'}
-                disabled={locked}
-                error={errorIn(vm.error, 'checkout')}
-                onCheckout={vm.startCheckout}
-              />
-            </Stack>
-          </Card>
+      {offer && (vm.checkoutAvailable || vm.promoEnabled) && (
+        <div className="grid items-start gap-lg sm:grid-cols-2">
+          {vm.checkoutAvailable && <TestCardNote id={testCardId} />}
           {vm.promoEnabled && (
             <PromoCodeForm
               code={vm.promoCode}
@@ -64,10 +82,10 @@ export function Paywall(vm: PaywallProps) {
               error={errorIn(vm.error, 'promo')}
             />
           )}
-        </>
+        </div>
       )}
 
-      <p className="text-xs text-text-muted">{common.disclaimer}</p>
-    </Stack>
+      {!offer && <p className="text-xs text-text-muted">{common.disclaimer}</p>}
+    </div>
   );
 }

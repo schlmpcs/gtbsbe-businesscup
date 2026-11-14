@@ -1,7 +1,7 @@
 // View-model types for the loan feature (S12). Tasks: Y7 (model) / Y11 (ui).
 // ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
 // Hook: useLoanLab() in ./useLoanLab.ts.
-import type { LoanInput, LoanResult, Money, Rate } from '@lifeguessr/types';
+import type { Debt, LoanInput, LoanResult, Money, Rate } from '@lifeguessr/types';
 import type { DebtLoadGaugeVM } from '@/lib/model/profile';
 import type { ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
 
@@ -38,6 +38,25 @@ export type ExtraPaymentVM = SliderVM & {
   monthsSaved: number | null;
 };
 
+/** One debt in the suggested payoff order (engine payoffOrder, avalanche: highest APR first). */
+export type PayoffStepVM = {
+  id: string;
+  kind: Debt['kind'];
+  /** The selected offer, added as a new debt. */
+  isNew: boolean;
+  apr: Rate;
+  /** Balance today (for the new loan: the financed principal). */
+  balance: Money;
+};
+
+/** Your debts plus the selected offer, in the order to pay them off with the minimums. */
+export type PayoffPlanVM = {
+  steps: PayoffStepVM[];
+  /** Months until every debt is paid (null = not within the simulation cap). */
+  payoffMonth: number | null;
+  totalInterest: Money;
+};
+
 export type LoanLabVM = {
   status: 'loading' | 'ready';
   /** Up to MAX_OFFERS offers, in the order entered. */
@@ -54,6 +73,8 @@ export type LoanLabVM = {
   /** Null when no valid offer is selected. */
   extra: ExtraPaymentVM | null;
   setExtraPayment: (value: Money) => void;
+  /** Null when there are no debts and no valid selected offer. */
+  payoffPlan: PayoffPlanVM | null;
   /** "28k at 6.9% for 5 years, $495 fees" → LoanInput; added (or replaces the selected offer when full). */
   parse: ParseConfirmVM<LoanInput>;
 };
