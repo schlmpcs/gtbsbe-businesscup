@@ -1,15 +1,13 @@
 'use client';
 
 // S21 Subscription audit (`/tools/subscriptions`): thin route. The view-model hook feeds the
-// presentational screen. Streamer mode (`?stream=1`) never shows it: the tool is about the
-// person's own money, so nothing of it is built there. There is no tools hub; this page has its own entry
-// in the app navigation (lib/screens.ts).
+// presentational screen (SubscriptionsTool). Streamer mode (`?stream=1`) never shows it: the tool is
+// about the person's own money, so nothing of it is built there. There is no tools hub; this page has
+// its own entry in the app navigation (lib/screens.ts).
 import { use } from 'react';
 import { subscriptions as t } from '@/copy';
-import { useSubscriptions, type SubscriptionsDeps } from '@/features/subscriptions/model/useSubscriptions';
+import { SubscriptionsTool } from '@/features/subscriptions/SubscriptionsTool';
 import { useSubscriptionsDeps } from '@/features/subscriptions/model/wiring';
-import { SubscriptionsScreen } from '@/features/subscriptions/ui/SubscriptionsScreen';
-import { useAppStore } from '@/state';
 import { PageHeader } from '@/ui-kit';
 
 function Notice({ title, body }: { title: string; body: string }) {
@@ -20,14 +18,9 @@ function Notice({ title, body }: { title: string; body: string }) {
   );
 }
 
-function Tool({ deps }: { deps: SubscriptionsDeps }) {
-  const profile = useAppStore((s) => s.profile);
-  return <SubscriptionsScreen vm={useSubscriptions(profile, deps)} />;
-}
-
 function Connected() {
   const deps = useSubscriptionsDeps();
-  return deps ? <Tool deps={deps} /> : <Notice title={t.screens.S21} body={t.notConnected} />;
+  return deps ? <SubscriptionsTool deps={deps} /> : <Notice title={t.screens.S21} body={t.notConnected} />;
 }
 
 export default function SubscriptionsPage({ searchParams }: { searchParams: Promise<{ stream?: string | string[] }> }) {

@@ -3,7 +3,8 @@
 // statement categorizer and the event sender are all injected (apps/web/src/test/subscriptions.ts).
 import { subscriptionsExpected } from '@lifeguessr/data/fixtures/tools';
 import { applyPatch, forecast, rankCandidates } from '@lifeguessr/engine';
-import { ClientEventEnvelopeSchema, type ClientFunnelEvent } from '@lifeguessr/types';
+import { statementItemsSample } from '@lifeguessr/data/fixtures/tools';
+import { ClientEventEnvelopeSchema, type ClientFunnelEvent, type StatementCategorizeResponse } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api/http';
@@ -11,9 +12,10 @@ import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
-import { csvFile, fakeCategorize, realisticCatalogue, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
+import { csvFile, fakeCategorize, realisticCatalogue, ruleClasses, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
 import { CANCEL_MOVE_ID, cancelCandidate } from './audit';
 import { SubscriptionsToolStateSchema, type SubscriptionsToolState } from './state';
+import { useCancelResult } from './useCancelResult';
 import { useSubscriptions, type SubscriptionsDeps } from './useSubscriptions';
 
 const track = vi.fn<NonNullable<SubscriptionsDeps['track']>>();
@@ -29,7 +31,9 @@ function renderTool(opts: Options = {}) {
       catalogue: opts.catalogue ?? testCatalogue, store, track, downloadRenewals,
       categorize: opts.categorize ?? fakeCategorize(),
     });
-    return { vm, store };
+    // The screen mounts this only while something is marked (SubscriptionsTool); here it is always there.
+    const cancel = useCancelResult(profile, vm.plan.candidate, { track });
+    return { vm, store, cancel };
   });
   return view;
 }
@@ -220,6 +224,103 @@ describe('guess and reveal', () => {
     act(() => tool.result.current.vm.back());
     act(() => tool.result.current.vm.back());
     expect(tool.result.current.vm.step).toBe('guess');
+  });
+});
+
+describe('where the tool starts', () => {
+  const empty = { ticks: [], confirmed: [], dismissed: [], cancelMarked: [] };
+
+  const cases: [string, SubscriptionsToolState | undefined, string][] = [
+    ['nothing saved', undefined, 'guess'],
+    ['a guess only', { ...empty, guess: 40 }, 'ticks'],
+    ['ticks only', { ...empty, ticks: [{ serviceId: 'netflix', planId: 'standard' }] }, 'ticks'],
+  ];
+  it.each(cases)('with %s it starts on %s', async (_name, initial, step) => {
+    const tool = renderTool({ initial });
+    await ready(tool);
+    expect(tool.result.current.vm.step).toBe(step);
+  });
+
+  it('with a saved statement it starts on the findings; it does not move on when the state changes later', async () => {
+    const first = renderTool();
+    await ready(first);
+    await uploaded(first);
+    const tool = renderTool({ initial: first.result.current.store.state });
+    await ready(tool);
+    expect(tool.result.current.vm.step).toBe('findings');
+    act(() => tool.result.current.vm.goTo('guess'));
+    act(() => tool.result.current.vm.guess.set(40));
+    expect(tool.result.current.vm.step).toBe('guess'); // typing a guess did not carry the person on
+  });
+
+  it('does not start on a step that is not available (saved state that points past what exists)', async () => {
+    // A saved audit that is gone from the state when the tool is cleared: it falls back to the guess.
+    const first = renderTool();
+    await ready(first);
+    await uploaded(first);
+    act(() => first.result.current.vm.clearLocalData());
+    expect(first.result.current.vm.step).toBe('guess');
+  });
+});
+
+describe('reading a statement: overlapping and abandoned uploads', () => {
+  const deferred = <T,>() => {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => (resolve = r));
+    return { promise, resolve };
+  };
+  const answer = (items: readonly { label: string; amount: number }[]): StatementCategorizeResponse => ({
+    months: [], categorizedBy: 'rules', classes: ruleClasses(items as never),
+  });
+
+  it('a late answer to an earlier file is ignored: the newest file wins, whatever order they come back in', async () => {
+    const slow = deferred<StatementCategorizeResponse>();
+    let calls = 0;
+    const categorize = vi.fn(async (items: readonly { label: string; amount: number }[]) => (++calls === 1 ? slow.promise : answer(items)));
+    const tool = renderTool({ categorize: categorize as never });
+    await ready(tool);
+    act(() => tool.result.current.vm.statement.upload(sampleStatementFile())); // A: waits
+    await waitFor(() => expect(categorize).toHaveBeenCalledTimes(1));
+    act(() => tool.result.current.vm.statement.upload(csvFile(['2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99']))); // B: answers at once
+    await waitFor(() => expect(tool.result.current.vm.statement.status).toBe('done'));
+    expect(tool.result.current.vm.findings.active.map((f) => f.id)).toEqual(['netflix-com']);
+    const saved = tool.result.current.store.saves.length;
+
+    await act(async () => slow.resolve(answer(statementItemsSample))); // A comes back late
+    expect(tool.result.current.store.saves).toHaveLength(saved);
+    expect(tool.result.current.vm.findings.active.map((f) => f.id)).toEqual(['netflix-com']);
+    expect(tool.result.current.vm.statement.status).toBe('done');
+    expect(tool.result.current.vm.step).toBe('findings');
+  });
+
+  it('an earlier file that fails after a newer one was started does not show its error', async () => {
+    const slow = deferred<StatementCategorizeResponse>();
+    let calls = 0;
+    const categorize = vi.fn(async (items: readonly { label: string; amount: number }[]) => (++calls === 1 ? slow.promise : answer(items)));
+    const tool = renderTool({ categorize: categorize as never });
+    await ready(tool);
+    act(() => tool.result.current.vm.statement.upload(sampleStatementFile()));
+    await waitFor(() => expect(categorize).toHaveBeenCalledTimes(1));
+    act(() => tool.result.current.vm.statement.upload(csvFile(['2026-10-07,NETFLIX.COM,-17.99', '2026-11-07,NETFLIX.COM,-17.99'])));
+    await waitFor(() => expect(tool.result.current.vm.statement.status).toBe('done'));
+    await act(async () => { slow.resolve(Promise.reject(new ApiError('Network error', 0)) as never); await Promise.resolve(); });
+    expect(tool.result.current.vm.statement).toMatchObject({ status: 'done', error: null });
+  });
+
+  it('leaving the page mid-upload saves nothing and updates nothing when the answer arrives', async () => {
+    const slow = deferred<StatementCategorizeResponse>();
+    const categorize = vi.fn(async () => slow.promise);
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const tool = renderTool({ categorize: categorize as never });
+    await ready(tool);
+    act(() => tool.result.current.vm.statement.upload(sampleStatementFile()));
+    await waitFor(() => expect(categorize).toHaveBeenCalledTimes(1));
+    expect(tool.result.current.vm.statement.status).toBe('reading');
+    tool.unmount();
+    await act(async () => slow.resolve(answer(statementItemsSample)));
+    expect(tool.result.current.store.saves).toEqual([]);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
   });
 });
 
@@ -551,7 +652,8 @@ describe('cancel plan', () => {
   it('nothing marked: no saving, no effect', async () => {
     const tool = renderTool();
     await ready(tool);
-    expect(tool.result.current.vm.plan).toMatchObject({ options: [], markedCount: 0, saving: null, effect: null, canAddAsMove: false, moveAdded: false });
+    expect(tool.result.current.vm.plan).toMatchObject({ options: [], markedCount: 0, saving: null, candidate: null, moveAdded: false });
+    expect(tool.result.current.cancel).toMatchObject({ effect: null, canAddAsMove: false });
   });
 
   it('marking sums what is marked: $17.99 + $11.99 = $29.98 a month, $359.76 a year', async () => {
@@ -621,8 +723,8 @@ describe('cancel plan', () => {
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    await waitFor(() => expect(tool.result.current.vm.plan.effect).toMatchObject({ status: 'ready' }));
-    const effect = tool.result.current.vm.plan.effect;
+    await waitFor(() => expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready' }));
+    const effect = tool.result.current.cancel.effect;
     if (effect?.status !== 'ready') throw new Error('not ready');
     expect(effect.data.source).toBe('rules');
     expect(effect.data.effect10y).toBeCloseTo(rulesEffectOf(), 6);
@@ -636,8 +738,8 @@ describe('cancel plan', () => {
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    await waitFor(() => expect(tool.result.current.vm.plan.effect).toMatchObject({ status: 'ready', data: { source: 'ai' } }));
-    const effect = tool.result.current.vm.plan.effect;
+    await waitFor(() => expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready', data: { source: 'ai' } }));
+    const effect = tool.result.current.cancel.effect;
     if (effect?.status !== 'ready') throw new Error('not ready');
     const inflation = areaRates(useAppStore.getState().profile).inflationAnnual!;
     expect(effect.data.effect10y).toBeCloseTo(20_000 / (1 + inflation) ** 10, 4);
@@ -648,7 +750,7 @@ describe('cancel plan', () => {
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    await waitFor(() => expect(tool.result.current.vm.plan.effect).toMatchObject({ status: 'ready' }));
+    await waitFor(() => expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready' }));
     const asked = route.calls.at(-1) as { scenarios: { id: string; patch: unknown }[] };
     expect(asked.scenarios).toEqual([{ id: CANCEL_MOVE_ID, patch: { spending: { subscriptions: 55.02 } } }]);
   });
@@ -657,10 +759,10 @@ describe('cancel plan', () => {
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    await waitFor(() => expect(tool.result.current.vm.plan.canAddAsMove).toBe(true));
-    const effect = tool.result.current.vm.plan.effect;
+    await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
+    const effect = tool.result.current.cancel.effect;
     if (effect?.status !== 'ready') throw new Error('not ready');
-    act(() => tool.result.current.vm.plan.addAsMove());
+    act(() => tool.result.current.cancel.addAsMove());
     const s = useAppStore.getState();
     expect(s.committedMove).toEqual({
       id: CANCEL_MOVE_ID, kind: 'cancelSubscriptions', level: 1, category: 'subscriptions',
@@ -679,8 +781,8 @@ describe('cancel plan', () => {
       await uploaded(tool);
       act(() => tool.result.current.vm.plan.markCancel('netflix-com-ca'));
       act(() => tool.result.current.vm.plan.markCancel('spotify-usa-ny'));
-      await waitFor(() => expect(tool.result.current.vm.plan.canAddAsMove).toBe(true));
-      act(() => tool.result.current.vm.plan.addAsMove());
+      await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
+      act(() => tool.result.current.cancel.addAsMove());
       expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 55.02 } });
       expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
       return tool;
@@ -690,8 +792,8 @@ describe('cancel plan', () => {
       const tool = await committed();
       act(() => tool.result.current.vm.apply.applyToProfile()); // the line goes $85 → $69.54
       expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: false, moveOutdated: true });
-      await waitFor(() => expect(tool.result.current.vm.plan.canAddAsMove).toBe(true));
-      act(() => tool.result.current.vm.plan.addAsMove());
+      await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
+      act(() => tool.result.current.cancel.addAsMove());
       // 69.54 − 29.98 = 39.56
       expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 39.56 } });
       expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
@@ -703,8 +805,8 @@ describe('cancel plan', () => {
       expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 54.97 });
       expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: false, moveOutdated: true });
       expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 55.02 } }); // still the old one
-      await waitFor(() => expect(tool.result.current.vm.plan.canAddAsMove).toBe(true));
-      act(() => tool.result.current.vm.plan.addAsMove());
+      await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
+      act(() => tool.result.current.cancel.addAsMove());
       expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 30.03 } }); // 85 − 54.97
       expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
     });
@@ -725,14 +827,28 @@ describe('cancel plan', () => {
     });
   });
 
+  it('the view-model alone never asks the forecast route, marks and all (the screen mounts the measurement)', async () => {
+    const route = mockForecastRoute();
+    const view = renderHook(() => {
+      const store = useMemoryStore();
+      return { vm: useSubscriptions(useAppStore((s) => s.profile), { catalogue: testCatalogue, store, track, downloadRenewals }), store };
+    });
+    await waitFor(() => expect(view.result.current.vm.status).toBe('ready'));
+    act(() => view.result.current.vm.ticks.toggle('netflix', 'standard'));
+    act(() => view.result.current.vm.plan.markCancel('tick:netflix'));
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+    expect(view.result.current.vm.plan.candidate).toMatchObject({ id: CANCEL_MOVE_ID, patch: { spending: { subscriptions: 67.01 } } }); // 85 − 17.99
+    expect(route.calls).toEqual([]);
+  });
+
   it('addAsMove does nothing while the forecast is still on its way', async () => {
     mockForecastRoute(() => new Promise(() => {})); // never answers
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    expect(tool.result.current.vm.plan.effect).toEqual({ status: 'loading' });
-    expect(tool.result.current.vm.plan.canAddAsMove).toBe(false);
-    act(() => tool.result.current.vm.plan.addAsMove());
+    expect(tool.result.current.cancel.effect).toEqual({ status: 'loading' });
+    expect(tool.result.current.cancel.canAddAsMove).toBe(false);
+    act(() => tool.result.current.cancel.addAsMove());
     expect(useAppStore.getState().committedMove).toBeNull();
   });
 
@@ -813,8 +929,8 @@ describe('events carry enums and counts only', () => {
       '2026-10-07,NETFLIX.COM # CA,-17.99', '2026-11-07,NETFLIX.COM # CA,-17.99',
     ]));
     act(() => tool.result.current.vm.plan.markCancel('netflix-com-ca'));
-    await waitFor(() => expect(tool.result.current.vm.plan.canAddAsMove).toBe(true));
-    act(() => tool.result.current.vm.plan.addAsMove());
+    await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
+    act(() => tool.result.current.cancel.addAsMove());
 
     const events = track.mock.calls.map(([e]) => e as ClientFunnelEvent);
     expect(events.map((e) => e.name)).toEqual([

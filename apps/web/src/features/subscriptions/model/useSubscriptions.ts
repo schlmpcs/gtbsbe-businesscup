@@ -3,27 +3,26 @@
 //   guess → ticks → reveal → statement → findings → plan
 //
 // Cold first: the guess, the ticks and the reveal need no profile, no game and no upload. A statement
-// is the upgrade; everything it finds stays in this browser (`store`). The cancel plan's 10-year
-// effect is not a new formula: the plan is one Next Move candidate, measured by the same forecast
-// (the AI bundle, else the rules) and ranked by the engine's `rankCandidates`, like S10.
+// is the upgrade; everything it finds stays in this browser (`store`). The cancel plan is one Next Move
+// candidate (`plan.candidate`); its 10-year number is measured by `useCancelResult`, which a screen
+// mounts only while something is marked, so this hook never asks the forecast route.
 //
 // Everything that comes from outside the feature is a parameter (`SubscriptionsDeps`): the catalogue
 // of known services (M4), the tool's slice of the local store (M2), the statement categorizer client
 // and the event sender. Wiring them is `./wiring.ts`.
-import { auditTotals, detectSubscriptions, rankCandidates, subsMinCharges, type MoveCandidate } from '@lifeguessr/engine';
+import { auditTotals, detectSubscriptions, subsMinCharges } from '@lifeguessr/engine';
 import {
   EVENT_COUNT_MAX, SERVICE_CATEGORIES,
-  type ClientFunnelEvent, type KnownService, type MissBucket, type Move, type Profile, type ServiceCategory,
+  type ClientFunnelEvent, type KnownService, type MissBucket, type Profile, type ServiceCategory,
   type StatementClass, type SubscriptionFinding,
 } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { answerDollars, forecastIsBusy, patchesEqual } from '@/features/forecast/model/forecastAnswer';
-import { useForecastBundle } from '@/features/forecast/model/useForecastBundle';
+import { patchesEqual } from '@/features/forecast/model/forecastAnswer';
 import { categorizeStatement } from '@/lib/api/statement';
 import { downloadRenewalsCalendar } from '@/lib/download';
 import { track as defaultTrack } from '@/lib/events';
 import { renewalsFromFindings } from '@/lib/ics';
-import { runEngine, toVMError } from '@/lib/model/errors';
+import { toVMError } from '@/lib/model/errors';
 import { useAppReady, useAppStore } from '@/state';
 import { getAnonId } from '@/state/anonId';
 import {
@@ -34,7 +33,7 @@ import { GUESS_PRESETS, SURVEY } from './constants';
 import { readStatementForAudit, toStatementError } from './readForAudit';
 import { emptyToolState, type SubscriptionsStore, type SubscriptionsToolState } from './state';
 import type {
-  ApplyVM, CancelEffectVM, FindingVM, FindingsVM, Loadable, PlanVM, RenewalsVM, RevealVM, StatementErrorVM,
+  ApplyVM, FindingVM, FindingsVM, PlanVM, RenewalsVM, RevealVM, StatementErrorVM,
   StatementVM, StepVM, SubscriptionsStep, SubscriptionsVM, TickGroupVM, TickPlanVM, TicksVM, DownloadOutcome,
 } from './types';
 
@@ -52,7 +51,6 @@ export type SubscriptionsDeps = {
 };
 
 const STEP_ORDER: readonly SubscriptionsStep[] = ['guess', 'ticks', 'reveal', 'statement', 'findings', 'plan'];
-const NO_CANDIDATES: MoveCandidate[] = [];
 
 const directionOf = (miss: MissBucket | null): RevealVM['direction'] =>
   miss === null ? null : miss === 'under0.5' || miss === '0.5to0.8' ? 'lower' : miss === '0.8to1.25' ? 'close' : 'higher';
@@ -76,7 +74,6 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const ready = useAppReady();
   const profileOrigin = useAppStore((s) => s.profileOrigin);
   const subscriptionsDetected = useAppStore((s) => s.subscriptionsDetected);
-  const commitMove = useAppStore((s) => s.commitMove);
   const committedMove = useAppStore((s) => s.committedMove);
   const applySubscriptionsAudit = useAppStore((s) => s.applySubscriptionsAudit);
 
@@ -359,39 +356,6 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     () => (savingMonthly === null ? null : cancelCandidate(profile, savingMonthly)),
     [profile, savingMonthly],
   );
-  const candidates = useMemo(() => (candidate ? [candidate] : NO_CANDIDATES), [candidate]);
-  const forecast = useForecastBundle(profile, candidates);
-
-  const measured: Loadable<{ move: Move | null; source: CancelEffectVM['source'] }> | null = useMemo(() => {
-    if (!candidate) return null;
-    if (forecast.status === 'error') return { status: 'error', error: forecast.error };
-    if (forecast.status === 'loading' || forecast.isStale) return { status: 'loading' };
-    const { answer, source } = forecast;
-    const asked = answer.candidates.filter((c) => c.id === candidate.id);
-    if (asked.length === 0) return { status: 'loading' }; // an answer for another set of candidates
-    return runEngine(() => {
-      // The same measurement as S10 (useNextMoves): the answer's own scenario minus its base, at month 120, today's dollars.
-      const dollars = answerDollars(answer, true);
-      const base = dollars(answer.bundle.base).in10y.mid;
-      const effectOf = (c: MoveCandidate) => {
-        const scenario = answer.bundle.scenarios[c.id];
-        if (!scenario) throw new RangeError(`the forecast has no scenario for ${c.id}`);
-        return dollars(scenario).in10y.mid - base;
-      };
-      const [ranked] = rankCandidates(answer.profile, asked, effectOf);
-      return { move: ranked ?? null, source };
-    });
-  }, [candidate, forecast]);
-
-  const effect: PlanVM['effect'] = useMemo(
-    () => (measured?.status === 'ready'
-      ? { status: 'ready', data: { effect10y: measured.data.move?.effect10y ?? 0, source: measured.data.source } }
-      : measured),
-    [measured],
-  );
-  const busy = forecastIsBusy(forecast);
-  const moveToAdd = measured?.status === 'ready' ? measured.data.move : null;
-
   const markCancel = useCallback(
     (id: string) => {
       const now = combineFindings(latest.current, catalogue);
@@ -403,12 +367,6 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   );
   const unmarkCancel = useCallback((id: string) => update((s) => ({ ...s, cancelMarked: without(s.cancelMarked, id) })), [update]);
 
-  const addAsMove = useCallback(() => {
-    if (!moveToAdd || busy) return;
-    commitMove(moveToAdd);
-    emit({ name: 'move_committed', props: { kind: moveToAdd.kind } });
-  }, [moveToAdd, busy, commitMove, emit]);
-
   const profileSubscriptions = profile.spending.subscriptions;
   // The committed move is a snapshot: its patch is absolute and was sized for the marks and the subscriptions
   // line of that moment. It is "added" only while the plan would commit the same patch today.
@@ -418,17 +376,15 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     options: findingsView.active.concat(findingsView.tickedOnly).filter((f) => f.counted),
     markedCount: marked.length,
     saving,
-    effect,
+    candidate,
     profileSubscriptions: { value: profileSubscriptions.value, isEstimate: profileSubscriptions.isEstimate },
     // Whole cents, so $29.98 marked against $29.98 held is covered.
     profileCovers: saving === null || Math.round(profileSubscriptions.value * 100) >= Math.round(saving.monthly * 100),
     isSampleProfile: profileOrigin === 'demo',
     markCancel,
     unmarkCancel,
-    canAddAsMove: moveToAdd !== null && !busy,
     moveAdded,
     moveOutdated: cancelPlanCommitted && !moveAdded,
-    addAsMove,
   };
 
   // ----- apply to the profile ---------------------------------------------------------------------

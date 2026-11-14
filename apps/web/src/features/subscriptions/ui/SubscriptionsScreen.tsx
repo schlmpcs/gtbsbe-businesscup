@@ -3,6 +3,7 @@
 // S21 Subscription audit (`/tools/subscriptions`): guess → ticks → reveal → statement → findings → plan.
 // Placeholder UI: tokens and copy only. All data and actions come from useSubscriptions(); nothing is
 // computed here. The designer's frames (docs/design/08-subscription-audit.md) replace it later.
+import type { ReactNode } from 'react';
 import { subscriptions as t } from '@/copy';
 import { PageHeader, Stack } from '@/ui-kit';
 import type { SubscriptionsVM } from '../model/types';
@@ -15,7 +16,11 @@ import { StepNav } from './StepNav';
 import { TickList } from './TickList';
 import { UploadStep } from './UploadStep';
 
-export function SubscriptionsScreen({ vm }: { vm: SubscriptionsVM }) {
+/**
+ * `planResults`: the measured part of the cancel plan (the 10-year number, add as move). It asks the
+ * forecast route, so the screen's owner builds it only while it is wanted; it is shown on the plan step.
+ */
+export function SubscriptionsScreen({ vm, planResults }: { vm: SubscriptionsVM; planResults?: ReactNode }) {
   return (
     <main className="mx-auto w-full max-w-(--container-2xl) px-lg py-xl">
       <Stack gap="xl">
@@ -44,7 +49,7 @@ export function SubscriptionsScreen({ vm }: { vm: SubscriptionsVM }) {
                 <UploadStep statement={vm.statement} />
               </Stack>
             )}
-            {vm.step === 'plan' && <CancelPlan plan={vm.plan} apply={vm.apply} renewals={vm.renewals} />}
+            {vm.step === 'plan' && <CancelPlan plan={vm.plan} apply={vm.apply} renewals={vm.renewals} results={planResults} />}
             <KeepNote hasLocalData={vm.hasLocalData} onClear={vm.clearLocalData} />
           </>
         )}

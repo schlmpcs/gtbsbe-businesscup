@@ -10,22 +10,21 @@ import { resetClientState } from '@/test/clientState';
 import { mockForecastRoute } from '@/test/forecastApi';
 import { csvFile, fakeCategorize, realisticCatalogue, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
 import type { KnownService } from '@lifeguessr/types';
-import { useSubscriptions } from './model/useSubscriptions';
-import { SubscriptionsScreen } from './ui/SubscriptionsScreen';
+import { SubscriptionsTool } from './SubscriptionsTool';
 
 const track = vi.fn();
 
 function Tool({ categorize = fakeCategorize(), catalogue = testCatalogue }: { categorize?: ReturnType<typeof fakeCategorize>; catalogue?: readonly KnownService[] }) {
   const store = useMemoryStore();
-  const profile = useAppStore((s) => s.profile);
-  const vm = useSubscriptions(profile, { catalogue, store, track, categorize, downloadRenewals: () => 'downloaded' });
-  return <SubscriptionsScreen vm={vm} />;
+  return <SubscriptionsTool deps={{ catalogue, store, track, categorize, downloadRenewals: () => 'downloaded' }} />;
 }
+
+let route: ReturnType<typeof mockForecastRoute>;
 
 beforeEach(() => {
   resetClientState();
   track.mockClear();
-  mockForecastRoute();
+  route = mockForecastRoute();
 });
 
 /** Guess $40 and tick Netflix (standard), Spotify and Planet Fitness: $17.99 + $11.99 + $24.99 = $54.97 a month. */
@@ -84,6 +83,50 @@ describe('SubscriptionsScreen: the cold path', () => {
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) })).toBeDisabled();
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.reveal) })).toBeDisabled();
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.guess) })).toHaveAttribute('aria-current', 'step');
+  });
+});
+
+describe('SubscriptionsScreen: no forecast request before there is something to measure', () => {
+  const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+
+  it('opening the page, guessing, ticking and opening an empty plan send nothing to the forecast route', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await settle();
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
+    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
+    expect(screen.getByText(t.plan.empty)).toBeInTheDocument();
+    await settle();
+    expect(route.calls).toEqual([]);
+  });
+
+  it('the first mark on the plan step asks once, for one scenario: the cancel plan', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
+    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
+    await settle();
+    expect(route.calls).toHaveLength(0);
+    await user.click(screen.getByRole('checkbox', { name: t.plan.mark('Spotify') }));
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    expect((route.calls[0] as { scenarios: { id: string }[] }).scenarios.map((x) => x.id)).toEqual(['cancelSubscriptions:audit']);
+    expect(await screen.findByText(t.plan.in10y)).toBeInTheDocument();
+  });
+
+  it('a mark that is saved but not on screen (another step) asks nothing', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
+    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
+    await user.click(screen.getByRole('checkbox', { name: t.plan.mark('Spotify') }));
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.ticks) }));
+    await user.click(screen.getByRole('checkbox', { name: 'Netflix' })); // the profile is the same; nothing new to measure
+    await settle();
+    expect(route.calls).toHaveLength(1);
   });
 });
 
