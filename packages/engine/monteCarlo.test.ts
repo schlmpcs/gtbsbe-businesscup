@@ -132,8 +132,8 @@ describe('monteCarlo', () => {
   });
 
   it.skipIf(process.env.CI_SLOW === '1')('1,000 paths, age 25 → 90 (66 years, 792 months each) in under 400 ms', () => {
-    // The issue's bound is 400 ms. Shared CI runners are slower and noisier than a laptop, so the test
-    // takes the fastest of 3 runs and allows 3 × 400 ms when CI is set; the PR reports the local time.
+    // The issue's bound: < 400 ms in Node on CI. The fastest of 3 runs is timed, so one noisy run on a
+    // shared runner does not fail the test; the PR reports the local time.
     const p = { ...demo.profile, age: { value: 25, isEstimate: false }, asOf: '2026-01' } as Profile;
     const s = settings({ paths: 1000 });
     monteCarlo(p, accountsDemo, demoScenario, { ...s, paths: 50 }, demo.area); // warm up the JIT
@@ -146,6 +146,6 @@ describe('monteCarlo', () => {
     }
     console.info(`monteCarlo: 1,000 paths × ${years} years, best of 3: ${best.toFixed(1)} ms`);
     expect(years).toBe(66);
-    expect(best).toBeLessThan(process.env.CI ? 3 * 400 : 400);
+    expect(best).toBeLessThan(400);
   });
 });
