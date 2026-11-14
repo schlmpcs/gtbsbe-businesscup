@@ -205,6 +205,11 @@ export type ParsedRowVM = {
 export type QuickSlidersVM = {
   status: Status;
   sliders: SpendingSliderVM[];
+  /**
+   * The statement months the measured values were averaged over ('YYYY-MM', oldest first); empty
+   * without an imported statement. When set, the sliders confirm imported numbers, not enter them.
+   */
+  statementMonths: string[];
   /** Share of a monthly surplus saved to retirement (decimal). */
   savings: SliderVM & { isEstimate: boolean };
   /** This month from the engine simulation (point values). */
@@ -290,6 +295,8 @@ export type StatementMonthVM = {
   total: Money;
   oneOffs: { label: string; amount: Money }[];
   detectedPay: Money | null;
+  /** The month counts toward the averages; false when the statement covers only part of it. */
+  averaged: boolean;
 };
 
 /** Why a statement file couldn't be used (read in the browser, before anything was sent). */
@@ -311,6 +318,33 @@ export type StatementReadVM = {
   categorizedBy: 'ai' | 'rules' | 'mixed';
 };
 
+/** What the user said about one follow-up question; null = not answered yet. */
+export type StatementAnswerVM =
+  | { kind: 'category'; category: CostCategory }
+  | { kind: 'amount'; monthly: Money }
+  | { kind: 'skipped' };
+
+/**
+ * One follow-up question on the review (JF6): something the statement can't settle by itself.
+ * Found and priced in code; only `question` may come from the model.
+ */
+export type StatementQuestionVM = {
+  id: string;
+  /** merchant: what is this store or payment mostly? cash: what does the cash pay for? missing: a category with nothing in it. */
+  kind: 'merchant' | 'cash' | 'missing';
+  /** The model's wording, or null: the screen then uses its own template for the kind. */
+  question: string | null;
+  /** merchant: the label in readable form (masks dropped, a person shown as "someone"); null otherwise. */
+  merchant: string | null;
+  /** missing: the category the statement shows none of; null otherwise. */
+  category: CostCategory | null;
+  /** merchant/cash: the money that goes through it per month (0 for missing). */
+  monthly: Money;
+  /** merchant/cash: the categories the answer can pick (debt payments are never assigned). Empty for missing. */
+  options: CostCategory[];
+  answer: StatementAnswerVM | null;
+};
+
 /** S9 Statement upload (screen state; parsing and categorizing are T6/T7 in features/upload). */
 export type StatementUploadVM = {
   /** 'reading': a file is being parsed in the browser and categorized. */
@@ -318,8 +352,17 @@ export type StatementUploadVM = {
   error: StatementUploadError | null;
   /** The file behind `pending` (null before a file was read, and after apply or discard). */
   lastRead: StatementReadVM | null;
-  /** Months waiting for the user to confirm. */
+  /** Months waiting for the user to confirm, with the answers to the follow-ups applied. */
   pending: StatementMonthVM[];
+  /** A few questions about what the statement can't settle, during review. Each can be skipped. */
+  questions: StatementQuestionVM[];
+  /** merchant/cash: that money is mostly this category (its lines are re-sorted, the months summed again). */
+  answerCategory: (id: string, category: CostCategory) => void;
+  /** missing: about this much a month (≥ 0), paid outside the statement; it becomes that category's value. */
+  answerAmount: (id: string, monthly: Money) => void;
+  skipQuestion: (id: string) => void;
+  /** Bounds for a typed monthly amount. */
+  amountBounds: InputBounds;
   /** Months already merged into the profile ('YYYY-MM', oldest first). */
   history: string[];
   /** Drift flags on Today need ≥ 3 months. */

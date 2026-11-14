@@ -13,7 +13,7 @@ export const tools = {
       checkin: { question: 'Am I on track this month?', line: 'Your month against your usual one.' },
       subscriptions: { question: 'What am I still paying for?', line: 'Find the subscriptions you forgot.' },
       overpaying: { question: 'Am I overpaying?', line: 'Your bills against people near you.' },
-      exact: { question: 'Are my numbers right?', line: 'Swap our estimates for your statement.' },
+      exact: { question: 'Are my numbers right?', line: 'Import a bank statement: about a minute, nothing to type.' },
       bills: { question: 'What is due this month?', line: 'Every bill on one calendar, on the day it is due.' },
       together: { question: 'How do we split it?', line: 'Plan with your partner by link: a fair split and us in 10 years.' },
     },

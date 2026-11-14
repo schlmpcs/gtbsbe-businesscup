@@ -29,7 +29,13 @@ export {
 } from './moves';
 export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordCheck, type AffordOptions } from './afford';
 export { monthEnd, usualMonthSpend, type CurrentMonth, type UsualMonth } from './month';
-export { statementTotals, merchantKey, type ClassifiedStatementItem } from './statement';
+export {
+  statementTotals, merchantKey, oneOffFlags, isFullStatementMonth, averagedStatementMonths, statementAverages,
+  type ClassifiedStatementItem, type StatementAverages,
+} from './statement';
+export {
+  statementFollowUps, applyFollowUpAnswers, followUpKey, FOLLOW_UP_CATEGORIES, type FollowUpCategoryAnswers,
+} from './followUps';
 export { detectSubscriptions, auditTotals, type DetectSubscriptionsOptions } from './subscriptions';
 export {
   sceneOf, carSprite, takeoutSprite, CAR_PRICE_BANDS, TAKEOUT_BUCKETS, CLUE_COST_CATEGORIES, LAYOUT_COST_CATEGORY,
@@ -37,8 +43,8 @@ export {
   type DecorRoom, type SpriteId,
 } from './scene';
 export {
-  loan, compareLoans, payoffOrder, payoffPlan, comparePayoff, extraToFinishBy, amortize, amortizedPayment, MAX_SIMULATION_MONTHS,
-  type Amortization, type LoanOptions,
+  loan, compareLoans, payoffOrder, payoffPlan, comparePayoff, extraToFinishBy, suggestedPayoffExtra, amortize, amortizedPayment,
+  MAX_SIMULATION_MONTHS, type Amortization, type LoanOptions, type PayoffExtraSuggestion,
 } from './loan/index';
 export { goalStatus, extraSavingToReach, movesTowardGoal, goalReachMonth, GOAL_REACH_SLACK_YEARS, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';

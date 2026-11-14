@@ -3,7 +3,9 @@ import type { z } from 'zod';
 import {
   type AREA_TIERS, type CATEGORIZED_BY, type CLUE_IDS, COST_CATEGORIES, type DEBT_KINDS, type KID_AGES,
   MAX_STATEMENT_ITEMS, type MOVE_KINDS, type PRO_ERROR_CODES, type PRO_PLANS, PRO_PRICES, type PRO_SOURCES,
-  type SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
+  type SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES, type STATEMENT_FOLLOW_UP_KINDS, MAX_STATEMENT_FOLLOW_UPS,
+  StatementFollowUpSchema, StatementLineClassSchema,
+  type StatementFollowUp, type StatementFollowUpKind, type StatementLineClass,
   AnonIdSchema, SessionRequestSchema, SessionResponseSchema, type SessionStateSchema,
   StatementCategorizeRequestSchema, StatementCategorizeResponseSchema,
   type StatementCategorizeRequest, type StatementCategorizeResponse, type StatementClass,
@@ -62,6 +64,10 @@ describe('schemas match the contracts', () => {
     expectTypeOf<z.infer<typeof StatementCategorizeRequestSchema>>().toExtend<StatementCategorizeRequest>();
     expectTypeOf<StatementCategorizeRequest>().toExtend<z.input<typeof StatementCategorizeRequestSchema>>();
     expectTypeOf<z.infer<typeof StatementCategorizeResponseSchema>>().toExtend<StatementCategorizeResponse>();
+    expectTypeOf<z.infer<typeof StatementFollowUpSchema>>().toExtend<StatementFollowUp>();
+    expectTypeOf<StatementFollowUp>().toExtend<z.input<typeof StatementFollowUpSchema>>();
+    expectTypeOf<z.infer<typeof StatementLineClassSchema>>().toExtend<StatementLineClass>();
+    expectTypeOf<StatementLineClass>().toExtend<z.input<typeof StatementLineClassSchema>>();
     expectTypeOf<z.infer<typeof SessionStateSchema>>().toExtend<SessionState>();
     expectTypeOf<SessionState>().toExtend<z.input<typeof SessionStateSchema>>();
   });
@@ -81,6 +87,7 @@ describe('schemas match the contracts', () => {
     expectTypeOf<ProErrorCode>().toEqualTypeOf<(typeof PRO_ERROR_CODES)[number]>();
     expectTypeOf<StatementClass>().toEqualTypeOf<(typeof STATEMENT_CLASSES)[number]>();
     expectTypeOf<StatementCategorizeResponse['categorizedBy']>().toEqualTypeOf<(typeof CATEGORIZED_BY)[number]>();
+    expectTypeOf<StatementFollowUpKind>().toEqualTypeOf<(typeof STATEMENT_FOLLOW_UP_KINDS)[number]>();
     expectTypeOf<SessionErrorCode>().toEqualTypeOf<(typeof SESSION_ERROR_CODES)[number]>();
     expect(new Set(COST_CATEGORIES).size).toBe(COST_CATEGORIES.length);
     expect(new Set(STATEMENT_CLASSES).size).toBe(STATEMENT_CLASSES.length);
@@ -167,6 +174,31 @@ describe('statement contracts', () => {
     const month = { month: '2026-02', totals, oneOffs: [], detectedPay: 4_800 };
     expect(StatementCategorizeResponseSchema.safeParse({ ok: true, months: [month], categorizedBy: 'rules' }).success).toBe(true);
     expect(StatementCategorizeResponseSchema.safeParse({ ok: true, months: [month], categorizedBy: 'llm' }).success).toBe(false);
+  });
+
+  it('knows how far into its first and last month a statement goes', () => {
+    const totals = Object.fromEntries(COST_CATEGORIES.map((c) => [c, 0]));
+    const month = { month: '2026-02', totals, oneOffs: [] };
+    expect(CategoryTotalsSchema.safeParse({ ...month, firstDay: 17, lastDay: 28 }).success).toBe(true);
+    expect(CategoryTotalsSchema.safeParse({ ...month, firstDay: 20, lastDay: 12 }).success).toBe(false);
+    expect(CategoryTotalsSchema.safeParse({ ...month, firstDay: 30 }).success).toBe(false); // February has no 30th
+  });
+
+  it('carries a few follow-up questions, each naming what it re-sorts', () => {
+    const merchant = { id: 'merchant:TARGET DALLAS TX', kind: 'merchant', key: 'TARGET DALLAS TX', label: 'TARGET # DALLAS TX', monthly: 60.28 };
+    const missing = { id: 'missing:groceries', kind: 'missing', key: 'groceries', category: 'groceries', monthly: 0 };
+    expect(StatementFollowUpSchema.safeParse(merchant).success).toBe(true);
+    expect(StatementFollowUpSchema.safeParse({ ...merchant, question: 'What do you mostly buy at Target?' }).success).toBe(true);
+    expect(StatementFollowUpSchema.safeParse(missing).success).toBe(true);
+    expect(StatementFollowUpSchema.safeParse({ ...missing, category: undefined }).success).toBe(false);
+    expect(StatementFollowUpSchema.safeParse({ ...merchant, category: 'groceries' }).success).toBe(false);
+    expect(StatementFollowUpSchema.safeParse({ ...merchant, monthly: -1 }).success).toBe(false);
+    expect(StatementFollowUpSchema.safeParse({ ...merchant, question: 'x'.repeat(161) }).success).toBe(false);
+    const reply = (followUps: unknown[]) => ({ ok: true, months: [], categorizedBy: 'rules', followUps });
+    expect(StatementCategorizeResponseSchema.safeParse(reply([merchant, missing])).success).toBe(true);
+    expect(StatementCategorizeResponseSchema.safeParse(reply(Array.from({ length: MAX_STATEMENT_FOLLOW_UPS + 1 }, () => merchant))).success).toBe(false);
+    expect(StatementLineClassSchema.safeParse({ cls: 'pay', oneOffHint: false }).success).toBe(true);
+    expect(StatementLineClassSchema.safeParse({ cls: 'salary', oneOffHint: false }).success).toBe(false);
   });
 });
 

@@ -6,9 +6,6 @@ import * as engine from './index';
 const stubs: [name: keyof typeof engine, task: string][] = [
   ['plan', 'MP3'],
   ['monteCarlo', 'MP5'],
-  ['accountsToProfile', 'MP8'],
-  ['profileToAccounts', 'MP8'],
-  ['netWorthSummary', 'MP8'],
   ['budgetRows', 'MP9'],
   ['budgetRowsForYear', 'MP9'],
   ['cashFlowSummary', 'MP9'],

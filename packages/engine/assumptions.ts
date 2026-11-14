@@ -375,6 +375,45 @@ export const oneOffOutlierMultiple = {
   assumption: true,
 } satisfies Assumption<number>;
 
+// ----- statements (JF6): monthly averages and follow-up questions ------------------------------
+
+/**
+ * A statement month counts toward the monthly averages only when the statement covers it nearly in
+ * full: its first line no later than this many days after the 1st, and its last line no earlier than
+ * this many days before the month's end. An export that runs to Nov 12, or starts on Aug 17, holds
+ * only part of that month, and averaging it in would pull every category (and pay) down.
+ */
+export const statementFullMonthSlackDays = {
+  value: 7,
+  assumption: true,
+  note: 'A week: a checking account almost always has a line (a bill, a card swipe, pay) within any week.',
+} satisfies Assumption<number>;
+
+/**
+ * Categories every household pays for. A statement with none of them in any full month is taken to
+ * be missing them (paid from another account or card), not to prove they cost $0: the profile keeps
+ * its value for them and S9 asks instead.
+ */
+export const statementEssentialCategories = {
+  value: ['rentUtilities', 'groceries'] as const satisfies readonly CostCategory[],
+  assumption: true,
+  note: 'Housing and food. Childcare, a car or subscriptions are often truly $0, so their absence is believed.',
+} satisfies Assumption<readonly CostCategory[]>;
+
+/** Smallest monthly amount at one unclear merchant (or in cash) worth a follow-up question on S9. */
+export const statementFollowUpMinMonthly = {
+  value: 20 as Money,
+  assumption: true,
+  note: 'Below about $20 a month, re-sorting a merchant moves no forecast number a user would notice.',
+} satisfies Assumption<Money>;
+
+/** The JF6 assumptions, spread into `assumptions` below. */
+export const statementAssumptions = {
+  statementFullMonthSlackDays,
+  statementEssentialCategories,
+  statementFollowUpMinMonthly,
+} as const;
+
 // ----- Y15: AI forecast sanity envelope (anchors.ts) -------------------------------------------
 
 /** How far an AI forecast may stray from the rules forecast before it is rejected. */
@@ -683,6 +722,7 @@ export const assumptions = {
   oneOffHintMinAmount,
   oneOffOutlierMinAmount,
   oneOffOutlierMultiple,
+  ...statementAssumptions,
   ...subscriptionAssumptions,
   ...subscriptionAuditAssumptions,
   ...workTimeCushionAssumptions,
@@ -859,3 +899,27 @@ export const planEventDefaults = {
 }>;
 
 // ----- end MP4 --------------------------------------------------------------------------------
+// MP8 ---------------------------------------------------------------------------------------------
+
+/**
+ * Term used to estimate a loan's monthly minimum (`amortizedPayment` of today's balance) when an
+ * account has none (accounts → profile, MP8). Cards use `cardMinPayment` instead. Auto and personal:
+ * the typical terms in `loanTermsTypical`. Student: the federal Standard Repayment Plan (10 years).
+ * Mortgage: the 30-year fixed. BNPL: pay-in-4 (four payments two weeks apart, six weeks), rounded up
+ * to 2 months. A loan partway through has less time left, so this can understate the real payment;
+ * the result is always tagged estimate and editable.
+ */
+export const debtTermMonthsDefault = {
+  value: {
+    auto: loanTermsTypical.value.auto.termMonths,
+    student: 120,
+    personal: loanTermsTypical.value.personal.termMonths,
+    bnpl: 2,
+    mortgage: 360,
+  },
+  assumption: true,
+  note:
+    'auto, personal: loanTermsTypical (Fed G.19 quote terms). student: Standard Repayment Plan, 10 years ' +
+    '(studentaid.gov). mortgage: 30-year fixed (Freddie Mac PMMS benchmark). bnpl: pay-in-4 over 6 weeks. ' +
+    'Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<Record<'auto' | 'student' | 'personal' | 'bnpl' | 'mortgage', number>>;
