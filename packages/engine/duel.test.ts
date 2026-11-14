@@ -7,7 +7,7 @@ import type { CostBreakdown, CostCategory, Source } from '@lifeguessr/types';
 import { clueCost, clueFloor, duelMinGap, guessMaxPoints } from './assumptions';
 import { costOfLife } from './cost';
 import {
-  DUEL_ROUND_COUNT, dailyDuelPairs, duelBlindSpot, duelCategoryLines, duelDifference, duelGap, duelMultiplier,
+  DUEL_ROUND_COUNT, dailyDuelPairs, duelBlindSpot, duelCategoryLines, duelDifference, duelGap, duelMultiplier, duelRoundPoints,
   scoreDuelPick, type DuelCandidate,
 } from './duel';
 
@@ -121,6 +121,7 @@ describe('scoreDuelPick', () => {
     expect(scoreDuelPick({ A, B }, 'B', 3).points).toBe(700);
     expect(scoreDuelPick({ A, B }, 'B', 9).points).toBe(500);
     expect(scoreDuelPick({ A, B }, 'A', 0)).toMatchObject({ correct: false, points: 0 });
+    expect([0, 1, 2, 5, 6].map(duelRoundPoints)).toEqual([1000, 900, 800, 500, 500]);
     expect(duelMultiplier(-2)).toBe(1);
     expect(duelMultiplier(Number.NaN)).toBe(1);
   });

@@ -131,6 +131,11 @@ export function duelMultiplier(hints: number): number {
   return Math.max(clueFloor.value, 1 - clueCost.value * n);
 }
 
+/** Points a right pick scores after `hints` hints: guessMaxPoints × duelMultiplier, rounded. */
+export function duelRoundPoints(hints: number): number {
+  return Math.round(guessMaxPoints.value * duelMultiplier(hints));
+}
+
 /** The costlier life of a pair (null when the totals are equal) and how much more it costs a month. */
 export function duelDifference(totals: Record<DuelLetter, Money>): { costlier: DuelLetter | null; amount: Money } {
   if (totals.A === totals.B) return { costlier: null, amount: 0 };
@@ -195,7 +200,7 @@ export function scoreDuelPick(
   return {
     correct,
     costlier,
-    points: correct ? Math.round(maxPoints * multiplier) : 0,
+    points: correct ? duelRoundPoints(hintsUsed) : 0,
     multiplier,
     maxPoints,
     totals,
