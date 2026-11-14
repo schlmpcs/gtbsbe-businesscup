@@ -127,7 +127,7 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   const chart = page.getByRole('figure', { name: forecast.future.chartTitle });
   await expect(chart.locator('.recharts-line-curve').first()).toBeVisible();
   await expect(chart.locator('.recharts-area-area').first()).toBeVisible();
-  await expect(page.getByTestId('in10y').getByText(/^Likely between \$[\d,]+ and \$[\d,]+$/)).toBeVisible();
+  await expect(page.getByTestId('in10y').getByText(/^Likely between −?\$[\d,]+ and −?\$[\d,]+$/)).toBeVisible();
   await expect(page.getByTestId('moves').getByRole('article').first()).toBeVisible();
 
   // ----- 6. Upload the sample statement (S9): estimates become measured, the range tightens -----
