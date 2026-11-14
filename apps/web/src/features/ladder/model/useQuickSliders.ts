@@ -85,6 +85,7 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
   );
 
   const month = useMemo(() => thisMonth(profile), [profile]);
+  const monthlyCost = month.spending + month.debtPayments;
   const in10y = useMemo(() => displayForecast(profile).in10y, [profile]);
 
   const parse = useParseConfirm('life', (patch: ProfilePatch) => applyUserPatch(patch), {
@@ -107,8 +108,9 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
       debtPayments: month.debtPayments,
       surplus: month.surplus,
     },
-    monthlyCost: month.spending + month.debtPayments,
+    monthlyCost,
     selfGuess,
+    guessGap: selfGuess === null ? null : monthlyCost - selfGuess,
     in10y,
     setSpending,
     setSavingsShare,

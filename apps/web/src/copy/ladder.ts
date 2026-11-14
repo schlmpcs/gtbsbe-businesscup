@@ -27,25 +27,26 @@ const kidAges: Record<KidAge, string> = {
   schoolAge: 'school-age kid',
 };
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 export const ladder = {
+  /** Screen titles (also each rung's h1, as in the Figma frames). */
   screens: {
-    S5: 'Guess yourself',
-    S6: 'Closest life',
-    S7: 'Quick sliders',
-    S8: 'Balance sheet',
+    S5: 'Now price your own life',
+    S6: 'Which life looks like yours?',
+    S7: 'Make it yours',
+    S8: 'Six quick numbers',
   },
 
   /** Shared frame of every rung: progress, the 10-year number and its range band, the CTA. */
   shell: {
     intro: {
-      S5: 'Before we show you anything, guess what your own month costs.',
-      S6: 'Start from the life closest to yours. You will make it exact on the next steps.',
-      S7: 'Move the sliders to your real numbers. Your month and your 10-year number update as you go.',
-      S8: 'Six quick answers about what you have and what you owe. Skip any you don’t know; we keep an estimate.',
-      S9: 'Make it exact with a bank statement. Statement months replace your estimates with what you really spent.',
+      S5: 'Rent, food, car, fun: everything in a normal month. Gut feeling, nothing to look up.',
+      S6: 'Pick one as your starting point. You can change every number next.',
+      S7: 'Move the sliders to your real numbers. Untouched numbers stay marked as an estimate.',
+      S8: 'Skip any. We’ll use a typical amount and mark it as an estimate.',
+      S9: 'Add a bank statement and we swap our guesses for your real numbers.',
     },
+    step: (n: number, total: number) => `Step ${n} of ${total}`,
+    optional: 'Optional',
     progressTitle: 'Your forecast so far',
     stepsLabel: 'Steps to your forecast',
     rungs: {
@@ -74,9 +75,12 @@ export const ladder = {
 
   guess: {
     sliderLabel: 'What does your life cost a month?',
+    aMonth: 'a month',
     sliderHint: 'Rent, car, childcare, food, subscriptions, debt payments and everything else.',
-    bridge: (low: number, played: number) =>
-      `You guessed low on ${low} of ${plural(played, 'home', 'homes')} today. Now guess your own month.`,
+    bridgeLabel: 'Your guesses in today’s game',
+    bridgeOf: (n: number, played: number) => `${n} of ${played}`,
+    bridgeLow: (played: number) => `${played === 1 ? 'home' : 'homes'} you priced too low today`,
+    bridgeHigh: (played: number) => `${played === 1 ? 'home' : 'homes'} you priced too high today`,
     bridgeNone: 'Same slider as the game: one guess, no peeking.',
     submit: 'Lock in my guess',
     update: 'Update my guess',
@@ -102,7 +106,7 @@ export const ladder = {
     fromToday: 'From today’s game',
     sample: 'Sample life',
     nearest: 'Closest to your guess',
-    chosen: 'Your starting point',
+    chosen: 'That’s me',
     household: (adults: 1 | 2, kids: readonly KidAge[], bedrooms: number) => {
       const people = adults === 1 ? '1 adult' : '2 adults';
       const kidText = kids.length === 0 ? 'no kids' : kids.map((k) => kidAges[k]).join(', ');
@@ -111,7 +115,7 @@ export const ladder = {
     },
     car: (price: string) => `Car worth ${price}`,
     noCar: 'No car',
-    monthlyLabel: 'Typical month',
+    perMonth: (amount: string) => `≈ ${amount} a month`,
     monthlyRange: (low: string, high: string) => `Range ${low} to ${high}`,
     costsToggle: 'See the costs and sources',
     costsLabel: (metro: string) => `Monthly costs for the ${metro} life`,
@@ -123,6 +127,9 @@ export const ladder = {
 
   sliders: {
     monthTitle: 'Your month',
+    moreThanGuessed: (amount: string) => `+${amount} more than you guessed`,
+    lessThanGuessed: (amount: string) => `${amount} less than you guessed`,
+    breakdownLabel: 'This month by category',
     takeHome: 'Take-home pay',
     spending: 'Spending',
     debtPayments: 'Debt payments',
@@ -179,19 +186,20 @@ export const ladder = {
   balance: {
     fieldsTitle: 'About you',
     fields: {
-      age: 'Age',
-      takeHomePay: 'Take-home pay per month',
-      cash: 'Cash (checking and savings)',
-      retirement: 'Retirement savings (401k, IRA)',
+      age: 'Your age',
+      takeHomePay: 'Take-home pay',
+      cash: 'Cash',
+      retirement: 'Retirement',
     },
     hints: {
-      age: 'In years.',
-      takeHomePay: 'After tax and payroll retirement contributions.',
-      cash: 'Today’s balance. Negative if you’re overdrawn.',
-      retirement: 'Today’s total balance.',
+      age: 'in years',
+      takeHomePay: 'per month, after tax and payroll retirement contributions',
+      cash: 'checking + savings today; negative if overdrawn',
+      retirement: '401k, IRA: today’s total',
     },
-    estimatedHint: 'We estimated this. Type yours to make it exact.',
-    skip: 'Use our estimate',
+    estimatedHint: 'typical amount · type yours to make it exact',
+    estimateSticker: 'Estimate',
+    skip: 'Skip',
     skipLabel: (field: string) => `Use our estimate for ${field.toLowerCase()}`,
     yearsSuffix: 'years',
     perMonthSuffix: '/mo',
@@ -219,10 +227,14 @@ export const ladder = {
     debtLoadZones: { low: 'Comfortable', medium: 'Stretched', high: 'Risky' },
     netWorthLabel: 'Net worth today',
     netWorthHint: 'Cash + retirement − debts.',
+    scoreLabel: 'Your balance sheet today',
+    netWorthScore: 'net worth today (cash + retirement − debts)',
+    debtLoadScore: 'of take-home pay goes to debt payments',
   },
 
   upload: {
-    pickerTitle: 'Your statement',
+    pickerTitle: 'Add a bank CSV',
+    pickerSub: 'A CSV export from your bank’s website. We read the columns for you.',
     pickerLabel: 'Bank statement (CSV)',
     pickerHint: 'A CSV export from your bank. It is read on this device.',
     pickerUnavailable:
@@ -233,7 +245,8 @@ export const ladder = {
     },
     dismiss: 'Dismiss',
     bank: {
-      title: 'Or connect your bank app',
+      or: 'or',
+      title: 'Connect your bank app',
       note: 'Read-only, through a secure partner: we never see your password and can’t move money. Not switched on in this build yet; use a CSV export for now.',
       button: 'Connect bank',
       soon: 'Coming soon',
@@ -248,6 +261,9 @@ export const ladder = {
     applied: 'Done. Your spending categories now use your statement averages.',
     history: (months: readonly string[]) => `Months in your profile: ${months.map(monthName).join(', ')}.`,
     driftReady: 'You have 3 or more months, so Today can flag categories drifting from your average.',
+    scoreLabel: 'Your statement so far',
+    monthsScore: (n: number) => (n === 1 ? 'month in your profile' : 'months in your profile'),
+    categoriesScore: (n: number) => (n === 1 ? 'category from your statements' : 'categories from your statements'),
     driftNotYet: 'Today can flag categories drifting from your average once you have 3 months.',
     keep: {
       title: 'What we keep',

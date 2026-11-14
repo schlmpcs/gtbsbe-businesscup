@@ -1,7 +1,7 @@
 'use client';
 
 import { afford as t } from '@/copy';
-import { Button, Card, cx, formatMoney, formatRate, Row, Stack } from '@/ui-kit';
+import { Button, cx, formatMoney, formatRate, Row, Stack } from '@/ui-kit';
 import { useId } from 'react';
 import type { ParseConfirmVM, Purchase, VMError } from '../model/types';
 
@@ -71,61 +71,57 @@ export function PurchaseParse({ parse }: { parse: ParseConfirmVM<Purchase> }) {
   const inputId = useId();
   const busy = parse.status === 'parsing';
   return (
-    <Card title={t.parse.title} tone="muted">
-      <Stack gap="md">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            parse.submit();
-          }}
-          className="flex flex-col gap-sm"
-        >
-          <label htmlFor={inputId} className="text-sm font-medium">
-            {t.parse.label}
-          </label>
-          <textarea
-            id={inputId}
-            name="purchaseText"
-            rows={2}
-            value={parse.text}
-            onChange={(e) => parse.setText(e.target.value)}
-            placeholder={t.parse.placeholder}
-            className="w-full resize-y rounded-md border border-border bg-bg px-md py-sm text-base"
-          />
-          <Row>
-            <Button type="submit" variant="secondary" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
-              {busy ? t.parse.parsing : t.parse.submit}
-            </Button>
-          </Row>
-        </form>
+    <Stack gap="md">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          parse.submit();
+        }}
+        className="flex flex-col gap-sm rounded-lg bg-surface-strong p-md sm:flex-row sm:items-center sm:p-lg"
+      >
+        <label htmlFor={inputId} className="sr-only">
+          {t.parse.label}
+        </label>
+        <input
+          id={inputId}
+          type="text"
+          name="purchaseText"
+          value={parse.text}
+          onChange={(e) => parse.setText(e.target.value)}
+          placeholder={t.parse.placeholder}
+          className="min-w-0 flex-1 rounded-md bg-transparent px-sm py-sm text-xl placeholder:text-text-muted sm:text-2xl"
+        />
+        <Button type="submit" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
+          {busy ? t.parse.parsing : t.parse.submit}
+        </Button>
+      </form>
 
-        <div aria-live="polite">
-          {parse.status === 'confirming' && parse.parsed && (
-            <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-md border border-border bg-bg p-lg">
-              <h3 className="text-base font-semibold">{t.parse.confirmTitle}</h3>
-              <p className="text-xs text-text-muted">{t.parse.confirmNote}</p>
-              <ParsedPurchase purchase={parse.parsed} inferred={parse.inferred} />
-              {parse.inferred.length > 0 && <p className="text-xs text-text-muted">{t.parse.inferredNote}</p>}
-              <Row>
-                <Button onClick={parse.confirm}>{t.parse.confirm}</Button>
-                <Button variant="ghost" onClick={parse.cancel}>
-                  {t.parse.cancel}
-                </Button>
-              </Row>
-            </section>
-          )}
-          {parse.status === 'error' && (
-            <div role="alert" className="flex flex-col gap-sm rounded-md border border-border bg-bg p-lg">
-              <p className="text-sm">{errorText(parse.error)}</p>
-              <Row>
-                <Button variant="ghost" size="sm" onClick={parse.cancel}>
-                  {t.parse.useForm}
-                </Button>
-              </Row>
-            </div>
-          )}
-        </div>
-      </Stack>
-    </Card>
+      <div aria-live="polite">
+        {parse.status === 'confirming' && parse.parsed && (
+          <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg border-2 border-border bg-surface p-lg">
+            <h3 className="text-base font-bold">{t.parse.confirmTitle}</h3>
+            <p className="text-xs text-text-muted">{t.parse.confirmNote}</p>
+            <ParsedPurchase purchase={parse.parsed} inferred={parse.inferred} />
+            {parse.inferred.length > 0 && <p className="text-xs text-text-muted">{t.parse.inferredNote}</p>}
+            <Row>
+              <Button onClick={parse.confirm}>{t.parse.confirm}</Button>
+              <Button variant="ghost" onClick={parse.cancel}>
+                {t.parse.cancel}
+              </Button>
+            </Row>
+          </section>
+        )}
+        {parse.status === 'error' && (
+          <div role="alert" className="flex flex-col gap-sm rounded-lg border-2 border-border bg-surface p-lg">
+            <p className="text-sm">{errorText(parse.error)}</p>
+            <Row>
+              <Button variant="ghost" size="sm" onClick={parse.cancel}>
+                {t.parse.useForm}
+              </Button>
+            </Row>
+          </div>
+        )}
+      </div>
+    </Stack>
   );
 }

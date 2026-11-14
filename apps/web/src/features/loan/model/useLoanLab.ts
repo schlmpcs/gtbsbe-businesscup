@@ -1,7 +1,7 @@
 // S12 Loan Lab: compare up to 3 offers (engine compareLoans), the debt-load gauge, and an
 // extra-payment slider on the selected offer (engine loan). Starts from the fixture offers.
-import { compareLoans, loan } from '@lifeguessr/engine';
-import { LoanInputSchema, type LoanInput, type Money } from '@lifeguessr/types';
+import { compareLoans, loan, payoffOrder } from '@lifeguessr/engine';
+import { LoanInputSchema, type Debt, type LoanInput, type Money } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { loanOffersSample } from '@/fixtures';
 import { runEngine } from '@/lib/model/errors';
@@ -9,7 +9,7 @@ import { debtLoadGauge } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { useAppReady, useAppStore } from '@/state';
-import type { LoanLabVM, LoanOfferVM } from './types';
+import type { LoanLabVM, LoanOfferVM, PayoffPlanVM } from './types';
 
 export const MAX_OFFERS = 3;
 /** Extra-payment slider: $0 to max(EXTRA_MAX_FLOOR, the selected offer's monthly payment), $25 steps. */
@@ -17,6 +17,8 @@ export const EXTRA_MAX_FLOOR: Money = 500;
 export const EXTRA_STEP: Money = 25;
 /** End of the debt-load dial: well past the red threshold (0.36) so both zones read clearly. */
 export const DEBT_LOAD_GAUGE_MAX = 0.6;
+/** Id of the selected offer when it is added to the payoff order as a new debt. */
+export const NEW_LOAN_DEBT_ID = 'new-loan';
 
 type Offer = { id: string; input: LoanInput };
 
@@ -90,6 +92,32 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
     };
   }, [selected, extraPayment, profile]);
 
+  const payoffPlan = useMemo((): PayoffPlanVM | null => {
+    const debts: Debt[] = profile.debts.map((d) => ({ ...d, minPayment: { ...d.minPayment } }));
+    if (selected?.result) {
+      const { amount, apr, downPayment = 0, fees = 0 } = selected.input;
+      debts.push({
+        id: NEW_LOAN_DEBT_ID,
+        kind: 'personal',
+        balance: Math.max(0, amount - downPayment + fees), // financed principal (LoanInput contract)
+        apr,
+        minPayment: { value: selected.result.monthly, isEstimate: false },
+      });
+    }
+    if (debts.length === 0) return null;
+    const plan = runEngine(() => payoffOrder(debts, 0, 'avalanche'));
+    if (plan.status !== 'ready') return null;
+    const byId = new Map(debts.map((d) => [d.id, d]));
+    return {
+      steps: plan.data.order.map((id) => {
+        const d = byId.get(id)!;
+        return { id, kind: d.kind, isNew: id === NEW_LOAN_DEBT_ID, apr: d.apr, balance: d.balance };
+      }),
+      payoffMonth: plan.data.payoffMonth,
+      totalInterest: plan.data.totalInterest,
+    };
+  }, [profile, selected]);
+
   const addOffer = useCallback(
     (input?: LoanInput) => {
       if (offers.length >= MAX_OFFERS) return null;
@@ -141,6 +169,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
     },
     extra,
     setExtraPayment: setExtra,
+    payoffPlan,
     parse,
   };
 }
