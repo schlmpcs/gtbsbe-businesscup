@@ -7,7 +7,7 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 - [x] Agree stack defaults (ARCHITECTURE.md) or swaps
 - [x] Merge `packages/types` contracts; agree units (rates as decimals, monthly vs balance per field)
 - [x] Commit fixtures to `packages/data/fixtures/`: `areaData.sample.json`, `cards.sample.json`, `profile.demo.json`, `statement.sample.csv`, `loanOffers.sample.json`
-- [ ] LLM provider and key (with a no-training / zero-retention option); the store is self-hosted on the team's server (`STORE_URL`)
+- [ ] LLM provider and key (Anthropic: no training on API data; zero data retention is not enabled, so no copy may claim it); the store is self-hosted on the team's server (`STORE_URL`)
 - [ ] Agree which Figma frames come first (S1, S2 house scene, S3, S10, S12)
 - [ ] Agree the sprite id list for the house kit (layouts, props per clue, decor) with the designer, and size T12
 
