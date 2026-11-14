@@ -184,7 +184,10 @@ test('picking 3 years re-reads the same forecast: the headline and the moves cha
 });
 
 test('Today follows the year picked on You in N years, and the pick is remembered', async ({ page }) => {
-  await page.goto('/future');
+  // Past the first visit (the sample life is on), so Today shows the forecast card; a fresh context
+  // would otherwise open on the first-visit screen, which has no numbers.
+  await page.goto('/future?sample=1');
+  await expect(page.getByTestId('sample-banner')).toBeVisible();
   await expect(page.getByTestId('at-horizon').getByTestId('forecast-source')).toBeVisible({ timeout: 30_000 });
   await page.getByRole('group', { name: t.future.horizonLabel }).getByText(yearsPhrase(5), { exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title(5));

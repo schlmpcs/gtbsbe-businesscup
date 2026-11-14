@@ -74,8 +74,8 @@ export type NextMovesVM = {
   horizonYears: HorizonYears;
   /**
    * False until the saved state is loaded: `horizonYears` is then the default (10), not necessarily the
-   * user's pick, so screens show no year-specific title, intro or picker yet (no "10 years" flash for
-   * someone who picked 3).
+   * user's pick, so screens show no year-specific title or intro yet, and the picker is off with no year
+   * chosen (no "10 years" flash for someone who picked 3).
    */
   horizonReady: boolean;
   /** The years the picker offers (FORECAST_HORIZONS). */

@@ -562,7 +562,7 @@ describe('Before the saved state loads (S1 and S10)', () => {
     return div;
   };
 
-  it('names no year and shows no picker until the saved horizon is in, then shows the saved one (no 10-year flash)', async () => {
+  it('names no year and keeps the picker off, with no year chosen, until the saved horizon is in, then shows the saved one (no 10-year flash)', async () => {
     // A returning user who picked 3 years: saved, while the store in memory still holds the default.
     useAppStore.getState().setHorizonYears(3);
     const saved = localStorage.getItem(APP_STORE_KEY)!;
@@ -571,8 +571,13 @@ describe('Before the saved state loads (S1 and S10)', () => {
 
     const future = firstRender(<Future />);
     expect(future.querySelector('h1')?.textContent).toBe(t.future.titleNeutral);
-    expect(future.querySelector('input[name="horizon"]')).toBeNull();
+    // The picker keeps its place, but is off with no year chosen.
+    const radios = [...future.querySelectorAll<HTMLInputElement>('input[name="horizon"]')];
+    expect(radios).toHaveLength(4);
+    expect(radios.some((r) => r.checked)).toBe(false);
+    expect(future.querySelector('fieldset')?.hasAttribute('disabled')).toBe(true);
     expect(future.textContent).toContain(t.moves.introNeutral);
+    future.querySelector('fieldset')?.remove(); // its options are the years on offer, not a shown one
     expect(future.textContent).not.toMatch(/\d+ years?/);
 
     const today = firstRender(<Today />);
@@ -586,5 +591,6 @@ describe('Before the saved state loads (S1 and S10)', () => {
     render(<Future />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('You in 3 years');
     expect(await screen.findByRole('radio', { name: '3 years' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '3 years' })).toBeEnabled();
   });
 });

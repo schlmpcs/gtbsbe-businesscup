@@ -37,7 +37,7 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
             <h1 className="text-sm font-bold uppercase tracking-wide">{vm.horizonReady ? f.title(vm.horizonYears) : f.titleNeutral}</h1>
           </header>
 
-          {vm.horizonReady && <HorizonPicker vm={vm} />}
+          <HorizonPicker vm={vm} />
 
           {loading ? (
             <Card>
@@ -78,7 +78,9 @@ function HorizonPicker({ vm }: { vm: FutureVM }) {
       <Choice
         legend={t.future.horizonLabel}
         name="horizon"
-        value={String(vm.horizonYears)}
+        // Until the saved year is in, the picker keeps its place (no jump) with no year chosen.
+        value={vm.horizonReady ? String(vm.horizonYears) : ''}
+        disabled={!vm.horizonReady}
         options={options}
         onChange={(value) => {
           const years = vm.horizons.find((y) => String(y) === value);
