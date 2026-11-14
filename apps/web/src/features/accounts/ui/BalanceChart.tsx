@@ -50,7 +50,6 @@ export function BalanceChart({ points, label, tooFew, className }: BalanceChartP
         <path d={area} className="fill-current opacity-10" />
         {zeroY !== null && <line x1={0} x2={W} y1={zeroY} y2={zeroY} className="stroke-chart-grid" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />}
         <path d={line} fill="none" className="stroke-current" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        <circle cx={x(points.length - 1)} cy={y(last.value)} r={3.5} className="fill-current" />
       </svg>
       <figcaption className="flex justify-between text-xs text-text-muted">
         <span>{formatMonthYear(first.month)}</span>

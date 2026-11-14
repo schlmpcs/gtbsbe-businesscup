@@ -3,7 +3,7 @@
 // on Home. Presentational: everything comes from QuickAddVM.
 import { useId } from 'react';
 import { common, spend as t } from '@/copy';
-import { Button, cx, EstimateTag, formatMoney, Row, Stack } from '@/ui-kit';
+import { Button, cx, formatMoney, Row, Stack } from '@/ui-kit';
 import type { QuickAddVM } from '../model/types';
 
 export type QuickAddProps = { vm: QuickAddVM; className?: string };
@@ -123,10 +123,7 @@ export function QuickAdd({ vm, className }: QuickAddProps) {
       )}
 
       <div className="flex flex-col gap-xs">
-        <div className="flex flex-wrap items-center gap-sm">
-          <span className="text-xs font-bold uppercase tracking-wide text-text-muted">{t.presets.title}</span>
-          <EstimateTag />
-        </div>
+        <span className="text-xs font-bold uppercase tracking-wide text-text-muted">{t.presets.title}</span>
         <ul className="flex flex-wrap gap-xs">
           {vm.presets.map((p) => {
             const name = t.presets.names[p.id];

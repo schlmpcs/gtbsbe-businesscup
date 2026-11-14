@@ -1,12 +1,29 @@
-// Strings for Budget (MP11). Category names are in planner.categories, group names in planner.budgetGroups.
+// Strings for Budget (MP11, MP17). Category names are in planner.categories, group names in planner.budgetGroups.
 export const budget = {
   title: 'Budget',
+  intro: 'What you planned for each category against what you spent.',
   modes: { month: 'Month', year: 'Year' },
+  modeLegend: 'Show',
   today: 'Today',
+  prev: 'Previous period',
+  next: 'Next period',
   income: 'Income',
+  spending: 'Spending',
   columns: { planned: 'Planned', actual: 'Actual', remaining: 'Remaining' },
   statuses: { under: 'Under', onPace: 'On pace', over: 'Over' },
   create: 'Create budget from my spending',
   emptyTitle: 'No budget yet',
   empty: 'Start from what you spend now. You can change every line.',
+  /** Shown beside "Create budget": the plan starts from the profile, the actuals from imported lines. */
+  emptyLinks: { guess: 'Set up my numbers first', upload: 'Import a statement' },
+  noActuals: 'No spending in this period yet. Import a statement to fill the Actual column.',
+  editPlanned: (category: string) => `Planned per month for ${category}`,
+  perMonthHint: 'Edit a line in Month view; the amount is per month.',
+  todayMarker: 'The line on each bar marks where you should be today.',
+  ofPlanned: (actual: string, planned: string) => `${actual} of ${planned}`,
+  overBy: (amount: string) => `${amount} over`,
+  left: (amount: string) => `${amount} left`,
+  toCome: (amount: string) => `${amount} still to come`,
+  total: 'Total spending',
+  loading: 'Loading your budget…',
 } as const;

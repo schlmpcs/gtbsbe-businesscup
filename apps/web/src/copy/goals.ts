@@ -1,13 +1,32 @@
-// Strings for Goals (MP11). "Pay down" reuses the Loan Lab and payoff planner copy (copy/loan.ts).
+// Strings for Goals (MP11, MP17). "Pay down" reuses the Loan Lab and payoff planner copy (copy/loan.ts).
 export const goals = {
   title: 'Goals',
+  intro: 'Save up for something, or pay a debt down faster.',
   tabs: { saveUp: 'Save up', payDown: 'Pay down' },
+  tabsLabel: 'Goal type',
   statuses: { onTrack: 'On track', atRisk: 'At risk', completed: 'Completed' },
   add: 'Add goal',
   allocate: 'Add a transaction to this goal',
   remove: 'Remove goal',
+  removeLabel: (name: string) => `Remove goal ${name}`,
   monthlyToStayOnTrack: 'Extra saving per month to stay on track',
   unreachable: 'Not reachable with your take-home pay.',
   invalid: 'Enter a name, a positive target and a whole number of years from 1 to 30.',
   estimate: 'Rules-based estimate. Educational simulation, not financial advice.',
+  form: { title: 'New goal', name: 'Name', namePlaceholder: 'Emergency fund', target: 'Target', years: 'In how many years', yearsSuffix: 'years' },
+  saved: (saved: string, target: string) => `${saved} saved of ${target}`,
+  eta: (years: number) => `Target date: in ${years} ${years === 1 ? 'year' : 'years'}`,
+  projected: 'Projected net worth by then',
+  projectedRange: (low: string, high: string) => `Range ${low} to ${high}`,
+  projectionError: 'We could not project this goal right now.',
+  transactions: (n: number) => `${n} ${n === 1 ? 'transaction' : 'transactions'} counted`,
+  emptyTitle: 'No savings goals yet',
+  empty: 'Add one above. The projection uses your take-home pay and spending, so set those up first for a real answer.',
+  emptyLinks: { guess: 'Set up my numbers', upload: 'Import a statement' },
+  payDown: {
+    title: 'Pay down a debt',
+    body: 'Compare loan offers, see what an extra payment saves and plan the order to pay your debts off.',
+    cta: 'Open the Loan Lab',
+  },
+  loading: 'Loading your goals…',
 } as const;

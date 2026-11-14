@@ -192,7 +192,7 @@ function Nudge({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: Link
 function NextBillLine({ vm, href, Link }: { vm: TodayVM; href?: string; Link: LinkComponent }) {
   const next = vm.status === 'ready' ? vm.nextBill : null;
   if (!next) return null;
-  const text = bills.today.nextBill(next.label, formatMoney(next.amount, { cents: true }), next.inDays);
+  const text = bills.today.nextBill(next.label, formatMoney(next.amount), next.inDays);
   return (
     <p data-testid="next-bill" className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs rounded-xl bg-surface px-xl py-sm text-sm font-semibold shadow-sm">
       <span>{text}</span>

@@ -21,7 +21,7 @@ test('a typed line is saved and the spent total changes, on /spend and Home', as
   await expect(page.getByTestId('spend-safe')).not.toHaveText(safeBefore ?? '');
 
   // A preset chip (estimated price), then Undo takes it back out.
-  await page.getByRole('button', { name: 'Add Coffee, $5 (estimate)' }).click();
+  await page.getByRole('button', { name: 'Add Coffee, $5 (typical price)' }).click();
   await expect(spent).toHaveText('$92');
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(spent).toHaveText('$87');

@@ -11,7 +11,7 @@ export const spend = {
   input: {
     label: 'Log spending',
     placeholder: 'coffee 5, taxi 18, groceries 64',
-    hint: 'Commas between purchases. “$18 uber” and “кофе 5” work too.',
+    hint: 'Commas between purchases. “$18 uber” works too.',
     add: 'Add',
     reading: 'Reading…',
     mic: 'Say it',
@@ -22,8 +22,8 @@ export const spend = {
 
   presets: {
     title: 'One tap',
-    /** The chip prices are typical amounts we picked, not yours. */
-    note: 'Typical prices (estimates). Type the line for the exact amount.',
+    /** The chip prices are typical amounts we picked, not yours: one short note, no tag. */
+    note: 'Typical prices. Type a line for the exact amount.',
     names: {
       coffee: 'Coffee',
       lunch: 'Lunch',
@@ -31,8 +31,8 @@ export const spend = {
       taxi: 'Taxi',
       gas: 'Gas',
     },
-    /** "Add Coffee, $5 (estimate)" for screen readers. */
-    aria: (name: string, amount: string) => `Add ${name}, ${amount} (estimate)`,
+    /** "Add Coffee, $5 (typical price)" for screen readers. */
+    aria: (name: string, amount: string) => `Add ${name}, ${amount} (typical price)`,
   },
 
   added: (count: number) => (count === 1 ? 'Added 1 purchase.' : `Added ${count} purchases.`),

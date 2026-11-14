@@ -1,9 +1,31 @@
-// Strings for Cash Flow (MP11). Category names are in planner.categories, group names in planner.budgetGroups.
+// Strings for Cash Flow (MP11, MP17). Category names are in planner.categories, group names in planner.budgetGroups.
 export const cashflow = {
   title: 'Cash flow',
+  intro: 'Money in, money out and what was left, from your transactions.',
   periods: { monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly' },
+  periodLegend: 'Period',
   views: { bars: 'Bars', sankey: 'Sankey' },
+  viewLegend: 'Chart',
   breakdowns: { category: 'Category', group: 'Group' },
+  breakdownLegend: 'Break down by',
   kpis: { income: 'Income', expenses: 'Expenses', savings: 'Savings', savingsRate: 'Savings rate' },
+  previous: (value: string) => `Last period: ${value}`,
+  noRate: 'No income',
+  barsTitle: 'Income and expenses',
+  barsLabel: 'Income and expenses by period',
+  breakdownTitle: 'Where it went',
+  breakdownLabel: 'Spending this period',
+  sankeyTitle: 'How money flowed',
+  sankeyLabel: 'Money flow from income to spending and savings this period',
+  sankeyEmpty: 'Nothing came in or went out this period.',
+  /** Sankey node names that are not cost categories. */
+  nodes: { pay: 'Pay', income: 'Income', savings: 'Saved', fromSavings: 'From savings', oneOffs: 'One-offs' },
+  quarter: (q: number, year: string) => `Q${q} ${year}`,
+  saved: 'Saved',
+  overspent: 'Overspent',
   empty: 'Import a statement or add transactions to see your cash flow.',
+  emptyTitle: 'No transactions yet',
+  emptyLinks: { upload: 'Import a statement', guess: 'Set up my numbers' },
+  loading: 'Loading your cash flow…',
+  transfersNote: 'Transfers between your own accounts are left out.',
 } as const;
