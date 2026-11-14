@@ -20,7 +20,7 @@ const CATALOG_RESTRICTION = {
 };
 
 // The browser modules that may load the sample cards (packages/data/fixtures/cards.ts):
-// - the fixture game client, which plays them (an API build has no chunk for it);
+// - the fixture game client and the fixture duel client, which play them (an API build has no chunk for either);
 // - S6 Closest life and the ladder progress, which show them openly as "sample lives" when today's
 //   game wasn't played. They are not the API game's answers: the API plays the catalog
 //   (packages/data/cards), which shares no card with the samples;
@@ -28,6 +28,7 @@ const CATALOG_RESTRICTION = {
 // - apps/web/src/fixtures/cards.ts, the re-export they import.
 const SAMPLE_CARD_MODULES = [
   'apps/web/src/features/game/model/fixtureClient.ts',
+  'apps/web/src/features/game/model/duelFixtureClient.ts', // the fixture duel (same rules as fixtureClient)
   'apps/web/src/features/ladder/model/useClosestLife.ts',
   'apps/web/src/features/ladder/model/useLadderProgress.ts',
   'apps/web/app/kit/samples.ts',
@@ -42,9 +43,9 @@ const SAMPLE_CARD_RESTRICTIONS = [
 ];
 
 const FIXTURE_CLIENT_RESTRICTION = {
-  regex: '(^|/)fixtureClient$',
+  regex: '(^|/)(fixtureClient|duelFixtureClient)$',
   message:
-    'The fixture game client holds the answers: only features/game/model/client.ts loads it, with a dynamic import() that an API build drops. Tests may import it.',
+    'The fixture game clients hold the answers: only features/game/model/client.ts (duelClient.ts for the duel) loads them, with a dynamic import() that an API build drops. Tests may import them.',
 };
 
 export default defineConfig([

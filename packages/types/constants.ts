@@ -1,11 +1,11 @@
 // Value lists for the unions in ./index.ts (runtime iteration, zod enums). Each `satisfies` line
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
 import type {
-  AreaData, Benchmark, BenchmarkLine, Cadence, ClientFunnelEvent, ClueId, CostCategory, Debt, EventsErrorCode,
-  FunnelEventName, KidAge, MissBucket, MoveKind, OverpayingResult, PayoffMethod, ProErrorCode, ProPlan, ProSource,
-  ServerFunnelEvent, ServiceCategory, SessionErrorCode, StatementCategorizeResponse, StatementClass,
-  SubscriptionFinding, SubscriptionFlag, ToolId,
+  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, KidAge, MoveKind,
+  ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
+  MissBucket, SubscriptionFinding, SubscriptionFlag,
 } from './index';
+import type { Cadence } from './subscriptions';
 
 export const COST_CATEGORIES = [
   'rentUtilities', 'car', 'childcare', 'groceries',
@@ -19,6 +19,11 @@ export const MOVE_KINDS = [
   'payCardFirst', 'cutCategory', 'cancelSubscriptions',
   'retirementMatch', 'hsa', 'refinance', 'negotiateRent', 'reshopInsurance',
 ] as const satisfies readonly MoveKind[];
+
+// ----- Duel game (S2/S3) -----------------------------------------------------------------------
+
+export const DUEL_LETTERS = ['A', 'B'] as const satisfies readonly DuelLetter[];
+export const DUEL_ROUNDS = [1, 2, 3, 4, 5] as const satisfies readonly DuelRound[];
 
 // ----- statements (T6/T7) ---------------------------------------------------------------------
 
@@ -65,10 +70,10 @@ export const CLIENT_EVENT_NAMES = [
   'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared',
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
-  'paywall_viewed',
-  // Micro-tools (M1). Appended, so the order of the names above does not change.
-  'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked', 'renewals_exported',
-  'overpaying_checked', 'payoff_planned',
+  'paywall_viewed', 'sample_loaded',
+  'goal_set', 'goal_verdict_shown', 'goal_cleared',
+  'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked',
+  'renewals_exported', 'overpaying_checked', 'payoff_planned',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 /** Events only the server records (the Pro routes). */
 export const SERVER_EVENT_NAMES = [
@@ -93,43 +98,33 @@ export const FUNNEL_MAX_DAYS = 90;
 /** Most homes in one day's set: the bound on `home` in event props. */
 export const EVENT_HOMES_MAX = 10;
 
-// ----- Micro-tools (M1) ------------------------------------------------------------------------
+export const GOAL_MIN_YEARS=1;
+export const GOAL_MAX_YEARS=30;
+/** Independent tools; never inserted into the main funnel. */
+export const TOOL_IDS = ['subscriptions','overpaying','payoff'] as const;
+
+
+// ----- Subscription audit (M1) -----------------------------------------------------------------
+// The catalogue's own lists (cadences, categories) live with its schemas in ./subscriptions.
 
 /**
- * Most findings one SubscriptionAudit may hold. It is also the largest count a `subs_flagged` or
- * `subs_cancel_marked` event may carry (EVENT_COUNT_MAX below), so an audit that fits the schema can
- * always be counted: an event over its cap fails the whole POST /api/events batch.
+ * The five buckets of a `subs_revealed` event, guess ÷ actual, lowest first: under 0.5, 0.5 to 0.8, 0.8 to 1.25,
+ * 1.25 to 2, over 2. Main declares the `MissBucket` union and writes the same members into the event schema; this
+ * is the list to iterate (the union is checked against it in tools.test.ts).
  */
-export const SUBSCRIPTION_FINDINGS_MAX = 500;
-/** Largest count an event prop may carry (findings flagged or marked to cancel): the audit's own cap. */
-export const EVENT_COUNT_MAX = SUBSCRIPTION_FINDINGS_MAX;
-
-export const TOOL_IDS = ['subscriptions', 'overpaying', 'payoff'] as const satisfies readonly ToolId[];
-/** Guess ÷ actual, lowest first: under 0.5, 0.5 to 0.8, 0.8 to 1.25, 1.25 to 2, over 2. */
 export const MISS_BUCKETS = ['under0.5', '0.5to0.8', '0.8to1.25', '1.25to2', 'over2'] as const satisfies readonly MissBucket[];
-
-export const CADENCES = ['monthly', 'quarterly', 'yearly'] as const satisfies readonly Cadence[];
-/** Months in one billing period of each cadence: `monthly` = amount ÷ this, `yearly` = amount × 12 ÷ this. */
-export const CADENCE_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 } as const satisfies Record<Cadence, number>;
-export const SERVICE_CATEGORIES = [
-  'video', 'music', 'software', 'cloud', 'fitness', 'news', 'gaming', 'learning', 'food', 'other',
-] as const satisfies readonly ServiceCategory[];
 export const SUBSCRIPTION_FLAGS = ['priceUp', 'introEnded', 'overlap', 'seenOnce'] as const satisfies readonly SubscriptionFlag[];
 export const SUBSCRIPTION_CONFIDENCES = ['high', 'medium', 'low'] as const satisfies readonly SubscriptionFinding['confidence'][];
 export const SUBSCRIPTION_STATUSES = ['active', 'stopped'] as const satisfies readonly SubscriptionFinding['status'][];
 export const SUBSCRIPTION_ORIGINS = ['statement', 'tickList'] as const satisfies readonly SubscriptionFinding['origin'][];
-
-export const BENCHMARK_LINES = ['rent', 'carInsurance', 'groceries', 'childcare'] as const satisfies readonly BenchmarkLine[];
-export const BENCHMARK_POSITIONS = ['below', 'inRange', 'above'] as const satisfies readonly Benchmark['position'][];
-export const OVERPAYING_COVERAGES = ['exact', 'metro', 'none'] as const satisfies readonly OverpayingResult['coverage'][];
-export const OVERPAYING_SKIP_REASONS = ['noData', 'notEntered'] as const satisfies readonly OverpayingResult['skipped'][number]['reason'][];
-
-export const PAYOFF_METHODS = ['avalanche', 'snowball', 'minimum'] as const satisfies readonly PayoffMethod[];
+/** Months in one billing period of each cadence: `monthly` = amount ÷ this, `yearly` = amount × 12 ÷ this. */
+export const CADENCE_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 } as const satisfies Record<Cadence, number>;
 /**
- * Longest payoff timeline, in months after month 0: the engine's MAX_SIMULATION_MONTHS (packages/engine/loan/amortize.ts).
- * This package cannot import the engine, so keep the two equal by hand.
+ * Most findings one SubscriptionAudit may hold. Below the 5,000 a `subs_flagged` or `subs_cancel_marked`
+ * event may count (EventsRequestSchema), so every audit that fits the schema can be counted.
  */
-export const PAYOFF_TIMELINE_MAX_MONTHS = 1_200;
-
-/** Longest id (catalogue slug, finding id, debt id) the micro-tool schemas accept. */
+export const SUBSCRIPTION_FINDINGS_MAX = 500;
+/** Longest id of a finding the schema accepts. */
 export const MAX_ID_LENGTH = 100;
+/** Most services a person can have ticked in the subscription tool (the tick-list is about 40, with room for more). */
+export const SUBSCRIPTION_TICKS_MAX = 200;

@@ -39,7 +39,7 @@ const checkoutButton = () => screen.getByRole('button', { name: copy.checkout.bu
 const statusRegion = () => screen.getByRole('status');
 
 describe('Paywall', () => {
-  it('offer: demo label, tagged prices, what is gated vs coming, test card, promo and disclaimer', () => {
+  it('offer: demo label, tagged prices (yearly first and preselected), only what Pro unlocks, test card, promo and disclaimer', () => {
     render(<Paywall {...vm()} />);
     expect(screen.getByText(copy.demoBadge.stripe)).toBeInTheDocument();
     const plans = screen.getByRole('group', { name: new RegExp(copy.plans.legend) });
@@ -49,7 +49,9 @@ describe('Paywall', () => {
 
     const includes = screen.getByRole('region', { name: copy.includes.title });
     expect(within(includes).getByText(copy.includes.now[0])).toBeInTheDocument();
-    expect(within(includes).getByRole('heading', { name: copy.includes.comingTitle })).toBeInTheDocument();
+    expect(within(includes).getAllByRole('listitem')).toHaveLength(copy.includes.now.length);
+    expect(within(includes).queryByText(/coming/i)).not.toBeInTheDocument();
+    expect(within(plans).getAllByRole('radio').map((r) => (r as HTMLInputElement).value)).toEqual(['yearly', 'monthly']);
 
     expect(checkoutButton()).toBeEnabled();
     expect(screen.getByText(copy.checkout.testCardNumber)).toBeInTheDocument();
@@ -77,6 +79,26 @@ describe('Paywall', () => {
     expect(checkoutButton()).toHaveAccessibleDescription(copy.checkout.unavailable);
     expect(screen.queryByText(copy.checkout.testCardNumber)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: copy.promo.button })).toBeEnabled();
+  });
+
+  describe('the demo badge names only the checkout that is really on', () => {
+    it.each([
+      ['stripe', copy.demoBadge.stripe],
+      ['demo', copy.demoBadge.demo],
+    ] as const)('%s mode', (checkoutMode, text) => {
+      render(<Paywall {...vm({ checkoutMode })} />);
+      expect(screen.getByText(text)).toBeInTheDocument();
+    });
+
+    it.each([
+      ['loading', { view: 'loading' }],
+      ['an offer with no checkout on', { view: 'offer', checkoutMode: 'off' }],
+    ] as const)('%s: neutral wording, never Stripe or simulated', (_, overrides) => {
+      render(<Paywall {...vm({ ...overrides, checkoutMode: 'off' })} />);
+      expect(screen.getByText(copy.demoBadge.neutral)).toBeInTheDocument();
+      expect(screen.queryByText(copy.demoBadge.stripe)).not.toBeInTheDocument();
+      expect(screen.queryByText(copy.demoBadge.demo)).not.toBeInTheDocument();
+    });
   });
 
   it('while a request runs every control is off', () => {

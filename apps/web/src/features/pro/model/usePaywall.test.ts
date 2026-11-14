@@ -2,9 +2,12 @@
 import { PRO_PRICES } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ProResult, ProStatusInfo } from '@/lib/api/pro';
 import { useProStore } from '@/state';
+import { getAnonId } from '@/state/anonId';
+import { PRO_CACHE_KEY } from '@/state/pro';
 import { resetClientState } from '@/test/clientState';
-import { PRO_DEMO, PRO_STRIPE, fakeProAdapter, resetProState, statusInfo, type FakeProAdapter } from '@/test/pro';
+import { FREE, PRO_DEMO, PRO_STRIPE, fakeProAdapter, resetProState, statusInfo, type FakeProAdapter } from '@/test/pro';
 import { usePaywall, type CheckoutReturnParams } from './usePaywall';
 
 const SESSION = 'cs_test_a1B2c3D4e5F6';
@@ -57,6 +60,56 @@ describe('usePaywall (S15)', () => {
       { id: 'monthly', amount: PRO_PRICES.monthly.amount, interval: 'month', isEstimate: true, selected: false },
     ]);
     expect(result.current).toMatchObject({ checkoutMode: 'stripe', promoEnabled: true, promoCode: 'JURY2026', busy: null, error: null, pro: null });
+  });
+
+  describe('with a hint cached by an earlier visit', () => {
+    const writeHint = (status: ProStatusInfo['status']) =>
+      localStorage.setItem(PRO_CACHE_KEY, JSON.stringify({ anonId: getAnonId(), status }));
+
+    /** The next status request stays pending until the returned function lets it answer. */
+    function holdStatus(info: ProStatusInfo) {
+      let answer!: () => void;
+      adapter.status.mockImplementationOnce(
+        () => new Promise<ProResult<ProStatusInfo>>((resolve) => (answer = () => resolve({ ok: true, value: info }))),
+      );
+      return () => act(async () => answer());
+    }
+
+    it('a free hint is not an offer: the screen stays loading until the server says which checkout applies', async () => {
+      resetProState((adapter = fakeProAdapter()));
+      writeHint(FREE);
+      const answer = holdStatus(statusInfo(FREE, { checkoutAvailable: false }));
+      const { result } = mountPaywall();
+      await waitFor(() => expect(useProStore.getState().origin).toBe('cache')); // the hint was read
+      // Showing the offer now would use the pre-answer defaults: no checkout, no promo.
+      expect(result.current.view).toBe('loading');
+
+      await answer();
+      await waitFor(() => expect(result.current.view).toBe('offer'));
+      expect(result.current).toMatchObject({ checkoutMode: 'demo', promoEnabled: true });
+    });
+
+    it('a Pro hint shows the Pro screen at once, and the server answer keeps it', async () => {
+      resetProState((adapter = fakeProAdapter()));
+      writeHint(PRO_DEMO);
+      const answer = holdStatus(statusInfo(PRO_DEMO, { checkoutAvailable: false }));
+      const { result } = mountPaywall();
+      await waitFor(() => expect(result.current.view).toBe('pro'));
+
+      await answer();
+      await waitFor(() => expect(useProStore.getState().origin).toBe('server'));
+      expect(result.current.view).toBe('pro');
+    });
+
+    it('a free hint and a failing status request still end on the offer, with the error and a retry', async () => {
+      resetProState((adapter = fakeProAdapter()));
+      writeHint(FREE);
+      adapter.status.mockResolvedValueOnce({ ok: false, error: { kind: 'network' } });
+      const { result } = mountPaywall();
+      await waitFor(() => expect(result.current.view).toBe('offer'));
+      expect(result.current.error).toEqual({ where: 'status', key: 'network', retryAfterSeconds: null });
+      expect(result.current.retry).not.toBeNull();
+    });
   });
 
   it('starts checkout for the chosen plan and sends the browser to Stripe once, however many clicks', async () => {

@@ -1,3 +1,6 @@
+import type { Goal } from './goal';
+import type { Cadence, ServiceCategory } from './subscriptions';
+import type { TOOL_IDS } from './constants';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
 // Change only together (Amir + Aibek): update this file, the zod schemas in ./schemas.ts,
 // the fixtures in packages/data/fixtures and both consumers in the same PR.
@@ -55,6 +58,45 @@ export type ClueReveal = { cardId: string; clue: ClueId; props: SceneProp[];
   facts: Partial<Pick<LifeCard, 'car' | 'kids' | 'eatingOutPerWeek' | 'adults' | 'zip'>> & { tier?: AreaData['tier'] } };
 export type GuessReveal = { resultId: string; cost: CostBreakdown; result: GuessResult;
   card: LifeCard; cluesOpened: ClueId[] };
+
+// ----- Duel game (S2/S3 "Which life costs more?", decision D-1) ------------------------------
+// Each round shows two composite lives; the player taps the one that costs more per month. The
+// browser gets no totals and no hint before it picks or asks for the hint: like the slider game,
+// the source (the server, or the fixture client in fixture mode) holds the answers and scores.
+export type DuelLetter = 'A' | 'B';
+export type DuelRound = 1 | 2 | 3 | 4 | 5;
+export type PublicDuelCard = {
+  letter: DuelLetter;
+  household: string;                  // "2 adults · 1 kid · 3 bedrooms"
+  metro: string;                      // "Columbus, OH"
+  caption: string;                    // flavor line, no cost facts
+  facts: string[];                    // 4 chips: "1 car", "Daycare", "Cooks at home", "Rents"
+  art: string;                        // house sprite id (engine SpriteId, e.g. "layout/2bed")
+  composite: true;                    // the UI shows a "Composite" label
+};
+export type PublicDuel = {
+  date: string;                       // YYYY-MM-DD, America/New_York
+  round: DuelRound;
+  kind: 'life' | 'habit';             // 'habit' = X4, after the cut line
+  cards: [PublicDuelCard, PublicDuelCard];
+};
+/** One cost category of a duel card: its cost lines added up (monthly), with every source behind them. */
+export type CategoryLine = { category: CostCategory; amount: Money; sources: Source[]; isEstimate: boolean };
+/** POST /api/daily/hint reply: one more fact per card (the neighborhood tier). */
+export type DuelHint = Record<DuelLetter, string>;
+/** POST /api/daily/pick reply. One pick per round per player; a repeat answers the stored result. */
+export type PickResult = {
+  resultId: string;                   // the player's result for the day (share + challenge link)
+  correct: boolean;
+  points: number;                     // 1000 × hint multiplier, 0 if wrong
+  totals: Record<DuelLetter, Money>;  // costOfLife(card).total.mid, per month
+  breakdown: Record<DuelLetter, CategoryLine[]>;
+  decidedBy: { category: CostCategory; A: Money; B: Money };  // biggest gap toward the costlier card (monthly)
+  lesson: string;                     // fixed template filled by code, never an LLM
+  crowd: { pickedA: number; total: number } | null;           // null when total < 20
+};
+export type DuelPickRequest = { anonId: string; date: string; round: DuelRound; choice: DuelLetter };
+export type DuelHintRequest = { anonId: string; date: string; round: DuelRound };
 
 export type Estimate<T> = { value: T; isEstimate: boolean };
 export type Debt = { id: string; kind: 'card'|'auto'|'student'|'personal'|'bnpl'|'mortgage';
@@ -142,11 +184,7 @@ export type StatementClass = CostCategory | 'pay' | 'transfer';
 // POST /api/statement/categorize. `categorizedBy`: who sorted the labels: the AI, the keyword
 // rules (no API key, provider failure or invalid output), or both (the AI skipped some labels).
 export type StatementCategorizeRequest = { items: StatementItem[] };
-// `classes` (additive, M1): how each distinct masked label of the request was sorted, so the browser
-// can tell a rent or loan line from a subscription (the subscription audit uses it). Labels are the
-// ones the browser already sent; a label with only masks gets no entry. Absent on older servers.
-export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed';
-  classes?: { label: string; class: StatementClass }[] };
+export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed'; classes?: { label: string; class: StatementClass }[] };
 
 // ----- Pro (S15): the paywall demo -----------------------------------------------------------
 // No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo_checkout` = the
@@ -167,33 +205,17 @@ export type ProErrorCode =
 // ----- Sessions (T4): POST /api/session ----------------------------------------------------
 // The profile and wishlist saved under the anonymous id, so a reload restores them without an
 // account. `revision` counts saves (0 = nothing saved yet); `updatedAt` is ISO 8601 UTC.
-export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
+export type SessionState = { goal?: Goal | null; profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
 export type SessionErrorCode =
   | 'bad_request' | 'too_large' | 'rate_limited'
   | 'unavailable'         // the store is not configured or cannot be reached (503)
   | 'not_paid';           // the save would add to the wishlist, which is a Pro feature (402)
 
-// ----- Micro-tools (M1): subscription audit, overpaying check, debt payoff planner -------------
-// Small tools beside the main flow. Nothing here is sent to the server: a finding names a merchant
-// (a masked statement label), so findings, ticks and results stay in the browser (docs/ARCHITECTURE.md
-// → Privacy design). Only the events at the end of this section leave it, and they hold enums and
-// counts. Money and rates follow the rules at the top of this file.
-export type ToolId = 'subscriptions' | 'overpaying' | 'payoff';
-// How far a guess was from the actual figure, as guess ÷ actual. A bucket, never the number itself,
-// so the `subs_revealed` event carries no amount.
-export type MissBucket = 'under0.5' | '0.5to0.8' | '0.8to1.25' | '1.25to2' | 'over2';
-
-// ----- subscriptions
-export type Cadence = 'monthly' | 'quarterly' | 'yearly';
-export type ServiceCategory = 'video' | 'music' | 'software' | 'cloud' | 'fitness' | 'news' | 'gaming'
-  | 'learning' | 'food' | 'other';
-/** One way to buy a service: `price` is per `cadence`, in dollars. */
-export type ServicePlan = { id: string; name: string; price: Money; cadence: Cadence };
-/** An entry of the catalogue of known subscription services (a dated manual snapshot, not live prices). */
-export type KnownService = { id: string; name: string; category: ServiceCategory;
-  matchers: string[];            // normalized (merchantKey style: letters and single spaces) whole-word patterns; masked-label friendly
-  ambiguous?: boolean;           // a merchant that bills many products (Apple, Google, Amazon): ask the user which
-  plans: ServicePlan[]; priceYear: number; source: Source; isEstimate: boolean };
+// ----- Subscription audit (M1): what the detector finds in a statement ---------------------------
+// The catalogue types (Cadence, ServiceCategory, ServicePlan, KnownService) are in ./subscriptions,
+// the overpaying types in ./overpaying and the payoff types in ./payoff. Nothing here is sent to the
+// server: a finding names a merchant (a masked statement label), so findings stay in the browser
+// (docs/ARCHITECTURE.md → Privacy design); only events leave it, and they hold enums and counts.
 /** A calendar day inside a statement: `month` = 'YYYY-MM'. */
 export type ChargeDate = { month: string; day: number };
 export type SubscriptionFlag = 'priceUp' | 'introEnded' | 'overlap' | 'seenOnce';
@@ -232,34 +254,24 @@ export type SubscriptionAudit = {
   /** The latest day in the statement ("today" for the audit: it never reads the clock); null for no lines. */
   asOf: ChargeDate | null };
 
-// ----- overpaying
-export type BenchmarkLine = 'rent' | 'carInsurance' | 'groceries' | 'childcare';
-export type Benchmark = { line: BenchmarkLine; yours: Money;    // monthly
-  typical: { low: Money; mid: Money; high: Money }; source: Source; isEstimate: boolean;
-  position: 'below' | 'inRange' | 'above'; gapPerMonth: Money;  // yours − high when above; 0 otherwise
-  gapPerYear: Money; effect10y: Money };                        // effect10y: closing the gap to mid, today's dollars
-export type OverpayingResult = { coverage: 'exact' | 'metro' | 'none'; metro?: string;
-  lines: Benchmark[]; skipped: { line: BenchmarkLine; reason: 'noData' | 'notEntered' }[] };
-
-// ----- debt payoff
-export type PayoffMethod = 'avalanche' | 'snowball' | 'minimum';
-export type PayoffPlan = { method: PayoffMethod; order: string[];          // debt ids
-  monthsToDebtFree: number | null;                                         // null = never at these payments
-  totalInterest: Money; totalPaid: Money;
-  perDebt: { id: string; payoffMonth: number | null; interest: Money }[];
-  timeline: { month: number; balance: Money }[];                           // total balance, month 0..end
-  interestSavedVsMinimum: Money; monthsSavedVsMinimum: number | null };
-export type PayoffComparison = { extra: Money; avalanche: PayoffPlan; snowball: PayoffPlan; minimum: PayoffPlan };
-
 // ----- Funnel events (T8): POST /api/events, GET /api/events/funnel -------------------------
 // What the app counts to show its funnel (docs/PRODUCT.md → Metrics to show). Names come from a
 // fixed list. Props hold only small enums, flags and counts: never text, amounts, ids or anything
 // a person typed, so an event cannot carry personal data. Stored under the hash of the anonymous id.
 // `home` is the 1-based position of a home in today's set.
-// The micro-tool events (last eight) are not steps of the main funnel; each tool's own counts are
-// reported per tool (M2). `tool_opened` for `payoff` is sent once per session, when the payoff
-// section of Loan Lab first shows a plan.
+export type ToolId = (typeof TOOL_IDS)[number];
+export type MissBucket = 'under0.5'|'0.5to0.8'|'0.8to1.25'|'1.25to2'|'over2';
 export type ClientFunnelEvent =
+  | {name:'goal_set';props:{years:number}}
+  | {name:'goal_verdict_shown';props:{verdict:'onTrack'|'withinRange'|'behind'}}
+  | {name:'goal_cleared'}
+  | { name: 'tool_opened'; props: { tool: ToolId } }
+  | { name: 'subs_started'; props: { path: 'tickList'|'statement' } }
+  | { name: 'subs_revealed'; props: { miss: MissBucket } }
+  | { name: 'subs_flagged'|'subs_cancel_marked'; props: { count: number } }
+  | { name: 'renewals_exported' }
+  | { name: 'overpaying_checked'; props: { lines: number; above: number } }
+  | { name: 'payoff_planned'; props: { method: 'avalanche'|'snowball' } }
   | { name: 'play_started' }
   | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
   | { name: 'home_guessed'; props: { home: number; cluesOpened: number } }
@@ -275,14 +287,8 @@ export type ClientFunnelEvent =
   | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
   | { name: 'loan_compared'; props: { offers: number } }
   | { name: 'paywall_viewed' }
-  | { name: 'tool_opened'; props: { tool: ToolId } }
-  | { name: 'subs_started'; props: { path: 'tickList' | 'statement' } }
-  | { name: 'subs_revealed'; props: { miss: MissBucket } }
-  | { name: 'subs_flagged'; props: { count: number } }          // findings with a flag
-  | { name: 'subs_cancel_marked'; props: { count: number } }    // findings marked to cancel
-  | { name: 'renewals_exported' }
-  | { name: 'overpaying_checked'; props: { lines: number; above: number } } // lines compared; of those, above the range
-  | { name: 'payoff_planned'; props: { method: Exclude<PayoffMethod, 'minimum'> } };
+  | { name: 'sample_loaded' };
+
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =
   | { name: 'checkout_started'; props: { plan: ProPlan } }
@@ -308,6 +314,7 @@ export type FunnelReport = {
   users: number;                                  // distinct anonymous ids with any event
   steps: FunnelStep[];                            // FUNNEL_STEPS, in order
   events: Record<FunnelEventName, number>;        // distinct anonymous ids per event
+  tools: { opened: Record<ToolId, number>; completed: Record<ToolId, number>; rates: Record<ToolId, number | null> };
   game: {
     players: number; finished: number; finishRate: number | null;
     guesses: number; cluesPerHome: number | null; blindGuessRate: number | null;  // blind = no clue opened
@@ -317,3 +324,9 @@ export type FunnelReport = {
 
 export * from './constants';
 export * from './schemas';
+export * from './goal';
+export * from './tools';
+export * from './payoff';
+export * from './overpaying';
+export * from './subscriptions';
+export * from './subscriptionAudit';

@@ -10,7 +10,7 @@
 //   window, as a bit mask (bit i = FUNNEL_EVENT_NAMES[i]); the stores return how many ids sent
 //   each set, and buildFunnelReport derives every number from those counts.
 import {
-  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelEvent, type FunnelEventName, type FunnelReport,
+  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, TOOL_IDS, type ToolId, type FunnelEvent, type FunnelEventName, type FunnelReport,
 } from '@lifeguessr/types';
 
 /** One event to store: its id (a UUID; the browser's, or a fresh one for server events) and body. */
@@ -57,7 +57,8 @@ export const propsOf = (event: FunnelEvent): Record<string, unknown> => ('props'
 const ratio = (part: number, whole: number): number | null => (whole > 0 ? part / whole : null);
 
 /** Everything GET /api/events/funnel reports, from the per-id event sets and the guess counts. */
-export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCount[], guesses: GuessStats): FunnelReport {
+export type ToolCount = { tool: ToolId; opened: number; completed: number; converted: number };
+export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCount[], guesses: GuessStats, tools: readonly ToolCount[] = []): FunnelReport {
   const rows = masks.filter((m) => m.mask !== 0 && m.users > 0);
   /** Distinct ids that sent every event in `need`. */
   const withAll = (need: number) => rows.reduce((sum, m) => ((m.mask & need) === need ? sum + m.users : sum), 0);
@@ -83,6 +84,11 @@ export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCoun
     users: rows.reduce((sum, m) => sum + m.users, 0),
     steps,
     events,
+    tools: {
+      opened: Object.fromEntries(TOOL_IDS.map(id=>[id,tools.find(t=>t.tool===id)?.opened??0])) as Record<ToolId,number>,
+      completed: Object.fromEntries(TOOL_IDS.map(id=>[id,tools.find(t=>t.tool===id)?.completed??0])) as Record<ToolId,number>,
+      rates: Object.fromEntries(TOOL_IDS.map(id=>{const t=tools.find(t=>t.tool===id);return [id,ratio(t?.converted??0,t?.opened??0)];})) as Record<ToolId,number|null>,
+    },
     game: {
       players,
       finished,
@@ -100,3 +106,6 @@ export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCoun
 export function lastDays(days: number, now: Date = new Date()): FunnelWindow {
   return { from: new Date(now.getTime() - days * 86_400_000), to: now };
 }
+
+/** Completion markers for the independent tool funnels. */
+export const TOOL_COMPLETIONS = { subscriptions: 'subs_revealed', overpaying: 'overpaying_checked', payoff: 'payoff_planned' } as const;

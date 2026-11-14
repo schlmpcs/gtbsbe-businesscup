@@ -1,7 +1,8 @@
 // Server-only: the AI 10-year forecast for /api/ai/forecast (docs/ENGINEERING.md → AI forecast).
 //
 // One model call answers for the profile as it is (`base`) and for every scenario (a candidate
-// move's patch): ten yearly net-worth anchors each, in nominal dollars. The model computes none
+// move's patch): ten yearly net-worth anchors each, in nominal dollars, written as compact
+// `[low, mid, high]` triples (half the tokens of keyed objects; the wait is mostly output). The model computes none
 // of the plumbing: month 0 is today's balance sheet, exact, and the 121 monthly points are
 // interpolated in code (`anchorsToForecast`). Every answer is checked in code before it is used:
 // the anchors' structure, the ids, a sanity envelope around the rules forecast of the same
@@ -31,40 +32,50 @@ import { BASE_FORECAST_ID, type ForecastRequest } from './schemas';
  * `PROMPT_FINGERPRINT` is a safety net under it for the system prompt and the output schema (it
  * does not cover the request text built in `forecastPrompt` or `retryContent`: bump for those).
  */
-export const PROMPT_VERSION = 2;
+export const PROMPT_VERSION = 3;
 
-/** Timeout of the first model call. */
-export const FORECAST_CALL_TIMEOUT_MS = 12_000;
+/**
+ * Timeout of the first model call. Measured 2026-11-14 with the demo profile: Claude Opus 5.5 at
+ * effort low answers in 15–20 s (Haiku 5.5 thinks for 21–49 s even at low and missed the old 12 s).
+ */
+export const FORECAST_CALL_TIMEOUT_MS = 30_000;
 /** The whole request, retry included: after this the rules bundle is returned. */
-export const FORECAST_DEADLINE_MS = 20_000;
+export const FORECAST_DEADLINE_MS = 40_000;
 /** A second attempt starts only if at least this much of the deadline is left; it gets all of it as its timeout. */
-export const FORECAST_MIN_RETRY_MS = 8_000;
+export const FORECAST_MIN_RETRY_MS = 15_000;
 
 const MAX_ATTEMPTS = 2; // the first try plus one retry
-/** Adaptive thinking counts toward this: 9 forecasts of 10 anchors are ~2K tokens of JSON; the rest is headroom. */
+/** Adaptive thinking counts toward this: 9 forecasts of 10 triples are ~1.2K tokens of JSON; the rest is headroom. */
 const MAX_OUTPUT_TOKENS = 8_192;
 /** Issues quoted back to the model in the retry; a wrong-unit answer produces dozens that say the same thing. */
 const MAX_ISSUES_IN_PROMPT = 20;
 
 // ----- wire shape ----------------------------------------------------------------------------
 
-// Plain numbers on purpose (no `.int()`): structured outputs would put a safe-integer range in the
-// description. Whether the years are 1..10 is checked by `anchorIssues`, which words it for the model.
-// No `.describe()` on the arrays: zod would then emit `$defs`/`$ref` instead of inline objects, and
-// the descriptions that matter sit on the fields (and in the system prompt).
-const WireAnchorSchema = z.object({
-  year: z.number().describe('Years from today: 1 for the end of next year, up to 10. Ten anchors per forecast, in order.'),
-  low: z.number().describe('Low end of the range: net worth at the end of that year, nominal US dollars.'),
-  mid: z.number().describe('Best estimate of net worth at the end of that year, nominal US dollars.'),
-  high: z.number().describe('High end of the range: net worth at the end of that year, nominal US dollars.'),
-});
-
+// `years` is a list of [low, mid, high] triples, year 1 first: the year is the position, so the
+// model does not spend tokens on keys. Plain numbers on purpose (no `.int()`): structured outputs
+// would put a safe-integer range in the description. Structured outputs cannot hold an array to an
+// exact length, so "ten entries of three numbers" is checked in `toAnchors`, which words it for
+// the model. No `.describe()` on the arrays: zod would then emit `$defs`/`$ref` instead of inline
+// objects; the shape is explained on `id` and in the system prompt.
 const WireForecastSchema = z.object({
   forecasts: z.array(z.object({
     id: z.string().describe('"base" or one of the scenario ids, written exactly as listed; each id exactly once.'),
-    anchors: z.array(WireAnchorSchema),
+    years: z.array(z.array(z.number())),
   })),
 });
+
+/**
+ * The model's `years` as anchors (year = position + 1), or the issues that stop that: an entry that
+ * is not three numbers. How many years there are is left to `anchorIssues`, which words it.
+ */
+export function toAnchors(years: readonly (readonly number[])[]): { anchors: YearAnchor[] } | { issues: string[] } {
+  const issues = years.flatMap((entry, i) => (entry.length === 3
+    ? []
+    : [`year ${i + 1}: give exactly three numbers [low, mid, high], not ${entry.length}`]));
+  if (issues.length > 0) return { issues };
+  return { anchors: years.map(([low, mid, high], i) => ({ year: i + 1, low: low!, mid: mid!, high: high! })) };
+}
 
 let format: { type: 'json_schema'; schema: Record<string, unknown> } | undefined;
 /** The structured-output format the model is held to (built once). */
@@ -84,6 +95,7 @@ Rules:
 - Net worth = cash + retirement balance − all debt balances. It can be negative when debts exceed assets. Today's value is given; you forecast the end of each year, years 1 through 10 only. Do not return year 0.
 - Use nominal US dollars (not adjusted for inflation), written as plain dollar amounts, never in thousands or millions.
 - For every year give low, mid and high, with low ≤ mid ≤ high. mid is your best estimate.
+- Answer shape: for each id, "years" holds exactly 10 entries, for years 1 to 10 in order; each entry is [low, mid, high], three plain dollar numbers.
 - The range (low to high) is the uncertainty that comes from the inputs marked "isEstimate": true, which are guesses by the person or by the simulator. Inputs marked "isEstimate": false are exact. The more estimated inputs, the wider the range; with no estimated inputs the range is narrow. Do not widen it for market or inflation risk.
 - Return a forecast for the id "base" (the situation as given) and one for every scenario id listed, each id exactly once and no other ids. A scenario is the same person with its patch applied from today on. Work out what each patch changes in income, spending, debt interest and payments, and retirement saving, and let its forecast end where that change leads, compared with "base". A scenario that helps ends higher than "base"; do not copy "base" for a scenario unless its patch changes nothing.
 - Use the simulator's assumptions given in the request for inflation, take-home pay growth, and returns on cash and retirement.
@@ -149,7 +161,7 @@ ${previous === null ? '' : `\nYour previous answer was:\n${previous}\n`}
 It failed these checks:
 ${shown.join('\n')}
 
-Return the corrected JSON for every id. Remember: nominal US dollars (not thousands), years 1 to 10 only, low ≤ mid ≤ high, each id exactly once.`;
+Return the corrected JSON for every id. Remember: nominal US dollars (not thousands), 10 entries of [low, mid, high] for years 1 to 10, low ≤ mid ≤ high, each id exactly once.`;
 }
 
 // ----- checks --------------------------------------------------------------------------------
@@ -178,8 +190,8 @@ function checkAnswer(req: ForecastRequest, text: string, rules: ForecastBundle, 
 
   // Ids: `base` plus each scenario, every one exactly once.
   const wanted = [BASE_FORECAST_ID, ...req.scenarios.map((s) => s.id)];
-  const answers = new Map<string, YearAnchor[][]>();
-  for (const f of wire.data.forecasts) answers.set(f.id, [...(answers.get(f.id) ?? []), f.anchors]);
+  const answers = new Map<string, number[][][]>();
+  for (const f of wire.data.forecasts) answers.set(f.id, [...(answers.get(f.id) ?? []), f.years]);
   const issues: string[] = [];
   for (const id of wanted) {
     const count = answers.get(id)?.length ?? 0;
@@ -197,7 +209,12 @@ function checkAnswer(req: ForecastRequest, text: string, rules: ForecastBundle, 
   for (const id of wanted) {
     const given = answers.get(id);
     if (given?.length !== 1) continue; // already reported
-    const anchors = given[0]!;
+    const shaped = toAnchors(given[0]!);
+    if ('issues' in shaped) {
+      issues.push(...about(id, shaped.issues));
+      continue;
+    }
+    const { anchors } = shaped;
     const structure = anchorIssues(anchors);
     if (structure.length > 0) {
       issues.push(...about(id, structure));

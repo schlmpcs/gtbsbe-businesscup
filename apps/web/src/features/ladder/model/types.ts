@@ -261,6 +261,11 @@ export type StatementUploadVM = {
    * null when no reader is available: the screen then shows the file picker as unavailable.
    */
   readFile: ((file: File) => void) | null;
+  /**
+   * "Try with sample statement": the sample statement fixture, read through the same pipeline as
+   * `readFile` (parsed and masked in the browser, then categorized). Ends in review like a file.
+   */
+  trySample: () => void;
   /** The seam for T6/T7: CategoryTotals from /api/statement/categorize. Validated, then reviewed. */
   submitTotals: (totals: CategoryTotals[]) => void;
   /** Merge the pending months into the profile as measured values. */

@@ -1,14 +1,15 @@
 'use client';
 
 import { afford as t, forecast } from '@/copy';
-import { Art, Card, cx, ForecastChart, formatRate, Money, Scoreboard, Stack, Sticker, Tag } from '@/ui-kit';
+import { Art, Card, cx, ForecastChart, formatRate, Money, Stack, Sticker, Tag } from '@/ui-kit';
+import type { ReactNode } from 'react';
 import type { AffordResultVM, AffordRulesVM, AffordVM, PayWithChoice, VMError } from '../model/types';
 import { Skeleton } from './controls';
 
 const VERDICT_TONE: Record<AffordResultVM['verdict'], string> = {
   fits: 'text-positive',
-  wait: 'text-warning',
-  no: 'text-negative',
+  wait: 'text-text',
+  no: 'text-text',
 };
 
 function failsOnText(failsOn: NonNullable<AffordResultVM['failsOn']>, rules: AffordRulesVM): string {
@@ -26,7 +27,11 @@ function errorText(error: VMError): string {
   return error.kind === 'notImplemented' ? t.result.errors.notImplemented : t.result.errors.other;
 }
 
-const STICKER_TONE = { fits: 'positive', wait: 'primary', no: 'primary' } as const;
+const STICKER_TONE = { fits: 'positive', wait: 'primary', no: 'ink' } as const;
+
+/** Big display size for the verdict sentence (Figma S11: ~80px on desktop). */
+const VERDICT_SIZE =
+  'font-display text-4xl font-extrabold leading-display tracking-tight sm:text-display xl:text-[length:calc(var(--text-display)*1.4)]';
 
 /** Headline verdict plus the plain-language reason; never blames the purchase for a plan that already breaks a rule. */
 function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }) {
@@ -37,19 +42,15 @@ function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }
         ? t.result.verdicts.wait(data.waitMonths ?? 0)
         : t.result.verdicts.no;
   const reason = data.failsOn ? failsOnText(data.failsOn, rules) : null;
-  const body = 'text-lg text-text-muted';
+  const body = 'max-w-prose text-lg text-text-muted';
 
   return (
     <Stack gap="md">
-      <p
-        data-testid="afford-verdict"
-        data-verdict={data.verdict}
-        className={cx('font-display text-4xl font-extrabold leading-display sm:text-display', VERDICT_TONE[data.verdict])}
-      >
+      <p data-testid="afford-verdict" data-verdict={data.verdict} className={cx(VERDICT_SIZE, VERDICT_TONE[data.verdict])}>
         {headline}
       </p>
       {data.verdict === 'fits' && data.baselineFails && (
-        <p role="note" className="rounded-lg bg-surface-strong p-md text-sm">
+        <p role="note" className="rounded-lg bg-bg p-md text-sm">
           {t.result.baseline.fits}
         </p>
       )}
@@ -81,16 +82,36 @@ function SourceLabel({ source, className }: { source: AffordResultVM['forecastSo
   );
 }
 
-/** The green "cheapest way" strip at the bottom of the verdict tile. */
-function Cheapest({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWithChoice }) {
+/** A white fact card under the answer: a big number (or word) over a small label (Figma S11). */
+function Fact({ value, label, note }: { value: ReactNode; label: string; note?: string }) {
   return (
-    <div className="flex flex-col gap-xs rounded-lg bg-positive-soft px-lg py-md">
-      <p className="flex flex-wrap gap-x-sm font-semibold text-positive">
-        <span>{t.result.cheapestTitle}</span>
-        <span aria-hidden="true">·</span>
-        <span>{t.result.cheapestWays[data.cheapestWay]}</span>
-      </p>
-      <p className="text-xs text-text-muted">{data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent}</p>
+    <div className="flex min-w-0 flex-col gap-xs rounded-xl bg-surface p-xl shadow-md">
+      <dt className="order-2 text-sm text-text-muted">{label}</dt>
+      <dd className="order-1 font-display text-3xl font-extrabold leading-tight tabular-nums sm:text-4xl">{value}</dd>
+      {note && <dd className="order-3 text-xs font-semibold text-primary">{note}</dd>}
+    </div>
+  );
+}
+
+/**
+ * The fact cards: net worth vs not buying in 1 and 10 years (rules engine, labeled) and the cheapest way
+ * to pay. Every number comes from the view-model.
+ */
+function Facts({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWithChoice }) {
+  const shown = data.horizons.filter((h) => h.month === 120 || h.month === 12).sort((a, b) => b.month - a.month);
+  return (
+    <div data-testid={data.horizons.length > 0 ? 'afford-horizons' : undefined} className="flex flex-col gap-sm">
+      <dl aria-label={t.result.effectsLabel} className="grid grid-cols-1 gap-md sm:grid-cols-3">
+        {shown.map((h) => (
+          <Fact key={h.month} value={<Money value={h.deltaMid} signed />} label={t.result.effects[h.month]!} />
+        ))}
+        <Fact
+          value={t.result.cheapestWays[data.cheapestWay]}
+          label={t.result.cheapestTitle}
+          note={data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent}
+        />
+      </dl>
+      {data.horizons.length > 0 && <SourceLabel source={data.forecastSource} className="self-start" />}
     </div>
   );
 }
@@ -149,89 +170,96 @@ export type AffordResultPanelProps = {
   chosenWay: PayWithChoice;
 };
 
-/** The verdict tile (Figma S11, right): sticker, illustration, huge verdict, reason and the cheapest way. */
+/** The big white answer card: tilted verdict sticker, giant verdict sentence, reason, and the crane art. */
+function AnswerCard({ sticker, children }: { sticker?: ReactNode; children: ReactNode }) {
+  return (
+    <section
+      aria-label={t.result.title}
+      className="grid grid-cols-1 items-center gap-xl rounded-xl bg-surface p-xl shadow-md sm:p-2xl md:grid-cols-[3fr_2fr]"
+    >
+      <div className="flex min-w-0 flex-col items-start gap-lg">
+        {sticker}
+        {children}
+      </div>
+      <Art name="afford-crane" className="mx-auto w-1/2 max-w-(--container-3xs) md:w-full" />
+    </section>
+  );
+}
+
+/** The answer (Figma S11, right): the verdict card, then the fact cards. */
 export function AffordVerdictTile({ result, rules, invalidFields, chosenWay }: Omit<AffordResultPanelProps, 'purchaseLabel'>) {
   if (result === null) {
     return (
-      <Card title={t.result.title} tone="muted">
-        <Art name="afford" className="mb-lg w-full max-w-(--container-3xs)" />
-        <p className="text-lg text-text-muted">{invalidFields.length > 0 ? t.form.fixFields : t.form.empty}</p>
-      </Card>
+      <AnswerCard>
+        <p className="font-display text-3xl font-extrabold leading-tight text-text-muted sm:text-4xl">
+          {invalidFields.length > 0 ? t.form.fixFields : t.form.empty}
+        </p>
+      </AnswerCard>
     );
   }
   if (result.status === 'loading') {
     return (
-      <Card title={t.result.title}>
-        <Skeleton label={t.result.loading} />
-      </Card>
+      <AnswerCard>
+        <div className="w-full">
+          <Skeleton label={t.result.loading} />
+        </div>
+      </AnswerCard>
     );
   }
   if (result.status === 'error') {
     return (
-      <Card title={t.result.title}>
-        <p role="alert" className="text-sm">{errorText(result.error)}</p>
-      </Card>
+      <AnswerCard>
+        <p role="alert" className="text-lg">
+          {errorText(result.error)}
+        </p>
+      </AnswerCard>
     );
   }
 
   const data = result.data;
   return (
-    <div className="relative pt-lg" aria-live="polite">
-      <Card as="section" aria-label={t.result.title} className="relative flex flex-col gap-lg" style={{ transform: 'rotate(1deg)' }}>
-        <Sticker tone={STICKER_TONE[data.verdict]} tilt={-5} className="absolute -top-lg right-xl px-lg py-sm text-base">
-          {t.result.sticker}
-        </Sticker>
-        <Art name="afford" className="w-1/2 max-w-(--container-3xs)" tilt={-2} />
+    <div className="flex flex-col gap-lg" aria-live="polite">
+      <AnswerCard
+        sticker={
+          <Sticker tone={STICKER_TONE[data.verdict]} tilt={-4} className="px-lg! py-sm! text-base! shadow-md">
+            {t.result.stickers[data.verdict]}
+          </Sticker>
+        }
+      >
         <Verdict data={data} rules={rules} />
-        <Cheapest data={data} chosenWay={chosenWay} />
         <HowWeDecide data={data} />
-      </Card>
+      </AnswerCard>
+      <Facts data={data} chosenWay={chosenWay} />
     </div>
   );
 }
 
-/** The black score bar (net worth change at 4 horizons), the with / without chart and, collapsed, the table behind it. */
+/** The with / without chart and, collapsed, the table behind it (rules engine, labeled). */
 export function AffordEffects({ result, purchaseLabel }: Pick<AffordResultPanelProps, 'result' | 'purchaseLabel'>) {
   if (result?.status !== 'ready') return null;
   const data = result.data;
   return (
-    <Stack gap="lg">
+    <Card data-testid="afford-chart">
+      <SourceLabel source={data.forecastSource} className="mb-sm" />
+      <ForecastChart
+        title={t.result.chartTitle(purchaseLabel)}
+        series={{ label: t.result.chartWith(purchaseLabel), points: data.withPoints }}
+        compare={{ label: t.result.chartWithout, points: data.withoutPoints }}
+        footnote={t.result.chartFootnote}
+      />
       {data.horizons.length > 0 && (
-        <div data-testid="afford-horizons" className="flex flex-col gap-sm">
-          <SourceLabel source={data.forecastSource} className="self-start" />
-          <Scoreboard
-            label={t.result.effectsLabel}
-            items={data.horizons.map((h, i) => ({
-              id: String(h.month),
-              value: <Money value={h.deltaMid} signed />,
-              label: t.result.effects[h.month],
-              tone: h.deltaMid > 0 ? 'positive' : i === 0 ? 'primary' : 'default',
-            }))}
-          />
-        </div>
+        <details className="mt-md">
+          <summary className="cursor-pointer text-sm font-medium text-text-muted">{t.result.horizonsTitle}</summary>
+          <div className="mt-sm">
+            <Horizons data={data} />
+          </div>
+        </details>
       )}
-      <Card data-testid="afford-chart">
-        <SourceLabel source={data.forecastSource} className="mb-sm" />
-        <ForecastChart
-          title={t.result.chartTitle(purchaseLabel)}
-          series={{ label: t.result.chartWith(purchaseLabel), points: data.withPoints }}
-          compare={{ label: t.result.chartWithout, points: data.withoutPoints }}
-          footnote={t.result.chartFootnote}
-        />
-        {data.horizons.length > 0 && (
-          <details className="mt-md">
-            <summary className="cursor-pointer text-sm font-medium text-text-muted">{t.result.horizonsTitle}</summary>
-            <div className="mt-sm">
-              <Horizons data={data} />
-            </div>
-          </details>
-        )}
-      </Card>
-    </Stack>
+    </Card>
   );
 }
 
-/** Verdict tile plus the effects, stacked (the screen places the two parts separately). */
+/** Answer plus the chart, stacked (the screen places the two parts separately). */
 export function AffordResultPanel(props: AffordResultPanelProps) {
   return (
     <Stack gap="lg">

@@ -3,12 +3,12 @@
 // mode feature-detects the route: the first 404/405/501 turns the adapter off for the rest of the
 // page load, so a build pointed at a server without the route keeps working. Any other failure
 // (503 store down, 429, network) is skipped quietly; the next change saves again.
-import { ProfileSchema, PurchaseSchema, type Profile, type Purchase } from '@lifeguessr/types';
+import { GoalSchema, type Goal, ProfileSchema, PurchaseSchema, type Profile, type Purchase } from '@lifeguessr/types';
 import { z } from 'zod';
 import { sessionSource, type SessionSource } from '@/lib/config';
 import { ApiError, postJson } from './http';
 
-export type SessionPayload = { profile?: Profile; wishlist?: Purchase[] };
+export type SessionPayload = { goal?: Goal | null; profile?: Profile; wishlist?: Purchase[] };
 
 export interface SessionAdapter {
   /** False in local mode, or once the route turned out not to exist. */
@@ -21,6 +21,7 @@ export interface SessionAdapter {
 
 /** Saved state as the route returns it; unknown fields are ignored, broken ones dropped. */
 const SavedSessionSchema = z.object({
+  goal: GoalSchema.nullable().optional().catch(undefined),
   profile: ProfileSchema.optional().catch(undefined),
   wishlist: z.array(PurchaseSchema).optional().catch(undefined),
 });
@@ -41,13 +42,13 @@ export function createHttpSessionAdapter(url = '/api/session'): SessionAdapter {
     if (!enabled) return null;
     try {
       const saved = await postJson(url, { anonId, ...payload }, SavedSessionSchema, { anonId });
-      return { profile: saved.profile, wishlist: saved.wishlist };
+      return { profile: saved.profile, wishlist: saved.wishlist, ...(saved.goal !== undefined && {goal:saved.goal}) };
     } catch (err) {
       if (err instanceof ApiError && ROUTE_MISSING.has(err.status)) enabled = false;
       // 402: the wishlist holds an item the server won't add without Pro (e.g. saved in this
       // browser before the paywall). The profile still saves; the wishlist stays local.
       if (err instanceof ApiError && err.status === 402 && payload.wishlist !== undefined && payload.profile !== undefined) {
-        return call(anonId, { profile: payload.profile });
+        return call(anonId, { profile: payload.profile, ...(payload.goal !== undefined && {goal:payload.goal}) });
       }
       return null;
     }

@@ -1,8 +1,7 @@
 import { useId } from 'react';
 import { common, pro as copy } from '@/copy';
-import { Button, cx, Sticker } from '@/ui-kit';
-import type { PaywallError, PaywallVM } from '../model/types';
-import { FULL_BLEED_PRIMARY, ON_ARENA } from './arena';
+import { Art, Button, cx, Sticker } from '@/ui-kit';
+import type { CheckoutMode, PaywallError, PaywallVM } from '../model/types';
 import { CheckoutBlock, TestCardNote } from './CheckoutBlock';
 import { DemoCheckoutBlock } from './DemoCheckoutBlock';
 import { errorText } from './errorText';
@@ -13,11 +12,25 @@ import { PromoCodeForm } from './PromoCodeForm';
 
 export type PaywallProps = PaywallVM;
 
+/** The badge over the offer. Only a mode that is really on may be named; 'off' covers "not known yet" too. */
+const BADGE: Record<CheckoutMode, string> = { stripe: copy.demoBadge.stripe, demo: copy.demoBadge.demo, off: copy.demoBadge.neutral };
+
 const errorIn = (error: PaywallError | null, ...where: PaywallError['where'][]) => (error && where.includes(error.where) ? error : null);
 
+/** Anchor of the promo form, for the "Have a promo code?" link in the fine print. */
+const PROMO_ANCHOR = 'pro-promo-code';
+
 /**
- * S15 Pro paywall (demo): an orange band with the plans and a checkout (Stripe's test checkout, or
- * the simulated one when the server has no Stripe key), then the judges' promo code.
+ * The route keeps a narrow column; on wide screens the paywall widens to two columns, centered on
+ * the page (left offset + translate, so it never adds sideways scroll).
+ */
+const WIDE = 'lg:relative lg:left-1/2 lg:w-[min(calc(100vw-var(--spacing-3xl)*2),var(--container-6xl))] lg:-translate-x-1/2';
+
+/**
+ * S15 Pro paywall (demo, Figma Design v3 node 193:1653): the headline and the blueprint house on
+ * the left; the plans, what Pro includes today, the checkout (Stripe's test checkout, or the
+ * simulated one when the server has no Stripe key) and the fine print on the right; then the
+ * judges' promo code.
  */
 export function Paywall(vm: PaywallProps) {
   const testCardId = useId();
@@ -30,22 +43,26 @@ export function Paywall(vm: PaywallProps) {
   const offer = vm.view === 'offer';
 
   return (
-    <div className="mt-lg flex flex-col gap-xl">
-      <div className={cx(FULL_BLEED_PRIMARY, ON_ARENA, 'flex flex-col items-center gap-xl py-2xl text-center sm:py-3xl')}>
+    <div className={cx('mt-xl grid grid-cols-1 items-start gap-2xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]', WIDE)}>
+      <div className="flex flex-col gap-lg">
+        <h2 className="font-display text-display font-extrabold leading-display lg:text-[length:calc(var(--text-display)*1.4)]">
+          {copy.headline}
+        </h2>
+        <p className="max-w-prose text-lg text-text-muted">{copy.lead}</p>
+        <Art name="house-blueprint" className="mx-auto w-1/2 max-w-(--container-md) sm:w-3/4 lg:w-full" />
+      </div>
+
+      <div className="flex flex-col gap-xl">
         <Sticker tone="ink" tilt={-2}>
-          {vm.checkoutMode === 'demo' ? copy.demoBadge.demo : copy.demoBadge.stripe}
+          {BADGE[vm.checkoutMode]}
         </Sticker>
 
-        {offer && (
-          <h2 className="font-display text-display leading-display font-extrabold sm:text-7xl sm:leading-display">{copy.headline}</h2>
-        )}
-
         {/* One polite live region for every status change on the screen (loading, Stripe return, errors). */}
-        <div role="status" aria-live="polite" className="flex flex-col items-center gap-sm">
+        <div role="status" aria-live="polite" className="flex flex-col items-start gap-sm">
           {message && <p className="text-lg font-semibold">{message}</p>}
           {pageError && <p className="font-semibold text-negative">{errorText(pageError)}</p>}
           {pageError && vm.retry && (
-            <Button variant="dark" size="sm" onClick={vm.retry}>
+            <Button variant="secondary" size="sm" onClick={vm.retry}>
               {copy.retry}
             </Button>
           )}
@@ -77,28 +94,31 @@ export function Paywall(vm: PaywallProps) {
                 testCardId={testCardId}
               />
             )}
-            <p className="text-xs">{common.disclaimer}</p>
+            <div className="flex flex-wrap items-center justify-between gap-x-lg gap-y-xs text-xs text-text-muted">
+              <span>{copy.plans.priceNote}</span>
+              {vm.promoEnabled && (
+                <a href={`#${PROMO_ANCHOR}`} className="font-semibold text-primary underline-offset-2 hover:underline">
+                  {copy.finePrint.promoLink}
+                </a>
+              )}
+            </div>
+            {stripe && <TestCardNote id={testCardId} />}
+            {vm.promoEnabled && (
+              <PromoCodeForm
+                id={PROMO_ANCHOR}
+                code={vm.promoCode}
+                onCodeChange={vm.setPromoCode}
+                onRedeem={vm.redeem}
+                busy={vm.busy === 'promo'}
+                disabled={locked}
+                error={errorIn(vm.error, 'promo')}
+              />
+            )}
           </>
         )}
+
+        <p className="text-xs text-text-muted">{common.disclaimer}</p>
       </div>
-
-      {offer && (stripe || vm.promoEnabled) && (
-        <div className="grid items-start gap-lg sm:grid-cols-2">
-          {stripe && <TestCardNote id={testCardId} />}
-          {vm.promoEnabled && (
-            <PromoCodeForm
-              code={vm.promoCode}
-              onCodeChange={vm.setPromoCode}
-              onRedeem={vm.redeem}
-              busy={vm.busy === 'promo'}
-              disabled={locked}
-              error={errorIn(vm.error, 'promo')}
-            />
-          )}
-        </div>
-      )}
-
-      {!offer && <p className="text-xs text-text-muted">{common.disclaimer}</p>}
     </div>
   );
 }
