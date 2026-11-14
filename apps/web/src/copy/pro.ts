@@ -10,22 +10,29 @@ export const pro = {
     /** While the server has not said which checkout is on, and when none is: true of every mode. */
     neutral: 'Demo · no real charge',
   },
-  headline: 'Keep playing your future.',
+  headline: 'Keep building your future',
+  /** One sentence under the headline: what stays free, what Pro adds today. */
+  lead: 'Forecast, moves, decisions, Can I Afford It? and Loan Lab stay free. Pro adds a wishlist for the purchases you are planning.',
   loading: 'Checking your Pro status…',
 
   plans: {
     legend: 'Choose a plan',
     names: { yearly: 'Yearly', monthly: 'Monthly' } satisfies Record<ProPlan, string>,
     /** Suffix after the price: "$39.99 / year". */
-    per: { year: 'a year', month: 'a month' },
+    per: { year: '/ year', month: '/ month' },
     yearlyBadge: 'Best value',
     priceNote: 'Demo prices.',
   },
 
-  /** Only what Pro unlocks in this build (no promises of unbuilt features). */
   includes: {
-    title: 'What Pro includes',
+    title: 'Pro includes',
+    /** Only what Pro unlocks in this build (the wishlist is the one Pro-gated feature). */
     now: ['Save purchases to a wishlist in Can I Afford It?'],
+  },
+
+  /** The fine print under the checkout. */
+  finePrint: {
+    promoLink: 'Have a promo code?',
   },
 
   checkout: {

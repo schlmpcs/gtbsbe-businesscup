@@ -3,7 +3,7 @@
 import { afford as t } from '@/copy';
 import { Field, formatMoney, NumberInput, Stack } from '@/ui-kit';
 import type { AffordVM, PayWithChoice, Purchase } from '../model/types';
-import { Choice, TextInput } from './controls';
+import { bigNumberInput, Choice, TextInput } from './controls';
 
 type RecurringChoice = 'once' | 'monthly' | 'yearly';
 
@@ -19,8 +19,8 @@ export type PurchaseFormProps = Pick<
 export function PurchaseExamples({ setLabel, setAmount }: Pick<AffordVM, 'setLabel' | 'setAmount'>) {
   return (
     <div className="flex flex-col gap-sm">
-      <p className="text-sm text-text-muted">{t.form.examplesTitle}</p>
-      <div className="flex flex-wrap gap-sm">
+      <p className="text-sm font-medium text-text-muted">{t.form.examplesTitle}</p>
+      <div className="flex flex-wrap gap-xs">
         {t.form.examples.map((ex) => (
           <button
             key={ex.label}
@@ -29,7 +29,7 @@ export function PurchaseExamples({ setLabel, setAmount }: Pick<AffordVM, 'setLab
               setLabel(ex.label);
               setAmount(ex.amount);
             }}
-            className="rounded-full border-2 border-border bg-surface px-lg py-sm text-base font-medium leading-normal transition-colors hover:border-text"
+            className="rounded-full bg-bg px-md py-xs text-sm font-semibold leading-normal text-text-muted transition-colors hover:bg-primary-soft hover:text-primary"
           >
             {t.form.example(ex.label, formatMoney(ex.amount))}
           </button>
@@ -46,14 +46,12 @@ export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecu
   return (
     <form onSubmit={(e) => e.preventDefault()} noValidate>
       <Stack gap="lg">
-        <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
-          <Field label={t.form.label} error={error('label')}>
-            <TextInput name="label" value={form.label} onValueChange={setLabel} placeholder={t.form.labelPlaceholder} maxLength={120} />
-          </Field>
-          <Field label={t.form.amount} error={error('amount')}>
-            <NumberInput name="amount" value={form.amount} onValueChange={setAmount} prefix="$" />
-          </Field>
-        </div>
+        <Field label={t.form.label} error={error('label')} className="[&_label]:text-text-muted">
+          <TextInput name="label" value={form.label} onValueChange={setLabel} placeholder={t.form.labelPlaceholder} maxLength={120} />
+        </Field>
+        <Field label={t.form.amount} error={error('amount')} className="[&_label]:text-text-muted">
+          <NumberInput name="amount" value={form.amount} onValueChange={setAmount} prefix="$" className={bigNumberInput} />
+        </Field>
         <Choice<RecurringChoice>
           legend={t.form.recurring}
           name="recurring"
@@ -78,7 +76,7 @@ export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecu
           ]}
         />
         {form.payWith === 'loan' && (
-          <fieldset className="flex min-w-0 flex-col gap-md rounded-lg bg-surface-strong p-lg">
+          <fieldset className="flex min-w-0 flex-col gap-md rounded-lg border-2 border-bg p-lg [&_input]:font-bold">
             <legend className="sr-only">{t.form.loanTitle}</legend>
             <p aria-hidden="true" className="text-sm font-semibold">
               {t.form.loanTitle}

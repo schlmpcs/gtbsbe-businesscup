@@ -1,25 +1,34 @@
 import { mocks as t } from '@/copy';
-import { buttonClassName, Sticker } from '@/ui-kit';
+import { buttonClassName, cx, Sticker, type StickerTone } from '@/ui-kit';
 import type { ProPreviewVM } from '../model/types';
 import type { LinkComponent } from './shared';
 
-/**
- * Marks a mock screen: a small tilted "Preview" sticker and a one-line note. With `pro` (a screen
- * that is part of Pro), free users also get a link to Pro; free tools pass no `pro`.
- */
-export function PreviewBadge({ pro, Link }: { pro?: ProPreviewVM; Link: LinkComponent }) {
+type Props = {
+  /** Only for screens that are part of Pro; free tools pass none. */
+  pro?: ProPreviewVM;
+  Link: LinkComponent;
+  /** Sticker text (default "Preview"). */
+  label?: string;
+  tone?: StickerTone;
+  /** Offer the link to Pro to free users (off on screens whose tool is free). */
+  showPro?: boolean;
+  align?: 'start' | 'center';
+};
+
+/** Marks a mock screen: a tilted "Preview" sticker, a one-line note, and (optionally) a link to Pro for free users. */
+export function PreviewBadge({ pro, Link, label = t.preview.sticker, tone = 'soft', showPro = true, align = 'start' }: Props) {
   return (
     <div
       role="note"
       aria-label={t.preview.sticker}
       data-testid="preview-note"
-      className="flex flex-wrap items-center gap-sm text-xs text-text-muted"
+      className={cx('flex flex-wrap items-center gap-sm text-xs text-text-muted', align === 'center' && 'flex-col justify-center')}
     >
-      <Sticker tone="soft" tilt={-3}>
-        {t.preview.sticker}
+      <Sticker tone={tone} tilt={-3}>
+        {label}
       </Sticker>
-      <span>{pro?.isPro ? t.preview.proNote : t.preview.note}</span>
-      {pro && !pro.isPro && (
+      <span>{pro?.isPro && showPro ? t.preview.proNote : t.preview.note}</span>
+      {showPro && pro && !pro.isPro && (
         <Link href={pro.href} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
           {t.preview.cta}
         </Link>

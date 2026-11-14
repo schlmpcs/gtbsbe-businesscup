@@ -521,7 +521,7 @@ describe('FutureScreen (S10)', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('You in 3 years');
     expect(within(headline).getByText('Net worth in 3 years')).toBeInTheDocument();
     expect(screen.getByRole('figure', { name: 'Your net worth over the next 3 years' })).toBeInTheDocument();
-    expect(screen.getByText('Ranked by 3-year gain, in today’s dollars.')).toBeInTheDocument();
+    expect(screen.getByText('Ranked by what each adds in 3 years, in today’s dollars.')).toBeInTheDocument();
     for (const move of within(screen.getByTestId('moves')).getAllByRole('article')) {
       expect(within(move).getByText('Net worth gain in 3 years')).toBeInTheDocument();
     }
@@ -540,7 +540,7 @@ describe('FutureScreen (S10)', () => {
     expect(screen.getByRole('radio', { name: '1 year' })).toBeChecked();
     expect(within(headline).getByText('Net worth in 1 year')).toBeInTheDocument();
     expect(screen.getByRole('figure', { name: 'Your net worth over the next year' })).toBeInTheDocument();
-    expect(screen.getByText('Ranked by 1-year gain, in today’s dollars.')).toBeInTheDocument();
+    expect(screen.getByText('Ranked by what each adds in 1 year, in today’s dollars.')).toBeInTheDocument();
     const first = (await screen.findAllByRole('article'))[0]!;
     expect(within(first).getByText('Net worth gain in 1 year')).toBeInTheDocument();
     expect(within(first).getByText(/^\+\$[\d,]+$/)).toBeInTheDocument();

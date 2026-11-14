@@ -20,7 +20,7 @@ export function CheckoutBlock({ available, busy, disabled, error, onCheckout, te
   return (
     <div className="flex w-full flex-col items-center gap-md">
       <Button
-        variant="dark"
+        variant="primary"
         size="lg"
         fullWidth
         disabled={!available || disabled}
@@ -31,7 +31,7 @@ export function CheckoutBlock({ available, busy, disabled, error, onCheckout, te
         {busy ? copy.checkout.busy : copy.checkout.button}
       </Button>
       {!available && (
-        <p id={noteId} className="text-sm">
+        <p id={noteId} className="text-sm text-text-muted">
           {copy.checkout.unavailable}
         </p>
       )}
@@ -47,7 +47,7 @@ export function CheckoutBlock({ available, busy, disabled, error, onCheckout, te
 /** The Stripe test card to use on the next page (shown only when test checkout is on). */
 export function TestCardNote({ id }: { id: string }) {
   return (
-    <Card tone="muted" id={id} title={copy.checkout.testCardTitle} headingLevel={3}>
+    <Card id={id} title={copy.checkout.testCardTitle} headingLevel={3}>
       <p className="font-mono text-lg tracking-wide">{copy.checkout.testCardNumber}</p>
       <p className="mt-xs text-sm">{copy.checkout.testCardDetails}</p>
       <p className="mt-xs text-xs text-text-muted">{copy.checkout.testCardNote}</p>

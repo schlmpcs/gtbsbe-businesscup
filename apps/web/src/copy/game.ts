@@ -58,6 +58,12 @@ export const game = {
 
   /** "Home 2 of 5". */
   progress: (n: number, total: number) => `Home ${n} of ${total}`,
+  /** S2 top: the round sticker's second half ("1,000 pts") and the big question. */
+  round: {
+    maxPoints: (points: string) => `${points} pts`,
+    question: 'What does this life cost?',
+    subline: 'Look around, then guess their month. Everything in: rent, car, kids, food.',
+  },
   loading: 'Loading today’s homes…',
   errors: {
     title: 'We couldn’t load today’s homes',
@@ -96,6 +102,8 @@ export const game = {
     decor: 'Around the house',
     /** Accessible name of the chips under the caption (layout and decor). */
     about: 'About this home',
+    /** The "clues used" pill once a room is open. */
+    cluesUsed: (opened: number) => `${plural(opened, 'room', 'rooms')} opened`,
   },
   multiplier: {
     label: 'Score multiplier',
@@ -128,6 +136,14 @@ export const game = {
       kitchen: 'Kitchen',
       entry: 'Entry',
       mailbox: 'Mailbox',
+    } satisfies Record<ClueId, string>,
+    /** Decorative glyph on each room button: the same for every home, so it never hints at a fact. */
+    icons: {
+      garage: '🔧',
+      kidsRoom: '🛏️',
+      kitchen: '🍳',
+      entry: '🚪',
+      mailbox: '📬',
     } satisfies Record<ClueId, string>,
     closedHint: (pct: string) => `Tap to look (−${pct} points)`,
     closedFreeHint: 'Tap to look (free)',
@@ -176,6 +192,8 @@ export const game = {
     perMonth: 'a month',
     lockIn: (amount: string) => `Lock in ${amount}`,
     locking: 'Locking in…',
+    /** Under the lock-in button: the per-home maximum from the view-model. */
+    worth: (points: string) => `Worth up to ${points} points`,
   },
 
   // ----- S4: streamer -----
@@ -202,6 +220,12 @@ export const game = {
     perMonth: 'a month',
     eyebrow: (progress: string, metro: string) => `${progress} · ${metro}`,
     pointsSticker: (points: string) => `+${points} points`,
+    /** Neutral sticker when the guess missed the range (never red). */
+    pointsNeutral: (points: string) => `${points} points`,
+    /** The ink band: the biggest category, as the view-model's surprise line names it. */
+    decided: (category: string, amount: string) => `What decided it: ${category}, ${amount} a month`,
+    /** The ink band when there is no surprise line. */
+    decidedFallback: 'Where the money goes is below',
     /** Sticker when the guess is outside the range: "$800 too low". */
     missed: { low: (amount: string) => `${amount} too low`, high: (amount: string) => `${amount} too high` },
     inRangeSticker: 'In range',
@@ -230,13 +254,23 @@ export const game = {
 
   // ----- after 5 homes -----
   summary: {
-    heading: 'Your five lives',
+    heading: 'Today’s five',
+    /** The giant score: homes guessed in range. */
+    inRange: (n: number, played: number) => `${n} of ${played}`,
+    inRangeLabel: 'in range',
+    pointsLine: (points: string, max: string) => `${points} of ${max} points`,
+    legend: 'Green in range · Yellow 500+ points · Black under 500',
+    takeawayEyebrow: 'Your takeaway',
+    takeawayDetail: (high: number, inRange: number) => `High on ${high}, in range on ${inRange}.`,
+    bridgeEyebrow: 'Now you’re up',
+    bridgeHeading: 'What does your month cost?',
+    nextFive: 'Five new homes tomorrow.',
     gridLabel: 'Your results, one tile per home',
     tile: (n: number, result: string, points: string) => `Home ${n}: ${result}, ${points} points`,
     tileResult: { green: 'in range', yellow: '500 points or more', red: 'under 500 points' },
     total: 'Total',
     bridge: (low: number, played: number) => `You guessed low on ${low} of ${played}.`,
-    cta: 'Now guess your own →',
+    cta: 'Price my own month →',
     share: 'Share',
     shareStatus: {
       idle: '',

@@ -50,7 +50,7 @@ test('closest life → sliders → balance sheet with a new debt → /future', a
   expect((await savedProfile(page))?.profileOrigin).toBe('closestLife');
 
   // S7: through the "Next" CTA; move a slider and watch the month and the forecast change.
-  await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S7) }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S6 }).click();
   await expect(page).toHaveURL(/\/me\/sliders$/);
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
@@ -66,7 +66,7 @@ test('closest life → sliders → balance sheet with a new debt → /future', a
   await expect(narrowed).not.toHaveAttribute('aria-valuenow', '0');
 
   // S8: add a student loan; APR typed as a percent, saved as a decimal; minimum left empty.
-  await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S8) }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S7 }).click();
   await expect(page).toHaveURL(/\/me\/balance$/);
   const debtLoad = page.getByRole('meter', { name: ladder.balance.debtLoadLabel });
   const loadBefore = await debtLoad.getAttribute('aria-valuenow');

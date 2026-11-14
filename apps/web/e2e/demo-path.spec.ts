@@ -122,7 +122,7 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   await ownGuess;
 
   // ----- 3. Closest life (S6), from today's homes -----
-  await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S6) }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S5 }).click();
   await expect(page).toHaveURL(/\/me\/closest$/);
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
   const chosen = stored(page, 'closest_life_chosen');
@@ -131,7 +131,7 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   await chosen;
 
   // ----- 4. Sliders (S7): the month and the 10-year number follow -----
-  await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S7) }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S6 }).click();
   await expect(page).toHaveURL(/\/me\/sliders$/);
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
