@@ -24,7 +24,8 @@ export type LadderRungVM = {
   href: string;
   /**
    * S5: a guess is saved. S6: a life card was picked. S7/S8: the profile is the user's own (not the
-   * demo) and at least one of that rung's inputs is measured. S9: at least one statement month merged.
+   * demo) and at least one of that rung's inputs is measured (S8 also: a debt was added, edited or
+   * removed since the starting profile). S9: at least one statement month merged.
    */
   done: boolean;
 };

@@ -291,6 +291,19 @@ describe('useLadderProgress', () => {
     act(() => useAppStore.getState().setField('takeHomePay', 6000));
     expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(true);
     expect(result.current.estimates.left).toBe(start.estimates.total - 2);
+    act(() => useAppStore.getState().skipField('takeHomePay'));
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
+    // Adding a debt counts, even with its minimum payment left to us (an estimate).
+    let id = '';
+    act(() => {
+      id = useAppStore.getState().addDebt({ kind: 'student', balance: 20000, apr: 0.05, minPayment: null });
+    });
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(true);
+    // One more input (its minimum is estimated) and one fewer estimate (rent): back to `total` left.
+    expect(result.current.estimates).toEqual({ left: start.estimates.total, total: start.estimates.total + 1 });
+    act(() => useAppStore.getState().removeDebt(id));
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
+    act(() => useAppStore.getState().setField('takeHomePay', 6000));
     expect(result.current.bandWidth).toBeLessThan(result.current.bandWidthAllEstimated);
     expect(result.current.bandNarrowed).toBeGreaterThan(0);
 
@@ -317,5 +330,20 @@ describe('useLadderProgress', () => {
     expect(result.current.estimates.left).toBe(0);
     expect(result.current.bandWidth).toBeCloseTo(0, 6);
     expect(result.current.bandNarrowed).toBe(1);
+  });
+});
+
+describe('debtsChanged / startingDebts', () => {
+  it('compares the debts with the starting profile', async () => {
+    const { debtsChanged, startingDebts } = await import('./useLadderProgress');
+    const demo = startingDebts(null, cardsSample)!;
+    expect(demo.map((d) => d.id)).toEqual(['card-1', 'auto-1']);
+    expect(debtsChanged(demo, demo)).toBe(false);
+    expect(debtsChanged(demo, demo.slice(1))).toBe(true);
+    expect(debtsChanged(demo, demo.map((d) => (d.id === 'card-1' ? { ...d, apr: 0.2 } : d)))).toBe(true);
+    expect(debtsChanged(null, [])).toBe(false);
+    expect(startingDebts('no-such-card', cardsSample)).toBeNull();
+    const withCar = cardsSample.find((c) => c.car)!;
+    expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, areaByZip(withCar.zip)).debts);
   });
 });
