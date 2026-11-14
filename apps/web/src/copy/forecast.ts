@@ -186,6 +186,9 @@ export const forecast = {
     /** The rules forecast: every number is the engine's. */
     intro:
       'Every number comes from the same simulation, month by month for 10 years. Same inputs, same answer, every time. These are the rates and rules it uses.',
+    /** Before the first answer: the forecast is loading, so it is not yet known who made the numbers. */
+    introPending:
+      'Your 10-year forecast is loading. Once it is in, this panel says how its numbers were made. Below are the rates and rules our simulation uses.',
     /** The AI forecast: the model writes the numbers, code checks them against the simulation. */
     introAi:
       'The 10-year numbers are written by an AI model from your inputs, then checked in code against our rules simulation: an answer that strays too far from it is thrown out, and you see the simulation’s numbers instead, labeled as such. Everything else, like this month’s spending, is still worked out by our own rules. These are the rates and rules the simulation uses.',

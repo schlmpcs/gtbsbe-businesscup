@@ -281,6 +281,21 @@ describe('FutureScreen (S10)', () => {
     expect(within(aiChart).queryByText(t.band.label)).not.toBeInTheDocument();
   });
 
+  it('shows a neutral “How we calculate” intro, naming no source, until the first answer is in', async () => {
+    let release!: () => void;
+    route = mockForecastRoute((body) => new Promise((resolve) => (release = () => resolve(aiAnswer(body)))));
+    render(<Future />);
+    const how = screen.getByTestId('how-we-calculate');
+    expect(within(how).getByText(t.how.introPending)).toBeInTheDocument();
+    expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
+    expect(within(how).queryByText(t.how.introAi)).not.toBeInTheDocument();
+
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    act(() => release());
+    await waitFor(() => expect(within(how).getByText(t.how.introAi)).toBeInTheDocument());
+    expect(within(how).queryByText(t.how.introPending)).not.toBeInTheDocument();
+  });
+
   it('says the forecast is updating while a new answer is on its way', async () => {
     render(<Future />);
     const headline = await screen.findByTestId('in10y');
