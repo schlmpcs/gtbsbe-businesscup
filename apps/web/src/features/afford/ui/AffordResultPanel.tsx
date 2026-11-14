@@ -1,7 +1,7 @@
 'use client';
 
-import { afford as t } from '@/copy';
-import { Card, cx, ForecastChart, formatRate, Money, Stack, Stat } from '@/ui-kit';
+import { afford as t, forecast } from '@/copy';
+import { Card, cx, ForecastChart, formatRate, Money, Stack, Stat, Tag } from '@/ui-kit';
 import type { AffordResultVM, AffordRulesVM, AffordVM, PayWithChoice, VMError } from '../model/types';
 import { Skeleton } from './controls';
 
@@ -64,6 +64,15 @@ function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }
           reason && <p className="text-sm">{reason}</p>
         ))}
     </Stack>
+  );
+}
+
+/** Who made the with / without numbers ("Rules-based estimate"): S10 may show another number from the AI model. */
+function SourceLabel({ source, className }: { source: AffordResultVM['forecastSource']; className?: string }) {
+  return (
+    <Tag data-testid="afford-forecast-source" className={className}>
+      {forecast.source[source]}
+    </Tag>
   );
 }
 
@@ -138,7 +147,8 @@ export function AffordResultPanel({ result, rules, invalidFields, purchaseLabel,
         <Verdict data={data} rules={rules} />
       </Card>
 
-      <Card>
+      <Card data-testid="afford-chart">
+        <SourceLabel source={data.forecastSource} className="mb-sm" />
         <ForecastChart
           title={t.result.chartTitle(purchaseLabel)}
           series={{ label: t.result.chartWith(purchaseLabel), points: data.withPoints }}
@@ -147,7 +157,8 @@ export function AffordResultPanel({ result, rules, invalidFields, purchaseLabel,
         />
       </Card>
 
-      <Card title={t.result.horizonsTitle}>
+      <Card title={t.result.horizonsTitle} data-testid="afford-horizons">
+        <SourceLabel source={data.forecastSource} className="mb-sm" />
         <Horizons data={data} />
         <p className="mt-sm text-xs text-text-muted">{t.result.chartFootnote}</p>
       </Card>

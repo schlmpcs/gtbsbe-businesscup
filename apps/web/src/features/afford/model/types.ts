@@ -35,6 +35,11 @@ export type AffordResultVM = {
   cheapestWay: AffordResult['cheapestWay'];
   /** canAfford's forecasts are nominal (not today's dollars). */
   todaysDollars: false;
+  /**
+   * Who made the with / without numbers: always the rules engine (`canAfford`), never the AI model, so
+   * they can differ from the 10-year number on S10. The UI labels them with it.
+   */
+  forecastSource: 'rules';
   withPoints: ForecastPoint[];
   withoutPoints: ForecastPoint[];
   /** This month, 12 months, 5 years, 10 years. */

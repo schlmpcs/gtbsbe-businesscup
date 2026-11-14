@@ -105,6 +105,7 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
         baselineFails: a.baselineFails,
         cheapestWay: a.cheapestWay,
         todaysDollars: false,
+        forecastSource: 'rules',
         withPoints: a.with.points,
         withoutPoints: a.without.points,
         horizons,
