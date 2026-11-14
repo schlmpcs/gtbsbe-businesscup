@@ -329,9 +329,10 @@ describe('Funnel event contracts', () => {
     for (const name of CLIENT_EVENT_NAMES) {
       expect(ClientEventEnvelopeSchema.options.some((o) => o.shape.name.value === name)).toBe(true);
     }
-    // The funnel is made of known events; the Postgres funnel query gives each name one bit of an int.
+    // The funnel is made of known events; the funnel query gives each name one bit of a 64-bit mask
+    // (a Postgres bigint, a JS bigint in server/store/events.ts). Bit 63 is the sign bit, so 63 names at most.
     for (const step of FUNNEL_STEPS) expect(FUNNEL_EVENT_NAMES).toContain(step);
-    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(31);
+    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(63);
   });
 
   it('accepts the events the app sends', () => {

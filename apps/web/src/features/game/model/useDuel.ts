@@ -132,7 +132,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
         (result) => {
           const picks = { ...progress.picks, [round]: { choice: letter, result } };
           // The funnel's existing game events: a duel round is a home guessed, and the hint is the
-          // mailbox clue (neighborhood tier). The event mask has room for 31 names (server/store/events.ts).
+          // mailbox clue (neighborhood tier). The event mask has room for 63 names (server/store/events.ts).
           track({ name: 'home_guessed', props: { home: round, cluesOpened: progress.hints[round] ? 1 : 0 } }, { once: `duel_pick:${day.date}:${round}` });
           if (day.duels.every((d) => picks[d.round])) {
             track({ name: 'game_finished', props: { homes: day.duels.length } }, { once: `duel_finished:${day.date}` });
