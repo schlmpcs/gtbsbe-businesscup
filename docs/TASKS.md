@@ -49,7 +49,7 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 
 | Done | ID | Task | Depends on | Done when |
 | --- | --- | --- | --- | --- |
-| [ ] | D1 | House sprite kit: 5 layouts, props per clue state (car bands, kid ages, takeout piles, coats, tier signs), decor set; SVGs named by sprite id | Sprite id list (Hour 0) | Kit in `apps/web/public/scene/` by Sync 2; scene skinned by h17 |
+| [x] | D1 | House sprite kit: 5 layouts, props per clue state (car bands, kid ages, takeout piles, coats, tier signs), decor set; SVGs named by sprite id | Sprite id list (Hour 0) | Kit in `apps/web/public/scene/` by Sync 2; scene skinned by h17 |
 | [x] | D2 | Figma frames S1–S15, named by screen ID; S1, S2 (house scene), S3, S10, S12 first | Screen list (ARCHITECTURE.md) | Priority frames by h12, the rest by h17, ready for the Y14 skin pass |
 | [x] | D3 | Design tokens: Figma variables → `tokens.json` (colors incl. chart palette, type scale, spacing, radius, shadows) | — | `pnpm tokens` generates `tokens.css`; ui-kit restyle can start by Sync 2 |
 | [x] | D4 | S9: "connect your bank app" option next to CSV upload (Figma + disabled "coming soon" card in the UI) | D2 | Frame in Figma; card on `/me/upload` with a test; real integration is post-hackathon |
