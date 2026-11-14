@@ -5,7 +5,7 @@ import type { ClueReveal, GuessReveal, Money, PublicCard } from '@lifeguessr/typ
 import { z } from 'zod';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { ClueRevealSchema, GuessRevealSchema, PublicCardSchema } from '@/lib/api/gameSchemas';
+import { ClueRevealSchema, GuessRevealSchema, PublicCardSchema, type DailyProgress } from '@/lib/api/gameSchemas';
 import { safeStateStorage } from '@/lib/safeStorage';
 
 export type GameData = {
@@ -25,6 +25,12 @@ export type GameData = {
 export type GameActions = {
   /** Load a day's cards. A different date resets progress; the same date keeps it. */
   startDay: (date: string, cards: PublicCard[]) => void;
+  /**
+   * Merge what the game source recorded for this player today (after startDay). Its guesses win;
+   * its clues come first, then any opened only here. A browser with no result of its own yet
+   * moves to the first home without one, so a cleared tab resumes where the player was.
+   */
+  mergeProgress: (progress: DailyProgress) => void;
   addClue: (reveal: ClueReveal) => void;
   setGuess: (cardId: string, value: Money) => void;
   setReveal: (cardId: string, reveal: GuessReveal) => void;
@@ -58,6 +64,27 @@ export const useGameStore = create<GameState>()(
           const sameSet = s.date === date && s.cards.length === cards.length && s.cards.every((c, i) => c.id === cards[i]?.id);
           if (sameSet) return { cards };
           return { ...initialGameData(), date, cards };
+        }),
+      mergeProgress: (progress) =>
+        set((s) => {
+          const inSet = new Set(s.cards.map((c) => c.id));
+          const hadResults = s.cards.some((c) => s.reveals[c.id]);
+          const clues = { ...s.clues };
+          const reveals = { ...s.reveals };
+          const guesses = { ...s.guesses };
+          for (const [cardId, recorded] of Object.entries(progress.clues)) {
+            if (!inSet.has(cardId)) continue;
+            const localOnly = (clues[cardId] ?? []).filter((l) => !recorded.some((r) => r.clue === l.clue));
+            clues[cardId] = [...recorded, ...localOnly];
+          }
+          for (const [cardId, played] of Object.entries(progress.guesses)) {
+            if (!inSet.has(cardId)) continue;
+            reveals[cardId] = played.reveal;
+            guesses[cardId] = played.guess;
+          }
+          if (hadResults) return { clues, reveals, guesses };
+          const firstOpen = s.cards.findIndex((c) => !reveals[c.id]);
+          return { clues, reveals, guesses, index: firstOpen === -1 ? s.cards.length : firstOpen };
         }),
       addClue: (reveal) =>
         set((s) => {

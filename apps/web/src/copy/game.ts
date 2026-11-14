@@ -1,5 +1,6 @@
 // Strings for the daily game (S2–S4). Owner: Amir (Y8).
 // Functions here only pick words; every number arrives already computed (and usually formatted).
+import type { SpriteId } from '@lifeguessr/engine';
 import type { AreaData, ClueId, KidAge, SceneLayout } from '@lifeguessr/types';
 
 type Tier = AreaData['tier'];
@@ -12,6 +13,41 @@ const kidAges: Record<KidAge, string> = {
   preschool: 'preschooler',
   schoolAge: 'school-age kid',
 };
+
+/** What each house-scene sprite shows (alt text and close-up captions). */
+const spriteLabels = {
+  'layout/studio': 'A studio',
+  'layout/1bed': 'A 1-bedroom home',
+  'layout/2bed': 'A 2-bedroom home',
+  'layout/3bed': 'A 3-bedroom home',
+  'layout/4bed': 'A 4-bedroom home',
+  'garage/none': 'A bike and a bus pass',
+  'garage/economy': 'An economy car',
+  'garage/mid': 'A mid-range car',
+  'garage/luxury': 'A luxury car',
+  'garage/loanTag': 'A car loan bill',
+  'kidsRoom/crib': 'A crib',
+  'kidsRoom/toddler': 'A toddler’s toys',
+  'kidsRoom/preschool': 'Preschool blocks',
+  'kidsRoom/schoolAge': 'A school backpack',
+  'kidsRoom/homeOffice': 'A home office',
+  'kitchen/takeout-0-1': 'One takeout bag',
+  'kitchen/takeout-2-3': 'A few takeout bags',
+  'kitchen/takeout-4-6': 'A stack of takeout bags',
+  'kitchen/takeout-7plus': 'A mountain of takeout bags',
+  'entry/coat-adult': 'An adult’s coat',
+  'entry/coat-kid': 'A kid’s coat',
+  'mailbox/tier-cheap': 'A lower-cost neighborhood sign',
+  'mailbox/tier-mid': 'A mid-priced neighborhood sign',
+  'mailbox/tier-expensive': 'An expensive neighborhood sign',
+  'mailbox/tier-suburb': 'A suburban neighborhood sign',
+  'decor/skyline': 'The city skyline in the window',
+  'decor/lamp': 'A lamp',
+  'decor/plant': 'A house plant',
+  'decor/bed': 'A bed',
+  'decor/bookshelf': 'A bookshelf',
+  'decor/tree': 'A tree',
+} satisfies Record<SpriteId, string>;
 
 export const game = {
   screens: {
@@ -58,18 +94,34 @@ export const game = {
     metro: 'Metro',
     layout: 'Layout',
     decor: 'Around the house',
-    /** A decor sprite id ('decor/plant') as words; decor never implies a cost. */
-    decorItem: (sprite: string) => (sprite.split('/').pop() ?? sprite).replace(/[-_]/g, ' '),
+    /** Accessible name of the chips under the caption (layout and decor). */
+    about: 'About this home',
   },
   multiplier: {
     label: 'Score multiplier',
-    /** "Opening a room costs 10% of your points." */
-    cost: (pct: string) => `Opening a room costs ${pct} of your points.`,
-    floor: 'Your multiplier is at its floor: more rooms are free now.',
+    /** "Each room costs 10% of your points." */
+    cost: (pct: string) => `Each room costs ${pct} of your points.`,
+    floor: 'More rooms are free now.',
+  },
+
+  // ----- S2/S3: today's strip and score bar -----
+  day: {
+    label: 'Today’s homes',
+    now: 'Now',
+    points: (points: string) => `+${points}`,
+    homeDone: (n: number, points: string) => `Home ${n}: ${points} points`,
+    homeNow: (n: number) => `Home ${n}: playing now`,
+    homeLater: (n: number) => `Home ${n}: not played yet`,
+  },
+  score: {
+    label: 'Your score',
+    maxPerHome: 'max this home',
+    multiplier: (opened: number) => `multiplier · ${plural(opened, 'room', 'rooms')}`,
+    total: 'today',
   },
   clues: {
     heading: 'Look around',
-    intro: 'Tap a room to see a clue. Each one lowers your score multiplier.',
+    intro: 'Tap a room for a clue.',
     rooms: {
       garage: 'Garage',
       kidsRoom: 'Kids’ room',
@@ -82,6 +134,21 @@ export const game = {
     opening: 'Opening…',
     opened: 'Opened',
     lockedHint: 'Locked in',
+  },
+  /** The illustrated house (T12, <HouseScene>). */
+  scene: {
+    /** Short tag on a closed room: what opening it costs. */
+    costBadge: (pct: string) => `−${pct}`,
+    freeBadge: 'Free',
+    errorBadge: 'Retry',
+    placeholderArt: 'Placeholder illustrations until the final art lands.',
+    /** The 3D scene (D1 renders): grouped props, e.g. two coats → ×2. */
+    count: (n: number) => `×${n}`,
+    /** What each sprite shows (alt text and close-up captions). Every sprite id has a line. */
+    sprites: spriteLabels,
+    /** A sprite id as words (falls back to the id's last part for an id this list doesn't know). */
+    sprite: (id: string): string =>
+      (spriteLabels as Record<string, string>)[id] ?? (id.split('/').pop() ?? id).replace(/[-_]/g, ' '),
   },
   facts: {
     noCar: 'No car: a bike and a bus pass.',
@@ -101,38 +168,47 @@ export const game = {
 
   // ----- S2: the guess -----
   guess: {
-    heading: 'What does their month cost?',
+    heading: 'Guess their month',
     slider: 'Monthly cost of living',
-    hint: 'Rent, car, childcare, food and the rest, per month.',
+    hint: 'Rent, car, kids, food and the rest.',
     input: 'Or type it',
     inputSuffix: '/mo',
+    perMonth: 'a month',
     lockIn: (amount: string) => `Lock in ${amount}`,
     locking: 'Locking in…',
   },
 
   // ----- S4: streamer -----
   streamer: {
-    countdown: 'Time left',
+    countdown: 'Locks in at zero',
+    live: 'Live',
+    guessLabel: 'Streamer’s guess',
+    realCost: 'Real cost',
+    /** Placeholder shown instead of the answer until the guess is locked in (not a number). */
+    hiddenCost: '$?,???',
+    hiddenCostLabel: 'Hidden until the guess is locked in',
     seconds: (n: number) => `${n}s`,
     secondsLabel: (n: number) => plural(n, 'second', 'seconds') + ' left',
     start: 'Start countdown',
     pause: 'Pause',
     reset: 'Reset',
-    autoLock: 'At zero your guess locks in.',
     lockedIn: 'Locked in. Revealing…',
   },
 
   // ----- S3: the reveal -----
   reveal: {
     actualLabel: 'Their month',
+    costsHeading: 'This life costs',
+    perMonth: 'a month',
+    eyebrow: (progress: string, metro: string) => `${progress} · ${metro}`,
+    pointsSticker: (points: string) => `+${points} points`,
+    /** Sticker when the guess is outside the range: "$800 too low". */
+    missed: { low: (amount: string) => `${amount} too low`, high: (amount: string) => `${amount} too high` },
+    inRangeSticker: 'In range',
+    sourceShort: (name: string, year: number) => `${name} · ${year}`,
     actualHint: 'Most likely, per month',
     range: (low: string, high: string) => `Typical range ${low} to ${high}`,
     yourGuess: 'Your guess',
-    direction: {
-      low: 'You guessed low.',
-      in: 'In range!',
-      high: 'You guessed high.',
-    },
     scaleLabel: (guess: string, low: string, high: string) =>
       `Your guess ${guess} against the typical range ${low} to ${high}`,
     scaleRange: 'Typical range',
@@ -144,12 +220,12 @@ export const game = {
     surprise: (category: string, share: string) => `${category} was ${share} of their month.`,
     breakdownHeading: 'Where the money goes',
     breakdownLabel: 'Monthly costs by category',
-    sourcesHeading: 'Where these numbers come from',
+    sourcesHeading: 'Sources',
     whoLivedHere: 'Who lived here',
     next: 'Next home →',
     finish: 'See your results →',
-    shareCard: 'Share card (9:16)',
-    shareCardSquare: 'Share card (square)',
+    shareCard: 'Story card',
+    shareCardSquare: 'Square card',
   },
 
   // ----- after 5 homes -----
@@ -160,8 +236,7 @@ export const game = {
     tileResult: { green: 'in range', yellow: '500 points or more', red: 'under 500 points' },
     total: 'Total',
     bridge: (low: number, played: number) => `You guessed low on ${low} of ${played}.`,
-    bridgeDetail: (inRange: number, high: number) => `In range on ${inRange}, high on ${high}.`,
-    cta: 'Now guess your own life →',
+    cta: 'Now guess your own →',
     share: 'Share',
     shareStatus: {
       idle: '',
@@ -171,7 +246,7 @@ export const game = {
       failed: 'Couldn’t share. Copy the text below.',
     },
     shareTextLabel: 'Text to share',
-    clipCard: 'Clip card of your most surprising home (9:16)',
+    clipCard: 'Clip card: your biggest surprise',
   },
 
   /** The spoiler-free share grid (PRODUCT.md → Game design): 🟩 in range, 🟨 500+ points, 🟥 below. */
@@ -179,6 +254,40 @@ export const game = {
     header: (date: string) => `LifeGuessr ${date}`.trim(),
     tiles: { green: '🟩', yellow: '🟨', red: '🟥' },
     score: (points: string, max: string) => `${points} / ${max}`,
+  },
+
+  /** The share card PNG (GET /api/share, 9:16 and 1:1). Every number arrives formatted. */
+  shareCard: {
+    brand: 'LifeGuessr',
+    daily: (date: string) => `Daily · ${date}`,
+    guessLabel: 'My guess',
+    actualLabel: 'Their month',
+    perMonth: '/mo',
+    range: (low: string, high: string) => `Typical range ${low}–${high}`,
+    points: (points: string, max: string) => `${points} / ${max} points`,
+    verdict: { low: 'Guessed low', in: 'In range', high: 'Guessed high' },
+    clues: (n: number) => (n === 0 ? 'No rooms opened' : `${plural(n, 'room', 'rooms')} opened`),
+    cta: 'Guess what 5 strangers’ lives cost. New homes daily.',
+    disclaimer: 'Educational simulation, not financial advice.',
+  },
+
+  /** The daily leaderboard (GET /api/leaderboard): made-up handles, never an id. */
+  leaderboard: {
+    handle: (adjective: string, animal: string, n: number) => `${adjective} ${animal} ${n}`,
+    handleWords: {
+      adjectives: [
+        'Thrifty', 'Frugal', 'Savvy', 'Lucky', 'Bold', 'Clever', 'Calm', 'Brave', 'Quick', 'Witty',
+        'Steady', 'Sunny', 'Cozy', 'Swift', 'Keen', 'Jolly', 'Nimble', 'Plucky', 'Shrewd', 'Wise',
+        'Breezy', 'Chipper', 'Dapper', 'Gentle', 'Hearty', 'Mellow', 'Peppy', 'Snappy', 'Spry', 'Zesty',
+        'Canny', 'Merry',
+      ],
+      animals: [
+        'Otter', 'Fox', 'Badger', 'Heron', 'Lynx', 'Panda', 'Koala', 'Falcon', 'Beaver', 'Moose',
+        'Raccoon', 'Walrus', 'Gecko', 'Puffin', 'Bison', 'Ferret', 'Llama', 'Marmot', 'Owl', 'Quokka',
+        'Robin', 'Seal', 'Tapir', 'Wombat', 'Yak', 'Hare', 'Ibis', 'Jaguar', 'Kiwi', 'Lemur',
+        'Newt', 'Orca',
+      ],
+    },
   },
 } as const;
 

@@ -103,6 +103,15 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
   payoffMonth: number | null;    // null = the payment never covers the interest
   debtLoadBefore: Rate; debtLoadAfter: Rate; effect10y: Money;
   schedule: { month: number; interest: Money; principal: Money; balance: Money }[] };
+  // debtLoad = required debt payments / take-home pay; Infinity when there are payments but no pay.
+
+// POST /api/ai/explain (at least one of the two). The loan result travels without its schedule,
+// and with a debt load JSON can carry: JSON has no Infinity, so a debt load with no take-home pay
+// to measure it against (the engine's Infinity) is sent as null and said in words, never as a number.
+export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
+  debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
+export type ExplainRequest = { move?: Move; loanResult?: ExplainLoanResult };
+export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence
   recurring: false | 'monthly' | 'yearly';
@@ -117,7 +126,22 @@ export type Transaction = { date: string; description: string; amount: Money };
 // The only statement data that leaves the browser. month = 'YYYY-MM'; label has names masked.
 export type StatementItem = { label: string; amount: Money; month: string; day: number };
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
-  oneOffs: { label: string; amount: Money }[]; detectedPay?: Money };
+  oneOffs: { label: string; amount: Money }[]; detectedPay?: Money;
+  lastDay?: number };
+// `totals` exclude `oneOffs`; `detectedPay` = take-home pay deposits that month (money in).
+// `lastDay` = day of month of the latest statement line in that month (any line: spending, pay or
+// a transfer), i.e. how far into the month the statement goes. Month-end projects the month in
+// progress from it. Absent on data saved before it existed: the app then falls back to today.
+
+// How the server sorted one statement line (labels only; every sum is done in code). A CostCategory
+// is spending in that category when money goes out, or a refund from that kind of merchant when it
+// comes in. 'pay' = take-home pay coming in. 'transfer' = money moved between the user's own
+// accounts, or received from a person: neither spending nor pay, so it is left out.
+export type StatementClass = CostCategory | 'pay' | 'transfer';
+// POST /api/statement/categorize. `categorizedBy`: who sorted the labels: the AI, the keyword
+// rules (no API key, provider failure or invalid output), or both (the AI skipped some labels).
+export type StatementCategorizeRequest = { items: StatementItem[] };
+export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed' };
 
 // ----- Pro (S15): the paywall demo -----------------------------------------------------------
 // No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo` = the promo code
@@ -133,6 +157,67 @@ export type ProErrorCode =
   | 'not_paid'            // confirm: the Checkout Session is not complete and paid
   | 'session_mismatch'    // confirm: the session belongs to another anonymous id, or is already claimed
   | 'invalid_code';       // demo-unlock: wrong code, or demo unlock is switched off
+
+// ----- Sessions (T4): POST /api/session ----------------------------------------------------
+// The profile and wishlist saved under the anonymous id, so a reload restores them without an
+// account. `revision` counts saves (0 = nothing saved yet); `updatedAt` is ISO 8601 UTC.
+export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
+export type SessionErrorCode =
+  | 'bad_request' | 'too_large' | 'rate_limited'
+  | 'unavailable'         // the store is not configured or cannot be reached (503)
+  | 'not_paid';           // the save would add to the wishlist, which is a Pro feature (402)
+
+// ----- Funnel events (T8): POST /api/events, GET /api/events/funnel -------------------------
+// What the app counts to show its funnel (docs/PRODUCT.md → Metrics to show). Names come from a
+// fixed list. Props hold only small enums, flags and counts: never text, amounts, ids or anything
+// a person typed, so an event cannot carry personal data. Stored under the hash of the anonymous id.
+// `home` is the 1-based position of a home in today's set.
+export type ClientFunnelEvent =
+  | { name: 'play_started' }
+  | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
+  | { name: 'home_guessed'; props: { home: number; cluesOpened: number } }
+  | { name: 'game_finished'; props: { homes: number } }
+  | { name: 'result_shared'; props: { via: 'share' | 'copy' } }
+  | { name: 'own_guess_submitted' }
+  | { name: 'closest_life_chosen'; props: { fromToday: boolean } }
+  | { name: 'sliders_adjusted' }
+  | { name: 'balance_sheet_edited' }
+  | { name: 'statement_applied'; props: { months: number } }
+  | { name: 'forecast_viewed' }
+  | { name: 'move_committed'; props: { kind: MoveKind } }
+  | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
+  | { name: 'loan_compared'; props: { offers: number } }
+  | { name: 'paywall_viewed' };
+/** Recorded by the server routes themselves (Pro); a browser cannot send them. */
+export type ServerFunnelEvent =
+  | { name: 'checkout_started'; props: { plan: ProPlan } }
+  | { name: 'pro_purchased'; props: { plan: ProPlan } }   // a test-mode Stripe Checkout, confirmed paid
+  | { name: 'pro_promo_redeemed' };                        // the jury promo code
+export type FunnelEvent = ClientFunnelEvent | ServerFunnelEvent;
+export type FunnelEventName = FunnelEvent['name'];
+/** One event as the browser sends it: `id` = crypto.randomUUID(), so a resent batch is stored once. */
+export type ClientEventEnvelope = ClientFunnelEvent & { id: string };
+/** POST /api/events. */
+export type EventsRequest = { anonId: string; events: ClientEventEnvelope[] };
+export type EventsErrorCode = 'bad_request' | 'too_large' | 'rate_limited' | 'unavailable';
+/**
+ * One step of the funnel: `users` = distinct anonymous ids that sent this step's event; `funnel` =
+ * those that also sent every earlier step's; `conversion` = funnel / the previous step's funnel
+ * (null for the first step, or when the previous step has nobody).
+ */
+export type FunnelStep = { name: FunnelEventName; users: number; funnel: number; conversion: number | null };
+/** GET /api/events/funnel: the funnel and the game metrics over [from, to]. Rates are null when nothing was counted. */
+export type FunnelReport = {
+  from: string; to: string;                       // ISO 8601 UTC
+  users: number;                                  // distinct anonymous ids with any event
+  steps: FunnelStep[];                            // FUNNEL_STEPS, in order
+  events: Record<FunnelEventName, number>;        // distinct anonymous ids per event
+  game: {
+    players: number; finished: number; finishRate: number | null;
+    guesses: number; cluesPerHome: number | null; blindGuessRate: number | null;  // blind = no clue opened
+    shared: number; shareRate: number | null;     // share rate = shared / finished
+  };
+};
 
 export * from './constants';
 export * from './schemas';

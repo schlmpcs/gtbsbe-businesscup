@@ -7,7 +7,7 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 - [x] Agree stack defaults (ARCHITECTURE.md) or swaps
 - [x] Merge `packages/types` contracts; agree units (rates as decimals, monthly vs balance per field)
 - [x] Commit fixtures to `packages/data/fixtures/`: `areaData.sample.json`, `cards.sample.json`, `profile.demo.json`, `statement.sample.csv`, `loanOffers.sample.json`
-- [ ] LLM provider and key (with a no-training / zero-retention option); the store is self-hosted on the team's server (`STORE_URL`)
+- [ ] LLM provider and key (Anthropic: no training on API data; zero data retention is not enabled, so no copy may claim it); the store is self-hosted on the team's server (`STORE_URL`)
 - [ ] Agree which Figma frames come first (S1, S2 house scene, S3, S10, S12)
 - [ ] Agree the sprite id list for the house kit (layouts, props per clue, decor) with the designer, and size T12
 
@@ -25,7 +25,7 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 | [x] | Y10 | Placeholder UI: S1 Today + S10 forecast + Next Moves | 2 | Y2, Y3 | Range band + top 3 render |
 | [x] | Y11 | Placeholder UI: S11 Can I Afford It? + S12 Loan Lab | 2 | Y4; T3 | Compare 3 loans, gauge, slider work |
 | [x] | Y12 | `/api/ai/parse` + `/api/ai/explain` | 1 | Contracts | Typed JSON or clear error; no numbers; parsed values confirmed by the user |
-| [ ] | Y14 | Figma skin pass | 2 | Figma frames | Screens match Figma; no model or engine file changed |
+| [x] | Y14 | Figma skin pass | 2 | Figma frames | Screens match Figma; no model or engine file changed |
 | [ ] | Y15 | AI forecast: contracts + pure engine helpers (`ForecastBundle`, `anchorsToForecast`, `deflateForecast`, `forecastSanityIssues`, `moveCandidates` / `rankCandidates`; `rankMoves` unchanged) | — | Y2, Y3 | Helpers tested incl. envelope rejects x3 / ÷1000 / over-wide band and wrong-effect moves; `rankMoves` tests untouched and green |
 | [ ] | Y16 | AI forecast: `POST /api/ai/forecast` (prompt, wire schema, checks, one retry, rules fallback, own rate limit) | — | Y12, Y15 | Valid → `source: 'ai'`, month 0 exact; invalid twice / no key / provider error → `source: 'rules'`; no live model in tests |
 | [ ] | Y17 | AI forecast: cache + in-flight dedup keyed by profile hash | — | Y16 | Same profile → same bundle; concurrent identical requests call the model once; fallbacks never cached |
@@ -38,26 +38,29 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 
 | Done | ID | Task | Hours | Depends on | Done when |
 | --- | --- | --- | --- | --- | --- |
-| [x] | T1 | Monorepo, lint (incl. UI import rule), Vitest, CI, env (live deploy moved to the team's server, see `ARCHITECTURE.md`, Deployment; not set up yet) | 0.5 | — | Live URL by hour 1 |
-| [ ] | T2 | Data pipeline (HUD, Census, BLS, childcare) → `areas.json` for ~60 ZIPs + refresh | 2.5 | Contracts | JSON committed, every value has a Source |
-| [ ] | T3 | Engine: `loan`, `compareLoans`, debt load, extra payments, payoff order | 1.5 | Contracts | Amortization matches the formula in tests; `payoffMonth: null` when the payment doesn't cover interest |
-| [ ] | T4 | Sessions: anon ID, save Profile + wishlist | 1 | T1 | Reload keeps profile without sign-up |
-| [ ] | T5 | `/api/daily` (US Eastern date, `PublicCard`s), `/api/daily/clue`, `/api/daily/guess`, leaderboard, share images 9:16 + 1:1 by `resultId`, rate limits | 1.5 | T1; T10 (fixture first) | Same 5 homes for everyone; no answer reaches the browser before the guess; share PNG renders; client can't post a score |
-| [ ] | T6 | In-browser CSV parsing, column detection, PII and name masking | 1.5 | Contracts | Sample + 2 real exports parse locally |
-| [ ] | T7 | `/api/statement/categorize` + one-off tagging + "What we keep" data | 1.5 | T6 | Returns CategoryTotals; raw data never stored |
-| [ ] | T8 | Funnel events + Playwright demo-path test | 1 | T1 | One command runs the demo path green |
-| [ ] | T9 | Engine: `monthEnd` (was Y5) | 1 | T7 shape (fixture first) | Flags only real drift; no flags with < 3 months |
-| [ ] | T10 | 50 life cards + 2 creator packs (no per-card images: the scene is built from the data) (was Y6) | 1.5 | T2 | Cards load with real costs; day order goes easy → curveball |
-| [ ] | T11 | Mockups S13–S15 (was Y13) | 1 | Y7 | Clickable on fixtures |
-| [ ] | T12 | House scene: `sceneOf` in `scene.ts` + `<HouseScene>` (layout, closed rooms, tap → zoom → clue) | Sized at Hour 0 | Contracts; D1 for art (placeholder rectangles first) | Playable on a phone with placeholders by Sync 2; consistency test green |
+| [x] | T1 | Monorepo, lint (incl. UI import rule), Vitest, CI, env, live deploy (on the team's server, see `ARCHITECTURE.md`, Deployment) | 0.5 | — | Live URL by hour 1 |
+| [x] | T2 | Data pipeline (HUD, Census, BLS, childcare) → `areas.json` for ~60 ZIPs + refresh | 2.5 | Contracts | JSON committed, every value has a Source |
+| [x] | T3 | Engine: `loan`, `compareLoans`, debt load, extra payments, payoff order | 1.5 | Contracts | Amortization matches the formula in tests; `payoffMonth: null` when the payment doesn't cover interest |
+| [x] | T4 | Sessions: anon ID, save Profile + wishlist | 1 | T1 | Reload keeps profile without sign-up |
+| [x] | T5 | `/api/daily` (US Eastern date, `PublicCard`s), `/api/daily/clue`, `/api/daily/guess`, leaderboard, share images 9:16 + 1:1 by `resultId`, rate limits | 1.5 | T1; T10 (fixture first) | Same 5 homes for everyone; no answer reaches the browser before the guess; share PNG renders; client can't post a score |
+| [~] | T6 | In-browser CSV parsing, column detection, PII and name masking | 1.5 | Contracts | Sample + 2 real exports parse locally |
+| [x] | T7 | `/api/statement/categorize` + one-off tagging + "What we keep" data | 1.5 | T6 | Returns CategoryTotals; raw data never stored |
+| [x] | T8 | Funnel events + Playwright demo-path test | 1 | T1 | One command runs the demo path green |
+| [x] | T9 | Engine: `monthEnd` (was Y5) | 1 | T7 shape (fixture first) | Flags only real drift; no flags with < 3 months |
+| [x] | T10 | 50 life cards + 2 creator packs (no per-card images: the scene is built from the data) (was Y6) | 1.5 | T2 | Cards load with real costs; day order goes easy → curveball |
+| [x] | T11 | Mockups S13–S15 (was Y13) | 1 | Y7 | Clickable on fixtures |
+| [x] | T12 | House scene: `sceneOf` in `scene.ts` + `<HouseScene>` (layout, closed rooms, tap → zoom → clue) | Sized at Hour 0 | Contracts; D1 for art (placeholder rectangles first) | Playable on a phone with placeholders by Sync 2; consistency test green |
 
 ## Kiko (UI/UX, Figma only)
 
 | Done | ID | Task | Depends on | Done when |
 | --- | --- | --- | --- | --- |
-| [ ] | D1 | House sprite kit: 5 layouts, props per clue state (car bands, kid ages, takeout piles, coats, tier signs), decor set; SVGs named by sprite id | Sprite id list (Hour 0) | Kit in `apps/web/public/scene/` by Sync 2; scene skinned by h17 |
-| [ ] | D2 | Figma frames S1–S15, named by screen ID; S1, S2 (house scene), S3, S10, S12 first | Screen list (ARCHITECTURE.md) | Priority frames by h12, the rest by h17, ready for the Y14 skin pass |
-| [ ] | D3 | Design tokens: Figma variables → `tokens.json` (colors incl. chart palette, type scale, spacing, radius, shadows) | — | `pnpm tokens` generates `tokens.css`; ui-kit restyle can start by Sync 2 |
+| [x] | D1 | House sprite kit: 5 layouts, props per clue state (car bands, kid ages, takeout piles, coats, tier signs), decor set; SVGs named by sprite id | Sprite id list (Hour 0) | Kit in `apps/web/public/scene/` by Sync 2; scene skinned by h17 |
+| [x] | D2 | Figma frames S1–S15, named by screen ID; S1, S2 (house scene), S3, S10, S12 first | Screen list (ARCHITECTURE.md) | Priority frames by h12, the rest by h17, ready for the Y14 skin pass |
+| [x] | D3 | Design tokens: Figma variables → `tokens.json` (colors incl. chart palette, type scale, spacing, radius, shadows) | — | `pnpm tokens` generates `tokens.css`; ui-kit restyle can start by Sync 2 |
+| [x] | D4 | S9: "connect your bank app" option next to CSV upload (Figma + disabled "coming soon" card in the UI) | D2 | Frame in Figma; card on `/me/upload` with a test; real integration is post-hackathon |
+
+`[~]` means partly done. T6 (#19): the sample and three synthetic exports parse and are tested; two anonymized real exports and masking payee names on bill-pay, check and deposit lines remain (listed on the issue).
 
 After T8–T12, Aibek owns integration and bugs and pairs on Y14.
 

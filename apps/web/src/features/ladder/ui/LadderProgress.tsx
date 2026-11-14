@@ -1,8 +1,9 @@
-// Ladder progress: the five rungs (done / not yet / this step), the 10-year number with its range
-// band, how far the user's own numbers have narrowed that band, the next rung and "See your future".
+// Ladder progress, compact: one row of rung pills (done / not yet / this step, read out to screen
+// readers), the 10-year number with its range, how far the user's own numbers have narrowed that
+// band (the explanation is collapsed), then one primary CTA and the other as a ghost link.
 import { useId } from 'react';
 import { ladder, screenTitles } from '@/copy';
-import { buttonClassName, Card, cx, formatMoney, formatRate, Row, Stack, Stat } from '@/ui-kit';
+import { buttonClassName, Card, cx, EstimateTag, formatMoney, formatRate, Stack } from '@/ui-kit';
 import type { LadderProgressVM, LadderScreen } from '../model/types';
 
 const t = ladder.shell;
@@ -15,97 +16,127 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
   const index = rungs.findIndex((r) => r.screen === screen);
   const next = index >= 0 ? rungs[index + 1] : undefined;
   const narrowedId = useId();
+  // The big orange CTA: the next rung, except from the balance sheet on (S9 is optional), where the
+  // frames lead straight to the forecast.
+  const futureFirst = !next || screen === 'S8';
 
   return (
-    <Card title={t.progressTitle} as="section">
-      <Stack gap="lg">
-        <nav aria-label={t.stepsLabel}>
-          <p className="mb-sm text-sm text-text-muted">{ready ? t.stepsDone(doneCount, rungs.length) : t.loading}</p>
-          <ol className="flex flex-col gap-xs">
-            {rungs.map((rung, i) => {
-              const isCurrent = rung.screen === screen;
-              const state = isCurrent ? t.current : rung.done ? t.done : t.notYet;
-              return (
-                <li key={rung.screen}>
-                  <a
-                    href={rung.href}
-                    aria-current={isCurrent ? 'step' : undefined}
-                    data-rung={rung.screen}
-                    data-done={rung.done ? 'true' : 'false'}
-                    className={cx(
-                      'flex items-center gap-md rounded-md px-md py-sm text-sm',
-                      isCurrent ? 'bg-surface-strong font-semibold' : 'hover:bg-surface',
-                    )}
-                  >
-                    <span
-                      aria-hidden="true"
+    <Stack gap="lg">
+      <Card>
+        <Stack gap="lg">
+          <nav aria-label={t.stepsLabel}>
+            <p className="sr-only">{ready ? t.stepsDone(doneCount, rungs.length) : t.loading}</p>
+            <ol className="flex flex-wrap gap-sm">
+              {rungs.map((rung, i) => {
+                const isCurrent = rung.screen === screen;
+                const state = isCurrent ? t.current : rung.done ? t.done : t.notYet;
+                return (
+                  <li key={rung.screen} className="min-w-0">
+                    <a
+                      href={rung.href}
+                      aria-current={isCurrent ? 'step' : undefined}
+                      data-rung={rung.screen}
+                      data-done={rung.done ? 'true' : 'false'}
                       className={cx(
-                        'flex size-xl shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
-                        rung.done ? 'border-positive bg-positive text-on-primary' : 'border-border text-text-muted',
+                        'flex items-center gap-xs rounded-full border-2 py-xs pr-md pl-xs text-sm',
+                        isCurrent
+                          ? 'border-text bg-surface font-semibold'
+                          : 'border-transparent bg-surface-strong hover:border-border',
                       )}
                     >
-                      {rung.done ? '✓' : i + 1}
-                    </span>
-                    <span className="min-w-0 flex-1">{t.rungs[rung.screen]}</span>
-                    <span className={cx('shrink-0 text-xs', rung.done ? 'text-positive' : 'text-text-muted')}>{state}</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
+                      <span
+                        aria-hidden="true"
+                        className={cx(
+                          'flex size-xl shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                          rung.done
+                            ? 'bg-positive text-on-primary'
+                            : isCurrent
+                              ? 'bg-ink text-on-primary'
+                              : 'bg-surface text-text-muted',
+                        )}
+                      >
+                        {rung.done ? '✓' : i + 1}
+                      </span>
+                      {t.rungs[rung.screen]}
+                      <span className="sr-only">({state})</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
 
-        {ready && (
-          <Stack gap="sm">
-            <div data-testid="ladder-in10y">
-              <Stat
-                label={t.in10yLabel}
-                value={formatMoney(in10y.mid)}
-                size="lg"
-                isEstimate={estimates.left > 0}
-                hint={t.in10yHint}
-              />
-            </div>
-            <p className="text-sm tabular-nums" data-testid="ladder-range">
-              {t.range(formatMoney(in10y.low), formatMoney(in10y.high))}
-            </p>
-            <div className="flex flex-col gap-xs">
-              <div className="flex items-baseline justify-between gap-md text-sm">
-                <span id={narrowedId}>{t.narrowedLabel}</span>
-                <span className="font-semibold tabular-nums">{formatRate(bandNarrowed, 0)}</span>
+          {ready && (
+            <div className="grid gap-lg sm:grid-cols-2 sm:items-end">
+              <div className="flex flex-col gap-xs">
+                <span className="flex flex-wrap items-center gap-sm text-sm font-medium text-text-muted">
+                  {t.in10yLabel}
+                  {estimates.left > 0 && <EstimateTag />}
+                </span>
+                <div data-testid="ladder-in10y">
+                  <p className="font-display text-4xl font-extrabold leading-display text-primary tabular-nums">
+                    {formatMoney(in10y.mid)}
+                  </p>
+                </div>
+                <p className="text-xs text-text-muted tabular-nums" data-testid="ladder-range">
+                  {t.range(formatMoney(in10y.low), formatMoney(in10y.high))}
+                </p>
               </div>
-              <div
-                role="progressbar"
-                aria-labelledby={narrowedId}
-                aria-valuemin={0}
-                aria-valuemax={1}
-                aria-valuenow={bandNarrowed}
-                aria-valuetext={t.narrowed(formatRate(bandNarrowed, 0))}
-                className="h-sm w-full overflow-hidden rounded-full bg-surface-strong"
-              >
+
+              <div className="flex flex-col gap-xs">
+                <div className="flex items-baseline justify-between gap-md text-sm">
+                  <span id={narrowedId} className="font-medium">
+                    {t.narrowedLabel}
+                  </span>
+                  <span className="font-bold tabular-nums">{formatRate(bandNarrowed, 0)}</span>
+                </div>
                 <div
-                  className="h-full origin-left rounded-full bg-positive transition-transform duration-500"
-                  style={{ transform: `scaleX(${bandNarrowed})` }}
-                />
+                  role="progressbar"
+                  aria-labelledby={narrowedId}
+                  aria-valuemin={0}
+                  aria-valuemax={1}
+                  aria-valuenow={bandNarrowed}
+                  aria-valuetext={t.narrowed(formatRate(bandNarrowed, 0))}
+                  className="h-sm w-full overflow-hidden rounded-full bg-surface-strong"
+                >
+                  <div
+                    className="h-full origin-left rounded-full bg-positive transition-transform duration-500"
+                    style={{ transform: `scaleX(${bandNarrowed})` }}
+                  />
+                </div>
+                <details className="text-xs text-text-muted">
+                  <summary className="cursor-pointer">
+                    {t.estimatesLeft(estimates.left, estimates.total)} · {t.howTitle}
+                  </summary>
+                  <p className="mt-xs">
+                    {t.in10yHint} {t.bandNote}
+                  </p>
+                </details>
               </div>
-              <p className="text-xs text-text-muted">
-                {t.estimatesLeft(estimates.left, estimates.total)} {t.bandNote}
-              </p>
             </div>
-          </Stack>
-        )}
-
-        <Row gap="sm">
-          <a href={progress.futureHref} className={buttonClassName({ variant: 'primary', size: 'md' })}>
-            {t.futureCta}
-          </a>
-          {next && (
-            <a href={next.href} className={buttonClassName({ variant: 'secondary', size: 'md' })}>
-              {t.next(screenTitles[next.screen])}
-            </a>
           )}
-        </Row>
-      </Stack>
-    </Card>
+        </Stack>
+      </Card>
+
+      <div className="flex flex-col-reverse gap-md sm:flex-row sm:items-center sm:justify-end">
+        <a
+          href={progress.futureHref}
+          className={buttonClassName({ variant: futureFirst ? 'primary' : 'ghost', size: 'lg' })}
+        >
+          {t.futureCta}
+        </a>
+        {next && (
+          <a
+            href={next.href}
+            className={cx(
+              buttonClassName({ variant: futureFirst ? 'ghost' : 'primary', size: 'lg' }),
+              futureFirst ? 'sm:order-first' : 'sm:order-last',
+            )}
+          >
+            {t.next(screenTitles[next.screen])}
+          </a>
+        )}
+      </div>
+    </Stack>
   );
 }

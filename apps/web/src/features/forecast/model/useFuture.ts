@@ -2,6 +2,7 @@
 // moves (engine rankMoves) and commit / done.
 import { applyPatch, hasEstimates } from '@lifeguessr/engine';
 import { useMemo, useState } from 'react';
+import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
 import { displayForecast, estimatedFields } from '@/lib/model/profile';
 import { useAppReady, useAppStore } from '@/state';
@@ -51,9 +52,12 @@ export function useFuture(opts: { explain?: ExplainFn } = {}): FutureVM {
   const yearly = useMemo(() => points.filter((p) => p.month % 12 === 0), [points]);
   const empty = { month: 0, low: 0, mid: 0, high: 0 };
 
+  const status: FutureVM['status'] = !ready ? 'loading' : result.status === 'ready' ? 'ready' : 'error';
+  useTrackOnce(status === 'ready', 'forecast_viewed', { name: 'forecast_viewed' });
+
   return {
     ...nextMoves,
-    status: !ready ? 'loading' : result.status === 'ready' ? 'ready' : 'error',
+    status,
     error: result.status === 'error' ? result.error : null,
     todaysDollars,
     setTodaysDollars,

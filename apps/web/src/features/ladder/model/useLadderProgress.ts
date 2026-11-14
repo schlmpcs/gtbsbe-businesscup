@@ -4,7 +4,8 @@
 import { cardToProfile } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type Debt, type Estimate, type LifeCard, type Profile } from '@lifeguessr/types';
 import { useMemo } from 'react';
-import { cardsSample, profileDemo } from '@/fixtures';
+import { profileDemo } from '@/fixtures';
+import { cardsSample } from '@/fixtures/cards';
 import { areaForZip } from '@/lib/areas';
 import { displayForecast, estimatedFields } from '@/lib/model/profile';
 import { SCREEN_ROUTES } from '@/lib/screens';

@@ -2,9 +2,10 @@
 import { act, cleanup, waitFor } from '@testing-library/react';
 import { expect } from 'vitest';
 import { createLocalSessionAdapter } from '@/lib/api/session';
+import { resetEventsForTests } from '@/lib/events';
 import { initialAppData, initialGameData, resetProStore, setSessionAdapter, useAppStore, useGameStore } from '@/state';
 
-/** Empty localStorage, default stores (Pro included), session sync off. Call in beforeEach. */
+/** Empty localStorage, default stores (Pro included), session sync and funnel events off. Call in beforeEach. */
 export function resetClientState(): void {
   cleanup();
   localStorage.clear();
@@ -12,6 +13,7 @@ export function resetClientState(): void {
   useGameStore.setState(initialGameData());
   resetProStore();
   setSessionAdapter(createLocalSessionAdapter());
+  resetEventsForTests(null);
 }
 
 /** Wait until a hook result reports `status` other than 'loading'. */
