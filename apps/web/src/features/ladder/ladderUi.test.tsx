@@ -40,6 +40,7 @@ function uploadVM(over: Partial<StatementUploadVM> = {}): StatementUploadVM {
     hasDriftHistory: false,
     whatWeKeep: { months: [], categories: [], takeHomePay: false, savedProfileToServer: false },
     readFile: null,
+    trySample: vi.fn(),
     submitTotals: vi.fn(),
     apply: vi.fn(),
     discard: vi.fn(),
@@ -100,11 +101,19 @@ describe('StatementUpload (S9)', () => {
     expect(ladder.upload.keep.forecastSent).not.toMatch(/retention|keep them/i);
   });
 
-  it('offers connecting a bank app as coming soon, not as a working option', () => {
-    render(<StatementUpload vm={uploadVM()} progress={progress} />);
-    const connect = screen.getByRole('button', { name: `${ladder.upload.bank.button} · ${ladder.upload.bank.soon}` });
-    expect(connect).toBeDisabled();
-    expect(connect).toHaveAccessibleDescription(ladder.upload.bank.note);
+  it('does not show “Connect your bank app”: it is not built, so the dead button is hidden', () => {
+    render(<StatementUpload vm={uploadVM({ readFile: vi.fn() })} progress={progress} />);
+    expect(screen.queryByText(/connect your bank/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /bank/i })).not.toBeInTheDocument();
+  });
+
+  it('“Try with sample statement” asks the view-model to read the sample; disabled while reading', async () => {
+    const trySample = vi.fn();
+    const { rerender } = render(<StatementUpload vm={uploadVM({ readFile: vi.fn(), trySample })} progress={progress} />);
+    await userEvent.click(screen.getByRole('button', { name: ladder.upload.trySample }));
+    expect(trySample).toHaveBeenCalledTimes(1);
+    rerender(<StatementUpload vm={uploadVM({ readFile: vi.fn(), trySample, status: 'reading' })} progress={progress} />);
+    expect(screen.getByRole('button', { name: ladder.upload.trySample })).toBeDisabled();
   });
 
   it('with a reader: the picker hands the file over', async () => {

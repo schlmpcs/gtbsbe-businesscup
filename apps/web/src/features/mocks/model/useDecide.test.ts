@@ -7,7 +7,7 @@ import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { resetProState } from '@/test/pro';
-import { evaluateDecision, leaseFromForm, leaseProfileAndPurchases, NEXT_DECISIONS, useDecide } from './useDecide';
+import { evaluateDecision, leaseFromForm, leaseProfileAndPurchases, useDecide } from './useDecide';
 
 beforeEach(() => {
   resetClientState();
@@ -47,7 +47,7 @@ describe('useDecide (S13)', () => {
     const { result } = await ready();
     const vm = result.current;
     const p = cloneProfileDemo();
-    expect(vm).toMatchObject({ isDemoProfile: true, horizonYear: 2036, todaysDollars: true, nextDecisions: NEXT_DECISIONS });
+    expect(vm).toMatchObject({ isDemoProfile: true, horizonYear: 2036, todaysDollars: true });
     expect(vm.lease.form).toEqual({ ...leaseScenarioSample });
     expect(Object.values(vm.lease.isEstimate)).toEqual([true, true, true, true]);
     expect(vm.result?.status).toBe('ready');

@@ -47,15 +47,18 @@ describe('S13 decision', () => {
     expect(await screen.findByRole('heading', { level: 1, name: d.title })).toBeTruthy();
     expect(screen.getByRole('region', { name: d.keep.title })).toBeTruthy();
     expect(screen.getByRole('region', { name: d.lease.title })).toBeTruthy();
+    // A preview, but a free tool: no Pro link on it.
     const note = screen.getByRole('note', { name: mocks.preview.sticker });
-    expect(within(note).getByRole('link', { name: mocks.preview.cta }).getAttribute('href')).toBe('/pro');
+    expect(within(note).getByText(mocks.preview.note)).toBeTruthy();
+    expect(within(note).queryByRole('link')).toBeNull();
+    expect(screen.queryByText(/\bPRO\b/i)).toBeNull();
     const r = evaluateDecision(cloneProfileDemo(), leaseScenarioSample, true);
     const score = screen.getByLabelText(d.scoreLabel);
     expect(within(score).getByText(formatMoney(r.betterBy10y, { signed: true }))).toBeTruthy();
     // The two 10-year numbers come from the rules engine, whatever S10 shows: labeled so.
     expect(screen.getByTestId('decide-forecast-source').textContent).toBe(forecast.source.rules);
-    // The other decisions are coming soon.
-    expect(screen.getByText(d.next.wedding)).toBeTruthy();
+    // No "coming soon" chips for decisions that aren't built.
+    expect(screen.queryByText(/coming soon/i)).toBeNull();
   });
 
   it('editing the lease updates the result; an emptied field is flagged', async () => {

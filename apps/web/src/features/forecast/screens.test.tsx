@@ -35,7 +35,7 @@ function A({ href, children, ...rest }: { href: string; children?: ReactNode; cl
 }
 
 const links: TodayLinks = {
-  play: '/play', future: '/future', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
+  play: '/play', sample: '/future?sample=1', future: '/future', afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin',
   profile: '/me/guess', upload: '/me/upload',
 };
 
@@ -52,7 +52,7 @@ function Future({ explain }: { explain?: ExplainFn }) {
 /** A hand-made Today view-model: ready, with the forecast answered by the rules. */
 function todayVm(over: Partial<TodayVM> = {}): TodayVM {
   return {
-    status: 'ready', profileOrigin: 'user', isDemoProfile: false,
+    status: 'ready', firstVisit: false, isSample: false, profileOrigin: 'user', isDemoProfile: false,
     monthEnd: {
       status: 'ready',
       data: {
@@ -71,7 +71,36 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
 const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
 
+describe('TodayScreen (S1) first visit', () => {
+  it('explains the app with Play and Try with sample data, and shows no numbers', async () => {
+    render(<Today />);
+    const f = t.today.firstVisit;
+    expect(await screen.findByRole('heading', { level: 1, name: f.title })).toBeInTheDocument();
+    expect(screen.getByText(f.body)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: new RegExp(`^${f.play}`) })).toHaveAttribute('href', '/play');
+    expect(screen.getByRole('link', { name: f.sample })).toHaveAttribute('href', '/future?sample=1');
+    expect(screen.getByText(f.note)).toBeInTheDocument();
+    const steps = within(screen.getByRole('region', { name: f.stepsLabel })).getAllByRole('listitem');
+    expect(steps.map((li) => li.textContent)).toEqual(f.steps.map((step, i) => `${i + 1}${step}`));
+    expect(screen.queryByText(/\$\d/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('in10y')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('month-end')).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: t.today.allScreens }).querySelectorAll('a[data-screen]')).toHaveLength(2);
+  });
+
+  it('shows the usual Today once the sample life is loaded, without the sample note (the banner says it)', async () => {
+    act(() => void useAppStore.getState().loadSample());
+    render(<Today />);
+    expect(await screen.findByTestId('in10y')).toBeInTheDocument();
+    expect(screen.queryByTestId('today-first-visit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sample-note')).not.toBeInTheDocument();
+  });
+});
+
 describe('TodayScreen (S1)', () => {
+  // Past the first visit: the user has guessed their own month.
+  beforeEach(() => useAppStore.setState({ selfGuess: 3000 }));
+
   it('shows the 10-year number with its range, the play CTA and the entry points', async () => {
     render(<Today />);
     const card = await screen.findByTestId('in10y');

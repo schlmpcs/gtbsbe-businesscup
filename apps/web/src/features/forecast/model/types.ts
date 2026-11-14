@@ -104,6 +104,14 @@ export type TodayHomeVM = { id: string; metro: string; played: boolean };
 export type TodayVM = {
   /** Saved state loaded. The 10-year number has its own `forecastStatus`: it may take a while. */
   status: 'loading' | 'ready';
+  /**
+   * First visit: no profile of the user's own (nor the sample life asked for), nothing entered, no
+   * home played. The screen shows what the app is (Play, Try with sample data) and no numbers.
+   * False while loading.
+   */
+  firstVisit: boolean;
+  /** The sample life ("Try with sample data") is on; the site-wide banner already says so. */
+  isSample: boolean;
   profileOrigin: ProfileOrigin;
   /** Still the sample profile: nudge to the ladder (S5). */
   isDemoProfile: boolean;

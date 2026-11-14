@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import { createSessionAdapter, type SessionAdapter } from '@/lib/api/session';
 import { getAnonId } from './anonId';
-import { useAppStore } from './store';
+import { isSampleActive, useAppStore } from './store';
 
 export const SESSION_SAVE_DEBOUNCE_MS = 1000;
 
@@ -30,7 +30,8 @@ function start(a: SessionAdapter): () => void {
     const initialGoal = useAppStore.getState().goal;
     void a.load(anonId).then((saved) => {
       const s = useAppStore.getState();
-      if (saved?.profile && s.profileOrigin === 'demo')
+      // The sample life (isSample) is what the user asked to see: a saved profile does not replace it.
+      if (saved?.profile && s.profileOrigin === 'demo' && !s.isSample)
         s.setProfile(saved.profile, 'user');
       if (
         saved?.goal &&
@@ -62,11 +63,12 @@ function start(a: SessionAdapter): () => void {
     clearTimeout(timer);
     timer = setTimeout(() => {
       const now = useAppStore.getState();
-      void a.save(anonId, {
-        profile: now.profile,
-        wishlist: now.wishlist.map((w) => w.purchase),
-        goal: now.goal,
-      });
+      const wishlist = now.wishlist.map((w) => w.purchase);
+      // The sample life is not the user's: it is never saved as their profile.
+      void a.save(
+        anonId,
+        isSampleActive(now) ? { wishlist, goal: now.goal } : { profile: now.profile, wishlist, goal: now.goal },
+      );
     }, SESSION_SAVE_DEBOUNCE_MS);
   });
   return () => {

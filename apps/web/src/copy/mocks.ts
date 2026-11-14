@@ -98,8 +98,6 @@ export const mocks = {
       fix: 'Fix the highlighted fields.',
       reset: 'Reset',
     },
-    nextTitle: 'Coming soon:',
-    next: { moving: 'Move cities', kid: 'Have a kid', jobOffer: 'Job offer', wedding: 'Wedding' },
   },
 
   checkin: {
