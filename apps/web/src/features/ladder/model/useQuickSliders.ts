@@ -6,7 +6,7 @@ import { track } from '@/lib/events';
 import { displayForecast, thisMonth } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
-import { useAppReady, useAppStore } from '@/state';
+import { useAppReady, useAppStore, useProfile } from '@/state';
 import { SAVINGS_SHARE_MAX, SAVINGS_SHARE_STEP, SLIDER_HEADROOM, SPENDING_SLIDERS } from './constants';
 import type { ParsedRowVM, QuickSlidersVM, SpendingSliderVM } from './types';
 
@@ -58,7 +58,7 @@ const adjusted = () => track({ name: 'sliders_adjusted' }, { once: 'sliders_adju
 
 export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM {
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const selfGuess = useAppStore((s) => s.selfGuess);
   const setSpendingAction = useAppStore((s) => s.setSpending);
   const setField = useAppStore((s) => s.setField);

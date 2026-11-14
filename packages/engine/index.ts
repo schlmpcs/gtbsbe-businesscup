@@ -21,7 +21,8 @@ export {
 export {
   anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, pointAt, scenarioEffectIssues,
 } from './anchors';
-export { forecastFacts, rulesBundle, type ForecastFacts } from './bundle';
+export { forecastFacts, rulesBundle, type ForecastFacts, type ForecastFactsEvent } from './bundle';
+export { eventStartMonth, addMonths, withoutEvents } from './events';
 export {
   rankMoves, moveCandidates, rankCandidates, movesLevel, isLevelUnlocked, moveKindOf, MOVE_LEVELS, MOVES_SHOWN,
   DISCRETIONARY_CATEGORIES, type MoveCandidate, type RankMovesOptions,

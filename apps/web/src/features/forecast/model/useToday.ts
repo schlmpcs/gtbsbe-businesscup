@@ -8,7 +8,7 @@ import { gameMode, type GameMode } from '@/lib/config';
 import { localMonthDay, usEasternDate } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
-import { isSampleActive, useAppReady, useAppStore, useGameStore } from '@/state';
+import { isSampleActive, useAppReady, useAppStore, useProfile, useGameStore } from '@/state';
 import { shownForecast } from './forecastAnswer';
 import type { Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
 import { toMoveVM, useNextMoves } from './useNextMoves';
@@ -19,7 +19,7 @@ const NO_HOMES: TodayVM['game']['homes'] = [];
 export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
   const mode = opts.mode ?? gameMode();
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const profileOrigin = useAppStore((s) => s.profileOrigin);
   const statementMonths = useAppStore((s) => s.statementMonths);
   const committedMove = useAppStore((s) => s.committedMove);

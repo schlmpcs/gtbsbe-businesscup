@@ -11,7 +11,7 @@ export function resetClientState(): void {
   cleanup();
   localStorage.clear();
   resetForecastMemory();
-  useAppStore.setState(initialAppData());
+  useAppStore.setState({ ...initialAppData(), foldedNotesShown: [] });
   useGameStore.setState(initialGameData());
   resetProStore();
   setSessionAdapter(createLocalSessionAdapter());

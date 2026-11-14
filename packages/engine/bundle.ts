@@ -1,20 +1,55 @@
 // Y15: the rules side of the forecast bundle, and the profile facts the AI forecaster is given.
 // Spec: docs/ENGINEERING.md → AI forecast.
-import type { ForecastBundle, Profile, ProfilePatch } from '@lifeguessr/types';
+import type { ForecastBundle, LifeEvent, Profile, ProfilePatch } from '@lifeguessr/types';
+import { eventStartMonth } from './events';
 import { applyPatch, cloneProfile, forecast } from './forecast';
 import type { ForecastRates } from './simulate';
+
+/** A life event as the AI forecaster sees it: its kind and values, and how many months from now it starts. */
+export type ForecastFactsEvent =
+  | { kind: 'pay'; startsInMonths: number; takeHomePay: Extract<LifeEvent, { kind: 'pay' }>['takeHomePay'] }
+  | { kind: 'spending'; startsInMonths: number; category: Extract<LifeEvent, { kind: 'spending' }>['category'];
+      monthly: Extract<LifeEvent, { kind: 'spending' }>['monthly'] }
+  | { kind: 'oneOff'; startsInMonths: number; amount: number; direction: 'cost' | 'income' };
 
 /**
  * What the AI forecaster sees, and what its cache keys are built from: the profile's numbers and
  * estimate flags, and nothing that identifies a person or a place or only steers the UI (privacy,
- * CLAUDE.md rule 6): no `zip`, no `committedMoveId`, no `doneMoveIds`.
+ * CLAUDE.md rule 6): no `zip`, no `committedMoveId`, no `doneMoveIds`. Life events, when there are
+ * any, keep their kind and values but trade the calendar `month` for `startsInMonths` from `asOf`
+ * (so the same events give a new cache key each month, as they should: they are a month closer);
+ * `asOf`, event ids and presets are dropped.
  */
-export type ForecastFacts = Omit<Profile, 'zip' | 'committedMoveId' | 'doneMoveIds'>;
+export type ForecastFacts = Omit<Profile, 'zip' | 'committedMoveId' | 'doneMoveIds' | 'events' | 'asOf'> & {
+  events?: ForecastFactsEvent[];
+};
 
-/** The profile without `zip`, `committedMoveId` and `doneMoveIds`; a deep copy, so editing it never reaches the profile. */
+/**
+ * The profile as `ForecastFacts`; a deep copy, so editing it never reaches the profile. Each event is
+ * rebuilt field by field, so nothing outside the contract reaches the model. RangeError when the
+ * profile has events but no `asOf`.
+ */
 export function forecastFacts(p: Profile): ForecastFacts {
-  const { zip: _zip, committedMoveId: _committedMoveId, doneMoveIds: _doneMoveIds, ...facts } = cloneProfile(p);
-  return facts;
+  const {
+    zip: _zip, committedMoveId: _committedMoveId, doneMoveIds: _doneMoveIds, events, asOf, ...facts
+  } = cloneProfile(p);
+  if (!events || events.length === 0) return facts;
+  if (asOf === undefined) throw new RangeError('Profile.asOf is required when the profile has events');
+  return { ...facts, events: events.map((e) => factsEvent(e, eventStartMonth(asOf, e.month))) };
+}
+
+function factsEvent(e: LifeEvent, startsInMonths: number): ForecastFactsEvent {
+  switch (e.kind) {
+    case 'pay':
+      return { kind: 'pay', startsInMonths, takeHomePay: { value: e.takeHomePay.value, isEstimate: e.takeHomePay.isEstimate } };
+    case 'spending':
+      return {
+        kind: 'spending', startsInMonths, category: e.category,
+        monthly: { value: e.monthly.value, isEstimate: e.monthly.isEstimate },
+      };
+    case 'oneOff':
+      return { kind: 'oneOff', startsInMonths, amount: e.amount, direction: e.direction };
+  }
 }
 
 /**

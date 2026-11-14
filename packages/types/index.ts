@@ -114,7 +114,31 @@ export type Profile = {
   retirementShare: Estimate<Rate>; // share of a positive monthly surplus saved to retirement
   debts: Debt[]; zip?: string;
   committedMoveId?: string; doneMoveIds: string[];
+  /** Future changes the person expects (at most MAX_LIFE_EVENTS). Absent = none. */
+  events?: LifeEvent[];
+  /** The calendar month today's values describe (forecast month 0). Required by the engine when `events` is non-empty. */
+  asOf?: YearMonth;
 };
+
+// ----- Future life events (S10 "Coming up") --------------------------------------------------
+// Amounts are in today's dollars: the engine grows pay by income growth and spending and one-offs
+// by inflation, all from month 0. Events carry kinds, categories and numbers only, never free text
+// (CLAUDE.md rule 6); `preset` only picks the label the UI shows.
+
+/** A calendar month, 'YYYY-MM'. */
+export type YearMonth = string;
+export type LifeEventKind = 'pay' | 'spending' | 'oneOff';
+/** The shortcut an event was made from (raise = pay, kid and move = spending, bigPurchase = oneOff). */
+export type LifeEventPreset = 'raise' | 'kid' | 'move' | 'bigPurchase';
+type LifeEventBase = { id: string; month: YearMonth; preset?: LifeEventPreset };
+export type LifeEvent = LifeEventBase & (
+  /** Monthly take-home pay becomes `takeHomePay` from `month` ($0 = quitting or unpaid leave). */
+  | { kind: 'pay'; takeHomePay: Estimate<Money> }
+  /** That category's monthly amount becomes `monthly` from `month` ($0 = the cost ends). */
+  | { kind: 'spending'; category: Exclude<CostCategory, 'debtPayments'>; monthly: Estimate<Money> }
+  /** One amount (> 0) in `month`: a cost paid from cash, or income added to cash. */
+  | { kind: 'oneOff'; amount: Money; direction: 'cost' | 'income' }
+);
 export type ProfilePatch = {
   spending?: Partial<Record<CostCategory, Money>>;
   debts?: { id: string; extraPayment?: Money; apr?: Rate }[];
@@ -302,7 +326,9 @@ export type ClientFunnelEvent =
   | { name: 'loan_compared'; props: { offers: number } }
   | { name: 'paywall_viewed' }
   | { name: 'sample_loaded' }
-  | { name: 'forecast_horizon_changed'; props: { years: HorizonYears } };
+  | { name: 'forecast_horizon_changed'; props: { years: HorizonYears } }
+  /** S10 "Coming up": an event was added (its kind, and the shortcut it came from; never its amount or month). */
+  | { name: 'life_event_added'; props: { kind: LifeEventKind; preset?: LifeEventPreset } };
 
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =

@@ -4,10 +4,10 @@
 // who has not edited their own numbers starts cold instead of seeing someone else's rent and groceries
 // as theirs. An edit turns either one into the person's own (origin 'user').
 import type { Profile } from '@lifeguessr/types';
-import { useAppStore } from '@/state';
+import { useAppStore, useProfile } from '@/state';
 
 export function useOwnProfile(): Profile | null {
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const origin = useAppStore((s) => s.profileOrigin);
   return origin === 'user' ? profile : null;
 }

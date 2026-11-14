@@ -5,7 +5,7 @@
 // shows at least one mark. A cold visit, a guess, ticks, or an empty plan send no forecast request.
 import type { Profile } from '@lifeguessr/types';
 import type { MoveCandidate } from '@lifeguessr/engine';
-import { useAppStore } from '@/state';
+import { useProfile } from '@/state';
 import { useCancelResult } from './model/useCancelResult';
 import { useSubscriptions, type SubscriptionsDeps } from './model/useSubscriptions';
 import type { PlanVM } from './model/types';
@@ -19,7 +19,7 @@ function CancelResults({ profile, candidate, plan, deps }: { profile: Profile; c
 }
 
 export function SubscriptionsTool({ deps }: { deps: SubscriptionsDeps }) {
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const vm = useSubscriptions(profile, deps);
   const { candidate } = vm.plan;
   const planResults =

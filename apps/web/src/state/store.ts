@@ -7,9 +7,10 @@
 // hydration mismatch. Screen hooks report `status: 'loading'` until then.
 import { applyPatch } from '@lifeguessr/engine';
 import {
-  CategoryTotalsSchema, HorizonYearsSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema, PurchaseSchema, CostCategorySchema,
-  type CategoryTotals, type CostCategory, type HorizonYears, type Money, type Move, type Profile, type ProfilePatch,
-  type Purchase,
+  CategoryTotalsSchema, HorizonYearsSchema, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MOVE_KINDS, ProfilePatchSchema, ProfileSchema,
+  PurchaseSchema, CostCategorySchema, YearMonthSchema,
+  type CategoryTotals, type CostCategory, type HorizonYears, type LifeEvent, type Money, type Move, type Profile,
+  type ProfilePatch, type Purchase, type YearMonth,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
@@ -20,8 +21,9 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { cloneProfileDemo } from '@/fixtures';
 import { safeStateStorage } from '@/lib/safeStorage';
 import {
-  addDebt, applyUserPatch, mergeStatementHistory, mergeStatementTotals, removeDebt, setField, setSpending,
-  setSubscriptionsLine, skipField, updateDebt, type DebtInput, type ProfileField,
+  addDebt, addLifeEvent, applyUserPatch, foldStartedEvents, mergeStatementHistory, mergeStatementTotals, removeDebt,
+  removeLifeEvent, setField, setSpending, setSubscriptionsLine, skipField, updateDebt, updateLifeEvent, withoutAsOf,
+  type DebtInput, type FoldedNote, type ProfileField,
 } from './profileOps';
 
 /** demo = the sample profile (nothing entered yet); closestLife = built from a life card; user = edited. */
@@ -56,6 +58,17 @@ export type AppData = {
    * profile is still the demo one (`isSampleActive`): any edit makes the life the user's own.
    */
   isSample: boolean;
+  /**
+   * Life events that started and were folded into today's values (`foldStartedEvents`) and that S10 has
+   * not shown yet. Oldest first, at most MAX_LIFE_EVENTS. S10 moves them to `foldedNotesShown`.
+   */
+  foldedNotes: FoldedNote[];
+};
+
+/** State for this page load only (not persisted). */
+export type AppSessionData = {
+  /** Folded-event notes S10 is showing (from `foldedNotes`): kept until dismissed or the page is left for good. */
+  foldedNotesShown: FoldedNote[];
 };
 
 export type AppActions = {
@@ -63,7 +76,7 @@ export type AppActions = {
   clearGoal: () => void;
   setTool: <K extends keyof ToolsState>(key: K, value: ToolsState[K]) => void;
   clearTool: (key: keyof ToolsState) => void;
-  /** Replace the whole profile (e.g. restored from the server session). */
+  /** Replace the whole profile (e.g. restored from the server session), its life events included. */
   setProfile: (profile: Profile, origin: ProfileOrigin) => void;
   setSelfGuess: (guess: Money) => void;
   /** S6: start from a life card's profile (`cardToProfile`). Drops any committed move. */
@@ -90,6 +103,21 @@ export type AppActions = {
   /** The user did a move: its patch enters the profile and it joins doneMoveIds. */
   markMoveDone: (move: Move) => void;
   setHorizonYears: (years: HorizonYears) => void;
+  /** S10 "Coming up": add a future life event. False (nothing changes) at MAX_LIFE_EVENTS or for an invalid event. */
+  addLifeEvent: (event: LifeEvent) => boolean;
+  /** Replace an event's fields (its id is kept). False when the id is unknown or the event invalid. */
+  updateLifeEvent: (id: string, event: LifeEvent) => boolean;
+  removeLifeEvent: (id: string) => void;
+  /**
+   * Fold the events whose month has come (≤ `currentMonth`) into today's values and drop them from the
+   * list; their notes join `foldedNotes`. Run after hydration and when the month rolls over (state/index.ts).
+   * Returns the notes of this call (empty when nothing had started).
+   */
+  foldStartedEvents: (currentMonth: YearMonth) => FoldedNote[];
+  /** S10 shows the folded notes: they move from `foldedNotes` (saved) to `foldedNotesShown` (this page load only), so they show once. */
+  showFoldedNotes: () => void;
+  /** The user has read the folded notes on screen. */
+  dismissFoldedNotes: () => void;
   /**
    * Look around with the sample life: the demo fixture becomes the profile, flagged `isSample`. Only
    * when the user has no profile of their own (origin 'demo'); returns whether it was loaded.
@@ -101,7 +129,7 @@ export type AppActions = {
   reset: () => void;
 };
 
-export type AppState = AppData & AppActions;
+export type AppState = AppData & AppSessionData & AppActions;
 
 export const APP_STORE_KEY = 'lifeguessr.app';
 
@@ -119,6 +147,7 @@ export function initialAppData(): AppData {
     committedMove: null,
     horizonYears: 10,
     isSample: false,
+    foldedNotes: [],
   };
 }
 
@@ -142,6 +171,15 @@ const MoveSchema = z.object({
   patch: ProfilePatchSchema,
 });
 
+const FoldedNoteSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('pay'), month: YearMonthSchema, preset: z.enum(LIFE_EVENT_PRESETS).optional() }),
+  z.object({
+    kind: z.literal('spending'), month: YearMonthSchema, preset: z.enum(LIFE_EVENT_PRESETS).optional(),
+    category: CostCategorySchema.exclude(['debtPayments']),
+  }),
+  z.object({ kind: z.literal('oneOff'), month: YearMonthSchema, preset: z.enum(LIFE_EVENT_PRESETS).optional(), direction: z.enum(['cost', 'income']) }),
+]);
+
 const WishlistItemSchema = z.object({ id: z.string().min(1), purchase: PurchaseSchema, addedAt: z.string() });
 
 /** Saved state is validated field by field; a field that fails keeps its default. */
@@ -158,6 +196,7 @@ const persistedFields = {
   committedMove: MoveSchema.nullable(),
   horizonYears: HorizonYearsSchema,
   isSample: z.boolean(),
+  foldedNotes: z.array(FoldedNoteSchema).max(MAX_LIFE_EVENTS),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -175,7 +214,7 @@ function mergePersisted(saved: unknown, current: AppState): AppState {
     if (!parsed.success) continue;
     // A saved profile with an absurd monthly amount (left by the old runaway slider) is dropped.
     if (key === 'profile' && hasAbsurdSpending(parsed.data as AppState['profile'])) continue;
-    next[key] = parsed.data;
+    next[key] = key === 'profile' ? withoutAsOf(parsed.data as Profile) : parsed.data;
   }
   return next as AppState;
 }
@@ -184,11 +223,12 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       ...initialAppData(),
+      foldedNotesShown: [],
 
-      setProfile: (profile, origin) => set({ profile, profileOrigin: origin }),
+      setProfile: (profile, origin) => set({ profile: withoutAsOf(profile), profileOrigin: origin }),
       setSelfGuess: (guess) => set({ selfGuess: guess }),
       chooseClosestLife: (cardId, profile) =>
-        set({ profile, profileOrigin: 'closestLife', closestCardId: cardId, committedMove: null }),
+        set({ profile: withoutAsOf(profile), profileOrigin: 'closestLife', closestCardId: cardId, committedMove: null }),
       setSpending: (category, value) => set((s) => ({ profile: setSpending(s.profile, category, value), profileOrigin: 'user' })),
       setField: (field, value) => set((s) => ({ profile: setField(s.profile, field, value), profileOrigin: 'user' })),
       skipField: (field) => set((s) => ({ profile: skipField(s.profile, field) })),
@@ -241,6 +281,33 @@ export const useAppStore = create<AppState>()(
           return { profile, committedMove: null };
         }),
       setHorizonYears: (years) => set({ horizonYears: HorizonYearsSchema.parse(years) }),
+      addLifeEvent: (event) => {
+        const profile = addLifeEvent(get().profile, event);
+        if (profile === null) return false;
+        set({ profile, profileOrigin: 'user' });
+        return true;
+      },
+      updateLifeEvent: (id, event) => {
+        const profile = updateLifeEvent(get().profile, id, event);
+        if (profile === null) return false;
+        set({ profile, profileOrigin: 'user' });
+        return true;
+      },
+      removeLifeEvent: (id) => set((s) => ({ profile: removeLifeEvent(s.profile, id), profileOrigin: 'user' })),
+      foldStartedEvents: (currentMonth) => {
+        const { profile, notes } = foldStartedEvents(get().profile, currentMonth);
+        if (notes.length === 0) return notes;
+        // Not an edit by the user: the origin stays as it is.
+        set((s) => ({ profile, foldedNotes: [...s.foldedNotes, ...notes].slice(-MAX_LIFE_EVENTS) }));
+        return notes;
+      },
+      showFoldedNotes: () =>
+        set((s) =>
+          s.foldedNotes.length === 0
+            ? s
+            : { foldedNotesShown: [...s.foldedNotesShown, ...s.foldedNotes].slice(-MAX_LIFE_EVENTS), foldedNotes: [] },
+        ),
+      dismissFoldedNotes: () => set({ foldedNotesShown: [] }),
       loadSample: () => {
         if (get().profileOrigin !== 'demo') return false;
         set({ profile: cloneProfileDemo(), profileOrigin: 'demo', committedMove: null, isSample: true });
@@ -251,7 +318,7 @@ export const useAppStore = create<AppState>()(
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
       clearTool: key => set(s=>{const tools={...s.tools};delete tools[key];return {tools};}),
-      reset: () => set(initialAppData()),
+      reset: () => set({ ...initialAppData(), foldedNotesShown: [] }),
     }),
     {
       name: APP_STORE_KEY,
@@ -261,7 +328,7 @@ export const useAppStore = create<AppState>()(
       partialize: (s): AppData => ({
         goal: s.goal,
         tools: s.tools,
-        profile: s.profile,
+        profile: withoutAsOf(s.profile),
         profileOrigin: s.profileOrigin,
         selfGuess: s.selfGuess,
         closestCardId: s.closestCardId,
@@ -271,6 +338,7 @@ export const useAppStore = create<AppState>()(
         committedMove: s.committedMove,
         horizonYears: s.horizonYears,
         isSample: s.isSample,
+        foldedNotes: s.foldedNotes,
       }),
       merge: mergePersisted,
     },

@@ -12,7 +12,7 @@ import { leaseScenarioFixture, leaseScenarioSample, LeaseScenarioSchema, type Le
 import { runEngine } from '@/lib/model/errors';
 import { areaRates, displayForecast } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
-import { useAppReady, useAppStore } from '@/state';
+import { useAppReady, useAppStore, useProfile } from '@/state';
 import type { DecideResultVM, DecideVM, LeaseField, LeaseForm } from './types';
 
 const HORIZON_YEARS = 10;
@@ -92,7 +92,7 @@ export function evaluateDecision(p: Profile, lease: LeaseScenario, leaseIsEstima
 
 export function useDecide(opts: { now?: Date } = {}): DecideVM {
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const isDemoProfile = useAppStore((s) => s.profileOrigin) === 'demo';
   const [form, setForm] = useState<LeaseForm>(sampleForm);
   const [edited, setEdited] = useState<ReadonlySet<LeaseField>>(new Set());

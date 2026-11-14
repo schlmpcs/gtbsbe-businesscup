@@ -76,7 +76,7 @@ lifeguessr/
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
 | S8 | Balance sheet | `/me/balance` | ladder | Real |
 | S9 | Statement upload + "What we keep" + "Try with sample statement" | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: not shown until built) |
-| S10 | You in N years + Next Moves (a picker: 1, 3, 5 or 10 years, default 10; the headline, range, chart and the moves' gains and ranking read that year; S1's forecast card and the S14 check-in follow it) | `/future` | forecast | Real |
+| S10 | You in N years + Next Moves (a picker: 1, 3, 5 or 10 years, default 10; the headline, range, chart and the moves' gains and ranking read that year; S1's forecast card and the S14 check-in follow it) + "Coming up" (future life events under the chart: raise, kid, move, big purchase or something else, dated by month; every number in the app follows them) | `/future` | forecast | Real |
 | S11 | Can I Afford It? | `/afford` | afford | Real |
 | S12 | Loan Lab | `/loan` | loan | Real |
 | S13 | Decision (car example) | `/decide` | mocks | Mock |
@@ -152,7 +152,15 @@ export type Profile = {
   retirementShare: Estimate<Rate>; // share of a positive monthly surplus saved to retirement
   debts: Debt[]; zip?: string;
   committedMoveId?: string; doneMoveIds: string[];
+  events?: LifeEvent[];          // future life events, at most MAX_LIFE_EVENTS (12); absent = none
+  asOf?: YearMonth;              // the month today's values describe (forecast month 0); stamped by the client, never stored
 };
+// Future life events (S10 "Coming up"). Amounts in today's dollars; no free text (rule 6): `preset` only picks the label.
+export type YearMonth = string;  // 'YYYY-MM'
+export type LifeEvent = { id: string /* client-made, ≤ 64 chars */; month: YearMonth; preset?: 'raise' | 'kid' | 'move' | 'bigPurchase' } & (
+  | { kind: 'pay'; takeHomePay: Estimate<Money> }                                                // monthly take-home from `month` ($0 allowed)
+  | { kind: 'spending'; category: Exclude<CostCategory, 'debtPayments'>; monthly: Estimate<Money> } // that category's monthly amount from `month` ($0 allowed)
+  | { kind: 'oneOff'; amount: Money /* > 0 */; direction: 'cost' | 'income' });                  // once, in `month`
 export type ProfilePatch = {
   spending?: Partial<Record<CostCategory, Money>>;
   debts?: { id: string; extraPayment?: Money; apr?: Rate }[];
@@ -227,6 +235,7 @@ export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: 
 | `rankMoves` | Amir | `(p: Profile, opts?: { rates?: Partial<ForecastRates>; subscriptionsDetected?: boolean }) => Move[]` (level 1, top 3; `effect10y` in today's dollars; the committed move is the one with `id === p.committedMoveId`) |
 | `moveCandidates` / `rankCandidates` | Amir | `(p: Profile, opts?: RankMovesOptions) => MoveCandidate[]` / `(p: Profile, candidates: MoveCandidate[], effectOf: (c: MoveCandidate) => Money) => Move[]`. `rankMoves` is both with the rules forecast as `effectOf`; the AI path supplies `effectOf` from the bundle. `MoveCandidate = Omit<Move, 'effect10y'>`. |
 | `anchorIssues` / `anchorsToForecast` / `deflateForecast` / `pointAt` / `forecastSanityIssues` / `scenarioEffectIssues` / `rulesBundle` / `forecastFacts` | Amir | Pure helpers for the AI forecast: check the model's `YearAnchor[]`, expand it to a nominal `Forecast` (month 0 = today's balance sheet), convert a `Forecast` to today's dollars, read its point at a year (`pointAt`), compare a forecast and a move's effect (at 1, 3, 5 or 10 years) with the rules forecast, wrap the rules forecast as a `ForecastBundle` (the fallback), and strip a `Profile` to what the model sees. See ENGINEERING.md → AI forecast. |
+| `eventStartMonth` / `addMonths` / `withoutEvents` | Amir | `(asOf: YearMonth, month: YearMonth) => number` (whole months from `asOf`, never below 0) / `(ym: YearMonth, n: number) => YearMonth` / `(p: Profile) => Profile` (drops `events` and `asOf`: the server's own engine calls, e.g. the avatar). `simulate` applies `p.events` from `p.asOf` (required when there are events). See ENGINEERING.md → Forecast → Life events. |
 | `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
 | `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
 | `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
@@ -295,7 +304,7 @@ packages/data scripts ──► packages/data/out/areas.json (cached, committed)
 cards.json (server) ──► sceneOf ──► /api/daily (PublicCard) + /api/daily/clue (ClueReveal) ──► HouseScene (S2)
                  └──► costOfLife + scoreGuess in /api/daily/guess ──► game reveal (S3)
                                    │
-sliders / balance sheet / CSV ──► Profile ──► /api/ai/forecast (S1, S10; rules fallback) · engine (the ladder's 10-year preview on S5–S9, canAfford, loan, monthEnd)
+sliders / balance sheet / CSV / life events ──► Profile ──► (+ asOf, state/profile.ts) ──► /api/ai/forecast (S1, S10; rules fallback) · engine (the ladder's 10-year preview on S5–S9, canAfford, loan, monthEnd)
                                    │                         │
                          /api/session (persist)        view-model hooks ──► ui
 CSV (browser parse, mask names) ──► StatementItem[] ──► /api/statement/categorize ──► CategoryTotals[] ──► Profile
