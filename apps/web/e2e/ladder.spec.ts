@@ -125,7 +125,7 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   } else {
     await expect(headlineSource).toHaveText(forecast.source.ai);
   }
-  await page.getByTestId('chart-disclosure').locator('summary').click(); // JF16: behind a disclosure
+  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
   await expect(page.getByRole('figure', { name: forecast.future.chartTitle(10) }).locator('.recharts-line-curve').first()).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);
