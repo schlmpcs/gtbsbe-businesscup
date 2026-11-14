@@ -7,6 +7,7 @@ export { Art, type ArtName, type ArtProps } from './Art';
 export { BarBreakdown, type BarBreakdownItem, type BarBreakdownProps } from './BarBreakdown';
 export { Button, buttonClassName, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 export { Card, type CardProps } from './Card';
+export { Choice, type ChoiceOption, type ChoiceProps } from './Choice';
 export { cx } from './cx';
 export { EstimateTag } from './EstimateTag';
 export { Field, useFieldControl, type FieldProps } from './Field';
@@ -16,7 +17,7 @@ export {
   type ForecastChartProps,
   type ForecastChartSeries,
 } from './ForecastChart';
-export { formatMoney, formatRate, type FormatMoneyOptions } from './format';
+export { formatMoney, formatMonth, formatRate, type FormatMoneyOptions } from './format';
 export { Gauge, gaugeZone, type GaugeProps, type GaugeThresholds, type GaugeZone } from './Gauge';
 export {
   HouseScene,

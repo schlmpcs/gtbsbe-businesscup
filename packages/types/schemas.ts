@@ -9,8 +9,8 @@
 // likely LLM/user mistake and it would silently break every forecast.
 import { z } from 'zod';
 import {
-  AREA_TIERS, COST_CATEGORIES, DEBT_KINDS, KID_AGES, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES, SESSION_ERROR_CODES,
-  SESSION_WISHLIST_MAX,
+  AREA_TIERS, CATEGORIZED_BY, COST_CATEGORIES, DEBT_KINDS, KID_AGES, MAX_STATEMENT_ITEMS, PRO_ERROR_CODES, PRO_PLANS,
+  PRO_SOURCES, SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
 } from './constants';
 
 // ----- primitives ----------------------------------------------------------------------------
@@ -161,11 +161,40 @@ export const StatementItemSchema = z.object({
   day: z.number().int().min(1).max(31),
 });
 
+/** Days in a 'YYYY-MM' month (UTC calendar). */
+const daysInMonth = (month: string) => {
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+};
+
 export const CategoryTotalsSchema = z.object({
   month: MonthSchema,
   totals: z.record(CostCategorySchema, MoneySchema),
   oneOffs: z.array(z.object({ label: z.string().min(1), amount: MoneySchema })),
   detectedPay: NonNegativeMoneySchema.optional(),  // monthly
+  lastDay: z.number().int().min(1).max(31).optional(),  // day of the month's latest statement line
+}).refine((m) => m.lastDay === undefined || m.lastDay <= daysInMonth(m.month), {
+  message: 'lastDay is past the end of the month',
+  path: ['lastDay'],
+});
+
+export const StatementClassSchema = z.enum(STATEMENT_CLASSES);
+
+export const StatementCategorizeRequestSchema = z.object({
+  items: z.array(StatementItemSchema).min(1).max(MAX_STATEMENT_ITEMS)
+    .superRefine((items, ctx) => {
+      items.forEach((item, i) => {
+        if (item.day > daysInMonth(item.month)) {
+          ctx.addIssue({ code: 'custom', path: [i, 'day'], message: `${item.month} has no day ${item.day}` });
+        }
+      });
+    }),
+});
+
+export const StatementCategorizeResponseSchema = z.object({
+  ok: z.literal(true),
+  months: z.array(CategoryTotalsSchema),
+  categorizedBy: z.enum(CATEGORIZED_BY),
 });
 
 // ----- Pro (S15): requests and responses of /api/pro/* ---------------------------------------

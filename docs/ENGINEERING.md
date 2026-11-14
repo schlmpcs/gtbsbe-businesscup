@@ -54,6 +54,7 @@ All monthly. `t` = month index starting at 0. Defaults live in `assumptions.ts` 
 | `clueCost`, `clueFloor` | 0.10 per opened clue, floor 0.50 | Game tuning, not finance; tune after playtests |
 | `avgMealPrice`, `monthlyGallons`, `kidGroceryFactor` | from BLS CE / national averages | Source-tagged or assumption |
 | `payCardExtraShareOfSurplus`, `payCardExtraStep`, `cutCategoryShare`, `cancelSubscriptionsShare` | 0.5 of the surplus in $10 steps, 0.20, 0.5 | Next Moves sizes; assumptions |
+| `oneOffHintMinAmount`, `oneOffOutlierMinAmount`, `oneOffOutlierMultiple` | $50, $400, 5× the category median | Which statement charges count as one-offs; assumptions |
 
 ### Loan amortization (Aibek, T3)
 
@@ -215,11 +216,29 @@ drift   = projection − average; flag if |drift| > spread
 vsAverage = projectedSpend − Σ averages
 ```
 
-With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Without any upload, S1 shows the monthly spend implied by the profile and no drift flags. That also applies when there is history but no statement rows for the current calendar month.
+With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Without any upload, S1 shows the monthly spend implied by the profile and no drift flags. That also applies when there is history but no statement rows for the current calendar month; S1 then says that this month has no transactions yet (and, with 3 months of history, that only this month's statement is missing), never that more months are needed.
+
+`day` is how far the month in progress has data: S1 passes the day of the statement's latest line that month (`CategoryTotals.lastDay`), not today's date, since days after the statement ends have no data yet and would project the month too low. Statement months saved before `lastDay` existed fall back to today.
 
 Why bill categories are not extrapolated: rent paid on the 1st would project as rent × 30 on day 1, and as about twice the rent mid-month (the sample statement on Nov 14 would flag rent about $2,000 over). A bill is paid in one lump, so it is projected as the larger of what was paid and the usual amount, and it drifts only once it has really gone over. `car` mixes fixed insurance with variable gas, so it is floored at usual and not extrapolated either. The list, the 3-month window, the 10% share and the $25 floor are in `assumptions.ts` (`monthEnd*`). The sample std dev (n − 1) and the $25 floor keep a few dollars in a usually empty category from being called drift.
 
 Other rules: only months strictly before the current month count as history; a negative category total (refunds above spending) counts as 0; drifts are sorted by size. Malformed input (a bad `YYYY-MM`, a day outside the month, a non-finite total, the same month twice) throws a `RangeError`.
+
+### Statements (Aibek, T6/T7)
+
+The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/statement/*` (browser) → `POST /api/statement/categorize` → `statementTotals` (engine).
+
+**Reading the CSV (browser, `lib/statement/read.ts`).** The header row is found by name anywhere in the first 30 rows (banks put summaries above it); a file without a header has its columns inferred from the cells. Dates: ISO, `MM/DD/YYYY`, `M/D/YY`, `YYYY/MM/DD`, `Oct 1, 2026` (US order, never DD/MM). Amounts: `$1,234.50`, `(12.50)`, `-$12.50`, `12.50-`. The sign convention is detected, in this order: separate Debit/Credit columns; a Debit/Credit type column; pay deposits (they are money in); else the sign most lines have (most lines are spending). Pending lines and lines that aren't transactions are skipped and counted, shown on the review. Comma, semicolon and tab separators, BOM and CRLF are handled.
+
+**Masking (`lib/statement/mask.ts`, run in the browser and again on the server; idempotent).** Person-to-person lines become `Zelle to [name]`, `Venmo from [name]` …; transfers become `Transfer to savings` (or `[name]` when the other side isn't an account type); ACH name fields (`INDN:`, `IND NAME:`) are masked; e-mails, 4+ digit runs (card, account, phone, store numbers), `XXXX1234` and letter-digit reference codes become `[email]`, `#`, `[ref]`. Each line sent is `{ label, amount, month, day }`.
+
+**Categorizing (server, `server/statement/*`).** The distinct (direction, masked label) pairs, never amounts or dates, go to the LLM in chunks of 100 (at most 400 per request), which returns a `StatementClass` and a "typically one-off or yearly" flag per label (zod-checked; one retry with the problems listed; what is still invalid or missing uses the keyword rules). Without an API key, or when the provider fails, the keyword rules (`rules.ts`) sort everything. The response says which: `categorizedBy: 'ai' | 'rules' | 'mixed'`. Nothing is stored.
+
+**Totals (engine, `statementTotals`; whole cents).**
+
+- Money out in a cost category → that category's month total; money out sorted as `transfer` (own accounts, investments) is left out.
+- Money in sorted as `pay` → `detectedPay`; as a cost category → a refund off that category (never below 0); as `transfer` (money from people, interest, own accounts) → left out.
+- One-off: a merchant (label without digits and masks) seen in only one month of a statement covering 2+ months, not rent/utilities, childcare or debt payments, and either flagged by the categorizer with an amount ≥ `oneOffHintMinAmount`, or ≥ `oneOffOutlierMinAmount` and ≥ `oneOffOutlierMultiple` × that category's median charge. One-offs are listed in `oneOffs` and left out of `totals`; the browser drops their labels when the months are applied.
 
 ## AI usage rules
 

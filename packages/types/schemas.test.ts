@@ -1,10 +1,13 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
-  type AREA_TIERS, type CLUE_IDS, COST_CATEGORIES, type DEBT_KINDS, type KID_AGES, type MOVE_KINDS,
-  type PRO_ERROR_CODES, type PRO_PLANS, PRO_PRICES, type PRO_SOURCES, type SESSION_ERROR_CODES, SESSION_WISHLIST_MAX,
+  type AREA_TIERS, type CATEGORIZED_BY, type CLUE_IDS, COST_CATEGORIES, type DEBT_KINDS, type KID_AGES,
+  MAX_STATEMENT_ITEMS, type MOVE_KINDS, type PRO_ERROR_CODES, type PRO_PLANS, PRO_PRICES, type PRO_SOURCES,
+  type SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
   AnonIdSchema, SessionRequestSchema, SessionResponseSchema, type SessionStateSchema,
-  type AreaDataSchema, type CategoryTotalsSchema, type LifeCardSchema, LoanInputSchema, ProfilePatchSchema,
+  StatementCategorizeRequestSchema, StatementCategorizeResponseSchema,
+  type StatementCategorizeRequest, type StatementCategorizeResponse, type StatementClass,
+  type AreaDataSchema, CategoryTotalsSchema, type LifeCardSchema, LoanInputSchema, ProfilePatchSchema,
   ProConfirmRequestSchema, ProDemoUnlockRequestSchema, ProErrorResponseSchema, type ProStatusSchema,
   ProStatusResponseSchema, ProfileSchema, PurchaseSchema, StatementItemSchema,
   type AreaData, type CategoryTotals, type ClueId, type CostCategory, type Debt, type KidAge,
@@ -35,6 +38,9 @@ describe('schemas match the contracts', () => {
     expectTypeOf<CategoryTotals>().toExtend<z.input<typeof CategoryTotalsSchema>>();
     expectTypeOf<z.infer<typeof ProStatusSchema>>().toExtend<ProStatus>();
     expectTypeOf<ProStatus>().toExtend<z.input<typeof ProStatusSchema>>();
+    expectTypeOf<z.infer<typeof StatementCategorizeRequestSchema>>().toExtend<StatementCategorizeRequest>();
+    expectTypeOf<StatementCategorizeRequest>().toExtend<z.input<typeof StatementCategorizeRequestSchema>>();
+    expectTypeOf<z.infer<typeof StatementCategorizeResponseSchema>>().toExtend<StatementCategorizeResponse>();
     expectTypeOf<z.infer<typeof SessionStateSchema>>().toExtend<SessionState>();
     expectTypeOf<SessionState>().toExtend<z.input<typeof SessionStateSchema>>();
   });
@@ -49,8 +55,37 @@ describe('schemas match the contracts', () => {
     expectTypeOf<ProPlan>().toEqualTypeOf<(typeof PRO_PLANS)[number]>();
     expectTypeOf<ProSource>().toEqualTypeOf<(typeof PRO_SOURCES)[number]>();
     expectTypeOf<ProErrorCode>().toEqualTypeOf<(typeof PRO_ERROR_CODES)[number]>();
+    expectTypeOf<StatementClass>().toEqualTypeOf<(typeof STATEMENT_CLASSES)[number]>();
+    expectTypeOf<StatementCategorizeResponse['categorizedBy']>().toEqualTypeOf<(typeof CATEGORIZED_BY)[number]>();
     expectTypeOf<SessionErrorCode>().toEqualTypeOf<(typeof SESSION_ERROR_CODES)[number]>();
     expect(new Set(COST_CATEGORIES).size).toBe(COST_CATEGORIES.length);
+    expect(new Set(STATEMENT_CLASSES).size).toBe(STATEMENT_CLASSES.length);
+  });
+});
+
+describe('statement contracts', () => {
+  const item = { label: 'KROGER #', amount: 42.5, month: '2026-02', day: 28 };
+
+  it('accepts masked lines and rejects days the month does not have', () => {
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [item] }).success).toBe(true);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, day: 29 }] }).success).toBe(false);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, month: '2024-02', day: 29 }] }).success).toBe(true);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, month: '2026-13' }] }).success).toBe(false);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, label: '' }] }).success).toBe(false);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, amount: Number.NaN }] }).success).toBe(false);
+  });
+
+  it('caps the number of lines and needs at least one', () => {
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [] }).success).toBe(false);
+    const many = Array.from({ length: MAX_STATEMENT_ITEMS + 1 }, () => item);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: many }).success).toBe(false);
+  });
+
+  it('shapes the reply', () => {
+    const totals = Object.fromEntries(COST_CATEGORIES.map((c) => [c, 0]));
+    const month = { month: '2026-02', totals, oneOffs: [], detectedPay: 4_800 };
+    expect(StatementCategorizeResponseSchema.safeParse({ ok: true, months: [month], categorizedBy: 'rules' }).success).toBe(true);
+    expect(StatementCategorizeResponseSchema.safeParse({ ok: true, months: [month], categorizedBy: 'llm' }).success).toBe(false);
   });
 });
 
@@ -115,6 +150,17 @@ describe('schemas reject the mistakes they exist for', () => {
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-10', day: 3 }).success).toBe(true);
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-13', day: 3 }).success).toBe(false);
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-10', day: 32 }).success).toBe(false);
+  });
+
+  it('checks a month’s lastDay against the length of that month', () => {
+    const m = { month: '2026-11', totals: Object.fromEntries(COST_CATEGORIES.map((c) => [c, 0])), oneOffs: [] };
+    expect(CategoryTotalsSchema.safeParse(m).success).toBe(true); // optional: older saved data has none
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 30 }).success).toBe(true);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 31 }).success).toBe(false); // November has 30 days
+    expect(CategoryTotalsSchema.safeParse({ ...m, month: '2028-02', lastDay: 29 }).success).toBe(true); // leap year
+    expect(CategoryTotalsSchema.safeParse({ ...m, month: '2026-02', lastDay: 29 }).success).toBe(false);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 0 }).success).toBe(false);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 2.5 }).success).toBe(false);
   });
 
   it('accepts purchases paid with cash, card or a loan', () => {

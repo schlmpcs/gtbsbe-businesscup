@@ -2,6 +2,7 @@
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
 import type {
   AreaData, ClueId, CostCategory, Debt, KidAge, MoveKind, ProErrorCode, ProPlan, ProSource, SessionErrorCode,
+  StatementCategorizeResponse, StatementClass,
 } from './index';
 
 export const COST_CATEGORIES = [
@@ -16,6 +17,17 @@ export const MOVE_KINDS = [
   'payCardFirst', 'cutCategory', 'cancelSubscriptions',
   'retirementMatch', 'hsa', 'refinance', 'negotiateRent', 'reshopInsurance',
 ] as const satisfies readonly MoveKind[];
+
+// ----- statements (T6/T7) ---------------------------------------------------------------------
+
+export const STATEMENT_CLASSES = [
+  'rentUtilities', 'car', 'childcare', 'groceries',
+  'eatingOut', 'subscriptions', 'debtPayments', 'other',
+  'pay', 'transfer',
+] as const satisfies readonly StatementClass[];
+export const CATEGORIZED_BY = ['ai', 'rules', 'mixed'] as const satisfies readonly StatementCategorizeResponse['categorizedBy'][];
+/** Most lines one /api/statement/categorize request may carry (years of a busy checking account). */
+export const MAX_STATEMENT_ITEMS = 5_000;
 
 // ----- Pro (S15, the paywall demo) -----------------------------------------------------------
 

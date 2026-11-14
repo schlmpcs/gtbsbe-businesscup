@@ -9,6 +9,7 @@ import {
   cx,
   EstimateTag,
   formatMoney,
+  formatMonth,
   Money,
   Scoreboard,
   Stack,
@@ -25,6 +26,8 @@ export type TodayLinks = {
   future: string;
   afford: string;
   loan: string;
+  decide: string;
+  checkin: string;
   /** Start of "build your profile" (S5 Guess yourself). */
   profile: string;
   upload: string;
@@ -111,6 +114,8 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
           <ul className="mt-lg grid gap-lg sm:grid-cols-3">
             <ToolLink href={links.afford} art="afford" {...t.today.tools.afford} Link={Link} />
             <ToolLink href={links.loan} art="loan" {...t.today.tools.loan} Link={Link} />
+            <ToolLink href={links.decide} art="austin" {...t.today.tools.decide} Link={Link} />
+            <ToolLink href={links.checkin} art="checkin" {...t.today.tools.checkin} Link={Link} />
             <ToolLink
               href={links.profile}
               art="upload"
@@ -233,17 +238,22 @@ function DayScore({ vm }: { vm: TodayVM }) {
 
 function MonthEnd({ data, uploadHref, Link }: { data: MonthEndVM; uploadHref: string; Link: LinkComponent }) {
   const m = t.today.monthEnd;
+  const hint = data.fromStatement
+    ? m.fromStatement(formatMonth(data.month, data.asOfDay ?? undefined))
+    : data.historyMonths > 0
+      ? m.noRowsThisMonth(formatMonth(data.month))
+      : m.fromProfile;
   return (
     <Stack gap="md">
-      <Stat
-        label={m.projected}
-        value={<Money value={data.projectedSpend} />}
-        size="lg"
-        hint={data.fromStatement ? m.fromStatement : m.fromProfile}
-      />
+      <Stat label={m.projected} value={<Money value={data.projectedSpend} />} size="lg" hint={hint} />
       {data.vsAverage === null ? (
-        <div className="flex flex-col items-start gap-sm" data-testid="month-end-no-history">
-          <p className="text-sm text-text-muted">{m.needHistory(data.historyMonths)}</p>
+        <div
+          className="flex flex-col items-start gap-sm"
+          data-testid={data.noAverage === 'thisMonth' ? 'month-end-no-current' : 'month-end-no-history'}
+        >
+          <p className="text-sm text-text-muted">
+            {data.noAverage === 'thisMonth' ? m.needThisMonth(formatMonth(data.month)) : m.needHistory(data.historyMonths)}
+          </p>
           <Link href={uploadHref} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
             {m.upload}
           </Link>
