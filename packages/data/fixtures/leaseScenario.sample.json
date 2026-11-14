@@ -1,0 +1,22 @@
+{
+  "monthly": {
+    "value": 489,
+    "source": { "name": "Illustrative example lease for a new compact SUV, not a quote", "year": 2026 },
+    "isEstimate": true
+  },
+  "termMonths": {
+    "value": 36,
+    "source": { "name": "Illustrative example lease for a new compact SUV, not a quote", "year": 2026 },
+    "isEstimate": true
+  },
+  "dueAtSigning": {
+    "value": 3000,
+    "source": { "name": "Illustrative example lease for a new compact SUV, not a quote", "year": 2026 },
+    "isEstimate": true
+  },
+  "running": {
+    "value": 280,
+    "source": { "name": "Illustrative example: insurance, fuel and upkeep of the leased car, not a quote", "year": 2026 },
+    "isEstimate": true
+  }
+}
