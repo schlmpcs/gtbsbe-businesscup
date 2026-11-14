@@ -22,7 +22,7 @@ const EVENTS_ON = process.env.NEXT_PUBLIC_EVENTS_SOURCE === 'api';
 
 /** The funnel steps this path goes through, in the order it reaches them. */
 const PATH_EVENTS = [
-  'play_started', 'clue_opened', 'home_guessed', 'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted',
+  'play_started', 'hint_opened', 'duel_picked', 'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted',
   'forecast_viewed', 'statement_applied', 'loan_compared',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 
@@ -101,7 +101,7 @@ test('demo path: 5 duels → own guess → sliders → forecast → statement �
   await expect(page.getByRole('list', { name: duel.summary.gridLabel }).getByRole('listitem')).toHaveCount(5);
   await expectNoSideScroll(page);
   // The game's events leave in their own batch before the next page (see `stored`).
-  if (EVENTS_ON) await expect.poll(() => sentEvents.filter((e) => e.name === 'home_guessed').length, { timeout: 10_000 }).toBe(5);
+  if (EVENTS_ON) await expect.poll(() => sentEvents.filter((e) => e.name === 'duel_picked').length, { timeout: 10_000 }).toBe(5);
   await page.getByRole('link', { name: duel.summary.cta }).click();
   await expect(page).toHaveURL(/\/me\/guess$/);
 
@@ -183,13 +183,11 @@ test('demo path: 5 duels → own guess → sliders → forecast → statement �
   await expect
     .poll(() => PATH_EVENTS.filter((name) => !sentEvents.some((e) => e.name === name)), { timeout: 15_000 })
     .toEqual([]);
-  // The duel reports a round as a home guessed and its hint as the mailbox clue (useDuel).
-  const opened = sentEvents.filter((e) => e.name === 'clue_opened');
-  expect(opened.map((e) => (e as Extract<ClientFunnelEvent, { name: 'clue_opened' }>).props)).toEqual([{ home: 1, clue: 'mailbox' }]);
-  const guessed = sentEvents.filter((e) => e.name === 'home_guessed');
-  expect(guessed.map((e) => (e as Extract<ClientFunnelEvent, { name: 'home_guessed' }>).props)).toEqual([
-    { home: 1, cluesOpened: 1 }, { home: 2, cluesOpened: 0 }, { home: 3, cluesOpened: 0 }, { home: 4, cluesOpened: 0 }, { home: 5, cluesOpened: 0 },
-  ]);
+  // The duel reports its hint and each round it picked (useDuel).
+  const hints = sentEvents.filter((e) => e.name === 'hint_opened');
+  expect(hints.map((e) => (e as Extract<ClientFunnelEvent, { name: 'hint_opened' }>).props)).toEqual([{ round: 1 }]);
+  const picked = sentEvents.filter((e) => e.name === 'duel_picked');
+  expect(picked.map((e) => (e as Extract<ClientFunnelEvent, { name: 'duel_picked' }>).props.round)).toEqual([1, 2, 3, 4, 5]);
 
   // Nothing personal leaves the browser: the id travels in a header and the body, never the URL,
   // and no event carries statement text.
