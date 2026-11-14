@@ -82,6 +82,11 @@ export type LoanLabVM = {
   payoffPlan: PayoffPlanVM | null;
   /** "28k at 6.9% for 5 years, $495 fees" → LoanInput; added (or replaces the selected offer when full). */
   parse: ParseConfirmVM<LoanInput>;
+  /**
+   * JF14: money left over each month (take-home − spending − debt payments, engine simulate, first month):
+   * today, and with the selected offer's payment added (null without a valid selected offer). Negative = short.
+   */
+  leftOver: { before: Money; after: Money | null } | null;
 };
 
 // ----- Debt payoff planner (M13): usePayoffPlanner() in ./usePayoffPlanner.ts ----------------------

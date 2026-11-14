@@ -37,14 +37,19 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   // Against a deployment with a model key the last step may wait up to 25 s for the forecast on top of the
   // steps before it: three times the default timeout.
   test.slow();
-  // S6: start from the first life.
+  // S6: About you, then start from the month built for that household and ZIP.
   await page.goto('/me/closest');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(ladder.screens.S6);
-  // One task per step: no 10-year strip, and the CTA waits for a pick.
+  // One task per step: no 10-year strip, and the CTA waits for a ZIP we have data for.
   await loaded(page);
   await expect(page.getByTestId('ladder-in10y')).toHaveCount(0);
   await expect(page.getByRole('button', { name: ladder.shell.cta.S6 })).toBeDisabled();
-  const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
+  await page.getByLabel(ladder.closest.about.zip).fill('75205');
+  // The life built from the answers is preselected: the CTA is live before any tap (JF13).
+  const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) });
+  await expect(choose).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: ladder.shell.cta.S6 })).toBeEnabled();
+  await expect(page.getByText(ladder.closest.preselectedNote)).toBeVisible();
   await choose.click();
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText(ladder.closest.chosenNote)).toBeVisible();
@@ -79,10 +84,12 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   await expect(page).toHaveURL(/\/me\/balance$/);
   const debtLoad = page.getByRole('meter', { name: ladder.balance.debtLoadLabel });
   const loadBefore = await debtLoad.getAttribute('aria-valuenow');
-  await page.getByRole('button', { name: ladder.balance.addDebt }).click();
+  // Confirm, not type (JF17): tap the kind, type the balance; the APR comes prefilled (then edited here).
+  await page.getByRole('button', { name: ladder.balance.addKindLabel(ladder.balance.debtKinds.student) }).click();
   const form = page.getByRole('form', { name: ladder.balance.formTitleAdd });
-  await form.getByLabel(ladder.balance.kindLabel).selectOption({ label: ladder.balance.debtKinds.student });
+  await expect(form.getByRole('radio', { name: ladder.balance.debtKinds.student })).toBeChecked();
   await form.getByLabel(ladder.balance.balanceLabel).fill('20000');
+  await expect(form.getByLabel(ladder.balance.aprLabel)).not.toHaveValue('');
   await form.getByLabel(ladder.balance.aprLabel).fill('5');
   await form.getByRole('button', { name: ladder.balance.save }).click();
   await expect(form).toBeHidden();
@@ -120,19 +127,20 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   } else {
     await expect(headlineSource).toHaveText(forecast.source.ai);
   }
+  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
   await expect(page.getByRole('figure', { name: forecast.future.chartTitle(10) }).locator('.recharts-line-curve').first()).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);
 });
 
-test('S5: guess your own month, then see it next to our estimate', async ({ page }) => {
+test('S5: only the gut guess, with no estimate to compare it with yet', async ({ page }) => {
   await page.goto('/me/guess');
   const slider = page.getByRole('slider', { name: ladder.guess.sliderLabel });
   await slider.focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
   await page.getByRole('button', { name: ladder.guess.submit }).click();
-  await expect(page.getByRole('region', { name: ladder.guess.compareTitle })).toBeVisible();
-  await expect(page.getByTestId('guess-verdict')).not.toBeEmpty();
+  await expect(page.getByRole('link', { name: ladder.shell.cta.S5 })).toBeVisible();
+  await expect(page.getByTestId('guess-reveal')).toHaveCount(0);
   await expect(rung(page, 'S5')).toHaveAttribute('data-done', 'true');
 });
 

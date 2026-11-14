@@ -5,10 +5,11 @@
 // What is stored stays as it was answered (a pick keeps the score it got, hint and all); two things
 // are rebuilt when the server answers:
 // - the hint TEXT, with duelHint(pair), for rounds the server recorded a hint for and no other;
-// - the crowd, live (liveCrowds below), so a returning player sees today's numbers.
-import type { DuelRound, PickResult } from '@lifeguessr/types';
+// - the crowd, live (liveCrowds below), so a returning player sees today's numbers: null until
+//   DUEL_CROWD_MIN_PICKS players picked the round.
+import { DUEL_CROWD_MIN_PICKS, type DuelRound, type PickResult } from '@lifeguessr/types';
 import type { DuelProgressWire } from '@/lib/api/gameSchemas';
-import type { DuelStore } from '@/server/store/duel';
+import type { DuelCounts, DuelStore } from '@/server/store/duel';
 import { duelHint, findDuelPair } from './duel';
 
 /** The player's stored duel day, as DuelStore.playerDuelDay answers it. */
@@ -19,20 +20,39 @@ export type DuelCrowd = PickResult['crowd'];
 type RoundKey = keyof DuelProgressWire['picks'];
 
 /**
- * THE one place the crowd counts of a duel are produced for a reply that carries stored picks
- * (here, and the pick route when it answers a replayed pick). Live, not stored: each call reflects
- * everyone's picks so far.
+ * The crowd line of one round from its stored counts: `{ pickedA, total }`, or null while fewer
+ * than `min` players have picked it (the reveal then says "Not enough picks yet"). Pure, so the
+ * threshold edge (19 vs 20) is tested without a store.
  *
- * #116 (crowd counts) fills this in: read `store.crowd(date, round)` → `{ A, B }`, answer
- * `{ pickedA: A, total: A + B }`, or null while `total` is under the minimum PickResult documents
- * (20). Until then every round answers null, which PickResultSchema allows ("Not enough picks yet").
+ * It lives here, next to liveCrowds, rather than in ./duel: ./duel is the day's set (pairs, hints,
+ * scoring) built from the catalog, and never reads the store. Counting other players is part of
+ * turning stored picks into a reply, which is what this module does, and keeping the rule beside
+ * its only caller leaves one place to read when the line looks wrong.
+ */
+export function crowdOf(counts: DuelCounts, min: number = DUEL_CROWD_MIN_PICKS): DuelCrowd {
+  const total = counts.A + counts.B;
+  return total < min ? null : { pickedA: counts.A, total };
+}
+
+/**
+ * THE one place the crowd counts of a duel are produced for a reply that carries stored picks:
+ * GET /api/daily?game=duel for the rounds in the player's progress, and POST /api/daily/pick for
+ * the round just picked (new or replayed). Both go through here, so a pick, its replay and the
+ * daily progress always show the same numbers at the same moment.
+ *
+ * Live, not stored and not cached: every call counts everyone's picks so far, with one query for
+ * all the rounds asked (store.crowds). A replayed pick therefore carries today's count, not the
+ * one it had when it was first scored, and the player's own pick is in it (it is a stored row
+ * like any other). One indexed count per reply is cheap at this scale; if it ever is not, a short
+ * per-(date, round) cache goes here, and the reveal's number would then lag by that long.
  */
 export async function liveCrowds(
-  _store: DuelStore,
-  _date: string,
-  _rounds: readonly DuelRound[],
+  store: DuelStore,
+  date: string,
+  rounds: readonly DuelRound[],
 ): Promise<ReadonlyMap<DuelRound, DuelCrowd>> {
-  return new Map();
+  const counts = await store.crowds(date, rounds);
+  return new Map(rounds.map((round) => [round, crowdOf(counts.get(round) ?? { A: 0, B: 0 })]));
 }
 
 /** The day in the wire shape. `crowds` come from liveCrowds for the rounds in `day.picks`. */

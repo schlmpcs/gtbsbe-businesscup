@@ -243,7 +243,7 @@ describe('structured output schemas', () => {
     }
   };
 
-  it.each(['life', 'purchase', 'loan'] as const)('%s: closed objects, all properties required', (kind) => {
+  it.each(['life', 'purchase', 'loan', 'spend'] as const)('%s: closed objects, all properties required', (kind) => {
     const { schema } = outputFormat(kind);
     walk(schema, (o) => {
       if (o.type === 'object' && o.properties) {
@@ -251,5 +251,54 @@ describe('structured output schemas', () => {
         expect([...(o.required as string[])].sort()).toEqual(Object.keys(o.properties).sort());
       }
     });
+  });
+});
+
+describe('POST /api/ai/parse kind spend (daily log)', () => {
+  it('maps a line to typed purchases, amounts copied from the text', async () => {
+    create.mockResolvedValueOnce(replyJson({ items: [
+      { label: 'flat white', category: 'eatingOut', amount: 4.75 },
+      { label: 'bus pass', category: 'other', amount: 30 },
+    ] }));
+    const res = await post({ kind: 'spend', text: 'flat white 4.75 then bus pass 30' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      ok: true,
+      kind: 'spend',
+      value: [
+        { label: 'flat white', category: 'eatingOut', amount: 4.75 },
+        { label: 'bus pass', category: 'other', amount: 30 },
+      ],
+      needsConfirmation: true,
+      inferred: [],
+    });
+  });
+
+  it('never accepts an amount the user did not write: retries once, then invalid_output', async () => {
+    const invented = replyJson({ items: [{ label: 'coffee', category: 'eatingOut', amount: 5 }] });
+    create.mockResolvedValueOnce(invented).mockResolvedValueOnce(invented);
+    const res = await post({ kind: 'spend', text: 'a coffee at the station' });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe('invalid_output');
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(sentContent(1)).toContain('not written in the text');
+  });
+
+  it('a purchase without an amount is incomplete; no purchase at all is nothing_found', async () => {
+    create.mockResolvedValueOnce(replyJson({ items: [{ label: 'coffee', category: 'eatingOut', amount: null }] }));
+    const res = await post({ kind: 'spend', text: 'a coffee' });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toMatchObject({ code: 'incomplete', missing: ['items.0.amount'] });
+
+    create.mockResolvedValueOnce(replyJson({ items: [] }));
+    const res2 = await post({ kind: 'spend', text: 'hello there' });
+    expect((await res2.json()).error.code).toBe('nothing_found');
+  });
+
+  it('rejects debtPayments as a daily category (wire schema)', async () => {
+    const bad = replyJson({ items: [{ label: 'card', category: 'debtPayments', amount: 50 }] });
+    create.mockResolvedValueOnce(bad).mockResolvedValueOnce(bad);
+    const res = await post({ kind: 'spend', text: 'card 50' });
+    expect((await res.json()).error.code).toBe('invalid_output');
   });
 });

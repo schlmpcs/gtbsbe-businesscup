@@ -2,7 +2,7 @@
 // Functions here only pick words; every number arrives already computed (and formatted).
 // The fixed lesson and blind-spot templates live here too: code fills them, never an LLM.
 import type { DuelLessonId } from '@lifeguessr/engine';
-import type { AreaData, CostCategory, DuelLetter } from '@lifeguessr/types';
+import { DUEL_CROWD_MIN_PICKS, type AreaData, type CostCategory, type DuelLetter } from '@lifeguessr/types';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -23,6 +23,8 @@ export const duel = {
     state: { current: 'now', upcoming: 'to play', green: 'right', yellow: 'right with a hint', ink: 'missed' },
   },
   challenged: 'A friend challenged you. Beat their score on today’s five.',
+  /** The day on screen ended mid-play (after midnight in New York); these are the new day's duels. */
+  newDay: 'A new day started at midnight in New York. Here are today’s five.',
   /** S1's "All screens" list when /play is the duel (S2/S3 are its states). */
   screens: { S2: 'Which life costs more?', S3: 'Duel reveal' },
   /** The small muted footer under the duel: what the lives are, and where the round is scored. */
@@ -69,6 +71,14 @@ export const duel = {
       `What decided it: ${category.toLowerCase()}, ${amount} vs ${other}`,
     crowd: (share: string, letter: DuelLetter, total: string) => `${share} picked ${letter}, from ${total} picks`,
     crowdNone: 'Not enough picks yet',
+    /**
+     * In the sources panel, the reveal's "how we calculate": what the crowd line counts. It says
+     * outright that the player's own pick is in it, so nobody reads "61% picked A" as "61% of the
+     * others agreed with me". It does not repeat crowdNone word for word: the reveal shows both at
+     * once, and the same sentence twice reads like a glitch.
+     */
+    crowdHowHeading: 'How we count the crowd',
+    crowdHow: `Every pick stored for this round today, one per player, yours included. The share shows once ${DUEL_CROWD_MIN_PICKS} players have picked.`,
     perMonth: '/ month',
     sources: 'Sources →',
     sourceShort: (name: string, year: number) => `${name}, ${year}`,

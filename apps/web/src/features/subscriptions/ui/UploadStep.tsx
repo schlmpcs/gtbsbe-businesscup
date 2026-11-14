@@ -1,6 +1,6 @@
 'use client';
 
-// Step 4: the S9 look (dashed tile, file picker, "read on this device"), for the audit. Errors reuse the
+// Step 1 (JF8: detection first): the S9 look (dashed tile, file picker, "read on this device"), for the audit. Errors reuse the
 // S9 messages. Only this step needs the network: the guess, the ticks and the gap work offline.
 import { useId } from 'react';
 import { ladder, subscriptions as t } from '@/copy';
@@ -24,9 +24,10 @@ function errorText(error: StatementErrorVM | null): string {
   }
 }
 
-export type UploadStepProps = { statement: StatementVM };
+/** `onByHand`: the fallback when there is no statement (the tick list). */
+export type UploadStepProps = { statement: StatementVM; onByHand?: () => void };
 
-export function UploadStep({ statement }: UploadStepProps) {
+export function UploadStep({ statement, onByHand }: UploadStepProps) {
   const inputId = useId();
   const noteId = useId();
   const reading = statement.status === 'reading';
@@ -72,6 +73,14 @@ export function UploadStep({ statement }: UploadStepProps) {
               </Button>
             </Row>
           </div>
+        )}
+
+        {onByHand && statement.status !== 'done' && (
+          <Row>
+            <Button size="sm" variant="ghost" onClick={onByHand}>
+              {t.statement.byHand}
+            </Button>
+          </Row>
         )}
       </Stack>
     </Card>

@@ -39,8 +39,8 @@ function dayName(date: string): string {
 export const ladder = {
   /** Screen titles (also each rung's h1, as in the Figma frames). */
   screens: {
-    S5: 'What does your month cost?',
-    S6: 'Pick the life closest to yours',
+    S5: 'What do you think your month costs?',
+    S6: 'About you',
     S7: 'Your month',
     S8: 'Pay, savings and debts',
   },
@@ -49,7 +49,7 @@ export const ladder = {
   shell: {
     intro: {
       S5: 'Rent, car, food, everything. Just guess.',
-      S6: 'We start from its numbers. Next, your statement makes them yours.',
+      S6: 'Your age, pay and home. We build your starting month from your area’s costs.',
       S7: 'No statement at hand? Drag to match a normal month. Tagged amounts are our estimates.',
       S8: 'Six taps. Skip anything; we’ll use estimates and tag them.',
       S9: 'Drop a bank statement (CSV) and we sort your month into categories. Nothing to type.',
@@ -58,20 +58,22 @@ export const ladder = {
     stepsLabel: 'Steps to your forecast',
     rungs: {
       S5: 'Your guess',
-      S6: 'Closest life',
+      S6: 'About you',
       S7: 'Your month',
       S8: 'Pay & savings',
       S9: 'Your spending',
     },
     done: 'done',
     notYet: 'not yet',
+    /** A step before this one that was passed without being done. */
+    skipped: 'skipped',
     current: 'this step',
     stepsDone: (done: number, total: number) => `${done} of ${total} steps done`,
     /** The last step only: one short line above the CTA (net worth in 10 years, today's dollars). */
     in10yLabel: 'You in 10 years:',
     /** The one orange CTA of each rung: the next step, and on the last step the forecast. */
     cta: {
-      S5: 'Next: closest life →',
+      S5: 'Next: about you →',
       S6: 'Next: your spending →',
       S7: 'Next: pay & savings →',
       S8: 'See me in 10 years →',
@@ -100,23 +102,44 @@ export const ladder = {
     bridgeHigh: (n: number, played: number) => `You guessed ${n} of ${played} ${played === 1 ? 'home' : 'homes'} too high today`,
     plotSticker: 'Your house starts here',
     submit: 'Lock my guess →',
-    update: 'Update my guess',
-    saved: 'Saved',
-    compareTitle: 'Guess vs. estimate',
-    yourGuess: 'Your guess',
-    ourEstimate: 'Our estimate',
-    perMonth: '/mo',
-    basis: {
-      demo: 'Estimate for a sample profile.',
-      closestLife: 'Estimate for the life you picked.',
-      user: 'Estimate from your numbers so far.',
-    },
-    above: (amount: string, share: string) => `${amount} (${share}) over our estimate`,
-    below: (amount: string, share: string) => `${amount} (${share}) under our estimate`,
-    exact: 'Spot on!',
+    /** Guess vs reality: only once the spending is the user's own (a statement or typed categories). */
+    revealTitle: 'Guess vs. reality',
+    reveal: (guess: string, actual: string) => `You guessed ${guess}. You actually spend ${actual}.`,
+    revealMore: (amount: string) => `${amount} a month more than you thought.`,
+    revealLess: (amount: string) => `${amount} a month less than you thought.`,
+    revealExact: 'Spot on!',
   },
 
   closest: {
+    about: {
+      title: 'About you',
+      age: 'Age',
+      yearsSuffix: 'years',
+      pay: 'Take-home pay',
+      paySuffix: '/mo',
+      payHint: 'After tax, what reaches your account each month.',
+      estimateHint: 'Not typed yet: we use an estimate.',
+      homeTitle: 'Your home',
+      adults: 'Adults',
+      kidsTitle: 'Kids by age',
+      kidAges: { infant: 'Infants (0–1)', toddler: 'Toddlers (1–2)', preschool: 'Preschool (3–4)', schoolAge: 'School age (5+)' } as Record<KidAge, string>,
+      bedrooms: 'Bedrooms',
+      bedroomOptions: ['Studio', '1', '2', '3', '4+'] as readonly string[],
+      car: 'Car',
+      carOptions: { yes: 'Yes', no: 'No' },
+      zip: 'ZIP code',
+      zipPlaceholder: '75205',
+      zipHint: 'Sets rent, groceries, gas and childcare for your area.',
+      zipErrors: {
+        invalid: 'Enter a 5-digit ZIP code.',
+        none: 'We don’t have data for this area yet. Try a ZIP in a nearby city.',
+      },
+      zipNearby: (zip: string) => `No data for this exact ZIP yet: using nearby ${zip}.`,
+    },
+    yourLife: 'Your starting month',
+    yours: 'Yours',
+    yourLifeNote: 'Typical costs for your household in your area. Your statement makes them exact next.',
+    statementSkip: 'Your spending comes from your statement, so we skip the starting estimate.',
     sortedByGuess: (guess: string) => `Closest to your ${guess} guess first.`,
     listLabel: 'Lives to start from',
     fromToday: 'Today’s game',
@@ -141,14 +164,33 @@ export const ladder = {
       return `${people}, ${kidText}, ${home}`;
     },
     car: (price: string) => `Car worth ${price}`,
+    /** Chips that explain a card's price at a glance (JF13). */
+    differentiatorsLabel: 'Why this price',
+    differentiator: {
+      car: (perMonth: string) => `Car ${perMonth}/mo`,
+      noCar: 'No car',
+      childcare: (perMonth: string) => `Childcare ${perMonth}/mo`,
+      pricierArea: (rent: string) => `Pricier area · rent ${rent}`,
+      cheaperArea: (rent: string) => `Cheaper area · rent ${rent}`,
+    },
+    preselectedNote: 'Built from your answers. Tap it, or go on, to start from it.',
     noCar: 'No car',
+    carNoLoan: 'Car (no loan counted)',
     monthlyRange: (low: string, high: string) => `Range ${low} to ${high}`,
     costsToggle: 'Costs & sources',
     costsLabel: (metro: string) => `Monthly costs for the ${metro} life`,
     choose: 'Start from this life',
     chooseLabel: (metro: string, caption: string) => `Start from this life: ${metro}, ${caption}`,
-    chosenNote: 'All estimates for now. Next steps make them yours.',
+    chosenNote: 'Typical costs for now. Next steps make them yours.',
     unavailable: 'No area data yet.',
+  },
+
+  /** /future and /afford: typed pay next to a sample life's spending. */
+  mixedProfile: {
+    text: 'Your spending is still the sample family’s.',
+    guess: (guess: string) => `Your guess was ${guess}. Use that instead?`,
+    useGuess: 'Use my guess',
+    setSpending: 'Set my spending →',
   },
 
   sliders: {
@@ -234,6 +276,19 @@ export const ladder = {
     minPaymentLabel: 'Minimum payment',
     minPaymentPerMonth: (amount: string) => `${amount}/mo minimum`,
     minPaymentHint: 'Leave empty to estimate.',
+    minPaymentEstimated: (amount: string) => `Estimated ${amount}/mo. Type yours if you know it.`,
+    aprPrefilledHint: 'A typical rate for this kind. Type yours.',
+    addKindLabel: (kind: string) => `New debt: ${kind}`,
+    detected: {
+      sticker: 'Found in your statement',
+      text: (amount: string, months: number) =>
+        `${amount}/mo goes to card or loan payments${months > 1 ? ` (average of ${months} months)` : ''}. What is it?`,
+      balanceLabel: 'How much is left to pay?',
+      note: 'We keep this payment as yours and prefill a typical rate. Edit it after.',
+      confirm: 'Add it',
+      dismiss: 'Not a debt',
+      label: 'Debt payments found in your statement',
+    },
     edit: 'Edit',
     editLabel: (kind: string) => `Edit ${kind.toLowerCase()}`,
     remove: 'Remove',

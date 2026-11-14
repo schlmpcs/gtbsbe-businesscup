@@ -2,17 +2,19 @@ import { getArea } from '@lifeguessr/data/areas';
 import { dailyCards, lifeCards } from '@lifeguessr/data/cards';
 import { costOfLife } from '@lifeguessr/engine';
 import type { DuelLetter, DuelRound } from '@lifeguessr/types';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { duel as t } from '@/copy/duel';
-import { DailyResponseSchema, DuelDailyResponseSchema } from '@/lib/api/gameSchemas';
+import { DailyResponseSchema, DuelDailyResponseSchema, PickReplySchema } from '@/lib/api/gameSchemas';
 import { dayNumber } from '@/lib/dates';
 import { clueReveal } from '@/server/game/daily';
 import { duelHint, duelScorer, findDuelPair, publicDuels } from '@/server/game/duel';
 import { GAME_RATE_LIMITS } from '@/server/game/http';
 import { ANON, errorOf, getReq, OTHER_ANON, postReq, setupGameTestEnv, TODAY } from '@/server/game/testUtils';
-import { StoreUnavailableError, type Store } from '@/server/store';
+import { setStoreForTests, StoreUnavailableError, type Store } from '@/server/store';
+import { describePostgres, testPostgresStore } from '@/server/store/testUtils';
 import { POST as postClue } from './clue/route';
 import { POST as postGuess } from './guess/route';
+import { POST as postPick } from './pick/route';
 import { GET } from './route';
 
 const getStore = setupGameTestEnv();
@@ -184,6 +186,37 @@ describe('GET /api/daily?game=duel', () => {
     expect((await duelDaily(ANON)).parsed.progress).toEqual({ resultId: null, picks: {}, hints: {} });
   });
 
+  it('carries each picked round’s live crowd: null below 20 picks, the stored counts from 20 on, the same as a pick reply', async () => {
+    const store = getStore();
+    const crowdAnon = (i: number) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+    // Round 1: 19 other players (14 A, 5 B), round 2: 18 others, then ANON picks both.
+    for (let i = 0; i < 19; i++) await play(store, crowdAnon(i), 1, i < 14 ? 'A' : 'B');
+    for (let i = 0; i < 18; i++) await play(store, crowdAnon(100 + i), 2, 'B');
+    await play(store, ANON, 1, 'B');
+    await play(store, ANON, 2, 'A');
+
+    const before = (await duelDaily(ANON)).parsed.progress!;
+    expect(before.picks['1']!.result.crowd).toEqual({ pickedA: 14, total: 20 });
+    expect(before.picks['2']!.result.crowd).toBeNull(); // 19 picks
+
+    // One more pick of round 2 shows up on the next reply: the crowd is counted live, not stored.
+    await play(store, crowdAnon(200), 2, 'A');
+    const after = (await duelDaily(ANON)).parsed.progress!;
+    expect(after.picks['1']!.result.crowd).toEqual({ pickedA: 14, total: 20 });
+    expect(after.picks['2']!.result.crowd).toEqual({ pickedA: 2, total: 20 });
+    // Everything else in the result is the stored score, unchanged.
+    const { crowd: _a, ...scoredBefore } = before.picks['2']!.result;
+    const { crowd: _b, ...scoredAfter } = after.picks['2']!.result;
+    expect(scoredAfter).toEqual(scoredBefore);
+
+    // A replayed pick answers the same crowd as the progress, at the same moment.
+    const replay = await postPick(postReq('/api/daily/pick', { anonId: ANON, date: TODAY, round: 2, choice: 'B' }));
+    expect(PickReplySchema.parse(await replay.json())).toMatchObject({ replayed: true, crowd: { pickedA: 2, total: 20 } });
+
+    // A player who picked nothing gets no crowd at all: crowds only ride on stored picks.
+    expect((await duelDaily(OTHER_ANON)).parsed.progress!.picks).toEqual({});
+  });
+
   it('answers the hint of a round that was hinted but not picked yet, and no other', async () => {
     await getStore().duel.openHint({ date: TODAY, anonId: ANON }, 3);
     const { parsed } = await duelDaily(ANON);
@@ -255,3 +288,25 @@ describe('GET /api/daily?game=duel', () => {
     expect((await errorOf(res)).code).toBe('rate_limited');
   });
 });
+
+// The duel progress on Postgres, where the crowd is a GROUP BY over everyone's stored picks.
+describePostgres('GET /api/daily?game=duel on Postgres', () => {
+  let store: Store;
+  let cleanup: () => Promise<void>;
+  beforeAll(() => {
+    ({ store, cleanup } = testPostgresStore());
+  });
+  afterAll(async () => cleanup());
+  beforeEach(() => setStoreForTests(store));
+
+  it('carries the live crowd of each picked round from the stored rows', async () => {
+    const crowdAnon = (i: number) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+    for (let i = 0; i < 19; i++) await play(store, crowdAnon(i), 4, i < 9 ? 'A' : 'B');
+    await play(store, ANON, 4, 'A');
+    await play(store, ANON, 5, 'A');
+    const progress = (await duelDaily(ANON)).parsed.progress!;
+    expect(progress.picks['4']!.result.crowd).toEqual({ pickedA: 10, total: 20 });
+    expect(progress.picks['5']!.result.crowd).toBeNull();
+  });
+});
+

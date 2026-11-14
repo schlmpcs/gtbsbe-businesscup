@@ -372,3 +372,15 @@ describe('simulate: estimates', () => {
     expect(simulate(bnpl, 1, { rates, scenario: 'low' }).path[1]!.debtPayments).toBeCloseTo(115, 9);
   });
 });
+
+describe('debtAprDefaults', () => {
+  it('uses the sourced card rate for cards and a decimal APR for every debt kind', async () => {
+    const { debtAprDefaults, cardAprDefault } = await import('./assumptions');
+    const { DEBT_KINDS } = await import('@lifeguessr/types');
+    expect(debtAprDefaults.value.card).toBe(cardAprDefault.value);
+    for (const k of DEBT_KINDS) {
+      expect(debtAprDefaults.value[k]).toBeGreaterThanOrEqual(0);
+      expect(debtAprDefaults.value[k]).toBeLessThan(1);
+    }
+  });
+});

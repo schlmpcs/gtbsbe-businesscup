@@ -1,18 +1,18 @@
 // @vitest-environment jsdom
-import { cardToProfile, costOfLife } from '@lifeguessr/engine';
+import { cardToProfile, costOfLife, lifeCardFromFacts, OWN_LIFE_CARD_ID } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFixtureGameClient } from '@/features/game/model/fixtureClient';
 import { getArea } from '@lifeguessr/data/areas';
 import { cloneProfileDemo } from '@/fixtures';
-import { cardById, cardsSample } from '@/fixtures/cards';
+import { cardsSample } from '@/fixtures/cards';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
-import { displayForecast, thisMonth } from '@/lib/model/profile';
+import { displayForecast } from '@/lib/model/profile';
 import { useAppStore, useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
-import { useBalanceSheet } from './useBalanceSheet';
-import { useClosestLife } from './useClosestLife';
+import { detectedDebtPayments, useBalanceSheet } from './useBalanceSheet';
+import { differentiatorsFor, useClosestLife } from './useClosestLife';
 import { useGuessYourself } from './useGuessYourself';
 import { useLadderProgress } from './useLadderProgress';
 import { useQuickSliders } from './useQuickSliders';
@@ -53,61 +53,127 @@ describe('useGuessYourself (S5)', () => {
     expect(result.current.bridge).toBeNull();
   });
 
-  it('compares the saved guess with the engine month of the current profile', async () => {
+  it('asks only the guess: no estimate while the spending is a sample, the reveal once it is the user\'s own', async () => {
     const { result } = renderHook(() => useGuessYourself());
     await waitForReady(result);
-    expect(result.current.comparison).toBeNull();
     act(() => result.current.setGuess(3000));
     act(() => result.current.submit());
-    const month = thisMonth(useAppStore.getState().profile);
-    const estimate = month.spending + month.debtPayments;
-    expect(result.current.comparison).toEqual({
-      guess: 3000,
-      estimate,
-      isEstimate: true, // the demo profile has estimated categories and an estimated card minimum
-      basis: 'demo',
-      difference: 3000 - estimate,
-      differenceShare: (3000 - estimate) / estimate,
-      direction: 3000 > estimate ? 'above' : 'below',
-    });
+    // The demo profile has measured categories, but they are the sample family's: no reveal.
+    expect(result.current.reveal).toBeNull();
+    // After the save, the slider is the guess: one number, no "update" step.
+    act(() => result.current.setGuess(3500));
+    expect(useAppStore.getState().selfGuess).toBe(3500);
+    expect(result.current.guess.value).toBe(3500);
 
-    act(() => useAppStore.getState().setSelfGuess(estimate)); // the comparison follows the saved guess
-    expect(result.current.comparison).toMatchObject({ difference: 0, differenceShare: 0, direction: 'match' });
+    // A typed category makes the spending the user's own: the reveal appears.
+    act(() => useAppStore.getState().setSpending('groceries', 500));
+    const p = useAppStore.getState().profile;
+    const spending = COST_CATEGORIES.filter((c) => c !== 'debtPayments').reduce((s, c) => s + p.spending[c].value, 0);
+    const actual = spending + p.debts.reduce((s, d) => s + d.minPayment.value, 0);
+    expect(result.current.reveal).toEqual({ guess: 3500, actual, difference: actual - 3500 });
   });
 });
 
-describe('useClosestLife (S6)', () => {
-  it('offers sample lives when the game was not played, nearest to the self guess first', async () => {
-    useAppStore.getState().setSelfGuess(4000);
+describe('useClosestLife (S6): About you + the starting life from it', () => {
+  it('no starting life until a ZIP we have data for; then it is built from the answers and preselected', async () => {
     const { result } = renderHook(() => useClosestLife());
     await waitForReady(result);
-    const { candidates } = result.current;
-    expect(candidates).toHaveLength(cardsSample.length);
-    expect(candidates.every((c) => !c.fromToday && c.available)).toBe(true);
-    const dist = (mid: number) => Math.abs(Math.log(mid / 4000));
-    expect(dist(candidates[0]!.monthly.mid)).toBeLessThanOrEqual(dist(candidates[1]!.monthly.mid));
-    expect(result.current.nearestCardId).toBe(candidates[0]!.cardId);
-    const card = cardById(candidates[0]!.cardId);
-    const cost = costOfLife(card, getArea(card.zip));
-    expect(candidates[0]!.monthly).toEqual(cost.total);
-    // Cost lines with sources, largest first, unique ids, summing to the mid.
-    const { items } = candidates[0]!;
-    expect(items).toHaveLength(cost.items.length);
-    expect(items.every((i, n) => n === 0 || items[n - 1]!.amount >= i.amount)).toBe(true);
-    expect(new Set(items.map((i) => i.id)).size).toBe(items.length);
-    expect(items.every((i) => i.source.name.length > 0)).toBe(true);
-    expect(items.reduce((s, i) => s + i.amount, 0)).toBeCloseTo(cost.total.mid, 6);
+    expect(result.current.candidate).toBeNull();
+    expect(result.current.about.zip).toBe(''); // the demo profile's ZIP is not shown as the user's
+    act(() => result.current.setZip('75216'));
+    act(() => result.current.setAdults(2));
+    act(() => result.current.setHasCar(false));
+    const c = result.current.candidate!;
+    expect(c.isNearest).toBe(true);
+    expect(c.metro).toBe('Dallas-Fort Worth, TX');
+    const facts = { adults: 2 as const, kids: [], bedrooms: 1 as const, hasCar: false };
+    const area = getArea('75216');
+    expect(c.monthly).toEqual(costOfLife(lifeCardFromFacts(facts, area), area).total);
+    expect(useAppStore.getState().profile.householdFacts).toEqual(facts);
+    expect(useAppStore.getState().profile.zip).toBe('75216');
   });
 
-  it('choose builds the profile with cardToProfile', async () => {
+  it('a ZIP we do not cover uses a covered one with the same first three digits, and says so', async () => {
     const { result } = renderHook(() => useClosestLife());
     await waitForReady(result);
-    const id = cardsSample[3]!.id;
-    act(() => result.current.choose(id));
-    const card = cardById(id);
-    expect(useAppStore.getState().profile).toEqual(cardToProfile(card, getArea(card.zip)));
+    act(() => result.current.setZip('75299'));
+    expect(result.current.about.zipStatus).toBe('nearby');
+    expect(result.current.about.areaZip?.slice(0, 3)).toBe('752');
+    act(() => result.current.setZip('00501'));
+    expect(result.current.about.zipStatus).toBe('none');
+    expect(result.current.candidate).toBeNull();
+  });
+
+  it('choose builds the profile with cardToProfile and keeps the typed age and pay', async () => {
+    const { result } = renderHook(() => useClosestLife());
+    await waitForReady(result);
+    act(() => result.current.setAge(29));
+    act(() => result.current.setTakeHomePay(6000));
+    act(() => result.current.setZip('75216'));
+    act(() => result.current.choose());
+    const area = getArea('75216');
+    const built = cardToProfile(lifeCardFromFacts({ adults: 1, kids: [], bedrooms: 1, hasCar: true }, area), area);
+    const p = useAppStore.getState().profile;
+    expect(p.spending).toEqual(built.spending);
+    expect(p.debts).toEqual([]);
+    expect(p.age).toEqual({ value: 29, isEstimate: false });
+    expect(p.takeHomePay).toEqual({ value: 6000, isEstimate: false });
     expect(useAppStore.getState().profileOrigin).toBe('closestLife');
-    expect(result.current.chosenCardId).toBe(id);
+    expect(result.current.chosenCardId).toBe(OWN_LIFE_CARD_ID);
+    // The chosen life follows later answers.
+    act(() => result.current.setBedrooms(2));
+    expect(useAppStore.getState().profile.spending.rentUtilities.value).toBe(area.rentByBedrooms[2].value);
+  });
+
+  it('with a statement, the starting life is skipped and choose changes nothing', async () => {
+    useAppStore.getState().applyStatementTotals([{ month: '2026-10', totals: totals({ groceries: 400 }), oneOffs: [] }]);
+    const { result } = renderHook(() => useClosestLife());
+    await waitForReady(result);
+    act(() => result.current.setZip('75216'));
+    expect(result.current.spendingFromStatement).toBe(true);
+    expect(result.current.candidate).toBeNull();
+    const before = useAppStore.getState().profile.spending;
+    act(() => result.current.choose());
+    expect(useAppStore.getState().profile.spending).toEqual(before);
+  });
+});
+
+describe('mixed profile (typed pay + sample spending)', () => {
+  it('warns only when the pay is typed and the spending is still the sample family\'s', async () => {
+    const { mixedProfileWarning } = await import('./ownLife');
+    const base = { profile: cloneProfileDemo(), selfGuess: 3870, closestCardId: null, statementMonths: [] };
+    expect(mixedProfileWarning(base)).toBeNull(); // the demo pay is the sample's, not typed
+    const typedPay = { ...base.profile, takeHomePay: { value: 6000, isEstimate: false } };
+    expect(mixedProfileWarning({ ...base, profile: typedPay })).toEqual({ guess: 3870 });
+    expect(mixedProfileWarning({ ...base, profile: typedPay, selfGuess: null })).toEqual({ guess: null });
+    const typedRent = { ...typedPay, spending: { ...typedPay.spending, rentUtilities: { value: 1500, isEstimate: false } } };
+    expect(mixedProfileWarning({ ...base, profile: typedRent })).toBeNull();
+    expect(mixedProfileWarning({ ...base, profile: typedPay, closestCardId: OWN_LIFE_CARD_ID })).toBeNull();
+  });
+
+  it('one tap scales the sample spending so the month costs the guess, and the warning goes', async () => {
+    const { mixedProfileWarning, spendingScaledToGuess } = await import('./ownLife');
+    const e = (value: number) => ({ value, isEstimate: true });
+    const profile = {
+      ...cloneProfileDemo(),
+      takeHomePay: { value: 6000, isEstimate: false },
+      spending: {
+        rentUtilities: e(2000), car: e(400), childcare: e(0), groceries: e(600), eatingOut: e(300),
+        subscriptions: e(100), other: e(600), debtPayments: e(0),
+      },
+      debts: [{ id: 'card-1', kind: 'card' as const, balance: 3000, apr: 0.2, minPayment: { value: 200, isEstimate: false } }],
+    };
+    // spending 4000 + payments 200 = 4200; guess 3200 → spending 3000 = 0.75 × each category
+    const scaled = spendingScaledToGuess(profile, 3200);
+    expect(scaled.spending.rentUtilities).toEqual(e(1500));
+    expect(scaled.spending.car).toEqual(e(300));
+    expect(scaled.spending.groceries).toEqual(e(450));
+    expect(scaled.spending.eatingOut).toEqual(e(225));
+    expect(scaled.spending.subscriptions).toEqual(e(75));
+    expect(scaled.spending.other).toEqual(e(450));
+    expect(scaled.takeHomePay).toEqual(profile.takeHomePay);
+    expect(mixedProfileWarning({ profile, selfGuess: 3200, closestCardId: 'sample-01', statementMonths: [] })).toEqual({ guess: 3200 });
+    expect(mixedProfileWarning({ profile: scaled, selfGuess: 3200, closestCardId: 'sample-01', statementMonths: [] })).toBeNull();
   });
 });
 
@@ -388,7 +454,8 @@ describe('useLadderProgress', () => {
     act(() => useAppStore.getState().setSelfGuess(4000));
     const { result: closest } = renderHook(() => useClosestLife());
     await waitForReady(closest);
-    act(() => closest.current.choose(closest.current.nearestCardId!));
+    act(() => closest.current.setZip('75216'));
+    act(() => closest.current.choose());
     expect(result.current.doneCount).toBe(2);
     // A life card is all estimates: the band is as wide as it gets, nothing narrowed yet.
     const start = result.current;
@@ -459,5 +526,31 @@ describe('debtsChanged / startingDebts', () => {
     expect(startingDebts('no-such-card', cardsSample)).toBeNull();
     const withCar = cardsSample.find((c) => c.car)!;
     expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, getArea(withCar.zip)).debts);
+  });
+});
+
+describe('JF13 / JF17 helpers', () => {
+  const item = (category: CostCategory, amount: number) => ({
+    id: category, category, amount, source: { name: 'test', year: 2026 }, isEstimate: true,
+  });
+  it('differentiatorsFor: car vs no car, childcare, and the area tier among same-size cards', () => {
+    const chips = differentiatorsFor([
+      { available: true, bedrooms: 1, carPrice: null, items: [item('rentUtilities', 1000)] },
+      { available: true, bedrooms: 1, carPrice: 62000, items: [item('rentUtilities', 2000), item('car', 1300)] },
+      { available: true, bedrooms: 2, carPrice: 18000, items: [item('rentUtilities', 1500), item('car', 600), item('childcare', 1100)] },
+      { available: false, bedrooms: 1, carPrice: null, items: [] },
+    ]);
+    expect(chips[0]).toEqual([{ kind: 'noCar' }, { kind: 'cheaperArea', amount: 1000 }]);
+    expect(chips[1]).toEqual([{ kind: 'car', amount: 1300 }, { kind: 'pricierArea', amount: 2000 }]);
+    expect(chips[2]).toEqual([{ kind: 'childcare', amount: 1100 }]);
+    expect(chips[3]).toEqual([]);
+  });
+  it('detectedDebtPayments: mean over the statement months that have debt payments', () => {
+    expect(detectedDebtPayments([])).toBeNull();
+    expect(detectedDebtPayments([{ totals: { groceries: 300 } }])).toBeNull();
+    expect(detectedDebtPayments([{ totals: { debtPayments: 400 } }, { totals: { debtPayments: 200 } }, { totals: {} }])).toEqual({
+      monthlyPayment: 300,
+      months: 2,
+    });
   });
 });

@@ -2,8 +2,9 @@
 // docs/ARCHITECTURE.md → Privacy design). The server runs the same function again on what it
 // receives, so it must be idempotent: maskLabel(maskLabel(x)) === maskLabel(x).
 //
-// - Person-to-person lines (Zelle, Venmo, PayPal, Cash App…) become "<Service> to|from [name]":
-//   everything after the service is dropped, so no way of writing a name can slip through.
+// - Person-to-person lines (Zelle, Venmo, PayPal, Cash App, a bank app's own "Pay Anyone"…) become
+//   "<Service> to|from [name]": everything after the service is dropped, so no way of writing a
+//   name can slip through.
 // - Transfers become "Transfer to|from savings|checking|…", or "[name]" when the other side is
 //   not one of the user's own account types.
 // - Bill pay, named online payments, checks, deposits from a counterparty, and bare ACH
@@ -24,6 +25,10 @@ const P2P_SERVICES: readonly [RegExp, string][] = [
   [/\bcash ?app\b|\bsquare ?cash\b|\bsq ?c\*/i, 'Cash App'],
   [/\bapple ?cash\b/i, 'Apple Cash'],
   [/\bpopmoney\b/i, 'Popmoney'],
+  // Neobank apps send money between people with their own feature rather than Zelle, and the
+  // export reads "Pay Anyone to Sarah Nguyen" or, under its older name, "Pay Friends - Sent to …".
+  [/\bpay ?anyone\b/i, 'Pay Anyone'],
+  [/\bpay ?friends\b/i, 'Pay Friends'],
 ];
 
 const TRANSFER = /\b(?:transfer|xfer|trnsfr|tfr)\b/i;

@@ -9,13 +9,16 @@ import { applyPatch } from '@lifeguessr/engine';
 import {
   CategoryTotalsSchema, HorizonYearsSchema, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MOVE_KINDS, ProfilePatchSchema, ProfileSchema,
   PurchaseSchema, CostCategorySchema, YearMonthSchema,
-  type CategoryTotals, type CostCategory, type HorizonYears, type LifeEvent, type Money, type Move, type Profile,
+  type CategoryTotals, type CostCategory, type HorizonYears, type HouseholdFacts, type LifeEvent, type Money, type Move, type Profile,
   type ProfilePatch, type Purchase, type YearMonth,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
 import { ToolsStateSchema, type ToolsState } from '@lifeguessr/types';
 import { restoreTools } from './tools';
+import type { DailyEntry, SpendItem } from '@lifeguessr/types';
+import { appendEntries, restoreDailyEntries, withoutEntries } from './daily';
+import { initialBillsSettings, restoreBills, type BillsSettings } from './bills';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { cloneProfileDemo } from '@/fixtures';
@@ -63,6 +66,10 @@ export type AppData = {
    * not shown yet. Oldest first, at most MAX_LIFE_EVENTS. S10 moves them to `foldedNotesShown`.
    */
   foldedNotes: FoldedNote[];
+  /** The daily spending log (/spend, Home quick-add), oldest first. Browser only, never synced. */
+  dailyEntries: DailyEntry[];
+  /** Bills calendar: due days the user set per bill and their paydays (client state only). */
+  bills: BillsSettings;
 };
 
 /** State for this page load only (not persisted). */
@@ -82,6 +89,11 @@ export type AppActions = {
   /** S6: start from a life card's profile (`cardToProfile`). Drops any committed move. */
   chooseClosestLife: (cardId: string, profile: Profile) => void;
   setSpending: (category: CostCategory, value: Money) => void;
+  /**
+   * S6 "About you": the household the person typed, and their ZIP (null while it is not a valid one: the
+   * profile then has no ZIP, never a sample's). Not a number the forecast reads, so the origin stays.
+   */
+  setHousehold: (facts: HouseholdFacts, zip: string | null) => void;
   setField: (field: ProfileField, value: number) => void;
   skipField: (field: ProfileField) => void;
   addDebt: (input: DebtInput) => string;
@@ -125,6 +137,14 @@ export type AppActions = {
   loadSample: () => boolean;
   /** Stop showing the sample life as such ("Use mine"); the profile is left as it is. */
   clearSample: () => void;
+  /** Log purchases on `date` ('YYYY-MM-DD', local); returns the new entry ids (for undo). */
+  addDailyEntries: (items: SpendItem[], date: string) => string[];
+  /** Remove log entries (undo of an add, or a delete). */
+  removeDailyEntries: (ids: string[]) => void;
+  /** Bills calendar: the day a bill is due (1-31), or null to go back to the default day. */
+  setBillDueDay: (billId: string, day: number | null) => void;
+  /** Bills calendar: the user's paydays (days of the month), or null to go back to the assumed 1st and 15th. */
+  setPaydays: (days: number[] | null) => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -148,6 +168,8 @@ export function initialAppData(): AppData {
     horizonYears: 10,
     isSample: false,
     foldedNotes: [],
+    dailyEntries: [],
+    bills: initialBillsSettings(),
   };
 }
 
@@ -197,6 +219,9 @@ const persistedFields = {
   horizonYears: HorizonYearsSchema,
   isSample: z.boolean(),
   foldedNotes: z.array(FoldedNoteSchema).max(MAX_LIFE_EVENTS),
+  dailyEntries: z.unknown().transform(restoreDailyEntries),
+  // Added after version 1 went out: older saved state has no `bills`, which gives the defaults.
+  bills: z.unknown().transform(restoreBills),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -230,6 +255,13 @@ export const useAppStore = create<AppState>()(
       chooseClosestLife: (cardId, profile) =>
         set({ profile: withoutAsOf(profile), profileOrigin: 'closestLife', closestCardId: cardId, committedMove: null }),
       setSpending: (category, value) => set((s) => ({ profile: setSpending(s.profile, category, value), profileOrigin: 'user' })),
+      setHousehold: (facts, zip) =>
+        set((s) => {
+          const profile: Profile = { ...s.profile, householdFacts: { ...facts, kids: [...facts.kids] } };
+          if (zip) profile.zip = zip;
+          else delete profile.zip;
+          return { profile };
+        }),
       setField: (field, value) => set((s) => ({ profile: setField(s.profile, field, value), profileOrigin: 'user' })),
       skipField: (field) => set((s) => ({ profile: skipField(s.profile, field) })),
       addDebt: (input) => {
@@ -314,15 +346,31 @@ export const useAppStore = create<AppState>()(
         return true;
       },
       clearSample: () => set({ isSample: false }),
+      setBillDueDay: (billId, day) =>
+        set((s) => {
+          const dueDays = { ...s.bills.dueDays };
+          if (day === null) delete dueDays[billId];
+          else dueDays[billId] = day;
+          return { bills: restoreBills({ ...s.bills, dueDays }) };
+        }),
+      setPaydays: (days) => set((s) => ({ bills: restoreBills({ ...s.bills, paydays: days }) })),
       setGoal: goal => set({goal:GoalSchema.parse(goal)}),
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
       clearTool: key => set(s=>{const tools={...s.tools};delete tools[key];return {tools};}),
+      addDailyEntries: (items, date) => {
+        const { entries, added } = appendEntries(get().dailyEntries, items, date, newId);
+        set({ dailyEntries: entries });
+        return added.map((e) => e.id);
+      },
+      removeDailyEntries: (ids) => set((s) => ({ dailyEntries: withoutEntries(s.dailyEntries, ids) })),
       reset: () => set({ ...initialAppData(), foldedNotesShown: [] }),
     }),
     {
       name: APP_STORE_KEY,
-      version: 1,
+      // v2: + dailyEntries. A v1 save has none; merge then keeps the default (an empty log).
+      version: 2,
+      migrate: (saved) => saved as AppState,
       storage: createJSONStorage(() => safeStateStorage),
       skipHydration: true,
       partialize: (s): AppData => ({
@@ -339,6 +387,8 @@ export const useAppStore = create<AppState>()(
         horizonYears: s.horizonYears,
         isSample: s.isSample,
         foldedNotes: s.foldedNotes,
+        dailyEntries: s.dailyEntries,
+        bills: s.bills,
       }),
       merge: mergePersisted,
     },

@@ -1,7 +1,10 @@
 // S1 Today: month-end card (engine monthEnd), You in N years (the AI forecast, else rules, at the
 // horizon picked on S10), the committed / top move and the daily game call to action (the duel's
 // progress by default, the slider game's with NEXT_PUBLIC_GAME_MODE=slider: the game /play serves).
-import { goalStatus, hasEstimates as profileHasEstimates, monthEnd, monthEndHistoryMonths, type CurrentMonth } from '@lifeguessr/engine';
+import {
+  cushionBandMonths, emergencyCushion, goalStatus, hasEstimates as profileHasEstimates, monthEnd, monthEndHistoryMonths,
+  type CurrentMonth,
+} from '@lifeguessr/engine';
 import { useMemo } from 'react';
 import { readDuelDayProgress } from '@/features/game/model/duelProgress';
 import { gameMode, type GameMode } from '@/lib/config';
@@ -9,9 +12,11 @@ import { localMonthDay, usEasternDate } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import { isSampleActive, useAppReady, useAppStore, useProfile, useGameStore } from '@/state';
+import { spendSummary } from '@/features/spend/model/summary';
 import { shownForecast } from './forecastAnswer';
-import type { Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
+import type { CushionVM, Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
 import { toMoveVM, useNextMoves } from './useNextMoves';
+import { useNextBill } from '@/features/bills/model/useBills';
 
 const NO_MOVES: MoveVM[] = [];
 const NO_HOMES: TodayVM['game']['homes'] = [];
@@ -28,10 +33,12 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
   const isSampleFlag = useAppStore((s) => s.isSample);
   const selfGuess = useAppStore((s) => s.selfGuess);
   const savedGoal = useAppStore((s) => s.goal);
+  const dailyEntries = useAppStore((s) => s.dailyEntries);
   const gameDate = useGameStore((s) => s.date);
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);
   const nextMoves = useNextMoves(profile);
+  const nextBill = useNextBill(opts.now);
   const { forecast, horizonYears } = nextMoves;
   const now = opts.now;
 
@@ -68,6 +75,12 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
     };
   }, [profile, statementMonths, now]);
 
+  // The daily log's month so far (Home quick-add card): engine numbers, see features/spend/model/summary.ts.
+  const daily = useMemo(
+    () => spendSummary(profile, statementMonths, dailyEntries, localMonthDay(now)),
+    [profile, statementMonths, dailyEntries, now],
+  );
+
   // The number at the picked year in today's dollars, from the answer (S10 can also show nominal; S1 never does).
   const shown = useMemo(() => shownForecast(forecast, true, horizonYears), [forecast, horizonYears]);
 
@@ -79,6 +92,24 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
   }, [profile, savedGoal]);
 
   const hasEstimates = useMemo(() => profileHasEstimates(profile), [profile]);
+
+  // Emergency cushion: months of essentials cash covers with no income (engine emergencyCushion).
+  const cushion: Loadable<CushionVM> = useMemo(() => {
+    const r = runEngine(() => emergencyCushion(profile));
+    if (r.status !== 'ready') return r;
+    const c = r.data;
+    return {
+      status: 'ready',
+      data: {
+        monthsEssential: c.monthsEssential,
+        monthsFull: c.monthsFull,
+        band: c.band,
+        bands: { ...cushionBandMonths.value },
+        next: c.next ? { months: c.next.months, extraCash: c.next.extraCash } : null,
+        isEstimate: c.isEstimate,
+      },
+    };
+  }, [profile]);
 
   const rankedMoves = nextMoves.moves.status === 'ready' ? nextMoves.moves.data : NO_MOVES;
   // The committed move as ranked now (current number and label) when it is on the list, else as stored.
@@ -128,6 +159,7 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
     committedMove === null &&
     profile.doneMoveIds.length === 0 &&
     played === 0 &&
+    dailyEntries.length === 0 &&
     (mode === 'duel' || Object.keys(reveals).length === 0);
 
   return {
@@ -156,6 +188,9 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
     topMove,
     goal,
     hasEstimates,
+    cushion,
     game,
+    daily,
+    nextBill,
   };
 }

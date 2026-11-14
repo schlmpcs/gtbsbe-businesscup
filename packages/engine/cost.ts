@@ -1,7 +1,7 @@
 // Y1 (Amir): cost of a life card. Spec: docs/ENGINEERING.md → Cost of a life card.
 import {
   COST_CATEGORIES,
-  type AreaData, type CostBreakdown, type CostCategory, type Debt, type Estimate, type LifeCard,
+  type AreaData, type CostBreakdown, type CostCategory, type Debt, type Estimate, type HouseholdFacts, type LifeCard,
   type Money, type Profile, type Rate, type Source,
 } from '@lifeguessr/types';
 import {
@@ -9,8 +9,8 @@ import {
   ageDefault,
   assumptionSource,
   avgMealPrice,
-  cardSpendingShareOfTakeHome,
   cashBufferMonthsDefault,
+  eatingOutPerWeekDefault,
   estimateSpread,
   kidGroceryFactor,
   lifeCardLoanSource,
@@ -20,6 +20,7 @@ import {
   retirementBalanceDefault,
   retirementShareDefault,
   subscriptionsMonthlyDefault,
+  takeHomePayDefault,
   weeksPerMonth,
 } from './assumptions';
 
@@ -161,7 +162,8 @@ export function costOfLife(card: LifeCard, area: AreaData): CostBreakdown {
  * Closest Life: a life card as a Profile (car loan → `auto` debt; every field `isEstimate: true`).
  * `spending` holds the card's cost lines by category, with `car` = insurance + fuel only (the loan
  * payment lives in `debts`) and `debtPayments` = 0 (informational, measured from statements only).
- * Fields a card lacks (age, pay, balances, subscriptions, other) come from named assumptions.
+ * Fields a card lacks (age, pay, balances, subscriptions, other) come from named assumptions: pay is
+ * the sourced national default (`takeHomePayDefault`), never derived from the card's spending.
  */
 export function cardToProfile(card: LifeCard, area: AreaData): Profile {
   const est = <T>(value: T): Estimate<T> => ({ value, isEstimate: true });
@@ -190,7 +192,7 @@ export function cardToProfile(card: LifeCard, area: AreaData): Profile {
 
   return {
     age: est(ageDefault.value),
-    takeHomePay: est(monthlyOutflow / cardSpendingShareOfTakeHome.value),
+    takeHomePay: est(takeHomePayDefault.value),
     spending: Object.fromEntries(
       COST_CATEGORIES.map((c) => [c, est(byCategory[c])]),
     ) as Record<CostCategory, Estimate<Money>>,
@@ -201,4 +203,44 @@ export function cardToProfile(card: LifeCard, area: AreaData): Profile {
     zip: card.zip,
     doneMoveIds: [],
   };
+}
+
+/** The id of the life built from the person's own "About you" answers (S6). */
+export const OWN_LIFE_CARD_ID = 'own';
+
+/**
+ * "About you" → a life card for `costOfLife` / `cardToProfile`: the person's household in `area`. A car
+ * is counted with insurance and fuel only (price 0: no loan we don't know about); eating out uses
+ * `eatingOutPerWeekDefault`. `caption` is left empty: the screen labels this life itself.
+ */
+export function lifeCardFromFacts(facts: HouseholdFacts, area: AreaData): LifeCard {
+  return {
+    id: OWN_LIFE_CARD_ID,
+    zip: area.zip,
+    metro: area.metro,
+    adults: facts.adults,
+    kids: [...facts.kids],
+    bedrooms: facts.bedrooms,
+    ...(facts.hasCar ? { car: { price: 0, downPayment: 0, apr: 0, termMonths: 1 } } : {}),
+    eatingOutPerWeek: eatingOutPerWeekDefault.value,
+    caption: '',
+  };
+}
+
+/**
+ * Spending scaled so its categories (all but the informational `debtPayments`) add up to `total`,
+ * each in proportion to its current amount. Used to turn a sample life into "my guess" (S5) with one
+ * tap. Every scaled value is an estimate (the split is still the sample's). `total` ≤ 0 → all zero;
+ * spending that is all zero stays zero.
+ */
+export function scaleSpendingTo(
+  spending: Record<CostCategory, Estimate<Money>>,
+  total: Money,
+): Record<CostCategory, Estimate<Money>> {
+  const scaled = COST_CATEGORIES.filter((c) => c !== 'debtPayments');
+  const current = scaled.reduce((sum, c) => sum + spending[c].value, 0);
+  const factor = current > 0 ? Math.max(0, total) / current : 0;
+  const out = { ...spending };
+  for (const c of scaled) out[c] = { value: spending[c].value * factor, isEstimate: true };
+  return out;
 }

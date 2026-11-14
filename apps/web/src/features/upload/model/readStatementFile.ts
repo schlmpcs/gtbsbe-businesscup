@@ -7,6 +7,7 @@
 import { MAX_STATEMENT_ITEMS } from '@lifeguessr/types';
 import { categorizeStatement, type CategorizeOptions } from '@/lib/api/statement';
 import { readStatementCsv, StatementReadError, toStatementItems } from '@/lib/statement/read';
+import { rememberStatementRead } from './lastStatementRead';
 import type { StatementFileProblem, StatementFileResult } from './types';
 
 /** Largest file we read: years of transactions are well under 1 MB. */
@@ -25,10 +26,12 @@ const CSV_TYPES = new Set(['', 'text/csv', 'text/plain', 'application/csv', 'tex
 
 export type ReadStatementDeps = {
   categorize?: typeof categorizeStatement;
+  /** Keep the masked lines in memory for the subscription audit (`lastStatementRead`). Default true. */
+  remember?: boolean;
 } & CategorizeOptions;
 
 export async function readStatementFile(file: File, deps: ReadStatementDeps = {}): Promise<StatementFileResult> {
-  const { categorize = categorizeStatement, ...opts } = deps;
+  const { categorize = categorizeStatement, remember = true, ...opts } = deps;
   if (!/\.(csv|txt)$/i.test(file.name) && !CSV_TYPES.has(file.type)) {
     throw new StatementFileError('notCsv', `${file.name} is not a CSV file`);
   }
@@ -45,7 +48,9 @@ export async function readStatementFile(file: File, deps: ReadStatementDeps = {}
   if (items.length === 0) throw new StatementFileError('noTransactions', 'Every line has a zero amount');
   if (items.length > MAX_STATEMENT_ITEMS) throw new StatementFileError('tooMany', `${items.length} lines`);
 
-  const { months, categorizedBy } = await categorize(items, opts);
+  const { months, categorizedBy, classes } = await categorize(items, opts);
+  // In memory only, for the subscription audit to open on its findings without a second upload.
+  if (remember) rememberStatementRead({ items, classes });
   return {
     months,
     summary: {

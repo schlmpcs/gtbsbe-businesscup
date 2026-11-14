@@ -1,0 +1,26 @@
+{
+  "nickname": "Sam",
+  "takeHomePay": { "value": 3800, "isEstimate": false },
+  "spending": {
+    "rentUtilities": { "value": 1100, "isEstimate": false },
+    "car": { "value": 0, "isEstimate": false },
+    "childcare": { "value": 0, "isEstimate": false },
+    "groceries": { "value": 380, "isEstimate": true },
+    "eatingOut": { "value": 220, "isEstimate": true },
+    "subscriptions": { "value": 40, "isEstimate": false },
+    "debtPayments": { "value": 0, "isEstimate": true },
+    "other": { "value": 300, "isEstimate": true }
+  },
+  "cash": { "value": 5200, "isEstimate": false },
+  "retirement": { "value": 9000, "isEstimate": true },
+  "retirementShare": { "value": 0.1, "isEstimate": false },
+  "debts": [
+    {
+      "id": "student-1",
+      "kind": "student",
+      "balance": 21000,
+      "apr": 0.055,
+      "minPayment": { "value": 230, "isEstimate": false }
+    }
+  ]
+}

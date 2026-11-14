@@ -1,7 +1,10 @@
-// S1 Today. First visit: what the app is (Play, Try with sample data). After that, the Home
-// dashboard: your house (the 10-year number), this month, your next move, today's game and What if?.
+// S1 Today. First visit: the product above the fold (count your month → see where you're heading →
+// your next best move), one primary CTA (start with your month) and the daily game as the hook.
+// After that, the Home dashboard: your house (the 10-year number), this month, your next move,
+// today's game and What if?. The screen list for judges lives at /screens, not here.
 // Presentational: everything comes from TodayVM; links come from the route page.
-import { common, forecast as t, goal as g, screenTitles, tools, type ScreenId } from '@/copy';
+import type { ReactNode } from 'react';
+import { bills, common, forecast as t, goal as g, spend, tools } from '@/copy';
 import {
   Art,
   Button,
@@ -15,7 +18,8 @@ import {
   Sticker,
   type ArtName,
 } from '@/ui-kit';
-import type { MonthEndVM, MoveVM, TodayVM } from '../model/types';
+import type { MonthEndVM, MoveVM, SpendSummaryVM, TodayVM } from '../model/types';
+import { CushionCard } from './CushionCard';
 import {
   bandText,
   ErrorNote,
@@ -43,17 +47,18 @@ export type TodayLinks = {
   /** Start of "build your profile" (S5 Guess yourself). */
   profile: string;
   upload: string;
+  /** The daily spending log (/spend). */
+  spend?: string;
+  /** The bills calendar (the "Next bill" line links there when given). */
+  bills?: string;
 };
 
 export type TodayScreenProps = {
   vm: TodayVM;
   links: TodayLinks;
-  /**
-   * Every screen the app links to, for the compact "All screens" list (judges can reach each one).
-   * `title` overrides the screen's default title (S2/S3 when /play is the duel).
-   */
-  screens: { id: ScreenId; href: string; title?: string }[];
   Link: LinkComponent;
+  /** The daily log's quick-add (features/spend), rendered in the "This month so far" card. */
+  quickAdd?: ReactNode;
 };
 
 const CARD = 'rounded-xl bg-surface p-xl shadow-md';
@@ -61,8 +66,8 @@ const TEXT_LINK = 'inline-flex min-h-11 items-center gap-xs text-sm font-semibol
 const CARD_TITLE = 'text-xs font-bold uppercase tracking-wide';
 const VERDICT_TONE = { onTrack: 'positive', withinRange: 'primary', behind: 'ink' } as const;
 
-export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
-  if (vm.firstVisit) return <FirstVisit links={links} screens={screens} Link={Link} />;
+export function TodayScreen({ vm, links, Link, quickAdd }: TodayScreenProps) {
+  if (vm.firstVisit) return <FirstVisit links={links} Link={Link} />;
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl sm:py-3xl">
       <Stack gap="3xl">
@@ -70,15 +75,18 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
 
         <Nudge vm={vm} links={links} Link={Link} />
 
+        <NextBillLine vm={vm} href={links.bills} Link={Link} />
+
         <div className="grid items-stretch gap-xl md:grid-cols-2 lg:grid-cols-3">
           <MonthCard vm={vm} uploadHref={links.upload} Link={Link} />
           <MoveCard vm={vm} futureHref={links.future} Link={Link} />
           <GameCard vm={vm} playHref={links.play} Link={Link} />
+          <CushionCard vm={vm} />
         </div>
 
-        <WhatIfRow links={links} Link={Link} />
+        {(vm.daily || quickAdd) && <DailyCard vm={vm} quickAdd={quickAdd} spendHref={links.spend} Link={Link} />}
 
-        <AllScreens screens={screens} Link={Link} />
+        <WhatIfRow links={links} Link={Link} />
       </Stack>
     </main>
   );
@@ -177,6 +185,24 @@ function Nudge({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: Link
         <span aria-hidden="true">→</span>
       </Link>
     </div>
+  );
+}
+
+/** One line about the next bill due ("Next bill: Netflix $15.49 in 3 days"), linking to the bills calendar. */
+function NextBillLine({ vm, href, Link }: { vm: TodayVM; href?: string; Link: LinkComponent }) {
+  const next = vm.status === 'ready' ? vm.nextBill : null;
+  if (!next) return null;
+  const text = bills.today.nextBill(next.label, formatMoney(next.amount, { cents: true }), next.inDays);
+  return (
+    <p data-testid="next-bill" className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs rounded-xl bg-surface px-xl py-sm text-sm font-semibold shadow-sm">
+      <span>{text}</span>
+      {href && (
+        <Link href={href} className={TEXT_LINK}>
+          {bills.today.open}
+          <span aria-hidden="true">→</span>
+        </Link>
+      )}
+    </p>
   );
 }
 
@@ -365,6 +391,80 @@ function GameCard({ vm, playHref, Link }: { vm: TodayVM; playHref: string; Link:
   );
 }
 
+/** The daily log on Home: spent since the 1st of usual, projected month end, safe to spend today, quick-add. */
+function DailyCard({
+  vm,
+  quickAdd,
+  spendHref,
+  Link,
+}: {
+  vm: TodayVM;
+  quickAdd?: ReactNode;
+  spendHref?: string;
+  Link: LinkComponent;
+}) {
+  const daily = vm.daily;
+  return (
+    <section aria-labelledby="today-daily-heading" data-testid="today-daily" className={cx(CARD, 'flex flex-col gap-lg')}>
+      <div className="flex flex-wrap items-baseline justify-between gap-md">
+        <h2 id="today-daily-heading" className={cx(CARD_TITLE, 'text-text-muted')}>
+          {spend.summary.title}
+        </h2>
+        {spendHref && (
+          <Link href={spendHref} className={TEXT_LINK}>
+            {spend.homeLink}
+            <span aria-hidden="true">→</span>
+          </Link>
+        )}
+      </div>
+      <div className="grid gap-xl lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div>
+          {vm.status !== 'ready' || !daily || daily.status === 'loading' ? (
+            <Skeleton lines={3} />
+          ) : daily.status === 'error' ? (
+            <ErrorNote error={daily.error} />
+          ) : (
+            <DailyNumbers data={daily.data} />
+          )}
+        </div>
+        {quickAdd}
+      </div>
+    </section>
+  );
+}
+
+function DailyNumbers({ data }: { data: SpendSummaryVM }) {
+  const s = spend.summary;
+  return (
+    <Stack gap="md">
+      <div>
+        <p className={EYEBROW}>{s.spentSince(formatMonth(data.month, 1))}</p>
+        <p className="font-display text-4xl font-extrabold leading-display tabular-nums" data-testid="today-daily-spent">
+          <Money value={data.spent} />
+        </p>
+        <p className="text-sm text-text-muted tabular-nums">{s.ofUsual(formatMoney(data.usual))}</p>
+      </div>
+      <div className="flex flex-wrap gap-x-xl gap-y-md">
+        <div>
+          <p className={EYEBROW}>{s.projected}</p>
+          <p className="font-display text-2xl font-extrabold tabular-nums" data-testid="today-daily-projected">
+            <Money value={data.projected} />
+          </p>
+        </div>
+        <div>
+          <p className={EYEBROW}>{s.safeToday}</p>
+          <p className="font-display text-2xl font-extrabold tabular-nums text-positive" data-testid="today-daily-safe">
+            <Money value={data.safeToday} />
+          </p>
+        </div>
+      </div>
+      <p className="text-xs text-text-muted">
+        {data.remaining < 0 ? s.over(formatMoney(-data.remaining)) : s.safeHint(data.daysLeft)}
+      </p>
+    </Stack>
+  );
+}
+
 type ToolKey = 'afford' | 'loan' | 'decide' | 'checkin';
 // The same art as the What if? hub (/tools).
 const WHAT_IF: { key: ToolKey; art: ArtName }[] = [
@@ -410,7 +510,7 @@ function WhatIfRow({ links, Link }: { links: TodayLinks; Link: LinkComponent }) 
   );
 }
 
-const STEP_ART: ArtName[] = ['step-duels', 'step-month', 'step-future'];
+const STEP_ART: ArtName[] = ['step-month', 'step-future', 'house-crane'];
 
 function Steps({ items, label }: { items: readonly string[]; label: string }) {
   return (
@@ -437,72 +537,75 @@ function Steps({ items, label }: { items: readonly string[]; label: string }) {
   );
 }
 
-/** First visit (no profile, no game yet): what the app is and the two ways in. No user numbers. */
-function FirstVisit({ links, screens, Link }: Omit<TodayScreenProps, 'vm'>) {
+/**
+ * First visit (no profile, no game yet): the product above the fold (the three steps), one primary
+ * CTA (start with your month), the statement shortcut, and the daily game as the hook. No user numbers.
+ */
+function FirstVisit({ links, Link }: Omit<TodayScreenProps, 'vm' | 'quickAdd'>) {
   const f = t.today.firstVisit;
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl sm:py-3xl" data-testid="today-first-visit">
-      <Stack gap="3xl">
-        <section data-testid="play" className="grid items-center gap-2xl lg:grid-cols-2">
+      <Stack gap="2xl">
+        <section className="grid items-center gap-2xl lg:grid-cols-2">
           <div className="flex min-w-0 flex-col items-start gap-lg">
-            <h1 className="font-display text-6xl font-extrabold leading-display tracking-tight sm:text-7xl xl:text-8xl">
+            <Sticker tone="ink" tilt={-3}>
+              {f.eyebrow}
+            </Sticker>
+            <h1 className="font-display text-5xl font-extrabold leading-display tracking-tight sm:text-7xl xl:text-8xl">
               {f.title}
             </h1>
             <p className="max-w-(--container-lg) text-xl">{f.body}</p>
             <div className="flex w-full flex-wrap items-center gap-md">
-              <Link href={links.play} className={cx(buttonClassName({ variant: 'primary', size: 'lg' }), 'w-full sm:w-auto')}>
-                {f.play}
+              <Link href={links.profile} className={cx(buttonClassName({ variant: 'primary', size: 'lg' }), 'w-full sm:w-auto')}>
+                {f.start}
                 <span aria-hidden="true">→</span>
               </Link>
-              <Link
-                href={links.sample}
-                className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}
-              >
+              <Link href={links.sample} className={TEXT_LINK}>
                 {f.sample}
               </Link>
             </div>
-            <p className="text-sm text-text-muted">{f.note}</p>
+            <p className="text-sm text-text-muted">
+              <span>{f.note}</span>{' '}
+              <Link href={links.upload} className="font-semibold text-primary hover:underline">
+                {f.upload}
+              </Link>
+            </p>
           </div>
           {/* Decoration only: the art carries no number or cost fact. */}
-          <div aria-hidden="true" className="relative mx-auto w-full max-w-(--container-xl)">
-            <Art name="duel-houses" />
-            <span className="absolute top-1/3 left-1/2 flex size-16 -translate-x-1/2 items-center justify-center rounded-full bg-ink font-display text-xl font-extrabold uppercase text-on-primary shadow-md">
-              {f.vs}
-            </span>
+          <div aria-hidden="true" className="relative mx-auto hidden w-full max-w-(--container-md) lg:block">
+            <Art name="step-future" />
+            <Sticker tone="primary" tilt={6} className="absolute top-lg right-lg">
+              {f.heroSticker}
+            </Sticker>
           </div>
         </section>
         <section aria-label={f.stepsLabel}>
           <Steps items={f.steps} label={f.stepsLabel} />
         </section>
-        <AllScreens screens={screens} Link={Link} />
+        <section
+          data-testid="play"
+          aria-label={f.game.label}
+          className="grid items-center gap-xl rounded-xl bg-surface p-xl shadow-md sm:grid-cols-[1fr_auto]"
+        >
+          <div className="flex min-w-0 flex-col items-start gap-sm">
+            <Sticker tone="primary" tilt={-4}>
+              {f.game.label}
+            </Sticker>
+            <h2 className="font-display text-3xl font-extrabold leading-tight">{f.game.title}</h2>
+            <p className="text-text-muted">{f.game.body}</p>
+            <Link href={links.play} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'mt-sm')}>
+              {f.play}
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+          <div aria-hidden="true" className="relative mx-auto w-full max-w-(--container-xs)">
+            <Art name="duel-houses" />
+            <span className="absolute top-1/3 left-1/2 flex size-12 -translate-x-1/2 items-center justify-center rounded-full bg-ink font-display text-lg font-extrabold uppercase text-on-primary shadow-md">
+              {f.vs}
+            </span>
+          </div>
+        </section>
       </Stack>
     </main>
-  );
-}
-
-/** Every screen, for the compact "All screens" list (judges can reach each one). */
-function AllScreens({ screens, Link }: Pick<TodayScreenProps, 'screens' | 'Link'>) {
-  return (
-    <nav aria-label={t.today.allScreens}>
-      <details>
-        <summary className="min-h-11 cursor-pointer text-sm font-semibold uppercase tracking-wide text-text-muted">
-          {t.today.allScreens}
-        </summary>
-        <ul className="mt-sm flex flex-wrap gap-xs">
-          {screens.map(({ id, href, title }) => (
-            <li key={id}>
-              <Link
-                href={href}
-                data-screen={id}
-                className="inline-flex items-baseline gap-xs rounded-full bg-surface px-md py-xs text-xs shadow-sm hover:bg-primary-soft"
-              >
-                <span className="font-mono text-text-muted">{id}</span>
-                <span>{title ?? screenTitles[id]}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </details>
-    </nav>
   );
 }

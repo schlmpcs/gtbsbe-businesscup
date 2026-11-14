@@ -19,6 +19,8 @@ test.afterEach(() => {
   expect(pageErrors, pageErrors.join('\n\n')).toEqual([]);
 });
 
+/** JF14: the planner sits behind the "payoff" disclosure on /loan; open it after every load. */
+const openPlanner = (page: Page) => page.getByTestId('payoff-disclosure-summary').click();
 const planner = (page: Page) => page.getByRole('region', { name: loan.planner.title, exact: true });
 const comparison = (page: Page) => planner(page).getByRole('table', { name: loan.planner.compare.caption });
 /** The cells of one row of the comparison: avalanche, snowball, minimums only. */
@@ -45,6 +47,7 @@ async function expectNoHorizontalScroll(page: Page) {
 test.describe('S12 Loan Lab: debt payoff planner', () => {
   test('shows avalanche, snowball and minimums only side by side; moving the extra moves the debt-free date', async ({ page }) => {
     await page.goto('/loan');
+    await openPlanner(page);
     await expect(planner(page)).toBeVisible();
     await expect(comparison(page)).toBeVisible();
     // The old single-method card is gone: the planner took its place.
@@ -95,6 +98,7 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
 
   test('keeps the method and the extra after a reload, in this browser only', async ({ page }) => {
     await page.goto('/loan');
+    await openPlanner(page);
     await expect(planner(page)).toBeVisible();
     await extraSlider(page).fill('500');
     await methodLabel(page, loan.planner.method.names.snowball).click();
@@ -104,6 +108,7 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
       .toMatchObject({ method: 'snowball', extra: 500 });
 
     await page.reload();
+    await openPlanner(page);
     await expect(planner(page)).toBeVisible();
     await expect(extraSlider(page)).toHaveValue('500');
     await expect(planner(page).getByRole('radio', { name: loan.planner.method.names.snowball })).toBeChecked();
@@ -133,6 +138,7 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
 
   test('says the total extra a month it takes to be debt-free by a chosen month, and when no extra is needed', async ({ page }) => {
     await page.goto('/loan');
+    await openPlanner(page);
     const month = planner(page).getByLabel(loan.planner.target.label);
     const result = page.getByTestId('payoff-target-result');
     await expect(month).toBeVisible();
@@ -152,6 +158,7 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
 
   test('is hidden in streamer mode: no figures from the planner', async ({ page }) => {
     await page.goto('/loan?stream=1');
+    await openPlanner(page);
     await expect(planner(page)).toBeVisible();
     await expect(planner(page).getByText(loan.planner.hidden)).toBeVisible();
     await expect(comparison(page)).toHaveCount(0);

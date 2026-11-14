@@ -71,6 +71,20 @@ export function getJson<S extends z.ZodType>(url: string, schema: S, opts: Reque
   return request(url, { method: 'GET' }, schema, opts);
 }
 
+export function putJson<S extends z.ZodType>(
+  url: string,
+  body: unknown,
+  schema: S,
+  opts: RequestOptions = {},
+): Promise<z.output<S>> {
+  return request(
+    url,
+    { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
+    schema,
+    opts,
+  );
+}
+
 export function postJson<S extends z.ZodType>(
   url: string,
   body: unknown,

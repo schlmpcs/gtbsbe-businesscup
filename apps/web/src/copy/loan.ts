@@ -37,6 +37,18 @@ export const loan = {
 
   /** Under the page: where the numbers come from (the app footer carries the disclaimer). */
   footnote: 'Numbers from the loan math on your profile. We don’t recommend lenders.',
+  /** JF14: what is left over each month (take-home minus spending and debt payments); amounts formatted by the UI. */
+  leftOver: {
+    title: 'Left over each month',
+    after: (name: string) => `after ${name}`,
+    today: 'today, before any new loan',
+    /** `before` = today's amount, formatted. */
+    vsToday: (before: string) => `vs ${before} today`,
+    short: (amount: string) => `${amount} short`,
+    shortNote: 'More would go out each month than comes in.',
+  },
+  /** JF16: secondary sections sit behind these disclosures. */
+  disclosures: { parse: 'Type an offer in words', extra: 'Pay extra each month', payoff: 'Which debt to pay first' },
 
   compare: {
     title: 'Side by side',

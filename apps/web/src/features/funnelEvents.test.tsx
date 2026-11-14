@@ -44,7 +44,8 @@ describe('ladder view-models', () => {
 
     act(() => guess.result.current.submit());
     act(() => guess.result.current.submit());
-    act(() => closest.result.current.choose(closest.result.current.candidates.find((c) => c.available)!.cardId));
+    act(() => closest.result.current.setZip('75216'));
+    act(() => closest.result.current.choose());
     act(() => sliders.result.current.setSpending('eatingOut', 400));
     act(() => sliders.result.current.setSpending('groceries', 700));
     act(() => sliders.result.current.setSavingsShare(0.1));
