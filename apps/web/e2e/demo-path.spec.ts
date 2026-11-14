@@ -122,11 +122,12 @@ test('demo path: 5 duels → own guess → statement → by hand → forecast �
   await page.getByRole('link', { name: ladder.shell.cta.S5 }).click();
   await expect(page).toHaveURL(/\/me\/closest$/);
   await page.getByLabel(ladder.closest.about.zip).fill('75205');
+  // The month built from the answers is preselected (JF13); tapping it starts from it.
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) });
-  await expect(choose).toHaveAttribute('aria-pressed', 'false');
-  const chosen = stored(page, 'closest_life_chosen');
-  await page.getByRole('button', { name: ladder.closest.start }).click();
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
+  const chosen = stored(page, 'closest_life_chosen');
+  await choose.click();
+  await expect(page.getByText(ladder.closest.chosenNote)).toBeVisible();
   await chosen;
 
   // ----- 4. Your spending (S9): import the sample statement, nothing to type -----
@@ -164,6 +165,7 @@ test('demo path: 5 duels → own guess → statement → by hand → forecast �
   await page.getByRole('link', { name: ladder.shell.cta.last }).click();
   await expect(page).toHaveURL(/\/future$/);
   await expect(h1(page)).toHaveText(forecast.future.title(10));
+  await page.getByTestId('chart-disclosure').locator('summary').click(); // JF16: behind a disclosure
   const chart = page.getByRole('figure', { name: forecast.future.chartTitle(10) });
   await expect(chart.locator('.recharts-line-curve').first()).toBeVisible();
   await expect(chart.locator('.recharts-area-area').first()).toBeVisible();

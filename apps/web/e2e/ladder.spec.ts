@@ -45,8 +45,12 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   await expect(page.getByTestId('ladder-in10y')).toHaveCount(0);
   await expect(page.getByRole('button', { name: ladder.shell.cta.S6 })).toBeDisabled();
   await page.getByLabel(ladder.closest.about.zip).fill('75205');
+  // The life built from the answers is preselected: the CTA is live before any tap (JF13).
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) });
-  await page.getByRole('button', { name: ladder.closest.start }).click();
+  await expect(choose).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: ladder.shell.cta.S6 })).toBeEnabled();
+  await expect(page.getByText(ladder.closest.preselectedNote)).toBeVisible();
+  await choose.click();
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText(ladder.closest.chosenNote)).toBeVisible();
   await expect(rung(page, 'S6')).toHaveAttribute('data-done', 'true');
@@ -80,10 +84,12 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   await expect(page).toHaveURL(/\/me\/balance$/);
   const debtLoad = page.getByRole('meter', { name: ladder.balance.debtLoadLabel });
   const loadBefore = await debtLoad.getAttribute('aria-valuenow');
-  await page.getByRole('button', { name: ladder.balance.addDebt }).click();
+  // Confirm, not type (JF17): tap the kind, type the balance; the APR comes prefilled (then edited here).
+  await page.getByRole('button', { name: ladder.balance.addKindLabel(ladder.balance.debtKinds.student) }).click();
   const form = page.getByRole('form', { name: ladder.balance.formTitleAdd });
-  await form.getByLabel(ladder.balance.kindLabel).selectOption({ label: ladder.balance.debtKinds.student });
+  await expect(form.getByRole('radio', { name: ladder.balance.debtKinds.student })).toBeChecked();
   await form.getByLabel(ladder.balance.balanceLabel).fill('20000');
+  await expect(form.getByLabel(ladder.balance.aprLabel)).not.toHaveValue('');
   await form.getByLabel(ladder.balance.aprLabel).fill('5');
   await form.getByRole('button', { name: ladder.balance.save }).click();
   await expect(form).toBeHidden();
@@ -121,6 +127,7 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   } else {
     await expect(headlineSource).toHaveText(forecast.source.ai);
   }
+  await page.getByTestId('chart-disclosure').locator('summary').click(); // JF16: behind a disclosure
   await expect(page.getByRole('figure', { name: forecast.future.chartTitle(10) }).locator('.recharts-line-curve').first()).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);

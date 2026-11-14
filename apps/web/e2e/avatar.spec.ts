@@ -7,6 +7,7 @@ test('forecast → exact preview → consent → publish → privacy disclosure 
   page,
 }) => {
   await page.goto('/future?sample=1');
+  await page.getByTestId('goal-disclosure').locator('summary').click(); // JF16: behind a disclosure
   const optIn = page.getByText(
     'Let strangers meet a rounded version of you in the daily duel?',
     { exact: true },
@@ -45,6 +46,7 @@ test('forecast → exact preview → consent → publish → privacy disclosure 
   await page.getByText('Exactly what we keep', { exact: true }).click();
   await expect(page.getByText(/Published avatar: age band/)).toBeVisible();
   await page.goto('/future');
+  await page.getByTestId('goal-disclosure').locator('summary').click(); // JF16: behind a disclosure
   await page.getByRole('button', { name: 'Unpublish', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Published avatar', exact: true }),

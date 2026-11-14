@@ -5,11 +5,11 @@
 // failure we ask once more with the problems listed, then give up with a typed error so the UI
 // falls back to the manual form. Parsed values are inputs: the user confirms them in the UI.
 import {
-  COST_CATEGORIES, LoanInputSchema, ProfilePatchSchema, PurchaseSchema,
-  type LoanInput, type ProfilePatch, type Purchase,
+  COST_CATEGORIES, DAILY_ENTRY_LABEL_MAX, LoanInputSchema, ProfilePatchSchema, PurchaseSchema, SpendItemSchema,
+  type LoanInput, type ProfilePatch, type Purchase, type SpendItem,
 } from '@lifeguessr/types';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { type z } from 'zod';
+import { z } from 'zod';
 import { devLog, llmModel, responseText, type LlmClient } from './client';
 import { extractNumbers, tokenMatches, type NumberToken } from './numbers';
 import { WIRE_SCHEMAS, type ParseKind, type ParseRequest, type WireOutput } from './schemas';
@@ -18,7 +18,12 @@ export type ParsedValue = {
   life: ProfilePatch;
   purchase: Purchase;
   loan: LoanInput;
+  /** Daily log purchases (/spend). Amounts are only ever copied from the text (checked below). */
+  spend: SpendItem[];
 };
+
+/** Most purchases one daily-log line may hold. */
+export const MAX_SPEND_ITEMS = 20;
 
 export type ParseErrorCode =
   | 'unavailable'     // no ANTHROPIC_API_KEY: use the manual form
@@ -54,6 +59,9 @@ const KIND_RULES: Record<ParseKind, string> = {
 Only use debt ids from the list given with the text; if no list is given, return an empty debts array.`,
   purchase: `Extract one purchase: a short label, the price per occurrence, whether it repeats (none, monthly or yearly), and how it is paid: "loan" only if financing is mentioned (then fill loan), "card" for a credit card, otherwise "cash".`,
   loan: `Extract one loan: the amount (price before any down payment), APR, term in months, fees rolled into the loan, down payment and any extra monthly payment.`,
+  spend: `Extract each purchase the user logged: a short label as written, its category and the amount paid as written.
+Categories: groceries (supermarket, food for home); eatingOut (restaurants, cafes, coffee, takeout, food delivery); car (fuel, parking, tolls, car repairs and insurance); rentUtilities (rent, electricity, water, internet, phone bill); childcare (daycare, babysitter); subscriptions (streaming, apps, memberships); other (everything else: taxi and rides, transit, shopping, health, gifts).
+One item per purchase. Use null for an amount the text does not give: never use a typical price.`,
 };
 
 function systemPrompt(kind: ParseKind): string {
@@ -112,6 +120,18 @@ function loanFromWire(w: WireOutput<'loan'>, prefix = ''): { value: LoanInput } 
 }
 
 function convert<K extends ParseKind>(kind: K, wire: unknown, req: ParseRequest): Converted<K> {
+  if (kind === 'spend') {
+    const w = wire as WireOutput<'spend'>;
+    if (w.items.length === 0) return { empty: true };
+    const missing = w.items.flatMap((it, i) => (it.amount === null ? [`items.${i}.amount`] : []));
+    if (missing.length > 0) return { missing };
+    const value: SpendItem[] = w.items.map((it) => {
+      const label = it.label.trim().slice(0, DAILY_ENTRY_LABEL_MAX).trim();
+      return { category: it.category, amount: it.amount as number, ...(label ? { label } : {}) };
+    });
+    return { value } as Converted<K>;
+  }
+
   if (kind === 'loan') {
     const w = wire as WireOutput<'loan'>;
     if (Object.values(w).every((v) => v === null)) return { empty: true };
@@ -183,6 +203,9 @@ function numericLeaves(kind: ParseKind, value: ParsedValue[ParseKind]): Leaf[] {
     leaves.push({ path: 'amount', value: p.amount, unit: 'money' });
     if (typeof p.payWith === 'object') loanLeaves(p.payWith.loan, 'payWith.loan.');
   }
+  if (kind === 'spend') {
+    (value as SpendItem[]).forEach((it, i) => leaves.push({ path: `items.${i}.amount`, value: it.amount, unit: 'money' }));
+  }
   if (kind === 'life') {
     const p = value as ProfilePatch;
     for (const c of COST_CATEGORIES) {
@@ -222,6 +245,7 @@ const CONTRACT_SCHEMAS: { [K in ParseKind]: z.ZodType<ParsedValue[K]> } = {
   life: ProfilePatchSchema,
   purchase: PurchaseSchema,
   loan: LoanInputSchema,
+  spend: z.array(SpendItemSchema).min(1).max(MAX_SPEND_ITEMS),
 };
 
 const formatIssues = (error: z.ZodError) =>
@@ -255,7 +279,13 @@ function validate(
   const percent = percentIssues(leaves, tokens);
   if (percent.length > 0) return { issues: percent };
 
-  return { outcome: { ok: true, kind, value: checked.data, inferred: inferredPaths(leaves, tokens) } };
+  const inferred = inferredPaths(leaves, tokens);
+  // A logged amount is the user's own number: the model may only copy it, never supply one.
+  if (kind === 'spend' && inferred.length > 0) {
+    return { issues: inferred.map((path) => `${path}: this amount is not written in the text; copy amounts exactly or use null`) };
+  }
+
+  return { outcome: { ok: true, kind, value: checked.data, inferred } };
 }
 
 // ----- main ----------------------------------------------------------------------------------

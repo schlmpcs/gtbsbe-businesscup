@@ -10,7 +10,7 @@ import { common, forecast, ladder } from '@/copy';
 import type {
   GuessYourselfVM, LadderProgressVM, LifeCandidateVM, ParsedRowVM, QuickSlidersVM, StatementUploadVM,
 } from './model/types';
-import { artsFor } from './ui/ClosestLife';
+import { artFor } from './ui/ClosestLife';
 import { DebtForm } from './ui/DebtForm';
 import { DescribeLife } from './ui/DescribeLife';
 import { GuessYourself } from './ui/GuessYourself';
@@ -94,17 +94,19 @@ describe('LadderShell (via any rung)', () => {
 });
 
 describe('ClosestLife (S6) art', () => {
-  const life = (kids: number, bedrooms: LifeCandidateVM['bedrooms']) => ({
+  const life = (kids: number, bedrooms: LifeCandidateVM['bedrooms'], carPrice: number | null) => ({
     kids: Array.from({ length: kids }, () => 'schoolAge' as const),
     bedrooms,
+    carPrice,
   });
 
-  it('keeps the household picture, but never the same picture on two neighbouring cards', () => {
-    const arts = artsFor([life(0, 1), life(0, 0), life(2, 2), life(1, 3), life(0, 1), life(1, 4)]);
-    expect(arts[0]).toBe('home-apartment');
-    expect(arts[2]).toBe('home-family');
-    expect(arts[5]).toBe('home-large');
-    for (let i = 1; i < arts.length; i++) expect(arts[i]).not.toBe(arts[i - 1]);
+  it('matches the household: studio, 1-bed apartment, family house, with or without a car', () => {
+    expect(artFor(life(0, 0, null))).toBe('home-studio');
+    expect(artFor(life(0, 1, null))).toBe('home-apartment-nocar');
+    expect(artFor(life(0, 1, 62000))).toBe('home-apartment');
+    expect(artFor(life(1, 2, 18000))).toBe('home-family');
+    expect(artFor(life(1, 2, null))).toBe('home-cottage');
+    expect(artFor(life(2, 4, 52000))).toBe('home-large');
   });
 });
 
@@ -302,13 +304,15 @@ describe('DebtForm (S8)', () => {
     minPayment: { min: 0, max: 1e6, step: 1 },
   };
 
-  it('APR typed as a percent is saved as a decimal; an empty minimum is null (estimated)', async () => {
+  it('only the balance is needed: APR prefilled for the kind (estimate); typed APR saved as a decimal', async () => {
     const onSave = vi.fn();
     render(
       <DebtForm
         title="New debt"
         kinds={['card', 'student']}
         bounds={bounds}
+        aprDefaults={{ card: 0.2236, auto: 0.08, student: 0.0639, personal: 0.12, bnpl: 0, mortgage: 0.065 }}
+        estimateMinPayment={(b, apr) => b * (apr / 12) + b * 0.01}
         initial={{ kind: 'card', balance: null, apr: null, minPayment: null }}
         onSave={onSave}
         onCancel={vi.fn()}
@@ -316,11 +320,15 @@ describe('DebtForm (S8)', () => {
     );
     const save = screen.getByRole('button', { name: ladder.balance.save });
     expect(save).toBeDisabled();
-    await userEvent.selectOptions(screen.getByLabelText(ladder.balance.kindLabel), 'student');
+    await userEvent.click(screen.getByRole('radio', { name: ladder.balance.debtKinds.student }));
     await userEvent.type(screen.getByLabelText(ladder.balance.balanceLabel), '20000');
-    await userEvent.type(screen.getByLabelText(ladder.balance.aprLabel), '5.5');
     await userEvent.click(save);
-    expect(onSave).toHaveBeenCalledWith({ kind: 'student', balance: 20000, apr: 0.055, minPayment: null });
+    expect(onSave).toHaveBeenLastCalledWith({ kind: 'student', balance: 20000, apr: 0.0639, minPayment: null });
+    const apr = screen.getByLabelText(ladder.balance.aprLabel);
+    await userEvent.clear(apr);
+    await userEvent.type(apr, '5.5');
+    await userEvent.click(save);
+    expect(onSave).toHaveBeenLastCalledWith({ kind: 'student', balance: 20000, apr: 0.055, minPayment: null });
   });
 });
 

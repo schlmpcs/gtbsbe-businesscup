@@ -28,10 +28,35 @@ function contract(name: string, open: () => { store: Store; cleanup: () => Promi
       expect(await duel.findDuelDay('bad')).toBeNull();
       expect((await duel.submitPick({ date, anonId: 'two' }, 1, 'B', score)).resultId).not.toBe(first.resultId);
       expect((await duel.submitPick({ ...key, date: '2026-11-15' }, 1, 'A', score)).resultId).not.toBe(first.resultId);
-      expect(await duel.crowd(date, 1)).toEqual({ A: 1, B: 1 });
+      expect(await duel.crowds(date, [1])).toEqual(new Map([[1, { A: 1, B: 1 }]]));
       const concurrentKey = { date, anonId: 'concurrent' };
       const concurrent = await Promise.all([duel.submitPick(concurrentKey, 1, 'A', score), duel.submitPick(concurrentKey, 2, 'B', score)]);
       expect(concurrent[0]!.resultId).toBe(concurrent[1]!.resultId);
+    });
+
+    it('counts one stored pick per player per round, by round and by date', async () => {
+      // A date of its own, so the picks of the test above do not count here.
+      const day = '2026-12-01';
+      const next = '2026-12-02';
+      const player = (i: number) => ({ date: day, anonId: `crowd-${i}` });
+      expect(await duel.crowds(day, [1, 2])).toEqual(new Map([[1, { A: 0, B: 0 }], [2, { A: 0, B: 0 }]]));
+      expect(await duel.crowds(day, [])).toEqual(new Map());
+
+      // 12 A and 7 B on round 1; every replay (same letter or the other one) is answered from the
+      // stored row and adds nothing.
+      for (let i = 0; i < 19; i++) await duel.submitPick(player(i), 1, i < 12 ? 'A' : 'B', score);
+      for (let i = 0; i < 19; i++) expect((await duel.submitPick(player(i), 1, i % 2 ? 'A' : 'B', score)).replayed).toBe(true);
+      expect((await duel.crowds(day, [1])).get(1)).toEqual({ A: 12, B: 7 });
+
+      // Round 2 that day and round 1 the next day are counted apart from round 1 today.
+      await duel.submitPick(player(0), 2, 'B', score);
+      await duel.submitPick({ date: next, anonId: 'crowd-0' }, 1, 'B', score);
+      expect(await duel.crowds(day, [1, 2, 3])).toEqual(new Map([[1, { A: 12, B: 7 }], [2, { A: 0, B: 1 }], [3, { A: 0, B: 0 }]]));
+      expect(await duel.crowds(next, [1])).toEqual(new Map([[1, { A: 0, B: 1 }]]));
+
+      // The 20th player.
+      await duel.submitPick(player(19), 1, 'A', score);
+      expect((await duel.crowds(day, [1])).get(1)).toEqual({ A: 13, B: 7 });
     });
   });
 }

@@ -12,13 +12,15 @@ export type CutoutName =
   | 'duel-houses' | 'step-duels' | 'step-month' | 'step-future'
   | 'house-build' | 'house-crane' | 'house-blueprint' | 'empty-plot'
   | 'little-things' | 'afford-crane' | 'calendar' | 'coins' | 'coffee' | 'streaming'
-  | 'home-apartment' | 'home-family' | 'home-suburb' | 'home-large';
+  | 'home-apartment' | 'home-family' | 'home-suburb' | 'home-large'
+  | 'home-studio' | 'home-apartment-nocar' | 'home-cottage';
 
 const CUTOUTS: ReadonlySet<string> = new Set<CutoutName>([
   'duel-houses', 'step-duels', 'step-month', 'step-future',
   'house-build', 'house-crane', 'house-blueprint', 'empty-plot',
   'little-things', 'afford-crane', 'calendar', 'coins', 'coffee', 'streaming',
   'home-apartment', 'home-family', 'home-suburb', 'home-large',
+  'home-studio', 'home-apartment-nocar', 'home-cottage',
 ]);
 
 export type ArtProps = {

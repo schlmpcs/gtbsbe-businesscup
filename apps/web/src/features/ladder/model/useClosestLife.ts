@@ -13,7 +13,50 @@ import { BALANCE_FIELD_BOUNDS } from './constants';
 import { clampField } from './useBalanceSheet';
 import { debtsChanged, startingDebts } from './useLadderProgress';
 import { DEFAULT_HOUSEHOLD, isZip, OWN_LIFE_CARD_ID, ownArea, ownLifeProfile, spendingIsOwn, startingProfile } from './ownLife';
-import type { AboutYouVM, ClosestLifeVM, LifeCandidateVM } from './types';
+import type { AboutYouVM, ClosestLifeVM, DifferentiatorVM, LifeCandidateVM } from './types';
+
+/** Rent differs by at least this share from same-size cards before we call the area pricier/cheaper. */
+const AREA_GAP = 0.1;
+
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length === 0 ? 0 : s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+};
+
+const sumOf = (c: Pick<LifeCandidateVM, 'items'>, category: LifeCandidateVM['items'][number]['category']) =>
+  c.items.filter((i) => i.category === category).reduce((t, i) => t + i.amount, 0);
+
+/**
+ * 1–2 chips per card that explain its price next to the others: the car (or no car), childcare, and
+ * the neighborhood tier (rent vs. the median of cards with the same bedrooms). Largest gap first;
+ * every amount is one of the card's own cost lines.
+ */
+export function differentiatorsFor(
+  list: readonly Pick<LifeCandidateVM, 'available' | 'bedrooms' | 'carPrice' | 'items'>[],
+): DifferentiatorVM[][] {
+  const live = list.filter((c) => c.available);
+  const carMedian = median(live.map((c) => sumOf(c, 'car')));
+  return list.map((c) => {
+    if (!c.available) return [];
+    const car = sumOf(c, 'car');
+    const carChip: [DifferentiatorVM, number] =
+      c.carPrice === null || car === 0 ? [{ kind: 'noCar' }, carMedian] : [{ kind: 'car', amount: car }, Math.abs(car - carMedian)];
+    const chips: [DifferentiatorVM, number][] = [carChip];
+    const childcare = sumOf(c, 'childcare');
+    if (childcare > 0) chips.push([{ kind: 'childcare', amount: childcare }, childcare]);
+    const peers = live.filter((o) => o.bedrooms === c.bedrooms);
+    if (peers.length >= 2) {
+      const rent = sumOf(c, 'rentUtilities');
+      const m = median(peers.map((o) => sumOf(o, 'rentUtilities')));
+      if (m > 0 && Math.abs(rent - m) >= AREA_GAP * m) {
+        chips.push([{ kind: rent > m ? 'pricierArea' : 'cheaperArea', amount: rent }, Math.abs(rent - m)]);
+      }
+    }
+    const ranked = chips.filter(([, gap]) => gap > 0).sort((a, b) => b[1] - a[1]).map(([d]) => d);
+    return (ranked.length > 0 ? ranked : [carChip[0]]).slice(0, 2);
+  });
+}
 
 /** Most children per age band on the form. */
 export const KIDS_PER_BAND_MAX = 5;
@@ -33,22 +76,26 @@ function candidateOf(facts: HouseholdFacts, zip: string): LifeCandidateVM | null
   if (!found) return null;
   const card = lifeCardFromFacts(facts, found.area);
   const cost = costOfLife(card, found.area);
-  return {
+  const life: LifeCandidateVM = {
     cardId: OWN_LIFE_CARD_ID,
     metro: found.area.metro,
     caption: card.caption,
     adults: card.adults,
     kids: [...card.kids],
     bedrooms: card.bedrooms,
-    carPrice: null,
+    // A car here has no loan: price 0 means "has a car" (insurance + fuel), null means no car.
+    carPrice: facts.hasCar ? 0 : null,
     monthly: { ...cost.total },
     items: cost.items
       .map((i, n) => ({ id: `${i.category}-${n}`, category: i.category, amount: i.amount, source: i.source, isEstimate: i.isEstimate }))
       .sort((a, b) => b.amount - a.amount),
     fromToday: false,
     isNearest: true,
+    differentiators: [],
     available: true,
   };
+  life.differentiators = differentiatorsFor([life])[0]!;
+  return life;
 }
 
 export function useClosestLife(): ClosestLifeVM {
@@ -136,6 +183,7 @@ export function useClosestLife(): ClosestLifeVM {
     candidate,
     spendingFromStatement,
     chosenCardId,
+    selectedCardId: candidate?.cardId ?? null,
     choose,
   };
 }

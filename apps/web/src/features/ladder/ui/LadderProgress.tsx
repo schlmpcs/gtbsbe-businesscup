@@ -1,5 +1,6 @@
 // Ladder progress, Design v3. LadderSteps: one row of numbered step pills (this step = ink, done =
-// soft green with ✓, not yet = white; the state is read out to screen readers).
+// soft green with ✓, skipped / not yet = white; the state is read out to screen readers). The step
+// you are on never shows ✓ (JF16: honest states).
 import { ladder } from '@/copy';
 import { cx } from '@/ui-kit';
 import type { LadderProgressVM, LadderScreen } from '../model/types';
@@ -11,13 +12,15 @@ export type LadderProgressProps = { screen: LadderScreen; progress: LadderProgre
 export function LadderSteps({ screen, progress }: LadderProgressProps) {
   const { rungs, doneCount } = progress;
   const ready = progress.status === 'ready';
+  const current = screen === 'S7' ? 'S9' : screen;
+  const currentIndex = rungs.findIndex((r) => r.screen === current);
   return (
     <nav aria-label={t.stepsLabel} className="min-w-0">
       <p className="sr-only">{ready ? t.stepsDone(doneCount, rungs.length) : t.loading}</p>
       <ol className="flex flex-wrap gap-sm">
         {rungs.map((rung, i) => {
-          const isCurrent = rung.screen === (screen === 'S7' ? 'S9' : screen);
-          const state = isCurrent ? t.current : rung.done ? t.done : t.notYet;
+          const isCurrent = rung.screen === current;
+          const state = isCurrent ? t.current : rung.done ? t.done : i < currentIndex ? t.skipped : t.notYet;
           return (
             <li key={rung.screen} className="min-w-0">
               <a
@@ -36,7 +39,7 @@ export function LadderSteps({ screen, progress }: LadderProgressProps) {
               >
                 <span className="tabular-nums">{i + 1}</span>
                 {t.rungs[rung.screen]}
-                {rung.done && <span aria-hidden="true">✓</span>}
+                {rung.done && !isCurrent && <span aria-hidden="true">✓</span>}
                 <span className="sr-only">({state})</span>
               </a>
             </li>

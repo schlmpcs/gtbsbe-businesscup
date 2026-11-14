@@ -48,6 +48,27 @@ export const cardAprDefault = {
   },
 } satisfies Assumption<Rate>;
 
+/**
+ * Default APR per debt kind when the user only types a balance (S8 quick add; shown as an estimate,
+ * editable). Card: the sourced G.19 rate above. The others are typical levels of the series named
+ * in the note, rounded; they are assumptions, not quotes. BNPL "pay in 4" plans charge no interest.
+ */
+export const debtAprDefaults = {
+  value: {
+    card: cardAprDefault.value,
+    auto: 0.08 as Rate,
+    student: 0.0639 as Rate,
+    personal: 0.12 as Rate,
+    bnpl: 0 as Rate,
+    mortgage: 0.065 as Rate,
+  },
+  assumption: true,
+  note:
+    'card: Fed G.19 (cardAprDefault). auto: about the G.19 60-month new-car rate (2025). student: federal ' +
+    'Direct Loan undergraduate rate 2025-26 (6.39%, studentaid.gov). personal: about the G.19 24-month ' +
+    'personal loan rate (2025). mortgage: about the Freddie Mac PMMS 30-year fixed (2025). bnpl: pay-in-4, 0%.',
+} satisfies Assumption<Record<'card' | 'auto' | 'student' | 'personal' | 'bnpl' | 'mortgage', Rate>>;
+
 /** Card minimum payment when the user skips it: interest for the month + 1% of balance, floor $25. */
 export const cardMinPayment = {
   value: { balanceShare: 0.01, includesInterest: true, floor: 25 as Money },
@@ -607,6 +628,34 @@ export const subscriptionAuditAssumptions = { subsMissEdges } as const;
 
 // ----- end M5 ---------------------------------------------------------------------------------
 
+// ----- Work hours and emergency cushion (workTime.ts, cushion.ts) ------------------------------
+
+/**
+ * Price in work hours: hours worked per week, to turn monthly take-home pay into pay per hour
+ * (hours per month = hoursPerWeek × 52 / 12). One work day = hoursPerWeek / 5, one work week =
+ * hoursPerWeek (8 h and 40 h at the default).
+ */
+export const workHoursPerWeek = {
+  value: 40,
+  assumption: true,
+  note: 'Standard full-time week (the 40-hour week of the Fair Labor Standards Act overtime rule). Not the user’s real hours.',
+} satisfies Assumption<number>;
+
+/**
+ * Emergency cushion bands, in months of essential spending covered by cash with no income:
+ * under `thin` = under 1 month, `thin`–`okay` = 1–3, `okay`–`solid` = 3–6, at or above `solid` = 6+.
+ */
+export const cushionBandMonths = {
+  value: { thin: 1, okay: 3, solid: 6 },
+  assumption: true,
+  note:
+    'The widely cited "3 to 6 months of expenses" emergency-fund rule of thumb (e.g. CFPB, ' +
+    'consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund). Educational guideline, not advice.',
+} satisfies Assumption<{ thin: number; okay: number; solid: number }>;
+
+/** The work hours / cushion assumptions, spread into `assumptions` below. */
+export const workTimeCushionAssumptions = { workHoursPerWeek, cushionBandMonths } as const;
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
@@ -614,6 +663,7 @@ export const assumptions = {
   returnAnnualNominal,
   cashYieldAnnual,
   cardAprDefault,
+  debtAprDefaults,
   cardMinPayment,
   retirementShareDefault,
   estimateSpread,
@@ -635,6 +685,7 @@ export const assumptions = {
   oneOffOutlierMultiple,
   ...subscriptionAssumptions,
   ...subscriptionAuditAssumptions,
+  ...workTimeCushionAssumptions,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;

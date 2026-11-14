@@ -7,6 +7,7 @@ import { useSessionSync } from './sessionSync';
 import { useAppStore } from './store';
 
 export { useAppStore, initialAppData, isSampleActive, APP_STORE_KEY } from './store';
+export { entriesInMonth, DAILY_ENTRIES_MAX } from './daily';
 export type { AppData, AppActions, AppSessionData, AppState, ProfileOrigin, WishlistItem } from './store';
 export { useGameStore, initialGameData, GAME_STORE_KEY } from './game';
 export type { GameData, GameActions, GameState } from './game';

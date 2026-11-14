@@ -13,7 +13,7 @@ import type {
   AreaData, CostBreakdown, DuelHint, DuelLetter, DuelRound, LifeCard, PickResult, PublicDuel,
 } from '@lifeguessr/types';
 import { duel as t } from '@/copy/duel';
-import { duelCardsSample } from '@/fixtures/cards';
+import { duelCardsSample } from '@/fixtures/duelCards';
 import { ApiError } from '@/lib/api/http';
 import { areaForZip } from '@/lib/areas';
 import { hintOf, publicDuelCard } from '@/lib/duel/publicDuelCard';
@@ -95,6 +95,9 @@ export function createFixtureDuelClient(
         breakdown: score.breakdown,
         decidedBy: score.decidedBy,
         lesson: t.lessons[score.lesson],
+        // This browser only knows its own pick, so there is no crowd to report: null shows "Not
+        // enough picks yet", which is true here. Never make one up (#116); only the server, which
+        // stores everyone's picks, answers real counts.
         crowd: null,
       };
       log!.picks[round] = { choice, result };

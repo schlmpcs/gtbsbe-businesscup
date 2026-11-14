@@ -1,42 +1,48 @@
 // S6 About you + your starting month (JF2, JF3): age, take-home pay and the household (adults, kids
 // by age, bedrooms, car, ZIP), then the starting month built from those answers for the person's area,
-// preselected: one white card (house cutout by household shape, decorative only), the household as the
-// headline, the metro, a big "$X / month", and the cost lines with sources under "Costs & sources".
-// The orange CTA starts from it. When the spending came from a statement, the starting month is
-// skipped and only "About you" is asked.
+// preselected (JF13): one white card with a house cutout that matches the household (studio, 1-bed
+// apartment, family house, with or without a car; decorative only), the household as the headline, the
+// metro, a big "$X / month", 1–2 chips that explain the price, and the cost lines with sources under
+// "Costs & sources". The orange CTA starts from it in one tap. When the spending came from a
+// statement, the starting month is skipped and only "About you" is asked.
 import type { InputHTMLAttributes } from 'react';
 import { common, ladder } from '@/copy';
 import {
-  Art, BarBreakdown, Button, Card, Choice, cx, EstimateTag, Field, formatMoney, NumberInput, Stack, Sticker, Tag,
+  Art, BarBreakdown, Button, buttonClassName, Card, Choice, cx, EstimateTag, Field, formatMoney, NumberInput, Stack, Sticker, Tag,
   useFieldControl, type ArtName,
 } from '@/ui-kit';
-import type { AboutYouVM, ClosestLifeVM, LadderProgressVM, LifeCandidateVM } from '../model/types';
+import type { AboutYouVM, ClosestLifeVM, DifferentiatorVM, LadderProgressVM, LifeCandidateVM } from '../model/types';
 import { LadderShell } from './LadderShell';
 
 const t = ladder.closest;
 
-const HOME_ART = ['home-apartment', 'home-suburb', 'home-family', 'home-large'] as const satisfies readonly ArtName[];
-
-/** Decorative house cutout by household shape (never data). */
-function artFor(c: Pick<LifeCandidateVM, 'kids' | 'bedrooms'>): ArtName {
+/**
+ * Decorative house cutout that matches the household facts (never data): a studio or a 1-bed
+ * apartment, a family house with kids, a bigger house for 4 bedrooms, with or without a car.
+ */
+export function artFor(c: Pick<LifeCandidateVM, 'kids' | 'bedrooms' | 'carPrice'>): ArtName {
+  const car = c.carPrice !== null;
   if (c.bedrooms >= 4) return 'home-large';
-  if (c.kids.length > 0) return 'home-family';
-  return c.bedrooms <= 1 ? 'home-apartment' : 'home-suburb';
+  if (c.kids.length > 0) return car ? 'home-family' : 'home-cottage';
+  if (c.bedrooms === 0) return car ? 'home-apartment' : 'home-studio';
+  if (c.bedrooms === 1) return car ? 'home-apartment' : 'home-apartment-nocar';
+  return car ? 'home-suburb' : 'home-cottage';
 }
 
-/**
- * One picture per card, in list order. When the household rule gives a card the same picture as the
- * card before it, rotate through the other home pictures by the card's index so neighbours differ.
- */
-export function artsFor(candidates: readonly Pick<LifeCandidateVM, 'kids' | 'bedrooms'>[]): ArtName[] {
-  const arts: ArtName[] = [];
-  candidates.forEach((c, i) => {
-    const prev = arts[i - 1];
-    let art: ArtName = artFor(c);
-    for (let k = 0; art === prev && k < HOME_ART.length; k++) art = HOME_ART[(i + k) % HOME_ART.length]!;
-    arts.push(art);
-  });
-  return arts;
+function chipText(d: DifferentiatorVM): string {
+  const c = t.differentiator;
+  switch (d.kind) {
+    case 'car':
+      return c.car(formatMoney(d.amount));
+    case 'noCar':
+      return c.noCar;
+    case 'childcare':
+      return c.childcare(formatMoney(d.amount));
+    case 'pricierArea':
+      return c.pricierArea(formatMoney(d.amount));
+    case 'cheaperArea':
+      return c.cheaperArea(formatMoney(d.amount));
+  }
 }
 
 export type ClosestLifeProps = { vm: ClosestLifeVM; progress: LadderProgressVM };
@@ -46,11 +52,14 @@ const KID_AGES = ['infant', 'toddler', 'preschool', 'schoolAge'] as const;
 export function ClosestLife({ vm, progress }: ClosestLifeProps) {
   const { candidate } = vm;
   const chosen = candidate !== null && candidate.cardId === vm.chosenCardId;
-  // Starting from the built month is this screen's action; with a statement there is nothing to start from.
-  const primary = vm.spendingFromStatement || chosen ? undefined : candidate ? (
-    <Button size="lg" onClick={vm.choose}>
-      {t.start}
-    </Button>
+  const step = progress.rungs.findIndex((r) => r.screen === 'S6');
+  const nextHref = progress.rungs[step + 1]?.href ?? progress.futureHref;
+  // The built month is preselected: the CTA starts from it (and saves it) in one tap. With a statement
+  // there is nothing to start from, so the CTA just leads on.
+  const primary = vm.spendingFromStatement || chosen ? undefined : vm.selectedCardId ? (
+    <a href={nextHref} onClick={vm.choose} className={buttonClassName({ size: 'lg' })}>
+      {ladder.shell.cta.S6}
+    </a>
   ) : (
     <Button size="lg" disabled>
       {ladder.shell.cta.S6}
@@ -67,16 +76,19 @@ export function ClosestLife({ vm, progress }: ClosestLifeProps) {
             <h2 className="font-display text-2xl font-extrabold leading-tight">{t.yourLife}</h2>
             <p className="text-sm text-text-muted">{t.yourLifeNote}</p>
             <div className="grid grid-cols-1 gap-xl sm:grid-cols-2 lg:grid-cols-3">
-              <Candidate candidate={candidate} art={artFor(candidate)} chosen={chosen} onChoose={vm.choose} />
+              <Candidate
+                candidate={candidate}
+                art={artFor(candidate)}
+                chosen={candidate.cardId === vm.selectedCardId}
+                onChoose={vm.choose}
+              />
             </div>
+            <p className="flex flex-wrap items-center gap-sm text-sm text-text-muted">
+              <EstimateTag />
+              {chosen ? t.chosenNote : t.preselectedNote}
+            </p>
           </section>
         )
-      )}
-      {chosen && (
-        <p className="flex flex-wrap items-center gap-sm text-sm text-text-muted">
-          <EstimateTag />
-          {t.chosenNote}
-        </p>
       )}
     </LadderShell>
   );
@@ -252,6 +264,15 @@ function Candidate({
         ) : (
           <p className="text-sm text-text-muted">{t.unavailable}</p>
         )}
+        {c.differentiators.length > 0 && (
+          <ul aria-label={t.differentiatorsLabel} className="flex flex-wrap gap-xs pt-xs">
+            {c.differentiators.map((d) => (
+              <li key={d.kind}>
+                <Tag className="bg-bg">{chipText(d)}</Tag>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {c.available && (
@@ -261,7 +282,7 @@ function Candidate({
             {c.caption && <p className="text-xs text-text-muted">{c.caption}</p>}
             <p className="text-xs text-text-muted">
               {t.household(c.adults, c.kids, c.bedrooms)} ·{' '}
-              {c.carPrice !== null ? t.car(formatMoney(c.carPrice)) : t.noCar}
+              {c.carPrice === null ? t.noCar : c.carPrice > 0 ? t.car(formatMoney(c.carPrice)) : t.carNoLoan}
             </p>
             <p className="text-xs text-text-muted tabular-nums">
               {t.monthlyRange(formatMoney(c.monthly.low), formatMoney(c.monthly.high))}

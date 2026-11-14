@@ -65,6 +65,8 @@ export const ladder = {
     },
     done: 'done',
     notYet: 'not yet',
+    /** A step before this one that was passed without being done. */
+    skipped: 'skipped',
     current: 'this step',
     stepsDone: (done: number, total: number) => `${done} of ${total} steps done`,
     /** The last step only: one short line above the CTA (net worth in 10 years, today's dollars). */
@@ -138,7 +140,6 @@ export const ladder = {
     yours: 'Yours',
     yourLifeNote: 'Typical costs for your household in your area. Your statement makes them exact next.',
     statementSkip: 'Your spending comes from your statement, so we skip the starting estimate.',
-    start: 'Start from this month →',
     sortedByGuess: (guess: string) => `Closest to your ${guess} guess first.`,
     listLabel: 'Lives to start from',
     fromToday: 'Today’s game',
@@ -163,7 +164,18 @@ export const ladder = {
       return `${people}, ${kidText}, ${home}`;
     },
     car: (price: string) => `Car worth ${price}`,
+    /** Chips that explain a card's price at a glance (JF13). */
+    differentiatorsLabel: 'Why this price',
+    differentiator: {
+      car: (perMonth: string) => `Car ${perMonth}/mo`,
+      noCar: 'No car',
+      childcare: (perMonth: string) => `Childcare ${perMonth}/mo`,
+      pricierArea: (rent: string) => `Pricier area · rent ${rent}`,
+      cheaperArea: (rent: string) => `Cheaper area · rent ${rent}`,
+    },
+    preselectedNote: 'Built from your answers. Tap it, or go on, to start from it.',
     noCar: 'No car',
+    carNoLoan: 'Car (no loan counted)',
     monthlyRange: (low: string, high: string) => `Range ${low} to ${high}`,
     costsToggle: 'Costs & sources',
     costsLabel: (metro: string) => `Monthly costs for the ${metro} life`,
@@ -264,6 +276,19 @@ export const ladder = {
     minPaymentLabel: 'Minimum payment',
     minPaymentPerMonth: (amount: string) => `${amount}/mo minimum`,
     minPaymentHint: 'Leave empty to estimate.',
+    minPaymentEstimated: (amount: string) => `Estimated ${amount}/mo. Type yours if you know it.`,
+    aprPrefilledHint: 'A typical rate for this kind. Type yours.',
+    addKindLabel: (kind: string) => `New debt: ${kind}`,
+    detected: {
+      sticker: 'Found in your statement',
+      text: (amount: string, months: number) =>
+        `${amount}/mo goes to card or loan payments${months > 1 ? ` (average of ${months} months)` : ''}. What is it?`,
+      balanceLabel: 'How much is left to pay?',
+      note: 'We keep this payment as yours and prefill a typical rate. Edit it after.',
+      confirm: 'Add it',
+      dismiss: 'Not a debt',
+      label: 'Debt payments found in your statement',
+    },
     edit: 'Edit',
     editLabel: (kind: string) => `Edit ${kind.toLowerCase()}`,
     remove: 'Remove',

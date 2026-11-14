@@ -1,6 +1,6 @@
 // S12 Loan Lab: compare up to 3 offers (engine compareLoans), the debt-load gauge, and an
 // extra-payment slider on the selected offer (engine loan). Starts from the fixture offers.
-import { compareLoans, loan, payoffOrder } from '@lifeguessr/engine';
+import { compareLoans, loan, payoffOrder, simulate } from '@lifeguessr/engine';
 import { LoanInputSchema, type Debt, type LoanInput, type Money } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { loanOffersSample } from '@/fixtures';
@@ -114,6 +114,13 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
     };
   }, [profile, selected]);
 
+  const leftOver = useMemo(() => {
+    const r = runEngine(() => simulate(profile, 1, { rates: areaRates(profile) }).path[1]?.surplus ?? null);
+    if (r.status !== 'ready' || r.data === null) return null;
+    const before = r.data;
+    return { before, after: selected?.result ? before - selected.result.monthly : null };
+  }, [profile, selected]);
+
   const addOffer = useCallback(
     (input?: LoanInput) => {
       if (offers.length >= MAX_OFFERS) return null;
@@ -167,5 +174,6 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
     setExtraPayment: setExtra,
     payoffPlan,
     parse,
+    leftOver,
   };
 }
