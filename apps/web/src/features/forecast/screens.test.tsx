@@ -183,6 +183,8 @@ describe('TodayScreen (S1)', () => {
     render(<Today />);
     const card = await screen.findByTestId('at-horizon');
     await waitFor(() => expect(within(card).getByTestId('forecast-source')).toBeInTheDocument());
+    // The first request has settled (the source tag shows the rules answer at once, so it says nothing about that).
+    await waitFor(() => expect(within(card).queryByText(t.future.refreshing)).not.toBeInTheDocument());
     expect(within(card).getByRole('heading', { name: 'You in 10 years' })).toBeInTheDocument();
     expect(route.calls).toHaveLength(1);
 
@@ -190,6 +192,9 @@ describe('TodayScreen (S1)', () => {
     expect(within(card).getByRole('heading', { name: 'You in 3 years' })).toBeInTheDocument();
     expect(within(card).getByText('Net worth in 3 years')).toBeInTheDocument();
     expect(within(screen.getByTestId('today-move')).getByText(/^\+\$[\d,]+ in 3 years$/)).toBeInTheDocument();
+    // A new year that changed the request would show "updating" at once (its request is debounced, so the
+    // call count alone cannot see it yet).
+    expect(within(card).queryByText(t.future.refreshing)).not.toBeInTheDocument();
     expect(route.calls).toHaveLength(1);
   });
 
@@ -476,8 +481,10 @@ describe('FutureScreen (S10)', () => {
     render(<Future />);
     const headline = await screen.findByTestId('at-horizon');
     await screen.findAllByRole('article');
-    await waitFor(() => expect(within(headline).getByTestId('forecast-source')).toBeInTheDocument());
+    // The first request has settled (the source tag shows the rules answer at once, so it says nothing about that).
+    await waitFor(() => expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument());
     const asked = route.calls.length;
+    expect(asked).toBe(1);
 
     await user.click(screen.getByRole('radio', { name: '3 years' }));
     expect(screen.getByRole('radio', { name: '3 years' })).toBeChecked();
@@ -489,6 +496,9 @@ describe('FutureScreen (S10)', () => {
       expect(within(move).getByText('Net worth gain in 3 years')).toBeInTheDocument();
     }
     expect(useAppStore.getState().horizonYears).toBe(3);
+    // A new year that changed the request would show "updating" at once (its request is debounced, so the
+    // call count alone cannot see it yet).
+    expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument();
     expect(route.calls).toHaveLength(asked);
   });
 

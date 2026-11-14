@@ -115,9 +115,10 @@ test('picking 3 years re-reads the same forecast: the headline and the moves cha
   const headline = page.getByTestId('at-horizon');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title(10));
   await expect(headline.getByText(t.future.headline(10))).toBeVisible();
-  // Let the answer settle first (the model has up to ~25 s before the rules answer takes over), so the
-  // requests counted below can only be ones the click caused.
-  await expect(headline.getByTestId('forecast-source')).toBeVisible({ timeout: 30_000 });
+  // Let the first request settle (the model has up to ~25 s before the rules answer takes over), so the
+  // requests counted below can only be ones the click caused. The source tag is no signal for that (the
+  // rules answer shows at once); "Updating the forecast…" is on from the first render until the request
+  // settles, so an empty one means the answer is in.
   await expect(page.getByTestId('forecast-refreshing')).toBeEmpty({ timeout: 30_000 });
   const asked = forecastRequests.length;
   expect(asked).toBeGreaterThan(0);
@@ -141,6 +142,9 @@ test('picking 3 years re-reads the same forecast: the headline and the moves cha
   await expect(first.getByText(t.moves.effectLabel(3))).toBeVisible();
   await expect(first).toContainText(`in ${yearsPhrase(3)}`);
   await expect(page.getByText(t.moves.intro(3))).toBeVisible();
+  // A request for the new year would be debounced (it would go out after the assertions above), but the
+  // screen would say it is updating at once: wait that out before counting. Already empty when correct.
+  await expect(page.getByTestId('forecast-refreshing')).toBeEmpty({ timeout: 30_000 });
   expect(forecastRequests).toHaveLength(asked); // reading another year of the same answer is not a request
 });
 
