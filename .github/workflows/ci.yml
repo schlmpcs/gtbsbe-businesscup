@@ -35,3 +35,29 @@ jobs:
       - run: pnpm build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+
+  # The Playwright specs in apps/web/e2e (phone + desktop). `pnpm e2e` builds and starts the app
+  # itself. It runs on a GitHub-hosted runner, in parallel with `check`.
+  e2e:
+    name: e2e (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Both projects (Pixel 7, Desktop Chrome) run on Chromium.
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm e2e
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7

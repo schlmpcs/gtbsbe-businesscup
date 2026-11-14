@@ -32,4 +32,4 @@ About 60 ZIPs across 15 metros. Suggested metros: New York, Los Angeles, Chicago
 
 ## Refresh
 
-`pnpm data:refresh` re-fetches everything. API keys go in `.env` (`HUD_TOKEN`, `CENSUS_KEY`, `BLS_KEY`, plus the LLM key and the Supabase / Vercel KV credentials chosen in Hour 0) and are never committed. Commit a `.env.example` with names only.
+`pnpm data:refresh` re-fetches everything. API keys go in `.env` (`HUD_TOKEN`, `CENSUS_KEY`, `BLS_KEY`, plus the LLM key and the self-hosted store's `STORE_URL`) and are never committed. Commit a `.env.example` with names only.
