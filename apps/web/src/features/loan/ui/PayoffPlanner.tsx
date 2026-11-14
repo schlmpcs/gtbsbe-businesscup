@@ -72,7 +72,13 @@ export function PayoffPlanner({ vm, selectedName, Link = PlainLink }: { vm: Payo
       ) : (
         <>
           <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-2">
-            <ExtraControl extra={vm.extra} extraLimit={vm.extraLimit} setExtra={vm.setExtra} />
+            <ExtraControl
+              extra={vm.extra}
+              extraLimit={vm.extraLimit}
+              setExtra={vm.setExtra}
+              suggestion={vm.suggestion}
+              extraIsSuggested={vm.extraIsSuggested}
+            />
             <MethodToggle method={vm.method} setMethod={vm.setMethod} />
           </div>
           <PayoffCompare vm={vm} />

@@ -46,7 +46,8 @@ describe('/loan (S12)', () => {
     expect(payoff.textContent).toBe(t.extra.payoffMonths(36));
     fireEvent.change(screen.getByRole('slider', { name: t.extra.slider(t.offerName(1)) }), { target: { value: '200' } });
     await waitFor(() => expect(payoff.textContent).not.toBe(t.extra.payoffMonths(36)));
-    expect(screen.getByText((text) => text.endsWith(' sooner'))).toBeTruthy();
+    // In the offer's own result: the payoff planner below has its own "sooner" (it opens at a suggested extra).
+    expect(within(screen.getByTestId('extra-result')).getByText((text) => text.endsWith(' sooner'))).toBeTruthy();
   });
 
   it('selecting another offer moves the gauge and the slider to it', async () => {

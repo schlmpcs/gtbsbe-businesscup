@@ -1,6 +1,8 @@
 import { COST_CATEGORIES, CategoryTotalsSchema, type CostCategory, type StatementClass } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
-import { merchantKey, statementTotals, type ClassifiedStatementItem } from './statement';
+import {
+  isFullStatementMonth, merchantKey, statementAverages, statementTotals, type ClassifiedStatementItem,
+} from './statement';
 
 const line = (
   month: string, label: string, amount: number, cls: StatementClass, oneOffHint = false, day = 5,
@@ -65,6 +67,7 @@ describe('statementTotals', () => {
       line('2026-11', 'ALDI #', 25, 'groceries', false, 2),
     ]);
     expect(out.map((m) => [m.month, m.lastDay])).toEqual([['2026-10', 31], ['2026-11', 9]]);
+    expect(out.map((m) => [m.month, m.firstDay])).toEqual([['2026-10', 31], ['2026-11', 2]]);
     for (const m of out) expect(CategoryTotalsSchema.safeParse(m).success).toBe(true);
   });
 
@@ -123,5 +126,57 @@ describe('merchantKey', () => {
     expect(merchantKey('TXU ENERGY WEB PMT # WEB ID: #')).toBe('TXU ENERGY WEB PMT WEB ID');
     expect(merchantKey('Zelle payment to [name]')).toBe('ZELLE PAYMENT TO');
     expect(merchantKey('Amazon Mktpl*[ref] Amzn.com/bill')).toBe('AMAZON MKTPL AMZN COM BILL');
+  });
+});
+
+describe('isFullStatementMonth', () => {
+  const m = (month: string, firstDay?: number, lastDay?: number) => ({ month, firstDay, lastDay });
+  it('needs the first line within a week of the 1st and the last within a week of the end', () => {
+    expect(isFullStatementMonth(m('2026-10', 1, 31))).toBe(true);
+    expect(isFullStatementMonth(m('2026-10', 8, 24))).toBe(true);   // quiet first and last week: still the month
+    expect(isFullStatementMonth(m('2026-10', 9, 31))).toBe(false);  // the export starts on the 9th
+    expect(isFullStatementMonth(m('2026-11', 1, 12))).toBe(false);  // ...or runs to the 12th
+    expect(isFullStatementMonth(m('2026-02', 1, 21))).toBe(true);   // February ends on the 28th
+    expect(isFullStatementMonth(m('2026-02', 1, 20))).toBe(false);
+  });
+  it('counts months saved before firstDay and lastDay existed as full', () => {
+    expect(isFullStatementMonth(m('2026-10'))).toBe(true);
+  });
+});
+
+describe('statementAverages', () => {
+  const totals = (over: Partial<Record<CostCategory, number>>) => zeros(over) as Record<CostCategory, number>;
+  const month = (mo: string, over: Partial<Record<CostCategory, number>>, extra: object = {}) =>
+    ({ month: mo, totals: totals(over), oneOffs: [], firstDay: 1, lastDay: 28, ...extra });
+
+  it('averages the full months only: a statement that runs to the 12th does not pull the month down', () => {
+    const avg = statementAverages([
+      month('2026-09', { rentUtilities: 1900, groceries: 500 }, { detectedPay: 4800 }),
+      month('2026-10', { rentUtilities: 2000, groceries: 600 }, { detectedPay: 4800, lastDay: 30 }),
+      month('2026-11', { rentUtilities: 1950, groceries: 150 }, { detectedPay: 2400, lastDay: 12 }),
+    ]);
+    expect(avg.months).toEqual(['2026-09', '2026-10']);
+    expect(avg.spending.rentUtilities).toBe(1950);
+    expect(avg.spending.groceries).toBe(550);
+    expect(avg.takeHomePay).toBe(4800);
+  });
+
+  it('falls back to every month when none is full (a two-week export)', () => {
+    const avg = statementAverages([month('2026-11', { groceries: 150 }, { firstDay: 1, lastDay: 14 })]);
+    expect(avg.months).toEqual(['2026-11']);
+    expect(avg.spending.groceries).toBe(150);
+  });
+
+  it('leaves out housing and groceries when the statement shows none, but believes a $0 childcare', () => {
+    const avg = statementAverages([month('2026-10', { eatingOut: 200 }, { lastDay: 31 })]);
+    expect(avg.spending).not.toHaveProperty('rentUtilities');
+    expect(avg.spending).not.toHaveProperty('groceries');
+    expect(avg.spending.childcare).toBe(0);
+    expect(avg.spending.eatingOut).toBe(200);
+    expect(avg.takeHomePay).toBeNull();
+  });
+
+  it('is empty without months', () => {
+    expect(statementAverages([])).toEqual({ spending: {}, takeHomePay: null, months: [] });
   });
 });

@@ -26,7 +26,7 @@ import { type ForecastRates } from '../simulate';
 import { requiredPayment, validateDebts } from './debts';
 import { simulatePayoff } from './payoffSimulation';
 export { validateDebts } from './debts';
-export { payoffPlan, comparePayoff, extraToFinishBy } from './payoff';
+export { payoffPlan, comparePayoff, extraToFinishBy, suggestedPayoffExtra, type PayoffExtraSuggestion } from './payoff';
 import {
   PAID_OFF_EPSILON,
   amortize,

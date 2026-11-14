@@ -48,7 +48,12 @@ export const OverpayingToolStateSchema = z.strictObject({
 });
 export const PayoffToolStateSchema = z.strictObject({
   method: z.enum(['avalanche', 'snowball']).default('avalanche'),
-  extra: z.number().finite().nonnegative().default(0),
+  /**
+   * The extra per month the person set themselves. Absent means they never moved it: the planner then starts at the
+   * engine's suggestion for today's profile (suggestedPayoffExtra), which follows the profile as it changes. It has no
+   * default of 0 on purpose: a saved 0 is a choice ("show me minimums"), and only a real choice should beat the suggestion.
+   */
+  extra: z.number().finite().nonnegative().optional(),
   /**
    * The month the person wants to be debt-free by, as 'YYYY-MM'. A calendar month, not a number of
    * months from the day it was saved: a count from the save date moves every time it is read back later.

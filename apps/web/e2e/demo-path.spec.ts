@@ -155,7 +155,7 @@ test('demo path: first visit → Play → 5 duels → own guess → statement �
   await expectNoSideScroll(page);
 
   // ----- 5. Fine-tune by hand (S7, the same step): the month and the 10-year number follow -----
-  await page.getByRole('link', { name: ladder.shell.skip.byHand }).click();
+  await page.getByRole('link', { name: ladder.upload.fork.byHandLink }).click();
   await expect(page).toHaveURL(/\/me\/sliders$/);
   await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('aria-current', 'step');
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });

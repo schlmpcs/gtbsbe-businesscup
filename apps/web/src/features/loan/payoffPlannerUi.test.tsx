@@ -112,6 +112,25 @@ describe('the comparison', () => {
     expect(screen.getByTestId('payoff-savings')).toHaveTextContent(`${t.planner.savings.interestSame} · ${t.planner.savings.monthsSame}`);
   });
 
+  it('says why the methods match, in one line, instead of leaving identical columns unexplained', async () => {
+    const same = { monthsToDebtFree: 46, totalInterest: 6_200, interestSavedVsMinimum: 0, monthsSavedVsMinimum: 0 };
+    await open({ engineOptions: { avalanche: same, snowball: same } });
+    expect(screen.getByTestId('payoff-tie')).toHaveTextContent(t.planner.tie.noExtra);
+    // All three match: the reason takes the place of "about the same interest · the same debt-free month".
+    expect(screen.queryByTestId('payoff-savings')).toBeNull();
+  });
+
+  it('keeps the saving against minimums when only avalanche and snowball match, with the reason under it', async () => {
+    await open({ engineOptions: { snowball: { monthsToDebtFree: 40, totalInterest: 5_000 } } });
+    expect(screen.getByTestId('payoff-savings')).toHaveTextContent(t.planner.savings.interestSaves(formatMoney(1_200)));
+    expect(screen.getByTestId('payoff-tie')).toHaveTextContent(t.planner.tie.sameOrder);
+  });
+
+  it('has no reason line when the methods differ', async () => {
+    await open();
+    expect(screen.queryByTestId('payoff-tie')).toBeNull();
+  });
+
   it('shows an estimate tag and a note when a minimum payment was defaulted, and neither when none was', async () => {
     const { section } = await open();
     expect(within(section).getByText(t.planner.estimate)).toBeInTheDocument();
@@ -145,6 +164,29 @@ describe('the extra payment', () => {
     await user.type(box, '300');
     expect(comparePayoff.mock.lastCall![1]).toBe(300);
     expect(screen.getByTestId('payoff-planner')).not.toHaveTextContent(BAD);
+  });
+
+  it('says where a suggested starting amount came from, and drops the line once the person sets their own', async () => {
+    await open({ engineOptions: { suggest: { extra: 450, surplus: 939.08, share: 0.5 } } });
+    expect(slider()).toHaveValue('450');
+    expect(screen.getByTestId('payoff-extra-suggested')).toHaveTextContent(t.planner.extra.suggested.share('50%', '$939'));
+    fireEvent.change(slider(), { target: { value: '200' } });
+    expect(screen.queryByTestId('payoff-extra-suggested')).toBeNull();
+  });
+
+  it('says why it starts at $0 when the month has nothing, or too little, left', async () => {
+    await open({ engineOptions: { suggest: { extra: 0, surplus: -120, share: 0.5 } } });
+    expect(screen.getByTestId('payoff-extra-suggested')).toHaveTextContent(t.planner.extra.suggested.nothingLeft);
+    resetClientState();
+    render(<Screen options={plannerOptions({ engineOptions: { suggest: { extra: 0, surplus: 40, share: 0.5 } } }).options} />);
+    const other = (await screen.findAllByTestId('payoff-extra-suggested')).at(-1)!;
+    expect(other).toHaveTextContent(t.planner.extra.suggested.littleLeft('$40'));
+  });
+
+  it('has no suggestion line for a saved amount', async () => {
+    await open({ stored: { method: 'avalanche', extra: 100 }, engineOptions: { suggest: { extra: 450, surplus: 939.08, share: 0.5 } } });
+    expect(slider()).toHaveValue('100');
+    expect(screen.queryByTestId('payoff-extra-suggested')).toBeNull();
   });
 
   it('leaves the selected offer\'s own extra payment alone', async () => {
@@ -318,7 +360,7 @@ describe('the states', () => {
   });
 
   it('streamer mode: the section says it is hidden and shows no number', async () => {
-    const { section } = await open({ streamer: true });
+    const { section } = await open({ streamer: true, engineOptions: { suggest: { extra: 450, surplus: 939.08, share: 0.5 } } });
     expect(within(section).getByText(t.planner.hidden)).toBeInTheDocument();
     expect(section.textContent).not.toMatch(/\$\d/);
     expect(within(section).queryByRole('table')).toBeNull();

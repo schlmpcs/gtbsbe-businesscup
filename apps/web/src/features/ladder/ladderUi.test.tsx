@@ -39,6 +39,11 @@ function uploadVM(over: Partial<StatementUploadVM> = {}): StatementUploadVM {
     error: null,
     lastRead: null,
     pending: [],
+    questions: [],
+    answerCategory: vi.fn(),
+    answerAmount: vi.fn(),
+    skipQuestion: vi.fn(),
+    amountBounds: { min: 0, max: 100_000, step: 1 },
     history: [],
     hasDriftHistory: false,
     whatWeKeep: { months: [], categories: [], takeHomePay: false, savedProfileToServer: false },
@@ -158,9 +163,14 @@ describe('StatementUpload (S9)', () => {
     expect(screen.getByRole('button', { name: ladder.upload.trySample })).toBeDisabled();
   });
 
-  it('footer: set it by hand on the left, the one orange CTA to pay & savings on the right', () => {
-    render(<StatementUpload vm={uploadVM()} progress={progress} />);
-    expect(screen.getByRole('link', { name: ladder.shell.skip.byHand })).toHaveAttribute('href', '/me/sliders');
+  it('opens with the fork: a bank CSV (most accurate), or no statement → by hand; the footer has only the CTA', () => {
+    render(<StatementUpload vm={uploadVM({ readFile: vi.fn() })} progress={progress} />);
+    const csv = screen.getByRole('region', { name: ladder.upload.fork.statementTitle });
+    expect(csv).toHaveTextContent(ladder.upload.fork.statementBadge);
+    expect(within(csv).getByLabelText(ladder.upload.pickerLabel)).toBeEnabled();
+    const byHand = screen.getByRole('region', { name: ladder.upload.fork.byHandTitle });
+    expect(within(byHand).getByRole('link', { name: ladder.upload.fork.byHandLink })).toHaveAttribute('href', '/me/sliders');
+    expect(screen.getAllByRole('link', { name: /by hand/i })).toHaveLength(1); // no second way out in the footer
     expect(screen.getByRole('link', { name: ladder.shell.cta.S9 })).toHaveAttribute('href', '/x/S8');
     expect(screen.getByRole('link', { name: ladder.shell.back })).toHaveAttribute('href', '/x/S6');
     // The spending step is the third pill.
@@ -187,8 +197,8 @@ describe('StatementUpload (S9)', () => {
       status: 'review',
       lastRead: { transactions: 1234, skippedPending: 2, skippedOther: 1, from: '2026-09-01', to: '2026-10-31', categorizedBy: 'rules' },
       pending: [
-        { month: '2026-09', totals: zeros({ groceries: 600, subscriptions: 30 }), total: 630, oneOffs: [{ label: 'SOFA', amount: 800 }], detectedPay: 5400 },
-        { month: '2026-10', totals: zeros({ groceries: 700 }), total: 700, oneOffs: [], detectedPay: null },
+        { month: '2026-09', totals: zeros({ groceries: 600, subscriptions: 30 }), total: 630, oneOffs: [{ label: 'SOFA', amount: 800 }], detectedPay: 5400, averaged: true },
+        { month: '2026-10', totals: zeros({ groceries: 700 }), total: 700, oneOffs: [], detectedPay: null, averaged: false },
       ],
       whatWeKeep: { months: ['2026-09', '2026-10'], categories: [...COST_CATEGORIES], takeHomePay: true, savedProfileToServer: true },
     });
@@ -197,6 +207,8 @@ describe('StatementUpload (S9)', () => {
     expect(within(sep).getByRole('list', { name: ladder.upload.monthLabel('2026-09') })).toHaveTextContent(common.categories.groceries);
     expect(within(sep).getByText(ladder.upload.detectedPay('$5,400'))).toBeInTheDocument();
     expect(within(sep).getByText('SOFA')).toBeInTheDocument();
+    expect(within(sep).queryByText(ladder.upload.partialMonth)).toBeNull();
+    expect(within(screen.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).getByText(ladder.upload.partialMonth)).toBeInTheDocument();
     const read = screen.getByTestId('statement-read');
     expect(read).toHaveTextContent('Read 1,234 transactions from Sep 1, 2026 to Oct 31, 2026.');
     expect(read).toHaveTextContent('2 pending lines (they count once they post) and 1 line that isn’t a transaction left out.');
@@ -210,6 +222,48 @@ describe('StatementUpload (S9)', () => {
     expect(vm.apply).toHaveBeenCalledOnce();
     await userEvent.click(screen.getByRole('button', { name: ladder.upload.discard }));
     expect(vm.discard).toHaveBeenCalledOnce();
+  });
+
+  it('review: asks the follow-ups, in the model’s words or the template’s, each answerable or skippable', async () => {
+    const vm = uploadVM({
+      status: 'review',
+      pending: [{ month: '2026-10', totals: zeros({ other: 90 }), total: 90, oneOffs: [], detectedPay: null, averaged: true }],
+      questions: [
+        { id: 'missing:groceries', kind: 'missing', question: null, merchant: null, category: 'groceries', monthly: 0, options: [], answer: null },
+        { id: 'cash:cash', kind: 'cash', question: 'What do you usually spend your cash on?', merchant: null, category: null, monthly: 25, options: ['groceries', 'eatingOut', 'other'], answer: { kind: 'skipped' } },
+        { id: 'merchant:TARGET', kind: 'merchant', question: null, merchant: 'TARGET DALLAS TX', category: null, monthly: 60.28, options: ['groceries', 'eatingOut', 'other'], answer: { kind: 'category', category: 'groceries' } },
+      ],
+    });
+    render(<StatementUpload vm={vm} progress={progress} />);
+    // The fork steps aside while a file is reviewed.
+    expect(screen.queryByRole('region', { name: ladder.upload.fork.byHandTitle })).toBeNull();
+    const questions = screen.getByRole('region', { name: ladder.upload.questions.title });
+    const groceries = within(questions).getByRole('group', { name: ladder.upload.questions.template.missing(common.categories.groceries) });
+    const cash = within(questions).getByRole('group', { name: 'What do you usually spend your cash on?' });
+    const target = within(questions).getByRole('group', { name: ladder.upload.questions.template.merchant('TARGET DALLAS TX') });
+
+    // Amounts come from the view-model, formatted; a missing category has none.
+    expect(cash).toHaveTextContent(ladder.upload.questions.monthly('$25'));
+    expect(target).toHaveTextContent(ladder.upload.questions.monthly('$60'));
+    expect(groceries).not.toHaveTextContent(ladder.upload.questions.monthly('$0'));
+
+    // The answer so far is shown, and can be changed.
+    expect(within(target).getByRole('radio', { name: common.categories.groceries })).toBeChecked();
+    expect(target).toHaveTextContent(ladder.upload.questions.answeredCategory(common.categories.groceries));
+    await userEvent.click(within(target).getByRole('radio', { name: common.categories.eatingOut }));
+    expect(vm.answerCategory).toHaveBeenCalledWith('merchant:TARGET', 'eatingOut');
+    expect(cash).toHaveTextContent(ladder.upload.questions.skipped);
+    expect(within(cash).queryByRole('button', { name: ladder.upload.questions.skip })).toBeNull();
+
+    // A missing category takes a typed monthly amount, added only on "Add it".
+    const add = within(groceries).getByRole('button', { name: ladder.upload.questions.amountSave });
+    expect(add).toBeDisabled();
+    await userEvent.type(within(groceries).getByLabelText(ladder.upload.questions.amountLabel), '450');
+    expect(vm.answerAmount).not.toHaveBeenCalled();
+    await userEvent.click(add);
+    expect(vm.answerAmount).toHaveBeenCalledWith('missing:groceries', 450);
+    await userEvent.click(within(groceries).getByRole('button', { name: ladder.upload.questions.skip }));
+    expect(vm.skipQuestion).toHaveBeenCalledWith('missing:groceries');
   });
 
   it('bad totals: an alert with a way out', async () => {

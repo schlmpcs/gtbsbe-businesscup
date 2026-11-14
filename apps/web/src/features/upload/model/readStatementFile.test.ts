@@ -39,6 +39,27 @@ describe('readStatementFile', () => {
     });
   });
 
+  it('keeps how each sent line was sorted, and the follow-ups, only when the server describes every line', async () => {
+    const csv = 'Date,Description,Amount\n2026-10-01,TARGET 1234 DALLAS,-60\n2026-10-02,ACME PAYROLL,2400';
+    const followUp = { id: 'merchant:TARGET DALLAS', kind: 'merchant' as const, key: 'TARGET DALLAS', label: 'TARGET # DALLAS', monthly: 60 };
+    const categorize = vi.fn(async (items: readonly StatementItem[]) => ({
+      ...(await fakeCategorize(items)),
+      lines: [{ cls: 'other' as const, oneOffHint: false }, { cls: 'pay' as const, oneOffHint: false }],
+      followUps: [followUp],
+    }));
+    const read = await readStatementFile(new File([csv], 'a.csv', { type: 'text/csv' }), { categorize });
+    expect(read.classified).toEqual([
+      { label: 'TARGET # DALLAS', amount: 60, month: '2026-10', day: 1, cls: 'other', oneOffHint: false },
+      { label: 'ACME PAYROLL', amount: -2400, month: '2026-10', day: 2, cls: 'pay', oneOffHint: false },
+    ]);
+    expect(read.followUps).toEqual([followUp]);
+
+    // A reply whose line classes don't line up with what was sent: nothing can be re-sorted, so no questions.
+    categorize.mockImplementationOnce(async (items) => ({ ...(await fakeCategorize(items)), lines: [], followUps: [followUp] }));
+    const odd = await readStatementFile(new File([csv], 'a.csv', { type: 'text/csv' }), { categorize });
+    expect(odd).toMatchObject({ classified: null, followUps: [] });
+  });
+
   it('counts skipped pending lines', async () => {
     const file = new File([readStatementFixtureCsv('credit-card')], 'card.csv', { type: '' });
     const { summary } = await readStatementFile(file, { categorize: fakeCategorize });
