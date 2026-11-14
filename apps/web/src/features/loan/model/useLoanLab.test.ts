@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo, loanOffersSample } from '@/fixtures';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
 import { resetClientState, waitForReady } from '@/test/clientState';
-import { MAX_OFFERS, useLoanLab } from './useLoanLab';
+import { DEBT_LOAD_GAUGE_MAX, MAX_OFFERS, useLoanLab } from './useLoanLab';
 
 beforeEach(resetClientState);
 
@@ -28,6 +28,8 @@ describe('useLoanLab (S12)', () => {
     expect(g.after!.value).toBeCloseTo(expected[0]!.debtLoadAfter, 6);
     expect(g.after!.zone).toBe('yellow'); // (605.92 + 863.28) / 5200 ≈ 0.28
     expect(g.isEstimate).toBe(true);
+    expect(g.max).toBe(DEBT_LOAD_GAUGE_MAX);
+    expect(g.max).toBeGreaterThan(g.before.thresholds.red);
   });
 
   it('extra-payment slider shortens the payoff of the selected offer', async () => {
