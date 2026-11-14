@@ -114,6 +114,7 @@ describe('useQuickSliders (S7)', () => {
     expect(result.current.month.spending).toBeCloseTo(before - 200, 6);
     expect(result.current.in10y.mid).toBeGreaterThan(in10yBefore);
     expect(result.current.monthlyCost).toBeCloseTo(result.current.month.spending + result.current.month.debtPayments, 6);
+    expect(result.current.guessGap).toBe(result.current.selfGuess === null ? null : result.current.monthlyCost - result.current.selfGuess);
 
     act(() => result.current.setSavingsShare(0.123));
     expect(result.current.savings).toMatchObject({ value: 0.12, isEstimate: false });

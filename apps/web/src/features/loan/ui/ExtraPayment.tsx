@@ -1,7 +1,7 @@
 'use client';
 
 import { loan as t } from '@/copy';
-import { Card, formatMoney, Money, Slider, Stat } from '@/ui-kit';
+import { Card, cx, formatMoney, Money, Slider } from '@/ui-kit';
 import type { LoanLabVM } from '../model/types';
 
 /** Extra-payment slider on the selected offer: payoff month and total interest update as it moves. */
@@ -9,7 +9,8 @@ export function ExtraPayment({
   extra,
   setExtraPayment,
   selectedName,
-}: Pick<LoanLabVM, 'extra' | 'setExtraPayment'> & { selectedName: string | null }) {
+  selectedMonthly,
+}: Pick<LoanLabVM, 'extra' | 'setExtraPayment'> & { selectedName: string | null; selectedMonthly: number | null }) {
   if (!extra || !selectedName) {
     return (
       <Card title={t.extra.title} tone="muted">
@@ -19,17 +20,16 @@ export function ExtraPayment({
   }
 
   const changed = extra.value > 0;
-  const payoffHint =
-    extra.payoffMonth === null
-      ? changed
-        ? t.extra.neverEvenWithExtra
-        : undefined
-      : extra.monthsSaved !== null && extra.monthsSaved > 0
-        ? t.extra.monthsSaved(extra.monthsSaved)
-        : t.extra.noChange;
+  const saved = changed && extra.interestSaved > 0;
+  const sooner = extra.payoffMonth !== null && extra.monthsSaved !== null && extra.monthsSaved > 0;
 
   return (
-    <Card title={t.extra.title}>
+    <Card
+      title={t.extra.title}
+      headingLevel={2}
+      action={selectedMonthly !== null ? <span className="text-sm text-text-muted">{t.extra.onTopOf(formatMoney(selectedMonthly))}</span> : undefined}
+      className="flex flex-col gap-lg"
+    >
       <Slider
         label={t.extra.slider(selectedName)}
         value={extra.value}
@@ -39,23 +39,37 @@ export function ExtraPayment({
         onValueChange={setExtraPayment}
         formatValue={(v) => `${formatMoney(v)}${t.extra.perMonth}`}
       />
-      <div aria-live="polite" className="mt-lg grid grid-cols-1 gap-lg sm:grid-cols-2" data-testid="extra-result">
-        <Stat
-          label={t.extra.payoff}
-          value={
-            <span data-testid="extra-payoff">
-              {extra.payoffMonth === null ? t.extra.never : t.extra.payoffMonths(extra.payoffMonth)}
-            </span>
-          }
-          tone={extra.payoffMonth === null ? 'negative' : changed ? 'positive' : 'default'}
-          hint={payoffHint}
-        />
-        <Stat
-          label={t.extra.interest}
-          value={<Money value={extra.totalInterest} />}
-          tone={changed && extra.interestSaved > 0 ? 'positive' : 'default'}
-          hint={changed && extra.interestSaved > 0 ? t.extra.interestSaved(formatMoney(extra.interestSaved)) : undefined}
-        />
+      <div aria-live="polite" data-testid="extra-result" className="flex flex-col gap-md">
+        {(saved || sooner) && (
+          <p className="flex flex-wrap gap-x-sm text-lg font-semibold text-positive">
+            {saved && <span>{t.extra.interestSaved(formatMoney(extra.interestSaved))}</span>}
+            {saved && sooner && <span aria-hidden="true">·</span>}
+            {sooner && <span>{t.extra.monthsSaved(extra.monthsSaved!)}</span>}
+          </p>
+        )}
+        {extra.payoffMonth === null && changed && <p className="text-sm font-semibold text-negative">{t.extra.neverEvenWithExtra}</p>}
+        {!changed && extra.payoffMonth !== null && <p className="text-sm text-text-muted">{t.extra.noChange}</p>}
+        <dl className="grid grid-cols-2 gap-lg">
+          <div className="flex flex-col gap-xs">
+            <dt className="text-sm text-text-muted">{t.extra.payoff}</dt>
+            <dd
+              className={cx(
+                'font-display text-2xl font-extrabold tabular-nums',
+                extra.payoffMonth === null ? 'text-negative' : changed ? 'text-positive' : 'text-text',
+              )}
+            >
+              <span data-testid="extra-payoff">
+                {extra.payoffMonth === null ? t.extra.never : t.extra.payoffMonths(extra.payoffMonth)}
+              </span>
+            </dd>
+          </div>
+          <div className="flex flex-col gap-xs">
+            <dt className="text-sm text-text-muted">{t.extra.interest}</dt>
+            <dd className={cx('font-display text-2xl font-extrabold tabular-nums', saved ? 'text-positive' : 'text-text')}>
+              <Money value={extra.totalInterest} />
+            </dd>
+          </div>
+        </dl>
       </div>
     </Card>
   );

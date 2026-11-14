@@ -10,7 +10,7 @@ import type { VMError } from '@/lib/model/types';
 import { useAppReady, useGameStore } from '@/state';
 import { createGameClient, type GameClient } from './client';
 import { GUESS_DEFAULT, GUESS_MAX, GUESS_MIN, GUESS_STEP, STREAMER_COUNTDOWN_SECONDS } from './constants';
-import { buildReveal, buildSummary, clueCostOf, clueFacts, clueMultiplier } from './derive';
+import { buildDay, buildReveal, buildSummary, clueCostOf, clueFacts, clueMultiplier } from './derive';
 import { shareOrCopy, type ShareOutcome } from './share';
 import type { ClueVM, ExploreCardVM, PlayVM, ShareStatus, StreamerVM } from './types';
 
@@ -223,6 +223,8 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     [phase, date, cards, reveals, guesses, client.source],
   );
 
+  const day = useMemo(() => buildDay(cards, reveals, index), [cards, reveals, index]);
+
   // ----- share (summary) -----
 
   const shareImpl = opts.share ?? shareOrCopy;
@@ -264,6 +266,7 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     date,
     phase,
     progress: { index, total, guessed: guessedCount },
+    day,
     card: status === 'ready' && phase !== 'summary' ? card : null,
     reveal: status === 'ready' ? reveal : null,
     summary: status === 'ready' ? summary : null,

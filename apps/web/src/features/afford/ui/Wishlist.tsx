@@ -1,7 +1,7 @@
 'use client';
 
 import { afford as t, pro } from '@/copy';
-import { Button, Card, LockNotice, Money, Row, Stack } from '@/ui-kit';
+import { Button, Card, LockNotice, Money, Row } from '@/ui-kit';
 import { useState } from 'react';
 import type { AffordVM, Purchase } from '../model/types';
 
@@ -36,36 +36,36 @@ export function Wishlist({
 }: WishlistProps) {
   const [justAdded, setJustAdded] = useState(false);
   return (
-    <Card
-      title={t.wishlist.title}
-      action={
-        wishlistLocked ? undefined : (
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={!canAdd}
-            onClick={() => setJustAdded(addToWishlist() !== null)}
-          >
+    <section aria-label={t.wishlist.title} className="flex flex-col gap-lg">
+      <div className="flex flex-wrap items-center gap-lg">
+        {wishlistLocked ? null : (
+          <Button size="lg" variant="secondary" disabled={!canAdd} onClick={() => setJustAdded(addToWishlist() !== null)}>
             {t.wishlist.add}
           </Button>
-        )
-      }
-    >
-      <Stack gap="sm">
-        {wishlistLocked ? (
-          <LockNotice title={pro.lock.title} body={pro.lock.wishlistBody} ctaLabel={pro.lock.cta} href={proHref} />
-        ) : null}
-        <p aria-live="polite" className="text-xs text-text-muted">
+        )}
+        <p className="text-lg text-text-muted">{t.wishlist.count(wishlist.length)}</p>
+        <p aria-live="polite" className="text-sm text-positive">
           {justAdded ? t.wishlist.added : ''}
         </p>
-        {wishlist.length === 0 ? (
-          <p className="text-sm text-text-muted">{t.wishlist.empty}</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-border">
-            {wishlist.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center justify-between gap-sm py-sm">
+      </div>
+      {wishlistLocked ? (
+        <LockNotice
+          title={pro.lock.title}
+          body={pro.lock.wishlistBody}
+          ctaLabel={pro.lock.cta}
+          href={proHref}
+          className="max-w-(--container-xl) shadow-md"
+        />
+      ) : null}
+      {wishlist.length === 0 ? (
+        <p className="text-sm text-text-muted">{t.wishlist.empty}</p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3">
+          {wishlist.map((item) => (
+            <li key={item.id}>
+              <Card className="flex h-full flex-col justify-between gap-md p-lg">
                 <div className="flex min-w-0 flex-col">
-                  <span className="truncate font-medium">{item.purchase.label}</span>
+                  <span className="truncate text-lg font-bold">{item.purchase.label}</span>
                   <span className="text-sm text-text-muted">
                     <Money value={item.purchase.amount} /> {howOften(item.purchase)} · {payWithText(item.purchase)}
                   </span>
@@ -91,11 +91,11 @@ export function Wishlist({
                     {t.wishlist.remove}
                   </Button>
                 </Row>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Stack>
-    </Card>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
