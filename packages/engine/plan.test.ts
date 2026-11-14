@@ -1,14 +1,13 @@
 /// <reference types="node" />
-// plan() (MP3, #163): the issue's tests. Expected numbers are worked out in the comments; the golden
-// case compares against packages/data/fixtures/plan.demo.json, which `pnpm fixtures:plan` rewrites
-// (it runs this file with PLAN_FIXTURE_WRITE=1).
+// plan() (MP3, #163): the issue's tests. Expected numbers are worked out in the comments. The golden
+// case is a vitest snapshot (__snapshots__/plan.test.ts.snap); `pnpm fixtures:plan` runs it with
+// PLAN_FIXTURE_WRITE=1 to write the same result as packages/data/fixtures/plan.demo.json.
 import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Account, CostCategory, PlanAssumptions, PlanEvent, PlanResult, Profile, Scenario } from '@lifeguessr/types';
 import { COST_CATEGORIES, PlanResultSchema } from '@lifeguessr/types';
 import { areaByZip, profileDemo } from '@lifeguessr/data/fixtures';
 import { accountsDemo, scenarioDemo } from '@lifeguessr/data/fixtures/plan';
-import planDemoJson from '@lifeguessr/data/fixtures/plan.demo.json';
 import { profileToAccounts } from './accounts';
 import { forecast } from './forecast';
 import { plan } from './plan';
@@ -125,17 +124,18 @@ describe('plan', () => {
     expect(r.kpis.netWorthAtRetirement).toBe(year(2063).netWorth);
   });
 
-  it('golden snapshot: scenario.demo.json (plan.demo.json)', () => {
+  it('golden snapshot: scenario.demo.json', () => {
     // Demo profile at asOf 2026-11 (the accounts' latest month), accountsDemo, ZIP 75206.
     const r = plan({ ...structuredClone(profileDemo), asOf: '2026-11' }, accountsDemo, scenarioDemo, areaByZip('75206'));
     expect(PlanResultSchema.safeParse(r).success).toBe(true);
-    const golden = { $comment: GOLDEN_COMMENT, ...(cents(r) as PlanResult) };
+    const golden = cents(r) as PlanResult;
     if (process.env.PLAN_FIXTURE_WRITE === '1') {
-      // The imported JSON is the file as it was before this write, so there is nothing to compare.
-      writeFileSync(new URL('../data/fixtures/plan.demo.json', import.meta.url), `${JSON.stringify(golden, null, 2)}\n`);
+      // `pnpm fixtures:plan`: the same result, written as packages/data/fixtures/plan.demo.json.
+      writeFileSync(new URL('../data/fixtures/plan.demo.json', import.meta.url),
+        `${JSON.stringify({ $comment: GOLDEN_COMMENT, ...golden }, null, 2)}\n`);
       return;
     }
-    expect(golden).toEqual(planDemoJson);
+    expect(golden).toMatchSnapshot();
   });
 
   it.skipIf(process.env.CI_SLOW === '1')('performance: a 25-year-old to 90 in < 10 ms', () => {

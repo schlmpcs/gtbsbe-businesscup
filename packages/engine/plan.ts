@@ -18,7 +18,8 @@
 // 4. One PlanYear per calendar year: balances at the year's last month, flows summed over its months
 //    (the first year starts at asOf). Account rows: an asset group's values are split across its
 //    accounts by today's balance shares (equal shares when the group is 0 today); a group with a
-//    balance but no account (the home of Buy a home) gets a row `group:<group>`. A debt row (id =
+//    balance but no account gets one row per event that added to it, by share of the value added
+//    (`<eventId>:home` for the home of Buy a home), else `group:<group>`. A debt row (id =
 //    account id, or the event's debt id) has growth = interest charged, deposits = the amount borrowed
 //    when it opens, withdrawals = payments; end = start + growth + deposits − withdrawals.
 //    cashFlow: income takeHomePay + windfalls (one-off income), expenses spending + debtPayments +
@@ -101,6 +102,7 @@ export function plan(
   let lifeEvents: LifeEvent[] = [...(base.events ?? [])];
   const newDebts: { month: number; debt: Debt }[] = [];
   const newAssets: NonNullable<SimulateOptions['newAssets']>[number][] = [];
+  const eventAssets: { eventId: string; group: string; value: Money }[] = [];
   for (const e of ordered) {
     const ctx: PlanEventContext = { profile: { ...base, events: lifeEvents }, assumptions: a, asOf, ...(area && { area }) };
     const x = expandEvent(e, ctx);
@@ -108,6 +110,7 @@ export function plan(
     const start = eventStartMonth(asOf, planEventMonth(e.year, asOf));
     for (const debt of x.debts) newDebts.push({ month: start, debt });
     newAssets.push(...x.assets);
+    for (const asset of x.assets) eventAssets.push({ eventId: e.id, group: asset.group, value: asset.value });
   }
 
   // 3. The monthly simulation.
@@ -145,6 +148,20 @@ export function plan(
     if (own.length === 0) continue;
     const total = own.reduce((s, x) => s + x.balance.value, 0);
     groupAccounts.set(g, own.map((x) => ({ id: x.id, share: total > 0 ? x.balance.value / total : 1 / own.length })));
+  }
+  // A group with no account: one row per event that added to it (`<eventId>:home` for real estate,
+  // `<eventId>:<group>` otherwise), by share of the value added; else `group:<group>`.
+  const ownRows = new Map<AssetGroup, { id: string; share: number }[]>();
+  for (const g of ASSET_GROUPS) {
+    if (groupAccounts.has(g)) continue;
+    const added = eventAssets.filter((x) => x.group === g);
+    const total = added.reduce((s, x) => s + x.value, 0);
+    const byEvent = new Map<string, number>();
+    for (const x of added) byEvent.set(x.eventId, (byEvent.get(x.eventId) ?? 0) + x.value);
+    const part = g === 'realEstate' ? 'home' : g;
+    ownRows.set(g, byEvent.size > 0
+      ? [...byEvent].map(([id, v]) => ({ id: `${id}:${part}`, share: total > 0 ? v / total : 1 / byEvent.size }))
+      : [{ id: `group:${g}`, share: 1 }]);
   }
   const groupUsed = new Set<AssetGroup>();
   for (const m of path) {
@@ -223,7 +240,8 @@ export function plan(
       }
     }
     for (const g of ASSET_GROUPS) {
-      if (!groupAccounts.has(g) && groupUsed.has(g)) rows.push(groupRow(`group:${g}`, g, 1));
+      if (!groupUsed.has(g)) continue;
+      for (const r of ownRows.get(g) ?? []) rows.push(groupRow(r.id, g, r.share));
     }
     for (const id of debtIds) if (!liabilityIds.has(id)) rows.push(debtRow(id));
 
