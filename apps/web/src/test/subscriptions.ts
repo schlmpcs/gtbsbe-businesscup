@@ -7,6 +7,7 @@ import type { KnownService, ServiceCategory, StatementCategorizeResponse, Statem
 import { useCallback, useMemo, useState } from 'react';
 import type { CategorizeOptions } from '@/lib/api/statement';
 import { ruleClass } from '@/server/statement/rules';
+import { APP_STORE_KEY, initialAppData, useAppStore } from '@/state';
 import type { SubscriptionsStore, SubscriptionsToolState } from '@/features/subscriptions/model/state';
 
 type PlanSpec = [id: string, price: number, cadence?: 'monthly' | 'quarterly' | 'yearly'];
@@ -105,4 +106,16 @@ export function useMemoryStore(initial?: SubscriptionsToolState): SubscriptionsS
   }, [saves]);
   const clear = useCallback(() => setState(undefined), []);
   return useMemo(() => ({ state, save, clear, saves }), [state, save, clear, saves]);
+}
+
+/**
+ * A page load, on the real store: the in-memory store forgets everything, then reads what the browser kept
+ * (jsdom's localStorage). Wiping the memory persists the defaults too, so what the browser held is put back
+ * first, as it would be on a real load.
+ */
+export async function reloadAppStore(): Promise<void> {
+  const kept = localStorage.getItem(APP_STORE_KEY);
+  useAppStore.setState(initialAppData());
+  if (kept !== null) localStorage.setItem(APP_STORE_KEY, kept);
+  await useAppStore.persist.rehydrate();
 }

@@ -14,8 +14,6 @@ export const subscriptions = {
   intro:
     'Guess what you spend on subscriptions, tick what you pay for, then add a bank statement to find the ones you forgot. It works without an account or a profile.',
   loading: 'Loading…',
-  /** Shown while the tool's storage and catalogue are not connected to this build. */
-  notConnected: 'This tool is not switched on in this build yet.',
   /** `/tools/subscriptions?stream=1`: streamer mode never shows anyone's own money. */
   streamer: {
     title: 'Hidden in streamer mode',

@@ -19,8 +19,7 @@ function Notice({ title, body }: { title: string; body: string }) {
 }
 
 function Connected() {
-  const deps = useSubscriptionsDeps();
-  return deps ? <SubscriptionsTool deps={deps} /> : <Notice title={t.screens.S21} body={t.notConnected} />;
+  return <SubscriptionsTool deps={useSubscriptionsDeps()} />;
 }
 
 export default function SubscriptionsPage({ searchParams }: { searchParams: Promise<{ stream?: string | string[] }> }) {
