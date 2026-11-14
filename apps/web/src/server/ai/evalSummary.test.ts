@@ -1,6 +1,6 @@
 import { hasEstimates } from '@lifeguessr/engine';
 import { describe, expect, it } from 'vitest';
-import { profileDemo } from '@/fixtures';
+import { cloneProfileDemo, profileDemo } from '@/fixtures';
 import {
   evalRunCount, evalSkipReason, measuredProfile, summarizeRuns, type EvalRun,
 } from './evalSummary';
@@ -104,6 +104,36 @@ describe('measuredProfile', () => {
     expect(JSON.parse(JSON.stringify(measured).replaceAll('"isEstimate":false', '"isEstimate":true'))).toEqual(
       JSON.parse(JSON.stringify(profileDemo).replaceAll('"isEstimate":false', '"isEstimate":true')),
     );
+  });
+
+  it('clears every estimate flag wherever it sits, so a field added to Profile later is not missed', () => {
+    const flagged = (node: unknown): boolean =>
+      Array.isArray(node)
+        ? node.some(flagged)
+        : node !== null && typeof node === 'object'
+          ? Object.entries(node).some(([k, v]) => (k === 'isEstimate' && v === true) || flagged(v))
+          : false;
+    // A made-up Estimate field at the top, in a record, and in an array of objects.
+    const future = {
+      ...cloneProfileDemo(),
+      mortgageRate: { value: 0.06, isEstimate: true },
+      goals: [{ name: 'house', target: { value: 50_000, isEstimate: true } }],
+    };
+    expect(flagged(future)).toBe(true);
+    const measured = measuredProfile(future);
+    expect(flagged(measured)).toBe(false);
+    expect(measured).toMatchObject({ mortgageRate: { value: 0.06 }, goals: [{ name: 'house', target: { value: 50_000 } }] });
+    expect(flagged(measuredProfile(profileDemo))).toBe(false);
+  });
+
+  it('returns new objects all the way down (nothing is shared with the profile given)', () => {
+    const measured = measuredProfile(profileDemo);
+    expect(measured).not.toBe(profileDemo);
+    expect(measured.spending).not.toBe(profileDemo.spending);
+    expect(measured.spending.car).not.toBe(profileDemo.spending.car);
+    expect(measured.debts).not.toBe(profileDemo.debts);
+    expect(measured.debts[0]).not.toBe(profileDemo.debts[0]);
+    expect(measured.debts[0]!.minPayment).not.toBe(profileDemo.debts[0]!.minPayment);
   });
 
   it('does not touch the profile it is given (the fixture is frozen)', () => {

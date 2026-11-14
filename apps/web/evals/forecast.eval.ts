@@ -26,8 +26,11 @@ const skipReason = evalSkipReason(process.env);
 if (skipReason) console.warn(`[forecast eval] skipped: ${skipReason}`);
 // Read only when the eval runs, so a typo in EVAL_RUNS does not fail a skipped run.
 const runs = skipReason ? 0 : evalRunCount(process.env);
-/** Every call is bounded by the forecast deadline; two profiles, `runs` calls each, one at a time. */
-const TEST_TIMEOUT_MS = 2 * runs * (FORECAST_DEADLINE_MS + 5_000);
+/**
+ * Every call is bounded by the forecast deadline; two profiles, `runs` calls each, one at a time.
+ * When the eval is skipped there is no run count: the config's timeout stays.
+ */
+const testOptions = skipReason ? {} : { timeout: 2 * runs * (FORECAST_DEADLINE_MS + 5_000) };
 
 /** The request the app sends for this profile: Next Moves' candidates as scenarios, the area's inflation, as the route parses it. */
 function requestFor(profile: Profile): ForecastRequest {
@@ -74,7 +77,7 @@ function print({ label, summary: s, rulesMid, rulesBand }: Measured): void {
 }
 
 describe.skipIf(skipReason !== null)('forecast eval (live model)', () => {
-  it('measures the AI forecast of the demo profile, estimated and measured', { timeout: TEST_TIMEOUT_MS }, async () => {
+  it('measures the AI forecast of the demo profile, estimated and measured', testOptions, async () => {
     const estimatedProfile = cloneProfileDemo();
     const exactProfile = measuredProfile(estimatedProfile);
     // The comparison below means nothing if the "measured" profile still carries an estimate.

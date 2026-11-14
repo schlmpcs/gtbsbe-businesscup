@@ -244,6 +244,7 @@ With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Witho
   - the clue multiplier applies and floors at `clueFloor`.
 - Playwright (T8): one spec for the full demo path (play 3 homes, opening at least one clue → guess own → sliders → forecast → upload sample CSV → Loan Lab compare).
 - AI forecast: tests replace the Anthropic SDK module (`server/ai/testUtils.ts`). CI and Playwright never call a live model, and Playwright runs with no key, so S1 and S10 show the rules-based forecast. The eval script (Y19) is the only thing that calls the live model, and it is not part of CI.
+- AI forecast eval: `pnpm eval:forecast` calls the live model, so it costs API calls and is never run by CI or `pnpm test`. It asks `EVAL_RUNS` times (default 5) for the demo profile as it is and for the same profile with every input measured, with the request the app sends and without the route's cache; it reads `ANTHROPIC_API_KEY` from the shell or the repo root `.env`, and without a key it skips and says why. It reports the spread of the model's 10-year mid, its gap to the rules engine's mid, the mean band width, and whether the band is narrower for the measured profile than for the estimated one.
 - Run `pnpm lint && pnpm test && pnpm e2e` before merging anything that touches the demo path.
 
 ## Figma handoff procedure

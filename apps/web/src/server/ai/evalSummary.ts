@@ -2,7 +2,7 @@
 // The eval is never part of CI or `pnpm test`: it is the only thing that calls the live model
 // (docs/ENGINEERING.md → AI forecast). What it computes from the answers, and what it needs from
 // the environment, lives here so it is unit-tested without a model.
-import { COST_CATEGORIES, type Estimate, type ForecastSource, type Money, type Profile } from '@lifeguessr/types';
+import type { ForecastSource, Money, Profile } from '@lifeguessr/types';
 
 /** One model call's 10-year answer for the base profile, nominal dollars, and where it came from. */
 export type EvalRun = { in10yMid: Money; in10yLow: Money; in10yHigh: Money; source: ForecastSource };
@@ -72,23 +72,24 @@ export function evalRunCount(env: Env): number {
   return runs;
 }
 
-const exact = <T>(e: Estimate<T>): Estimate<T> => ({ ...e, isEstimate: false });
+/** A copy of `node` with every `isEstimate: true` set to false, at any depth (records, arrays, nested objects). */
+function clearEstimateFlags(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(clearEstimateFlags);
+  if (node === null || typeof node !== 'object') return node;
+  return Object.fromEntries(
+    Object.entries(node).map(([key, value]) => [
+      key,
+      key === 'isEstimate' && typeof value === 'boolean' ? false : clearEstimateFlags(value),
+    ]),
+  );
+}
 
 /**
- * The same person with every input given as exact (`isEstimate: false` on each field and each
- * debt's minimum payment). The numbers are unchanged. A new object: the profile given (a frozen
- * fixture, say) is not touched.
+ * The same person with every input given as exact: `isEstimate: false` on every `{ value,
+ * isEstimate }` in the profile (age, pay, each spending line, balances, each debt's minimum payment,
+ * and any field added later). The numbers are unchanged. A new object all the way down: the profile
+ * given (a frozen fixture, say) is not touched.
  */
 export function measuredProfile(p: Profile): Profile {
-  return {
-    ...p,
-    age: exact(p.age),
-    takeHomePay: exact(p.takeHomePay),
-    spending: Object.fromEntries(COST_CATEGORIES.map((c) => [c, exact(p.spending[c])])) as Profile['spending'],
-    cash: exact(p.cash),
-    retirement: exact(p.retirement),
-    retirementShare: exact(p.retirementShare),
-    debts: p.debts.map((d) => ({ ...d, minPayment: exact(d.minPayment) })),
-    doneMoveIds: [...p.doneMoveIds],
-  };
+  return clearEstimateFlags(p) as Profile;
 }
