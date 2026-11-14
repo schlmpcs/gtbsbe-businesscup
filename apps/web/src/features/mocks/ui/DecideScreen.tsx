@@ -28,7 +28,7 @@ function PathTile({
   title: string;
   art: ArtName;
   rows: { label: string; value: ReactNode }[];
-  /** This path's 10-year net worth against the other path (today's dollars). */
+  /** This path's own 10-year net worth (today's dollars, mid). */
   effect: number;
   tone: Tone;
   horizonYear: number;
@@ -64,7 +64,7 @@ function PathTile({
           <p className="flex flex-wrap items-baseline gap-x-sm">
             <Money
               value={effect}
-              signed
+              compact
               className={cx(
                 'font-display text-5xl font-extrabold leading-display tabular-nums sm:text-display',
                 better ? 'text-positive' : 'text-primary',
@@ -100,7 +100,7 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
         title={demo ? t.keep.title : t.keep.titleOwn}
         art="home-family"
         tone={r.better === 'keep' ? 'better' : 'worse'}
-        effect={r.keepAdvantage10y}
+        effect={r.keep.in10y.mid}
         horizonYear={vm.horizonYear}
         rows={[
           {
@@ -126,7 +126,7 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
         title={demo ? t.lease.title : t.lease.titleOwn}
         art="coins"
         tone={r.better === 'lease' ? 'better' : 'worse'}
-        effect={-r.keepAdvantage10y}
+        effect={r.lease.in10y.mid}
         horizonYear={vm.horizonYear}
         footnote={{ title: t.lease.assumptionTitle, body: t.lease.assumption(r.lease.signings) }}
         rows={[
@@ -139,6 +139,19 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
   );
 }
 
+/** The answer in one sentence: which path leaves you richer, and by how much (from the view-model). */
+function Verdict({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
+  const v = t.verdict;
+  const demo = vm.isDemoProfile;
+  const amount = formatMoney(r.betterBy10y, { compact: true });
+  const path = r.better === 'keep' ? (demo ? v.keep : v.keepOwn) : demo ? v.lease : v.leaseOwn;
+  return (
+    <p data-testid="decide-verdict" className="text-center font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+      {amount === formatMoney(0, { compact: true }) ? v.same(vm.horizonYear) : v.richer(path, amount, vm.horizonYear)}
+    </p>
+  );
+}
+
 function Result({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
   const demo = vm.isDemoProfile;
   const verb = r.better === 'keep' ? (demo ? t.score.keepVerb : t.score.keepVerbOwn) : demo ? t.score.leaseVerb : t.score.leaseVerbOwn;
@@ -148,7 +161,7 @@ function Result({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
         label={t.scoreLabel}
         className="sm:grid-cols-3"
         items={[
-          { id: 'advantage', value: <Money value={r.betterBy10y} signed />, label: t.score.advantage(verb), tone: 'positive' },
+          { id: 'advantage', value: <Money value={r.betterBy10y} />, label: t.score.advantage(verb), tone: 'positive' },
           {
             id: 'months',
             value: r.keep.loanLeft <= 0 ? t.score.noLoan : r.keep.monthsLeft === null ? t.never : t.score.monthsLeftValue(r.keep.monthsLeft),
@@ -234,6 +247,7 @@ export function DecideScreen({ vm, Link }: { vm: DecideVM; Link: LinkComponent }
         <>
           {r?.status === 'ready' && (
             <>
+              <Verdict vm={vm} r={r.data} />
               <Paths vm={vm} r={r.data} />
               <Result vm={vm} r={r.data} />
             </>
