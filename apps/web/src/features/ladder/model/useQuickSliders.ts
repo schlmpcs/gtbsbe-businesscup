@@ -68,7 +68,9 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
     () =>
       SPENDING_SLIDERS.map(({ category, max, step }) => {
         const { value, isEstimate } = profile.spending[category];
-        const top = Math.max(max, Math.ceil((value * SLIDER_HEADROOM) / step) * step);
+        // A fixed range, unless a value from outside the slider (statement, typed words) is past it:
+        // then the track gets headroom so the thumb is not pinned at the end.
+        const top = value > max ? Math.ceil((value * SLIDER_HEADROOM) / step) * step : max;
         return { ...linearSliderVM(value, 0, top, step), category, isEstimate };
       }),
     [profile.spending],
@@ -76,11 +78,18 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
 
   const setSpending = useCallback(
     (category: SpendingSliderVM['category'], value: Money) => {
-      const slider = sliders.find((s) => s.category === category);
-      setSpendingAction(category, slider ? snap(value, 0, slider.max, slider.step) : Math.max(0, value));
+      const cfg = SPENDING_SLIDERS.find((s) => s.category === category);
+      if (!cfg) {
+        setSpendingAction(category, Math.max(0, value));
+      } else {
+        // The slider never raises its own range: past the fixed max it can only go back down. Without
+        // this, dragging to the end grew the headroom and every drag multiplied the value by 1.5.
+        const ceiling = Math.max(cfg.max, profile.spending[category].value);
+        setSpendingAction(category, snap(value, 0, ceiling, cfg.step));
+      }
       adjusted();
     },
-    [sliders, setSpendingAction],
+    [profile.spending, setSpendingAction],
   );
 
   const setSavingsShare = useCallback(
