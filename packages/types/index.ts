@@ -33,6 +33,14 @@ export type AreaData = {
   gasPerGallon: Sourced<Money>;
   carInsuranceMonthly: Sourced<Money>;                  // state average; isEstimate until a source is verified
   cpiYoY: Sourced<Rate>;
+  // Homeowners (JF5). Optional: a ZIP whose value can't be sourced leaves it out. isEstimate marks a default
+  // (insurance, appreciation) or an ACS median published only as "X or more" (stored as X, the floor).
+  homeValueMedian?: Sourced<Money>;                     // BALANCE: median value of owner-occupied homes, ZCTA (ACS B25077)
+  ownerCostsWithMortgageMonthly?: Sourced<Money>;       // monthly, ZCTA median (ACS B25088): mortgage + tax + insurance + utilities + HOA
+  ownerCostsWithoutMortgageMonthly?: Sourced<Money>;    // monthly, ZCTA median (ACS B25088): tax + insurance + utilities + HOA
+  propertyTaxRate?: Sourced<Rate>;                      // per year, share of home value: 0.011 = 1.1% (ACS B25090 / B25082)
+  homeInsuranceMonthly?: Sourced<Money>;                // monthly, state average HO-3 premium (NAIC); isEstimate
+  homeAppreciationAnnual?: Sourced<Rate>;               // per year, nominal, metro 30-year average (FHFA HPI); isEstimate
 };
 
 // Server-side only: holds the answer. The browser never gets a full LifeCard during play.

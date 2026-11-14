@@ -32,6 +32,34 @@ describe('areas.json (T2 pipeline output)', () => {
     }
   });
 
+  it('has sourced homeowner data for every ZIP, in the contract units', () => {
+    for (const a of areaData) {
+      const { homeValueMedian, ownerCostsWithMortgageMonthly: withMortgage, ownerCostsWithoutMortgageMonthly: withoutMortgage,
+        propertyTaxRate, homeInsuranceMonthly, homeAppreciationAnnual } = a;
+      for (const v of [homeValueMedian, withMortgage, withoutMortgage, propertyTaxRate, homeInsuranceMonthly, homeAppreciationAnnual]) {
+        expect(v, a.zip).toBeDefined();
+        expect(v!.source.url, `${a.zip} ${v!.source.name}`).toMatch(/^https:\/\//);
+      }
+      // Measured ACS values are plain; an ACS median published only as "X or more" is stored as X and
+      // flagged, and the two defaults (state insurance, past appreciation) are always estimates.
+      for (const v of [homeValueMedian!, withMortgage!, withoutMortgage!]) {
+        if (v.isEstimate) expect(v.source.name).toContain('top-coded');
+      }
+      expect(propertyTaxRate!.isEstimate).toBeUndefined();
+      expect(homeInsuranceMonthly!.isEstimate).toBe(true);
+      expect(homeAppreciationAnnual!.isEstimate).toBe(true);
+      // Rates are decimals per year, not percents.
+      expect(propertyTaxRate!.value).toBeGreaterThan(0.001);
+      expect(propertyTaxRate!.value).toBeLessThan(0.04);
+      expect(homeAppreciationAnnual!.value).toBeGreaterThan(0);
+      expect(homeAppreciationAnnual!.value).toBeLessThan(0.15);
+      expect(homeValueMedian!.value).toBeGreaterThan(50_000);
+      expect(withMortgage!.value).toBeGreaterThan(withoutMortgage!.value);
+      expect(homeInsuranceMonthly!.value).toBeGreaterThan(50);
+      expect(homeInsuranceMonthly!.value).toBeLessThan(1000);
+    }
+  });
+
   it('has rent rising with bedrooms, and tiers that agree with HUD rents', () => {
     for (const a of areaData) {
       const rents = ([0, 1, 2, 3, 4] as const).map((b) => a.rentByBedrooms[b].value);
@@ -85,6 +113,11 @@ describe('areas.json (T2 pipeline output)', () => {
     const one = structuredClone(getArea('75206'));
     expect(() => parseAreas([one, one])).toThrow(/appears twice/);
     expect(() => parseAreas([{ ...one, cpiYoY: { ...one.cpiYoY, value: 3 } }])).toThrow();
+    // A property tax rate written as a percent (1.1 for 1.1%) is a contract break, not a valid row.
+    expect(() => parseAreas([{ ...one, propertyTaxRate: { ...one.propertyTaxRate!, value: 1.1 } }])).toThrow();
+    // Rows without the homeowner fields (older data, unsourced ZIPs) stay valid.
+    const { homeValueMedian: _v, propertyTaxRate: _t, homeAppreciationAnnual: _a, ...rentOnly } = one;
+    expect(parseAreas([rentOnly])).toHaveLength(1);
     expect(() => parseAreas([])).toThrow();
   });
 });

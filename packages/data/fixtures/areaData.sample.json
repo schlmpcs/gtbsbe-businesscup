@@ -90,6 +90,56 @@
         "year": 2026,
         "url": "https://www.bls.gov/regions/southwest/news-release/consumerpriceindex_dallasfortworth.htm"
       }
+    },
+    "homeValueMedian": {
+      "value": 159800.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 75216 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US75216"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1431.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75216 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75216"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 422.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75216 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75216"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00818,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 75216: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US75216"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0487,
+      "source": {
+        "name": "FHFA purchase-only house price index, Dallas-Plano-Irving, TX (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -183,6 +233,56 @@
         "year": 2026,
         "url": "https://www.bls.gov/regions/southwest/news-release/consumerpriceindex_dallasfortworth.htm"
       }
+    },
+    "homeValueMedian": {
+      "value": 615400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 75206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US75206"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3306.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75206"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1397.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75206"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01625,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 75206: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US75206"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0487,
+      "source": {
+        "name": "FHFA purchase-only house price index, Dallas-Plano-Irving, TX (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -276,6 +376,58 @@
         "year": 2026,
         "url": "https://www.bls.gov/regions/southwest/news-release/consumerpriceindex_dallasfortworth.htm"
       }
+    },
+    "homeValueMedian": {
+      "value": 1706700.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 75205 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US75205"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 4000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75205 (via Census Reporter); top-coded: ACS publishes this median as \"$4,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75205"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75205 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75205"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01126,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 75205: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US75205"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0487,
+      "source": {
+        "name": "FHFA purchase-only house price index, Dallas-Plano-Irving, TX (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -369,6 +521,56 @@
         "year": 2026,
         "url": "https://www.bls.gov/regions/southwest/news-release/consumerpriceindex_dallasfortworth.htm"
       }
+    },
+    "homeValueMedian": {
+      "value": 598600.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 75024 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US75024"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3252.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75024 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75024"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1428.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75024 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75024"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.0136,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 75024: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US75024"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0487,
+      "source": {
+        "name": "FHFA purchase-only house price index, Dallas-Plano-Irving, TX (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   }
 ]

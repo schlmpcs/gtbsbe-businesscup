@@ -80,6 +80,14 @@ export const AreaDataSchema = z.object({
   gasPerGallon: sourced(NonNegativeMoneySchema),
   carInsuranceMonthly: sourced(NonNegativeMoneySchema),
   cpiYoY: sourced(ChangeRateSchema),
+  // Homeowner fields are optional so area rows from before they existed (and ZIPs the pipeline can't
+  // source) stay valid. Rates are decimals per year, so a tax rate written as a percent (1.1) fails here.
+  homeValueMedian: sourced(NonNegativeMoneySchema).optional(),
+  ownerCostsWithMortgageMonthly: sourced(NonNegativeMoneySchema).optional(),
+  ownerCostsWithoutMortgageMonthly: sourced(NonNegativeMoneySchema).optional(),
+  propertyTaxRate: sourced(z.number().min(0).max(0.1)).optional(),
+  homeInsuranceMonthly: sourced(NonNegativeMoneySchema).optional(),
+  homeAppreciationAnnual: sourced(ChangeRateSchema).optional(),
 });
 
 export const LifeCardSchema = z.object({
