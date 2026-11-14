@@ -63,6 +63,8 @@ export type ScheduledPurchase = Purchase & { startMonth?: number; payOffFromSurp
 export type Scenario = 'low' | 'mid' | 'high';
 
 export type SimulateOptions = {
+  /** Additional monthly saving in today's dollars; inflated with prices, never income growth. */
+  extraMonthly?: Money;
   extra?: readonly ScheduledPurchase[];
   rates?: Partial<ForecastRates>;
   scenario?: Scenario;
@@ -223,6 +225,8 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
   if (!Number.isInteger(months) || months < 0 || months > MAX_SIMULATION_MONTHS) {
     throw new RangeError(`Invalid simulation length: ${months} months`);
   }
+  const extraMonthly = opts.extraMonthly ?? 0;
+  if (!Number.isFinite(extraMonthly) || extraMonthly < 0) throw new RangeError('Invalid extraMonthly');
   const rates = resolveRates(opts.rates);
   const scenario = opts.scenario ?? 'mid';
   const extra = opts.extra ?? [];
@@ -407,7 +411,7 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
 
     // 4. Surplus: pays off payOffFromSurplus cards, then is split between retirement and cash; or
     //    drawn from cash and then a card.
-    const surplus = income - spending - debtPayments - purchasesCash;
+    const surplus = income - spending - debtPayments - purchasesCash + extraMonthly * (1 + rates.inflationAnnual) ** (t / 12);
     let surplusToPayoffCards = 0;
     if (surplus > 0) {
       let left = surplus;

@@ -19,8 +19,6 @@ export type ProPreviewVM = { isPro: boolean; href: string };
 
 // ----- S13 Decision: keep the car or lease a new one ------------------------------------------
 
-/** F10's other decisions, shown as coming soon. */
-export type DecisionKind = 'moving' | 'kid' | 'jobOffer' | 'wedding';
 
 /** The lease inputs. `null` = the box is empty. Money is per month except `dueAtSigning` (per term). */
 export type LeaseForm = { monthly: Money | null; termMonths: number | null; dueAtSigning: Money | null; running: Money | null };
@@ -76,8 +74,6 @@ export type DecideVM = {
   resetLease: () => void;
   /** Null while a lease field is invalid. */
   result: Loadable<DecideResultVM> | null;
-  nextDecisions: DecisionKind[];
-  pro: ProPreviewVM;
 };
 
 // ----- S14 Monthly check-in -------------------------------------------------------------------

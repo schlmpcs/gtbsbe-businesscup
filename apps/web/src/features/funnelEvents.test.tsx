@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The funnel events each view-model sends (T8). The game's are in game/model/usePlay.test.ts.
 import { COST_CATEGORIES, type ClientFunnelEvent, type EventsRequest } from '@lifeguessr/types';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useAfford } from '@/features/afford/model/useAfford';
 import { useFuture } from '@/features/forecast/model/useFuture';
@@ -12,7 +12,9 @@ import { useQuickSliders } from '@/features/ladder/model/useQuickSliders';
 import { useStatementUpload } from '@/features/ladder/model/useStatementUpload';
 import { useLoanLab } from '@/features/loan/model/useLoanLab';
 import { flushEvents, queuedEventsForTests, resetEventsForTests } from '@/lib/events';
-import { resetClientState, waitForReady } from '@/test/clientState';
+import { cloneProfileDemo } from '@/fixtures';
+import { useAppStore } from '@/state';
+import { flush, resetClientState, waitForReady } from '@/test/clientState';
 
 let sent: EventsRequest[] = [];
 beforeEach(() => {
@@ -91,5 +93,31 @@ describe('screens that count a view', () => {
     const first = moves.status === 'ready' ? moves.data[0]! : null;
     act(() => future.result.current.commit(first!.id));
     expect(await tracked()).toContainEqual({ name: 'move_committed', props: { kind: first!.kind } });
+  });
+});
+
+describe('Try with sample data (/future?sample=1)', () => {
+  it('loads the sample life as the profile, flags it, counts sample_loaded and drops the query', async () => {
+    window.history.replaceState(null, '', '/future?sample=1');
+    useAppStore.setState({ profile: { ...cloneProfileDemo(), doneMoveIds: ['x'] } });
+    const future = renderHook(() => useFuture({ sample: true }));
+    await waitForReady(future.result);
+    await waitFor(() => expect(useAppStore.getState().isSample).toBe(true));
+    expect(useAppStore.getState().profile).toEqual(cloneProfileDemo());
+    expect(useAppStore.getState().profileOrigin).toBe('demo');
+    expect(window.location.pathname + window.location.search).toBe('/future');
+    future.rerender();
+    expect((await tracked()).filter((e) => e.name === 'sample_loaded')).toEqual([{ name: 'sample_loaded' }]);
+  });
+
+  it('never replaces a profile the user built', async () => {
+    useAppStore.getState().setSpending('groceries', 640);
+    const mine = useAppStore.getState().profile;
+    const future = renderHook(() => useFuture({ sample: true }));
+    await waitForReady(future.result);
+    await flush();
+    expect(useAppStore.getState().isSample).toBe(false);
+    expect(useAppStore.getState().profile).toBe(mine);
+    expect((await tracked()).map((e) => e.name)).not.toContain('sample_loaded');
   });
 });

@@ -25,10 +25,10 @@ function ClueRow({ clue, card, onOpenClue, disabled, large }: ClueBoardProps & {
   // Opened room: a black-bordered tile with what the room shows.
   if (clue.status === 'open') {
     return (
-      <div className={cx('flex flex-col gap-xs rounded-lg border-2 border-ink bg-surface px-lg py-md shadow-sm', rowText)}>
+      <div className={cx('flex flex-col gap-xs rounded-lg bg-primary-soft px-lg py-md', rowText)}>
         <div className="flex items-baseline justify-between gap-md">
           <span className="font-bold">{room}</span>
-          <span className="text-xs font-bold uppercase tracking-wide text-text-muted">{t.clues.opened}</span>
+          <span className="text-xs font-bold uppercase tracking-wide text-primary">{t.clues.opened}</span>
         </div>
         <ClueFacts facts={clue.facts} className="text-sm font-medium" />
       </div>
@@ -44,7 +44,7 @@ function ClueRow({ clue, card, onOpenClue, disabled, large }: ClueBoardProps & {
           ? t.clues.closedHint(formatRate(card.clueCost))
           : t.clues.closedFreeHint;
 
-  // Closed room: the "peek" pill, white with an orange border.
+  // Closed room: the "peek" pill, white with a soft shadow.
   return (
     <div className="flex flex-col gap-xs">
       <button
@@ -53,12 +53,15 @@ function ClueRow({ clue, card, onOpenClue, disabled, large }: ClueBoardProps & {
         disabled={disabled || clue.status === 'opening'}
         aria-busy={clue.status === 'opening' || undefined}
         className={cx(
-          'flex w-full flex-wrap items-baseline justify-between gap-x-md gap-y-xs rounded-full border-2 border-primary bg-surface px-lg py-sm text-left shadow-md',
+          'flex w-full flex-wrap items-baseline justify-between gap-x-md gap-y-xs rounded-full bg-surface px-lg py-sm text-left shadow-md ring-1 ring-surface-strong',
           'transition-colors hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-60',
           rowText,
         )}
       >
-        <span className="font-bold">{room}</span>
+        <span className="flex items-center gap-sm font-bold">
+          <span aria-hidden="true">{t.clues.icons[clue.id]}</span>
+          {room}
+        </span>
         <span className="text-sm font-semibold text-primary">{hint}</span>
       </button>
       {clue.status === 'error' && (
@@ -70,16 +73,16 @@ function ClueRow({ clue, card, onOpenClue, disabled, large }: ClueBoardProps & {
   );
 }
 
-/** Static clue panel (the cut-order fallback for the house scene): five tap-to-reveal rooms in a framed tile. */
+/** Static clue panel (the cut-order fallback for the house scene): five tap-to-reveal rooms in a white card. */
 export function ClueBoard(props: ClueBoardProps) {
   const { card, large } = props;
   const headingId = useId();
   return (
     <section
       aria-labelledby={headingId}
-      className="min-w-0 rounded-xl bg-surface p-md text-text shadow-lg lg:-rotate-1"
+      className="min-w-0 rounded-xl bg-surface p-lg text-text shadow-md sm:p-xl"
     >
-      <div className="flex flex-col gap-lg rounded-lg bg-surface-strong p-lg sm:p-xl">
+      <div className="flex flex-col gap-lg">
         <div className="flex flex-col gap-xs">
           <h2 id={headingId} className={cx('font-display font-extrabold leading-tight', large ? 'text-4xl' : 'text-2xl')}>
             {t.clues.heading}

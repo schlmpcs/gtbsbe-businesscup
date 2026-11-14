@@ -322,6 +322,31 @@ describe('useStatementUpload (S9)', () => {
     await waitFor(() => expect(result.current.error).toEqual({ kind: 'rateLimited' }));
   });
 
+  it('trySample: the sample statement goes through the same reader as a picked file, then review', async () => {
+    const sample = new File(['Date,Description,Amount'], 'statement.sample.csv', { type: 'text/csv' });
+    const fetchSampleStatement = vi.fn(async () => sample);
+    const readStatementFile = vi.fn(async () => ({ months: [months[0]!], summary }));
+    const { result } = renderHook(() => useStatementUpload({ readStatementFile, fetchSampleStatement }));
+    await waitForReady(result);
+    act(() => result.current.trySample());
+    expect(result.current.status).toBe('reading');
+    await waitFor(() => expect(result.current.status).toBe('review'));
+    expect(readStatementFile).toHaveBeenCalledWith(sample, expect.objectContaining({ anonId: expect.any(String), signal: expect.any(AbortSignal) }));
+    expect(result.current.pending.map((m) => m.month)).toEqual(['2026-08']);
+  });
+
+  it('trySample: a failed download is an error like any request', async () => {
+    const { ApiError } = await import('@/lib/api/http');
+    const fetchSampleStatement = vi.fn(async () => { throw new ApiError('GET → 0', 0); });
+    const readStatementFile = vi.fn();
+    const { result } = renderHook(() => useStatementUpload({ readStatementFile, fetchSampleStatement }));
+    await waitForReady(result);
+    act(() => result.current.trySample());
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    expect(result.current.error).toEqual({ kind: 'network', status: undefined });
+    expect(readStatementFile).not.toHaveBeenCalled();
+  });
+
   it('readFile: a newer file wins over one still being read', async () => {
     const resolvers: ((v: { months: CategoryTotals[]; summary: typeof summary }) => void)[] = [];
     const readStatementFile = vi.fn(() => new Promise<{ months: CategoryTotals[]; summary: typeof summary }>((r) => { resolvers.push(r); }));

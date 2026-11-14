@@ -78,7 +78,30 @@ export const forecast = {
 
   /** S1 Today. */
   today: {
-    title: 'Today',
+    /**
+     * The hero headline. The game today is "guess one stranger's month" (a slider), not a duel between two
+     * lives, so the Figma line "Which life costs more?" waits for the duel game.
+     */
+    title: 'What does their life cost?',
+    lead: 'Guess what a stranger’s month costs, then price your own and see your next 10 years.',
+    note: 'No sign-up, no bank login',
+    /** Opens the forecast on the sample profile (shown only while the profile is still the sample one). */
+    sampleCta: 'Try with sample data',
+    /** First visit (no profile, no game yet): what the app is, in one look. No user numbers. */
+    firstVisit: {
+      title: 'Which life costs more?',
+      body: 'Guess what strangers’ lives cost. Then see where yours is going.',
+      play: 'Play',
+      sample: 'Try with sample data',
+      note: 'No sign-up. About a minute.',
+      stepsLabel: 'How it works',
+      steps: ['Play 5 quick rounds', 'Price your own month', 'See you in 10 years'],
+      vs: 'vs',
+    },
+    steps: {
+      label: 'How it works',
+      items: ['Guess strangers’ months', 'Price your own month', 'See you in 10 years'],
+    },
     monthEnd: {
       title: 'This month',
       projected: 'Projected spending',
@@ -108,11 +131,16 @@ export const forecast = {
       cta: 'See your forecast',
     },
     play: {
-      title: 'Guess their month',
       cta: 'Play today’s homes',
       continue: (played: number, total: number) => `Keep playing (${played} of ${total})`,
-      done: 'Done for today. New homes tomorrow.',
+      /** Sticker over the score once today's homes are all guessed. */
+      doneSticker: 'Today’s homes · done',
+      /** The big line once the day is done: homes guessed of today's total. */
+      doneScore: (played: number, total: number) => `${played} of ${total}`,
+      done: 'Done for today. New homes tomorrow. Now try your own month.',
       doneCta: 'See your results',
+      /** Main call to action once the day is done, while the profile is still the sample one. */
+      priceOwn: 'Price my own month',
     },
     move: {
       committedTitle: 'Your move',
@@ -122,6 +150,7 @@ export const forecast = {
       seeAll: 'See all moves',
     },
     kicker: 'Daily game',
+    inProgress: 'Today’s game is on',
     homes: {
       label: 'Today’s homes',
       home: (n: number) => `Home ${n}`,
@@ -146,7 +175,7 @@ export const forecast = {
   /** S10 You in 10 years + Next Moves. */
   future: {
     title: 'You in 10 years',
-    headline: 'Net worth in 10 years',
+    headline: 'Your net worth in 10 years',
     todayLabel: 'Today',
     chartTitle: 'Your net worth over the next 10 years',
     seriesLabel: 'Your plan',
@@ -154,19 +183,22 @@ export const forecast = {
     todaysDollarsToggle: 'Show in today’s dollars',
     compareToggle: (title: string) => `Compare with: ${title}`,
     withMoveIn10y: 'With this move',
-    committedIn10y: 'With your committed move',
+    committedIn10y: 'With your plan',
     errorTitle: 'We could not build your forecast.',
-    /** Sticker on the illustration (no number: the amounts are shown once, above and in the moves). */
-    artSticker: 'If nothing changes',
+    /** Sticker on the illustration: the same 10-year number, compact (`amount` is formatted). */
+    artSticker: (amount: string) => `In 10 years · ${amount}`,
+    /** After the range line: today's net worth (`amount` is formatted). */
+    todayInline: (amount: string) => `today ${amount}`,
+    howLink: 'How we calculate',
     backCta: 'Back to Today',
     /** Shown while a new answer is on its way and the numbers on screen are the previous ones. */
     refreshing: 'Updating the forecast…',
   },
 
   moves: {
-    heading: 'Next moves',
+    heading: 'Your next best moves',
     rank: (n: number) => `#${n}`,
-    intro: 'Ranked by 10-year gain, in today’s dollars.',
+    intro: 'Ranked by what each adds in 10 years, in today’s dollars.',
     effect: (amount: string) => `${amount} in 10 years`,
     effectLabel: 'Net worth gain in 10 years',
     /** Title of a move; `categoryLabel` = common.categories[move.category] when the move has one. */
@@ -175,9 +207,9 @@ export const forecast = {
       payCardFirst: (amount: string) => `Pay ${amount} a month extra on your highest-rate card.`,
       spendingTo: (category: string, amount: string) => `Bring ${category.toLowerCase()} to ${amount} a month.`,
     },
-    committed: 'You committed to this',
-    commit: 'I’m doing this',
-    uncommit: 'Not now',
+    committed: 'In my plan ✓',
+    commit: 'Add to my plan',
+    uncommit: 'Remove from plan',
     markDone: 'I did it',
     why: 'Why?',
     whyLoading: 'Writing the explanation…',
