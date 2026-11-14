@@ -149,7 +149,8 @@ test('S9: a file without transaction columns gets a clear error', async ({ page 
   await page.getByLabel(ladder.upload.pickerLabel).setInputFiles({
     name: 'notes.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Age\nAnn,30\n'),
   });
-  await expect(page.getByRole('alert')).toContainText(ladder.upload.errors.unreadable.noColumns);
+  // Next.js has its own (empty) role="alert" route announcer, so pick ours by its text.
+  await expect(page.getByRole('alert').filter({ hasText: ladder.upload.errors.unreadable.noColumns })).toBeVisible();
 });
 
 for (const route of ['/me/guess', '/me/closest', '/me/sliders', '/me/balance', '/me/upload']) {
