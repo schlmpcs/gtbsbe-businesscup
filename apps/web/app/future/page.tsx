@@ -17,5 +17,12 @@ export default function FuturePage({ searchParams }: { searchParams: Promise<{ s
   const { sample } = use(searchParams);
   const vm = useFuture({ sample: sample === '1' });
   const goal = useGoal();
-  return <><FutureScreen vm={vm} links={links} Link={Link} /><div className="mx-auto max-w-(--container-md) px-lg pb-xl"><GoalCard vm={goal}/><AvatarPanel forecastSeen={vm.status==='ready'}/></div></>;
+  return (
+    <FutureScreen
+      vm={vm}
+      links={links}
+      Link={Link}
+      goal={<><GoalCard vm={goal} makeExactHref={links.makeExact} Link={Link} /><AvatarPanel forecastSeen={vm.status==='ready'} /></>}
+    />
+  );
 }

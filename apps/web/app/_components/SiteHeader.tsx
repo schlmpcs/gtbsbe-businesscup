@@ -37,7 +37,7 @@ export function SiteHeader() {
                 <Link
                   href={l.href}
                   aria-current={active ? 'page' : undefined}
-                  className={cx('hover:text-text', active ? 'font-semibold text-text' : 'text-text-muted')}
+                  className={cx('hover:text-text', active ? 'font-semibold text-primary' : 'text-text')}
                 >
                   {l.label}
                 </Link>
@@ -46,7 +46,10 @@ export function SiteHeader() {
           })}
         </ul>
       </nav>
-      <Link href="/pro" className={cx(buttonClassName({ variant: 'secondary', size: 'sm' }), 'ml-auto md:ml-0')}>
+      <Link
+        href="/pro"
+        className={cx(buttonClassName({ variant: 'secondary', size: 'sm' }), 'ml-auto text-primary md:ml-0')}
+      >
         {t.pro}
       </Link>
     </header>

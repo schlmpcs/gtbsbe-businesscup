@@ -1,5 +1,9 @@
 export const goal = {
   title: 'Your net worth goal',
+  /** Card headline once a goal is set (`target` is formatted). */
+  summary: (target: string, years: number) => `Your goal: ${target} in ${years} ${years === 1 ? 'year' : 'years'}`,
+  edit: 'Change goal',
+  makeExact: 'Make it exact',
   target: 'Target in today’s dollars',
   years: 'Years',
   start: 'Set goal',
@@ -15,11 +19,17 @@ export const goal = {
   saving: 'Extra monthly saving to reach the target',
   unreachable:
     'This target is not projected to be reachable by saving alone within your take-home pay.',
+  /** The verdict sticker. */
+  verdictLabel: {
+    onTrack: 'On track',
+    withinRange: 'Within range',
+    behind: 'Behind',
+  },
+  /** The line under the sticker. */
   verdict: {
-    onTrack: 'On track: even the low end reaches the target',
-    withinRange:
-      'Within range: the result depends on the estimates in your inputs',
-    behind: 'Behind: even the high end falls short',
+    onTrack: 'Even the low end of your range reaches the target.',
+    withinRange: 'Your range spans the target: the result depends on the estimates in your numbers.',
+    behind: 'Even the high end of your range falls short.',
   },
   moveShare: 'Top moves: share of the gap closed',
   combined: 'All moves together',

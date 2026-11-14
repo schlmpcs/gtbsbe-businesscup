@@ -1,12 +1,12 @@
 'use client';
 
-// S13 Decision, car example (Figma S13): keep the car or lease a new one. Presentational: every
+// S13 Decision, car example (Figma Design v3, node 194:1866): keep the car or lease a new one. Presentational: every
 // number comes from useDecide() (the user's profile through the engine's forecast / simulate; the
 // lease terms are the user's, starting from an illustrative fixture).
 import type { ReactNode } from 'react';
 import { forecast, mocks } from '@/copy';
 import {
-  Art, Button, Card, EstimateTag, Field, formatMoney, Money, NumberInput, Scoreboard, Sticker, Tag, type ArtName,
+  Art, Button, Card, cx, EstimateTag, Field, formatMoney, Money, NumberInput, Scoreboard, Sticker, Tag, type ArtName,
 } from '@/ui-kit';
 import type { DecideResultVM, DecideVM, LeaseField } from '../model/types';
 import { PreviewBadge } from './PreviewBadge';
@@ -14,26 +14,44 @@ import { ErrorNote, Loading, type LinkComponent } from './shared';
 
 const t = mocks.decide;
 
+type Tone = 'better' | 'worse';
+
 function PathTile({
   title,
   art,
   rows,
-  tilt,
+  effect,
+  tone,
+  horizonYear,
   footnote,
 }: {
   title: string;
   art: ArtName;
   rows: { label: string; value: ReactNode }[];
-  tilt: number;
+  /** This path's 10-year net worth against the other path (today's dollars). */
+  effect: number;
+  tone: Tone;
+  horizonYear: number;
   /** Collapsed under the rows: a summary label and the text. */
   footnote?: { title: string; body: string };
 }) {
+  const better = tone === 'better';
   return (
-    <Card as="section" aria-label={title} className="flex min-w-0 flex-col gap-lg p-md sm:p-lg" style={{ transform: `rotate(${tilt}deg)` }}>
-      <Art name={art} imgClassName="aspect-video" />
-      <div className="flex flex-col gap-md px-sm pb-sm">
-        <h2 className="text-2xl font-extrabold leading-tight sm:text-3xl">{title}</h2>
-        <dl className="flex flex-col gap-xs">
+    <Card
+      as="section"
+      aria-label={title}
+      data-better={better || undefined}
+      className={cx('relative flex min-w-0 flex-col gap-lg p-xl sm:p-2xl', better && 'inset-ring-3 inset-ring-positive')}
+    >
+      {better && (
+        <Sticker tone="positive" tilt={4} className="absolute -top-sm right-xl">
+          {t.better}
+        </Sticker>
+      )}
+      <Art name={art} className="mx-auto w-3/4 max-w-(--container-3xs)" />
+      <div className="flex flex-col gap-md">
+        <h2 className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">{title}</h2>
+        <dl className="flex flex-col gap-xs text-sm">
           {rows.map((r) => (
             <div key={r.label} className="flex flex-wrap items-baseline justify-between gap-x-md">
               <dt className="text-text-muted">{r.label}</dt>
@@ -41,6 +59,20 @@ function PathTile({
             </div>
           ))}
         </dl>
+        <div className="mt-sm flex flex-col gap-xs">
+          <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">{t.effectLabel}</span>
+          <p className="flex flex-wrap items-baseline gap-x-sm">
+            <Money
+              value={effect}
+              signed
+              className={cx(
+                'font-display text-5xl font-extrabold leading-display tabular-nums sm:text-display',
+                better ? 'text-positive' : 'text-primary',
+              )}
+            />
+            <span className="text-sm text-text-muted">{t.effectBy(horizonYear)}</span>
+          </p>
+        </div>
         {footnote && (
           <details className="text-xs text-text-muted">
             <summary className="cursor-pointer font-medium">{footnote.title}</summary>
@@ -63,11 +95,13 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
     </span>
   );
   return (
-    <div className="grid grid-cols-1 items-center gap-xl lg:grid-cols-[1fr_auto_1fr]">
+    <div className="grid grid-cols-1 gap-xl lg:grid-cols-2">
       <PathTile
         title={demo ? t.keep.title : t.keep.titleOwn}
-        art="austin"
-        tilt={-1}
+        art="home-family"
+        tone={r.better === 'keep' ? 'better' : 'worse'}
+        effect={r.keepAdvantage10y}
+        horizonYear={vm.horizonYear}
         rows={[
           {
             label: t.keep.loanLeft,
@@ -88,16 +122,12 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
           },
         ]}
       />
-      <div
-        aria-hidden="true"
-        className="mx-auto flex aspect-square w-fit items-center justify-center rounded-full bg-ink p-lg font-display text-xl font-extrabold text-on-primary sm:p-2xl sm:text-4xl"
-      >
-        {t.vs}
-      </div>
       <PathTile
         title={demo ? t.lease.title : t.lease.titleOwn}
-        art="loan"
-        tilt={1}
+        art="coins"
+        tone={r.better === 'lease' ? 'better' : 'worse'}
+        effect={-r.keepAdvantage10y}
+        horizonYear={vm.horizonYear}
         footnote={{ title: t.lease.assumptionTitle, body: t.lease.assumption(r.lease.signings) }}
         rows={[
           { label: t.lease.lease, value: est('monthly', t.lease.leaseValue(formatMoney(f.monthly ?? 0), t.months(f.termMonths ?? 0))) },
@@ -191,10 +221,9 @@ export function DecideScreen({ vm, Link }: { vm: DecideVM; Link: LinkComponent }
   const r = vm.result;
   return (
     <main className="mx-auto flex w-full max-w-(--container-7xl) flex-col gap-2xl px-lg py-xl">
-      <header className="flex flex-col items-center gap-md text-center">
-        <PreviewBadge Link={Link} />
-        <Sticker tone="ink">{t.eyebrow}</Sticker>
-        <h1 className="text-4xl leading-display sm:text-display lg:text-[calc(var(--text-display)*1.4)]">
+      <header className="flex flex-col items-center gap-lg text-center">
+        <PreviewBadge Link={Link} label={t.eyebrow} tone="ink" showPro={false} align="center" />
+        <h1 className="font-display text-4xl font-extrabold leading-display sm:text-display lg:text-[length:calc(var(--text-display)*1.4)]">
           {vm.isDemoProfile ? t.title : t.titleOwn}
         </h1>
       </header>
@@ -213,6 +242,7 @@ export function DecideScreen({ vm, Link }: { vm: DecideVM; Link: LinkComponent }
           <LeaseEditor vm={vm} />
         </>
       )}
+
     </main>
   );
 }

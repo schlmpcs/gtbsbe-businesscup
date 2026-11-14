@@ -120,10 +120,8 @@ export function useAvatar(enabled: boolean): AvatarVM {
     setError(null);
     try {
       const result = await avatarPublish(getAnonId(), draft.token);
-      {
-        rememberAvatarPublished(result.status.state === 'published');
-        setOwner({ status: 'ready', data: result });
-      }
+      rememberAvatarPublished(result.status.state === 'published');
+      setOwner({ status: 'ready', data: result });
       setConsent(false);
     } catch (err) {
       fail(err);
@@ -140,10 +138,8 @@ export function useAvatar(enabled: boolean): AvatarVM {
     setError(null);
     try {
       const result = await avatarUnpublish(getAnonId());
-      {
-        rememberAvatarPublished(result.status.state === 'published');
-        setOwner({ status: 'ready', data: result });
-      }
+      rememberAvatarPublished(result.status.state === 'published');
+      setOwner({ status: 'ready', data: result });
       setConsent(false);
       setDraft(null);
       setPreview({ status: 'ready', data: null });

@@ -51,6 +51,9 @@ function introText(source: ForecastSource | null): string {
   return source === 'ai' ? t.how.introAi : t.how.intro;
 }
 
+/** Anchor id of the panel, for the "How we calculate →" link under the headline number. */
+export const HOW_WE_CALCULATE_ID = 'how-we-calculate';
+
 export function HowWeCalculate({
   vm,
   source,
@@ -61,8 +64,12 @@ export function HowWeCalculate({
   className?: string;
 }) {
   return (
-    <details className={cx('group rounded-xl bg-surface p-lg shadow-md', className)} data-testid="how-we-calculate">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md text-lg font-bold">
+    <details
+      id={HOW_WE_CALCULATE_ID}
+      className={cx('group scroll-mt-xl rounded-xl bg-surface p-xl shadow-md', className)}
+      data-testid="how-we-calculate"
+    >
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-display text-2xl font-extrabold">
         <h2>{t.how.title}</h2>
         <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
           ▾

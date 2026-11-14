@@ -1,6 +1,6 @@
 import type { Migration } from './types';
-export const m007Avatars: Migration = {
-  version: 7,
+export const m008Avatars: Migration = {
+  version: 8,
   name: 'avatars',
   sql: `
 CREATE TABLE avatars (
