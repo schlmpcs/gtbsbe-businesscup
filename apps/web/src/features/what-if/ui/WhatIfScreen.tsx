@@ -73,9 +73,9 @@ export function WhatIfScreen({ vm }: { vm: WhatIfVM }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 items-center gap-0 md:grid-cols-[1fr_auto_1fr] md:gap-md">
+      <div className="grid grid-cols-1 items-stretch gap-0 md:grid-cols-[1fr_auto_1fr] md:gap-md">
         <ChoiceCard choice={vm.A} onEdit={() => vm.edit('A')} />
-        <VsBadge className="-my-md justify-self-center md:my-0" />
+        <VsBadge className="-my-md self-center justify-self-center md:my-0" />
         <ChoiceCard choice={vm.B} onEdit={() => vm.edit('B')} />
       </div>
 
