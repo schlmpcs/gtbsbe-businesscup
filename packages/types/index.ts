@@ -104,9 +104,17 @@ export type Debt = { id: string; kind: 'card'|'auto'|'student'|'personal'|'bnpl'
   balance: Money; apr: Rate;
   minPayment: Estimate<Money>;   // monthly; defaulted from assumptions when the user skips it
   extraPayment?: Money };        // monthly, set by moves
+/**
+ * "About you" (S6): the household the person typed. With `Profile.zip` it builds their starting life
+ * (engine `lifeCardFromFacts` → `costOfLife` / `cardToProfile`) and prefills the tools. Absent = not asked yet.
+ * Typed by the person, so never an estimate; a car here has no loan (insurance and fuel only).
+ */
+export type HouseholdFacts = { adults: 1|2; kids: KidAge[]; bedrooms: 0|1|2|3|4; hasCar: boolean };
 export type Profile = {
   /** Optional household facts, confirmed in the avatar preview; no effect on forecast math. */
   household?: AvatarFacts;
+  /** The household from "About you" (S6). Absent until the person answers it. */
+  householdFacts?: HouseholdFacts;
   age: Estimate<number>;
   takeHomePay: Estimate<Money>;  // monthly, after tax and payroll retirement contributions
   spending: Record<CostCategory, Estimate<Money>>;      // monthly

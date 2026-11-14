@@ -112,18 +112,22 @@ test('demo path: 5 duels → own guess → statement → by hand → forecast �
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
   const ownGuess = stored(page, 'own_guess_submitted');
   await page.getByRole('button', { name: ladder.guess.submit }).click();
-  await expect(page.getByRole('region', { name: ladder.guess.compareTitle })).toBeVisible();
-  await expect(page.getByTestId('guess-verdict')).not.toBeEmpty();
+  // Only the gut guess: nothing to compare it with before the spending is the user's own.
+  await expect(page.getByRole('link', { name: ladder.shell.cta.S5 })).toBeVisible();
+  await expect(page.getByTestId('guess-reveal')).toHaveCount(0);
 
   await ownGuess;
 
-  // ----- 3. Closest life (S6), from the sample lives (the duel's lives are composites) -----
+  // ----- 3. About you (S6): the household and ZIP build the starting month for that area -----
   await page.getByRole('link', { name: ladder.shell.cta.S5 }).click();
   await expect(page).toHaveURL(/\/me\/closest$/);
-  const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
+  await page.getByLabel(ladder.closest.about.zip).fill('75205');
+  // The month built from the answers is preselected (JF13); tapping it starts from it.
+  const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) });
+  await expect(choose).toHaveAttribute('aria-pressed', 'true');
   const chosen = stored(page, 'closest_life_chosen');
   await choose.click();
-  await expect(choose).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText(ladder.closest.chosenNote)).toBeVisible();
   await chosen;
 
   // ----- 4. Your spending (S9): import the sample statement, nothing to type -----

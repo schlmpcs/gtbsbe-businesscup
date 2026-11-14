@@ -159,14 +159,26 @@ export const ageDefault = {
 } satisfies Assumption<number>;
 
 /**
- * Closest Life: monthly spending (all categories + debt payments) as a share of take-home pay, so
- * take-home pay = outflow / share. A card has no income, so the default assumes the person behind
- * it lives on their pay and saves the rest, instead of a national figure unrelated to the card.
+ * Closest Life: monthly take-home pay when the person has not given theirs. The US average income
+ * after taxes per household (consumer unit), BLS Consumer Expenditure Survey 2023: $87,869 a year ÷ 12.
+ * Always tagged as an estimate. Pay is never derived from spending (it used to be outflow ÷ 0.9,
+ * which made "left over" 10% of pay for everyone).
  */
-export const cardSpendingShareOfTakeHome = {
-  value: 0.9,
+export const takeHomePayDefault = {
+  value: (87_869 / 12) as Money,
+  source: {
+    name: 'BLS Consumer Expenditure Survey 2023, average income after taxes, all consumer units',
+    year: 2023,
+    url: 'https://www.bls.gov/news.release/archives/cesan_09252024.htm',
+  },
+  note: 'National average, not adjusted for household size or area (the 2024 CE tables publish no after-tax income). The user types theirs on S6 or a statement detects it.',
+} satisfies Assumption<Money>;
+
+/** "About you" starting life: meals or delivery orders eaten out per week when the person has not said. */
+export const eatingOutPerWeekDefault = {
+  value: 2,
   assumption: true,
-  note: 'Saves about 10% of take-home pay. Placeholder until T2 sources a spending/after-tax-income ratio (BLS CE).',
+  note: 'Placeholder; the statement or the S7 sliders replace the eating-out line.',
 } satisfies Assumption<number>;
 
 /** Closest Life: cash on hand, in months of monthly outflow (spending + debt payments). */
@@ -208,7 +220,8 @@ export const otherPerKidMonthly = {
 export const lifeCardAssumptions = {
   guessMaxPoints,
   ageDefault,
-  cardSpendingShareOfTakeHome,
+  takeHomePayDefault,
+  eatingOutPerWeekDefault,
   cashBufferMonthsDefault,
   retirementBalanceDefault,
   subscriptionsMonthlyDefault,
