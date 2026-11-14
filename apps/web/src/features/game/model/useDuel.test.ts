@@ -15,9 +15,9 @@ import { flushEvents, queuedEventsForTests, resetEventsForTests } from '@/lib/ev
 import { resetClientState, waitForReady } from '@/test/clientState';
 import type { DuelDailyResponse } from '@/lib/api/gameSchemas';
 import { duelScorer, duelSet } from '@/server/game/duel';
-import { ANON, setupGameTestEnv } from '@/server/game/testUtils';
+import { ANON, OTHER_ANON, setupGameTestEnv } from '@/server/game/testUtils';
 import { createRouteFetch } from '@/test/gameRoutes';
-import { createHttpDuelClient, type DuelClient, type DuelDay } from './duelClient';
+import { createHttpDuelClient, type DuelChallenge, type DuelClient, type DuelDay } from './duelClient';
 import { choiceOf, nextNewYorkMidnight } from './duelDerive';
 import { createFixtureDuelClient, FIXTURE_DUEL_LOG_KEY } from './duelFixtureClient';
 import { DuelScreen } from '../ui/DuelScreen';
@@ -238,6 +238,7 @@ describe('useDuel on fixtures', () => {
       daily: (today) => (fail ? Promise.reject(new ApiError('down', 503)) : real.daily(today)),
       pick: (round, choice, date) => (fail ? Promise.reject(new ApiError('down', 0)) : real.pick(round, choice, date)),
       hint: (round, date) => real.hint(round, date),
+      challenge: (id, today) => real.challenge(id, today),
     };
     const hook = renderHook(() => useDuel({ client, now }));
     await waitForReady(hook.result);
@@ -344,6 +345,7 @@ describe('useDuel: a repeated pick, and the day ending mid-play', () => {
       daily: async () => ({ ...(await real.daily(TODAY)), progress: { picks: {}, hints: {} } }),
       pick: (r, c, d) => real.pick(r, c, d),
       hint: (r, d) => real.hint(r, d),
+      challenge: (id, today) => real.challenge(id, today),
     };
     client = stale;
     const tab = await renderDuel();
@@ -362,6 +364,7 @@ describe('useDuel: a repeated pick, and the day ending mid-play', () => {
       daily: vi.fn(async () => days[Math.min(served++, 1)]!),
       pick: vi.fn((round, choice, date) => (date === days[0].date ? dayOver() : real.pick(round, choice, date))),
       hint: vi.fn((round, date) => (date === days[0].date ? dayOver() : real.hint(round, date))),
+      challenge: vi.fn(async () => null),
     };
     return { c, real };
   }
@@ -427,6 +430,7 @@ describe('useDuel: a repeated pick, and the day ending mid-play', () => {
       daily: (d) => real.daily(d),
       pick: () => Promise.reject(new ApiError('conflict', 409, false, { ok: false, error: { code: 'something_else' } })),
       hint: (r, d) => real.hint(r, d),
+      challenge: (id, today) => real.challenge(id, today),
     };
     const hook = await renderDuel();
     act(() => hook.result.current.pick('A'));
@@ -469,7 +473,13 @@ describe('useDuel share: the share card PNG where the platform shares files, els
   // the server's share card like an API build does.
   const apiClient = (): DuelClient => {
     const real = createFixtureDuelClient({ persist: false });
-    return { source: 'api', daily: (d) => real.daily(d), pick: (r, c, d) => real.pick(r, c, d), hint: (r, d) => real.hint(r, d) };
+    return {
+      source: 'api',
+      daily: (d) => real.daily(d),
+      pick: (r, c, d) => real.pick(r, c, d),
+      hint: (r, d) => real.hint(r, d),
+      challenge: (id, today) => real.challenge(id, today),
+    };
   };
   const pngReply = () => new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { headers: { 'content-type': 'image/png' } });
 
@@ -554,6 +564,260 @@ describe('useDuel share: the share card PNG where the platform shares files, els
     expect(fetchMock).not.toHaveBeenCalled();
     await shareAndWait(hook);
     expect(share).toHaveBeenCalledWith({ text: hook.result.current.summary!.shareText });
+  });
+});
+
+describe('useDuel: challenge links (/duel?c=…)', () => {
+  const FRIEND_ID = 'f'.repeat(32);
+  const FRIEND_TILES = ['yellow', 'green', 'green', 'green', 'ink'] as const;
+  const friendDay = (over: Partial<DuelChallenge> = {}): DuelChallenge => ({
+    date: TODAY, rounds: 5, played: 5, right: 4, points: 3_900, tiles: [...FRIEND_TILES], today: true, ...over,
+  });
+
+  /** The fixture duel, with a friend's challenge the test decides: a day, null (not found), or an error. */
+  function withFriend(answer: DuelChallenge | null | Error | Promise<DuelChallenge | null>) {
+    const real = createFixtureDuelClient({ persist: false });
+    const challenge = vi.fn(async (): Promise<DuelChallenge | null> => {
+      if (answer instanceof Error) throw answer;
+      return answer;
+    });
+    return { client: { ...real, challenge } satisfies DuelClient, challenge };
+  }
+
+  /** Plays the five rounds on the hook (letters by round), ending on the day result. */
+  async function playDay(hook: Hook, letters: DuelLetter[]) {
+    for (const [i, letter] of letters.entries()) {
+      await pickAndWait(hook, letter);
+      act(() => hook.result.current.next());
+      expect(hook.result.current.round).toBe(i < 4 ? i + 2 : null);
+    }
+    expect(hook.result.current.phase).toBe('summary');
+  }
+
+  const challengeOf = (hook: Hook) => hook.result.current.challenge;
+  const settled = (hook: Hook) => waitFor(() => expect(challengeOf(hook).status).not.toBe('loading'));
+
+  it('without a link there is no challenge, and nothing is asked of the source', async () => {
+    const { client: c, challenge } = withFriend(friendDay());
+    client = c;
+    const hook = await renderDuel();
+    expect(hook.result.current).toMatchObject({ challenged: false, challenge: { status: 'ready', data: null } });
+    expect(challenge).not.toHaveBeenCalled();
+    // A blank id is no link either.
+    const blank = await renderDuel({ challengeId: '  ' });
+    expect(blank.result.current.challenged).toBe(false);
+    expect(challenge).not.toHaveBeenCalled();
+  });
+
+  it('shows the friend’s real score before the first round, and keeps it while you play', async () => {
+    const { client: c, challenge } = withFriend(friendDay());
+    client = c;
+    const hook = await renderDuel({ challengeId: FRIEND_ID });
+    await settled(hook);
+    expect(hook.result.current.challenged).toBe(true);
+    expect(hook.result.current.phase).toBe('round');
+    expect(challenge).toHaveBeenCalledWith(FRIEND_ID, TODAY); // the client's New York date goes along
+    expect(challengeOf(hook)).toEqual({
+      status: 'ready',
+      data: {
+        kind: 'friend',
+        comparison: null, // you have not played yet
+        friend: {
+          right: 4,
+          rounds: 5,
+          points: 3_900,
+          tiles: FRIEND_TILES.map((color, i) => ({ round: i + 1, color })),
+        },
+      },
+    });
+    await pickAndWait(hook, RIGHT[0]!);
+    expect(challengeOf(hook)).toMatchObject({ status: 'ready', data: { kind: 'friend', comparison: null } });
+  });
+
+  it('is loading until both the link and the day are read, then ready', async () => {
+    let resolve!: (day: DuelChallenge | null) => void;
+    const { client: c } = withFriend(new Promise<DuelChallenge | null>((r) => { resolve = r; }));
+    client = c;
+    const hook = await renderDuel({ challengeId: FRIEND_ID });
+    expect(hook.result.current.status).toBe('ready'); // the day does not wait for the link
+    expect(challengeOf(hook)).toEqual({ status: 'loading' });
+    await act(async () => resolve(friendDay()));
+    expect(challengeOf(hook)).toMatchObject({ status: 'ready', data: { kind: 'friend' } });
+  });
+
+  it('after round 5 sets your day next to the friend’s: You 3/5 against Friend 4/5, behind', async () => {
+    const { client: c } = withFriend(friendDay());
+    client = c;
+    const hook = await renderDuel({ challengeId: FRIEND_ID });
+    await settled(hook);
+    // Round 1 with a hint (yellow), 2 and 3 right (green), 4 and 5 missed (ink): 3 of 5, 2,900 points.
+    act(() => hook.result.current.openHint());
+    await waitFor(() => expect(hook.result.current.hint!.used).toBe(true));
+    await playDay(hook, [RIGHT[0]!, RIGHT[1]!, RIGHT[2]!, WRONG[3]!, WRONG[4]!]);
+
+    const { data } = challengeOf(hook) as Extract<ReturnType<typeof challengeOf>, { status: 'ready' }>;
+    expect(data).toMatchObject({ kind: 'friend', friend: { right: 4, points: 3_900 } });
+    expect((data as { comparison: unknown }).comparison).toEqual({
+      outcome: 'behind',
+      you: {
+        right: 3,
+        rounds: 5,
+        points: 2_900,
+        tiles: ['yellow', 'green', 'green', 'ink', 'ink'].map((color, i) => ({ round: i + 1, color })),
+      },
+    });
+    // What the comparison says of you is what the day result says.
+    expect(hook.result.current.summary).toMatchObject({ right: 3, totalPoints: 2_900 });
+  });
+
+  it('says ahead when you beat the friend, and tied when you match them', async () => {
+    const friend = friendDay({ right: 3, points: 2_900, tiles: ['yellow', 'green', 'green', 'ink', 'ink'] });
+    for (const [letters, hinted, outcome] of [
+      [RIGHT.slice(0, 5), false, 'ahead'], // 5 right, 5,000 points
+      [[RIGHT[0], RIGHT[1], RIGHT[2], WRONG[3], WRONG[4]] as DuelLetter[], true, 'tied'], // 3 right, 2,900 points
+    ] as const) {
+      client = withFriend(friend).client;
+      const hook = await renderDuel({ challengeId: FRIEND_ID });
+      await settled(hook);
+      if (hinted) {
+        act(() => hook.result.current.openHint());
+        await waitFor(() => expect(hook.result.current.hint!.used).toBe(true));
+      }
+      await playDay(hook, [...letters]);
+      expect(challengeOf(hook)).toMatchObject({ data: { comparison: { outcome } } });
+      hook.unmount();
+    }
+  });
+
+  it('a challenge from an earlier day shows no comparison, whatever you score today', async () => {
+    const { client: c } = withFriend(friendDay({ date: '2026-11-13', today: false }));
+    client = c;
+    const hook = await renderDuel({ challengeId: FRIEND_ID });
+    await settled(hook);
+    expect(challengeOf(hook)).toEqual({ status: 'ready', data: { kind: 'earlier', dateLabel: 'Nov 13' } });
+    await playDay(hook, RIGHT.slice(0, 5));
+    expect(challengeOf(hook)).toEqual({ status: 'ready', data: { kind: 'earlier', dateLabel: 'Nov 13' } });
+    expect(hook.result.current.summary).not.toBeNull();
+  });
+
+  it('your own link shows your result, not a comparison (this browser, any case, spaces round the id)', async () => {
+    client = createFixtureDuelClient({ persist: true });
+    const first = await renderDuel();
+    await playDay(first, RIGHT.slice(0, 5));
+    const resultId = first.result.current.summary!.challengeUrl.split('?c=')[1]!;
+    first.unmount();
+
+    client = createFixtureDuelClient({ persist: true }); // a reload, or the link opened in another tab
+    for (const id of [resultId, ` ${resultId.toUpperCase()} `]) {
+      const again = await renderDuel({ challengeId: id });
+      await settled(again);
+      expect(again.result.current.phase).toBe('summary');
+      expect(again.result.current.summary).toMatchObject({ right: 5, totalPoints: 5_000 });
+      expect(challengeOf(again)).toEqual({ status: 'ready', data: { kind: 'own' } });
+      again.unmount();
+    }
+  });
+
+  it('a fixture duel only knows its own day: another browser’s link falls back to the generic line', async () => {
+    client = createFixtureDuelClient({ persist: false });
+    const hook = await renderDuel({ challengeId: 'fixture-duel-2026-11-14-0a1b2c3d' });
+    await settled(hook);
+    expect(hook.result.current.challenged).toBe(true);
+    expect(challengeOf(hook)).toEqual({ status: 'ready', data: null });
+    expect(hook.result.current.phase).toBe('round'); // the day plays as ever
+  });
+
+  it('an id the source does not hold, and a day the friend has not finished, both fall back to the generic line', async () => {
+    client = withFriend(null).client;
+    const unknown = await renderDuel({ challengeId: FRIEND_ID });
+    await settled(unknown);
+    expect(unknown.result.current).toMatchObject({ challenged: true, challenge: { status: 'ready', data: null } });
+    unknown.unmount();
+
+    client = withFriend(friendDay({ played: 3, right: 2, points: 1_900, tiles: ['green', 'ink', 'green'] })).client;
+    const unfinished = await renderDuel({ challengeId: FRIEND_ID });
+    await settled(unfinished);
+    expect(unfinished.result.current).toMatchObject({ challenged: true, challenge: { status: 'ready', data: null } });
+  });
+
+  it('a source that cannot answer is an error on the link only: the day still plays', async () => {
+    client = withFriend(new ApiError('down', 503)).client;
+    const hook = await renderDuel({ challengeId: FRIEND_ID });
+    await settled(hook);
+    expect(hook.result.current).toMatchObject({ status: 'ready', challenged: true, challenge: { status: 'error', error: { kind: 'unavailable' } } });
+    await pickAndWait(hook, RIGHT[0]!);
+    expect(hook.result.current.reveal).toMatchObject({ round: 1, correct: true });
+  });
+
+  it('a new link is read afresh, and the old answer is never shown for it', async () => {
+    const real = createFixtureDuelClient({ persist: false });
+    const answers: Record<string, DuelChallenge | null> = { a: friendDay({ right: 4 }), b: friendDay({ right: 1, points: 1_000, tiles: ['green', 'ink', 'ink', 'ink', 'ink'] }) };
+    client = { ...real, challenge: async (id) => answers[id] ?? null };
+    const hook = renderHook((props: { challengeId: string }) => useDuel({ client, now, ...props }), { initialProps: { challengeId: 'a' } });
+    await waitForReady(hook.result);
+    await waitFor(() => expect(hook.result.current.challenge).toMatchObject({ status: 'ready', data: { friend: { right: 4 } } }));
+    hook.rerender({ challengeId: 'b' });
+    expect(hook.result.current.challenge.status).toBe('loading');
+    await waitFor(() => expect(hook.result.current.challenge).toMatchObject({ status: 'ready', data: { friend: { right: 1 } } }));
+  });
+
+  it('on the screen: the friend’s score before play, both grids on the day result, nothing for your own link', async () => {
+    const { client: c } = withFriend(friendDay());
+    client = c;
+    function Duel({ id }: { id: string }) {
+      return createElement(DuelScreen, { vm: useDuel({ client, now, challengeId: id }), guessOwnHref: '/me/guess' });
+    }
+    const user = userEvent.setup();
+    render(createElement(Duel, { id: FRIEND_ID }));
+    expect(await screen.findByText('Your friend got 4/5 · 3,900 points')).toHaveAttribute('role', 'status');
+    expect(screen.queryByText(t.challenge.generic)).toBeNull();
+
+    for (let round = 1; round <= 5; round++) {
+      await user.click(await screen.findByRole('button', { name: /^Life A costs more/ }));
+      await user.click(await screen.findByRole('button', { name: round === 5 ? t.reveal.finish : t.reveal.next }));
+    }
+    const versus = await screen.findByRole('region', { name: t.challenge.heading });
+    expect(versus).toHaveTextContent(/^You vs your friendYou \d\/5 · Friend 4\/5/);
+    expect(screen.getByRole('list', { name: t.challenge.friendGridLabel })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: t.summary.gridLabel })).toBeInTheDocument();
+    expect(screen.queryByText('Your friend got 4/5 · 3,900 points')).toBeNull(); // the line is for before and during play
+  });
+
+  describe('against the real routes (memory store): a friend finishes, a stranger opens the link', () => {
+    setupGameTestEnv();
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('the stranger sees the friend’s real score before playing, then the comparison', async () => {
+      const routes = createRouteFetch();
+      vi.stubGlobal('fetch', routes.fetch);
+      const costlier = duelSet(TODAY).map((pair) => (duelScorer(pair, 'A')(0).correct ? 'A' : 'B') as DuelLetter);
+      const other = (l: DuelLetter): DuelLetter => (l === 'A' ? 'B' : 'A');
+
+      // The friend: round 1 with a hint, then 4 right and the last one missed → 4/5 · 3,900 points.
+      client = createHttpDuelClient({ anonId: () => ANON });
+      const friend = await renderDuel();
+      act(() => friend.result.current.openHint());
+      await waitFor(() => expect(friend.result.current.hint!.used).toBe(true));
+      await playDay(friend, [costlier[0]!, costlier[1]!, costlier[2]!, costlier[3]!, other(costlier[4]!)]);
+      const link = friend.result.current.summary!.challengeUrl;
+      const resultId = new URL(link).searchParams.get('c')!;
+      friend.unmount();
+
+      // The stranger: another anonymous id, another storage.
+      localStorage.clear();
+      client = createHttpDuelClient({ anonId: () => OTHER_ANON });
+      const stranger = await renderDuel({ challengeId: resultId });
+      await settled(stranger);
+      expect(challengeOf(stranger)).toMatchObject({
+        status: 'ready',
+        data: { kind: 'friend', friend: { right: 4, rounds: 5, points: 3_900 }, comparison: null },
+      });
+      await playDay(stranger, [costlier[0]!, other(costlier[1]!), other(costlier[2]!), other(costlier[3]!), other(costlier[4]!)]);
+      expect(challengeOf(stranger)).toMatchObject({ data: { comparison: { you: { right: 1, points: 1_000 }, outcome: 'behind' } } });
+
+      // The route was asked with the link's id and no anonymous id.
+      expect(routes.calls.filter((call) => call.path === '/api/daily/challenge').map((call) => call.anonId)).toEqual([null]);
+    });
   });
 });
 

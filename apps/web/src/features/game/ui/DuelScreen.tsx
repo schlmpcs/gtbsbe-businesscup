@@ -3,6 +3,7 @@ import { duel as t } from '@/copy';
 import { Button, Card, cx, formatRate } from '@/ui-kit';
 import type { DuelCardVM, DuelHintVM, DuelVM } from '../model/types';
 import { DuelCard } from './DuelCard';
+import { DuelChallengeLine } from './DuelChallenge';
 import { DuelReveal, DuelRevealBand, DuelRevealHeader } from './DuelReveal';
 import { DuelSummary } from './DuelSummary';
 import { errorText } from './errorText';
@@ -103,9 +104,7 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
             {t.title}
           </h1>
           {roundPhase && <p className="text-base text-text-muted sm:text-lg">{t.subtitle}</p>}
-          {vm.challenged && ready && vm.phase !== 'summary' && (
-            <p className="rounded-full bg-primary-soft px-lg py-xs text-sm font-semibold text-primary">{t.challenged}</p>
-          )}
+          {vm.challenged && ready && vm.phase !== 'summary' && <DuelChallengeLine challenge={vm.challenge} />}
           {vm.newDay && (
             <p role="status" className="rounded-full bg-primary-soft px-lg py-xs text-sm font-semibold text-primary">{t.newDay}</p>
           )}
@@ -154,6 +153,7 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
               onShare={vm.share}
               onGuessOwn={vm.guessOwn}
               guessOwnHref={guessOwnHref}
+              challenge={vm.challenge.status === 'ready' && vm.challenge.data?.kind === 'friend' ? vm.challenge.data : null}
             />
           )}
         </div>

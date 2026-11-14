@@ -1,9 +1,9 @@
 // Duel game data source (S2/S3 "Which life costs more?"), behind one interface like the slider
 // game's ./client:
-// - http (createHttpDuelClient): the server routes GET /api/daily?game=duel, POST /api/daily/pick
-//   and POST /api/daily/hint. The server holds the answers, records hints, scores each pick once
-//   and keeps the day's progress per anonymous id, so a reload (or another device with the same
-//   id) resumes where the player stopped.
+// - http (createHttpDuelClient): the server routes GET /api/daily?game=duel, POST /api/daily/pick,
+//   POST /api/daily/hint and GET /api/daily/challenge. The server holds the answers, records hints,
+//   scores each pick once and keeps the day's progress per anonymous id, so a reload (or another
+//   device with the same id) resumes where the player stopped.
 // - fixtures (./duelFixtureClient): the contract computed in the browser from the sample cards with
 //   the real engine (costOfLife + dailyDuelPairs + scoreDuelPick), so the duel plays without a server.
 //   It holds the answers, so this module never imports it statically: see loadFixtureDuelClient.
@@ -13,10 +13,12 @@
 import {
   DUEL_ROUNDS, type DuelHint, type DuelLetter, type DuelRound, type PickResult, type PublicDuel,
 } from '@lifeguessr/types';
+import type { DuelTileColor } from '@/copy/duel';
 import {
-  DuelDailyResponseSchema, HintReplySchema, PickReplySchema, type DuelProgressWire,
+  DuelChallengeResponseSchema, DuelDailyResponseSchema, HintReplySchema, PickReplySchema, ResultIdSchema,
+  type DuelProgressWire,
 } from '@/lib/api/gameSchemas';
-import { getJson, postJson } from '@/lib/api/http';
+import { ApiError, getJson, postJson } from '@/lib/api/http';
 import { duelSource, type GameSource } from '@/lib/config';
 import { getAnonId } from '@/state/anonId';
 
@@ -29,6 +31,22 @@ export type DuelProgress = {
 /** A day's five duels and the player's progress on them. */
 export type DuelDay = { date: string; duels: PublicDuel[]; progress: DuelProgress };
 
+/**
+ * The score a friend shared with their challenge link (/duel?c=…), as GET /api/daily/challenge
+ * answers it: right picks out of the rounds played, the points and one colour per played round (in
+ * round order), for one day. Nothing else of their day: no picks, totals or answers.
+ * `today`: `date` is the day the source serves now; a challenge from an earlier day is no comparison.
+ */
+export type DuelChallenge = {
+  date: string;
+  rounds: number;
+  played: number;
+  right: number;
+  points: number;
+  tiles: DuelTileColor[];
+  today: boolean;
+};
+
 export interface DuelClient {
   readonly source: GameSource;
   /** Today's duels. `today` is the client's New York date; the source's date wins. */
@@ -40,6 +58,13 @@ export interface DuelClient {
   pick(round: DuelRound, choice: DuelLetter, date: string): Promise<PickResult>;
   /** One more fact on both cards; the source records it (−10% points for the round). */
   hint(round: DuelRound, date: string): Promise<DuelHint>;
+  /**
+   * The score behind a challenge link, or null when the source holds no such day (an unknown or
+   * malformed id; the fixture duel answers only the day it played itself). `today` is the client's
+   * New York date, as for `daily`: the server decides for itself, the browser source compares.
+   * Other failures (the server down, a reply that breaks the contract) reject.
+   */
+  challenge(resultId: string, today: string): Promise<DuelChallenge | null>;
 }
 
 // ----- http (DU3–DU5 routes) -----------------------------------------------------------------------
@@ -91,6 +116,20 @@ export function createHttpDuelClient(opts: { anonId?: () => string; base?: strin
       const { A, B } = await postJson(`${base}/api/daily/hint`, { anonId: id, date, round }, HintReplySchema, { anonId: id });
       return { A, B };
     },
+    async challenge(resultId) {
+      // A stored result's id is 32 hex characters: anything else (a fixture duel's link) is a
+      // certain 404, so don't ask. No anonymous id goes along: the route does not need to know who asks.
+      if (!ResultIdSchema.safeParse(resultId).success) return null;
+      try {
+        const { ok: _ok, ...challenge } = await getJson(
+          `${base}/api/daily/challenge?c=${encodeURIComponent(resultId)}`, DuelChallengeResponseSchema,
+        );
+        return challenge;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404 && !err.invalid) return null;
+        throw err;
+      }
+    },
   };
 }
 
@@ -118,6 +157,7 @@ export function lazyDuelClient(source: GameSource, load: () => Promise<DuelClien
     daily: async (today) => (await get()).daily(today),
     pick: async (round, choice, date) => (await get()).pick(round, choice, date),
     hint: async (round, date) => (await get()).hint(round, date),
+    challenge: async (resultId, today) => (await get()).challenge(resultId, today),
   };
 }
 

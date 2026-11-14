@@ -8,7 +8,7 @@ import { linkedScreenIds } from '@/lib/screens';
 import PlayPage from './page';
 
 vi.mock('../duel/DuelView', () => ({
-  DuelView: ({ challenged }: { challenged: boolean }) => <p>duel{challenged ? ' challenged' : ''}</p>,
+  DuelView: ({ challengeId }: { challengeId?: string }) => <p>duel{challengeId ? ` challenged by ${challengeId}` : ''}</p>,
 }));
 vi.mock('@/features/game/model/usePlay', () => ({
   usePlay: ({ streamer }: { streamer: boolean }) => ({ streamer }),
@@ -32,8 +32,18 @@ async function renderPlay(params: { stream?: string; c?: string } = {}) {
 describe('/play', () => {
   it('is the duel by default, and ?stream=1 does not switch it', async () => {
     await renderPlay({ stream: '1', c: 'friend-result' });
-    expect(screen.getByText('duel challenged')).toBeInTheDocument();
+    expect(screen.getByText('duel challenged by friend-result')).toBeInTheDocument();
     expect(screen.queryByText(/slider/)).not.toBeInTheDocument();
+  });
+
+  it('passes the challenge link’s id to the duel', async () => {
+    await renderPlay({ c: 'abc123' });
+    expect(screen.getByText('duel challenged by abc123')).toBeInTheDocument();
+  });
+
+  it('is a plain duel without a challenge link', async () => {
+    await renderPlay();
+    expect(screen.getByText('duel')).toBeInTheDocument();
   });
 
   it('is the slider game with NEXT_PUBLIC_GAME_MODE=slider, streamer mode included', async () => {
