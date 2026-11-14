@@ -38,8 +38,8 @@ export function addAccountMenu(): AddAccountMenu {
       { side: 'asset', label: copy.sides.asset, options: ASSET_GROUPS.map(option) },
       { side: 'liability', label: copy.sides.liability, options: LIABILITY_GROUPS.map(option) },
     ],
-    connectBank: { label: copy.add.connectBank, note: copy.add.connectBankNote, disabled: true },
-    importCsv: { label: copy.add.importCsv, note: copy.add.importCsvNote, href: '/transactions' },
+    connectBank: { label: copy.addMenu.connectBank, note: copy.addMenu.connectBankNote, disabled: true },
+    importCsv: { label: copy.addMenu.importCsv, note: copy.addMenu.importCsvNote, href: '/transactions' },
     loanKinds: LOAN_KINDS.map((kind) => ({ kind, label: copy.loanKinds[kind] })),
   };
 }
