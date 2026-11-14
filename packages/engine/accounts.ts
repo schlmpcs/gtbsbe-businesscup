@@ -2,8 +2,9 @@
 //
 // Accounts are the balance sheet the person keeps (browser only, names are personal). The profile the
 // rest of the engine reads is derived from them: cash = Σ cash, retirement = Σ retirement + investments,
-// every liability → a Debt. Real estate, vehicles and other assets have no profile field yet; they count
-// in `netWorthSummary` only. Excluded accounts count nowhere.
+// every liability → a Debt. Real estate is the profile's home (JF4): its value is Σ included real estate
+// accounts. Vehicles and other assets have no profile field yet; they count in `netWorthSummary` only.
+// Excluded accounts count nowhere.
 import {
   LIABILITY_GROUPS,
   type Account,
@@ -18,6 +19,7 @@ import {
 } from '@lifeguessr/types';
 import { debtAprDefaults, debtTermMonthsDefault } from './assumptions';
 import { addMonths } from './events';
+import { defaultHome } from './home';
 import { amortizedPayment } from './loan/amortize';
 import { cardMinPaymentFor } from './simulate';
 
@@ -54,7 +56,41 @@ function minPaymentOf(a: Account, kind: Debt['kind'], apr: Rate): Estimate<Money
   return { value, isEstimate: true };
 }
 
-/** `base` with cash, retirement and debts from the accounts; excluded accounts are skipped. */
+/** Id of the real estate account `profileToAccounts` makes for the profile's home. */
+export const HOME_ACCOUNT_ID = 'home';
+
+/**
+ * The profile's home after the accounts (JF4). No real estate account at all (included or not): the
+ * base home, unchanged. Otherwise the value is Σ included real estate balances (0 when all are
+ * excluded) and the appreciation their balance-weighted `growth` when any sets one (the others count at
+ * the base home's rate). Without a base home, one is made only when an included real estate account
+ * exists: tenure 'mortgage' when an included mortgage account exists, else 'outright', default
+ * appreciation (`defaultHome`), no HOA.
+ */
+function homeOf(accounts: readonly Account[], live: readonly Account[], base: Profile): Profile['home'] {
+  if (!accounts.some((a) => a.group === 'realEstate')) return base.home;
+  const homes = live.filter((a) => a.group === 'realEstate');
+  if (!base.home && homes.length === 0) return undefined;
+  const start = base.home ?? defaultHome(live.some((a) => a.group === 'mortgage') ? 'mortgage' : 'outright')!;
+  const value = sumOf(homes, ['realEstate']);
+  let appreciation = { ...start.appreciation };
+  if (homes.some((a) => a.growth !== undefined)) {
+    const rateOf = (a: Account) => a.growth ?? start.appreciation.value;
+    const rate = homes.length === 1
+      ? rateOf(homes[0]!)
+      : value.value > 0
+        ? homes.reduce((s, a) => s + rateOf(a) * a.balance.value, 0) / value.value
+        : homes.reduce((s, a) => s + rateOf(a), 0) / homes.length;
+    // An unchanged rate keeps its estimate flag (the round trip through profileToAccounts).
+    if (rate !== start.appreciation.value) appreciation = { value: rate, isEstimate: false };
+  }
+  return { ...start, value, appreciation };
+}
+
+/**
+ * `base` with cash, retirement, debts and the home (see `homeOf`) from the accounts; excluded accounts
+ * are skipped.
+ */
 export function accountsToProfile(accounts: readonly Account[], base: Profile): Profile {
   const live = included(accounts);
   const baseDebts = new Map(base.debts.map((d) => [d.id, d]));
@@ -67,11 +103,14 @@ export function accountsToProfile(accounts: readonly Account[], base: Profile): 
     if (extra !== undefined) debt.extraPayment = extra;
     return debt;
   });
+  const { home: _home, ...rest } = base;
+  const home = homeOf(accounts, live, base);
   return {
-    ...base,
+    ...rest,
     cash: sumOf(live, ['cash']),
     retirement: sumOf(live, ['retirement', 'investments']),
     debts,
+    ...(home && { home }),
   };
 }
 
@@ -86,7 +125,8 @@ const DEBT_ACCOUNT: Record<Debt['kind'], { group: LiabilityGroup; name: string }
 
 /**
  * The inverse, for people who came through the sliders / balance sheet, so Accounts never starts empty:
- * one Checking (cash) and one Retirement account, always, plus one account per debt (same id). History
+ * one Checking (cash) and one Retirement account, always, one Home (real estate, id `HOME_ACCOUNT_ID`,
+ * balance = home value, growth = its appreciation) for an owner, plus one account per debt (same id). History
  * holds one point at `profile.asOf` when the profile has it (the engine has no clock). Account balances
  * are never negative, so an overdrawn (negative) cash balance becomes a $0 Checking account.
  */
@@ -97,6 +137,16 @@ export function profileToAccounts(profile: Profile): Account[] {
     { id: 'cash', group: 'cash', name: 'Checking', balance: { value: cash, isEstimate: profile.cash.isEstimate }, history: history(cash) },
     { id: 'retirement', group: 'retirement', name: 'Retirement', balance: { ...profile.retirement }, history: history(profile.retirement.value) },
   ];
+  if (profile.home) {
+    accounts.push({
+      id: HOME_ACCOUNT_ID,
+      group: 'realEstate',
+      name: 'Home',
+      balance: { ...profile.home.value },
+      growth: profile.home.appreciation.value,
+      history: history(profile.home.value.value),
+    });
+  }
   for (const d of profile.debts) {
     const { group, name } = DEBT_ACCOUNT[d.kind];
     accounts.push({

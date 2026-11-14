@@ -12,11 +12,12 @@ import {
 } from '@lifeguessr/types';
 import { simulate } from './simulate';
 
-/** Shared balance-sheet definition: cash + retirement minus debts, matching month zero. */
+/** Shared balance-sheet definition: cash + retirement + the home (owners) minus debts, matching month zero. */
 export function netWorthOf(p: Profile): number {
   return (
     p.cash.value +
-    p.retirement.value -
+    p.retirement.value +
+    (p.home?.value.value ?? 0) -
     p.debts.reduce((sum, d) => sum + d.balance, 0)
   );
 }
@@ -90,7 +91,7 @@ export function coarsenAvatar(
   const rent = p.spending.rentUtilities;
   const estimated = new Set<AvatarPreview['estimatedFields'][number]>();
   if (p.age.isEstimate) estimated.add('ageBand');
-  if (p.cash.isEstimate || p.retirement.isEstimate) estimated.add('netWorth');
+  if (p.cash.isEstimate || p.retirement.isEstimate || p.home?.value.isEstimate) estimated.add('netWorth');
   if (
     Object.entries(p.spending).some(
       ([key, v]) => key !== 'debtPayments' && v.isEstimate,
