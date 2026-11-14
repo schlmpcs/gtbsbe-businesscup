@@ -3,6 +3,7 @@
 // clamped to what the profile contract accepts, so a half-typed number never breaks the profile.
 import { DEBT_KINDS } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
+import { track } from '@/lib/events';
 import { debtLoadGauge, netWorthToday, thisMonth } from '@/lib/model/profile';
 import { useAppReady, useAppStore, type DebtInput } from '@/state';
 import { BALANCE_FIELD_BOUNDS, DEBT_BOUNDS, DEBT_LOAD_GAUGE_MAX } from './constants';
@@ -11,6 +12,9 @@ import type { BalanceFieldKey, BalanceSheetVM, DebtRowVM, InputBounds } from './
 const FIELDS: readonly BalanceFieldKey[] = ['age', 'takeHomePay', 'cash', 'retirement'];
 
 const within = (v: number, { min, max }: InputBounds) => Math.min(max, Math.max(min, v));
+
+/** Funnel: the balance sheet was used (a value typed, skipped, or a debt changed). */
+const edited = () => track({ name: 'balance_sheet_edited' }, { once: 'balance_sheet_edited' });
 
 /** A typed field value inside its bounds (age in whole years); null when it is not a number. */
 export function clampField(field: BalanceFieldKey, value: number): number | null {
@@ -64,7 +68,9 @@ export function useBalanceSheet(): BalanceSheetVM {
   const setField = useCallback(
     (field: BalanceFieldKey, value: number) => {
       const v = clampField(field, value);
-      if (v !== null) setFieldAction(field, v);
+      if (v === null) return;
+      setFieldAction(field, v);
+      edited();
     },
     [setFieldAction],
   );
@@ -72,7 +78,9 @@ export function useBalanceSheet(): BalanceSheetVM {
   const addDebt = useCallback(
     (input: DebtInput) => {
       const clean = clampDebt(input);
-      return clean ? addDebtAction(clean) : '';
+      if (!clean) return '';
+      edited();
+      return addDebtAction(clean);
     },
     [addDebtAction],
   );
@@ -80,7 +88,9 @@ export function useBalanceSheet(): BalanceSheetVM {
   const updateDebt = useCallback(
     (id: string, input: DebtInput) => {
       const clean = clampDebt(input);
-      if (clean) updateDebtAction(id, clean);
+      if (!clean) return;
+      updateDebtAction(id, clean);
+      edited();
     },
     [updateDebtAction],
   );
@@ -96,9 +106,15 @@ export function useBalanceSheet(): BalanceSheetVM {
     debtLoadMax: DEBT_LOAD_GAUGE_MAX,
     netWorth,
     setField,
-    skipField: (field) => skipField(field),
+    skipField: (field) => {
+      skipField(field);
+      edited();
+    },
     addDebt,
     updateDebt,
-    removeDebt,
+    removeDebt: (id) => {
+      removeDebt(id);
+      edited();
+    },
   };
 }

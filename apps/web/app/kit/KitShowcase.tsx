@@ -1,8 +1,9 @@
 'use client';
 
 import { debtLoadThresholds } from '@lifeguessr/engine/assumptions';
+import type { ClueId } from '@lifeguessr/types';
 import { useState } from 'react';
-import { common, kitShowcase as t } from '@/copy';
+import { common, game, kitShowcase as t } from '@/copy';
 import {
   BarBreakdown,
   Button,
@@ -13,6 +14,7 @@ import {
   formatMoney,
   formatRate,
   Gauge,
+  HouseScene,
   Money,
   NumberInput,
   Percent,
@@ -30,6 +32,7 @@ import {
   demoArea,
   demoLoanOffers,
   demoProfile,
+  demoScene,
   profileSpendingItems,
   sampleForecast,
   sampleForecastCompare,
@@ -47,6 +50,7 @@ export function KitShowcase() {
   const [term, setTerm] = useState<number | null>(demoLoanOffers[0]?.termMonths ?? null);
   const [offer, setOffer] = useState('offer-1');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [openRooms, setOpenRooms] = useState<ClueId[]>([]);
   const termInvalid = term === null || term < 1 || term > 84;
 
   return (
@@ -215,6 +219,31 @@ export function KitShowcase() {
         <Stack gap="xl">
           <BarBreakdown label={t.breakdown.profile} items={profileSpendingItems} />
           <BarBreakdown label={t.breakdown.area} items={areaItems} />
+        </Stack>
+      </Card>
+
+      <Card title={t.sections.houseScene} data-kit="house-scene">
+        <Stack gap="md">
+          <p className="text-sm text-text-muted">{t.houseScene.hint}</p>
+          <HouseScene
+            layout={demoScene.public.layout}
+            layoutLabel={game.home.layouts[demoScene.public.layout]}
+            decor={demoScene.public.decor}
+            rooms={Object.values(demoScene.clues).map((reveal) => {
+              const open = openRooms.includes(reveal.clue);
+              return {
+                id: reveal.clue,
+                label: game.clues.rooms[reveal.clue],
+                status: open ? 'open' : 'closed',
+                badge: t.houseScene.badge,
+                hint: open ? game.clues.opened : t.houseScene.closed,
+                props: open ? reveal.props : [],
+              };
+            })}
+            onOpenRoom={(id) => setOpenRooms((rooms) => (rooms.includes(id) ? rooms : [...rooms, id]))}
+            spriteLabel={game.scene.sprite}
+            note={game.scene.placeholderArt}
+          />
         </Stack>
       </Card>
 

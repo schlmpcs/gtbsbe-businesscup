@@ -1,7 +1,7 @@
 // "How we calculate" (S10): every engine assumption behind the forecast and the moves, with its
 // source or an "our assumption" tag. Values arrive from the view-model; here they are only formatted.
 import { forecast as t } from '@/copy';
-import { formatMoney, formatRate, SourceNote } from '@/ui-kit';
+import { cx, formatMoney, formatRate, SourceNote } from '@/ui-kit';
 import type { AssumptionValue, AssumptionVM, ForecastSource, HowWeCalculateVM } from '../model/types';
 import { AssumptionTag } from './shared';
 
@@ -51,10 +51,18 @@ function introText(source: ForecastSource | null): string {
   return source === 'ai' ? t.how.introAi : t.how.intro;
 }
 
-export function HowWeCalculate({ vm, source }: { vm: HowWeCalculateVM; source: ForecastSource | null }) {
+export function HowWeCalculate({
+  vm,
+  source,
+  className,
+}: {
+  vm: HowWeCalculateVM;
+  source: ForecastSource | null;
+  className?: string;
+}) {
   return (
-    <details className="group rounded-lg border border-border bg-bg p-lg shadow-sm" data-testid="how-we-calculate">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md text-lg font-semibold">
+    <details className={cx('group rounded-xl bg-surface p-lg shadow-md', className)} data-testid="how-we-calculate">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md text-lg font-bold">
         <h2>{t.how.title}</h2>
         <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
           ▾

@@ -3,6 +3,7 @@
 // the one answered bundle, so the headline, the chart, the comparison, the band and the moves agree.
 import type { ForecastPoint } from '@lifeguessr/types';
 import { useMemo, useState } from 'react';
+import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
 import { estimatedFields } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
@@ -62,6 +63,9 @@ export function useFuture(opts: { explain?: ExplainFn } = {}): FutureVM {
 
   const points = shown.base?.points ?? NO_POINTS;
   const yearly = useMemo(() => points.filter((p) => p.month % 12 === 0), [points]);
+
+  // Counted once the numbers are on screen (the AI answer or the rules fallback), not when the page opens.
+  useTrackOnce(shown.status === 'ready', 'forecast_viewed', { name: 'forecast_viewed' });
 
   return {
     ...nextMoves,

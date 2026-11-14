@@ -128,7 +128,8 @@ describe('AffordResultPanel', () => {
   );
 
   it('labels the chart and the horizon numbers as the rules-based estimate (S10 may show the AI model’s number)', () => {
-    render(panel(base));
+    const at = (month: 1 | 12 | 60 | 120) => ({ month, with: points[0]!, without: points[0]!, deltaMid: 0 });
+    render(panel({ ...base, horizons: [at(1), at(12), at(60), at(120)] }));
     for (const card of [screen.getByTestId('afford-chart'), screen.getByTestId('afford-horizons')]) {
       expect(within(card).getByTestId('afford-forecast-source')).toHaveTextContent(forecast.source.rules);
     }

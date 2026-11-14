@@ -3,7 +3,8 @@ import { canAfford, debtLoadThresholds, inflationAnnualOf, safetyCushionMonths }
 import type { Purchase } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { areaByZip, cloneProfileDemo } from '@/fixtures';
+import { getArea } from '@lifeguessr/data/areas';
+import { cloneProfileDemo } from '@/fixtures';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
 import { useAppStore, useProStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
@@ -15,7 +16,7 @@ beforeEach(() => {
   resetProState();
 });
 
-const rates = { inflationAnnual: inflationAnnualOf(areaByZip('75206')) };
+const rates = { inflationAnnual: inflationAnnualOf(getArea('75206')) };
 
 describe('useAfford (S11)', () => {
   it('no result until an amount is entered; then the engine verdict with horizons', async () => {

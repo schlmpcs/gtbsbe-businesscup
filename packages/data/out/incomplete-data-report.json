@@ -1,0 +1,1228 @@
+{
+  "generatedAt": "2026-11-14T13:33:49+00:00",
+  "areas": 60,
+  "metros": 15,
+  "complete": false,
+  "summary": {
+    "rentFromHud": "60/60 ZIPs (HUD FY2026 SAFMR, no estimated rents)",
+    "rentRangeRatio": "55/60 ZIPs (others use the engine estimate spread)",
+    "childcare": "60/60 ZIPs (others have no childcareMonthly)",
+    "groceries": "USDA October 2026 (national)",
+    "gas": "EIA weekly by city / state / PADD",
+    "cpi": "BLS CPI-U by metro (South region for Austin and Nashville)",
+    "carInsurance": "60/60 ZIPs, isEstimate: true (NAIC state average)",
+    "acsMedianCrossCheck": "interpolated vs published B25064 median: max 0.05% apart over 60 ZCTAs"
+  },
+  "knownLimits": [
+    "Rents are HUD FY2026 Small Area FMRs from HUD's eGIS open-data service; huduser.gov's workbooks sit behind a WAF challenge from this network (HUD_XLSX + HUD_FY use a downloaded workbook instead).",
+    "ACS quartiles are read through Census Reporter (a mirror of the Census API, which blocks this network). ZIP codes are treated as their ZCTA.",
+    "Childcare uses the county with the largest share of the ZCTA's land; split ZCTAs: 75024 (Collin County, TX, 87.49% of land), 30316 (DeKalb County, GA, 84.32% of land).",
+    "NDCP 2022 has no center-based prices for ZIPs 19132, 19125, 19103, 19020; they use the county's latest complete survey year (2020), inflated the same way and labeled with that year.",
+    "Groceries are a national USDA plan (no regional plan exists); gas and CPI are regional.",
+    "Car insurance is a state average premium (NAIC 2023, CPI-inflated), not a quote for a driver: isEstimate is true in every area.",
+    "Engine constants (meal price, gallons per month, kid grocery factor) are assumptions in packages/engine/assumptions.ts, not data from this pipeline."
+  ],
+  "failures": [],
+  "coverage": [
+    {
+      "zip": "10467",
+      "metro": "New York, NY",
+      "tier": "cheap",
+      "county": "Bronx County, NY",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 32171.0,
+        "q1": 1122.9,
+        "median": 1521.54,
+        "q3": 1872.57,
+        "publishedMedian": 1522.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Bronx County, NY",
+      "gas": "EIA New York City",
+      "cpi": "BLS CUURS12ASA0 (New York-Newark-Jersey City)",
+      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated"
+    },
+    {
+      "zip": "11385",
+      "metro": "New York, NY",
+      "tier": "mid",
+      "county": "Queens County, NY",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 25569.0,
+        "q1": 1556.73,
+        "median": 2003.91,
+        "q3": 2470.56,
+        "publishedMedian": 2004.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Queens County, NY",
+      "gas": "EIA New York City",
+      "cpi": "BLS CUURS12ASA0 (New York-Newark-Jersey City)",
+      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated"
+    },
+    {
+      "zip": "10013",
+      "metro": "New York, NY",
+      "tier": "expensive",
+      "county": "New York County, NY",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 8220.0,
+        "q1": 1232.71,
+        "median": 2597.66,
+        "q3": null,
+        "publishedMedian": 2598.0
+      },
+      "rentRangeRatio": "missing: third quartile falls in the open-ended \"$3,500 or more\" bracket (the engine falls back to its estimate spread)",
+      "childcare": "NDCP 2022 New York County, NY",
+      "gas": "EIA New York City",
+      "cpi": "BLS CUURS12ASA0 (New York-Newark-Jersey City)",
+      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated"
+    },
+    {
+      "zip": "10801",
+      "metro": "New York, NY",
+      "tier": "suburb",
+      "county": "Westchester County, NY",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 9470.0,
+        "q1": 1331.16,
+        "median": 1839.03,
+        "q3": 2533.82,
+        "publishedMedian": 1839.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Westchester County, NY",
+      "gas": "EIA New York City",
+      "cpi": "BLS CUURS12ASA0 (New York-Newark-Jersey City)",
+      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated"
+    },
+    {
+      "zip": "90011",
+      "metro": "Los Angeles, CA",
+      "tier": "cheap",
+      "county": "Los Angeles County, CA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 17646.0,
+        "q1": 1170.77,
+        "median": 1541.71,
+        "q3": 2010.3,
+        "publishedMedian": 1542.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Los Angeles County, CA",
+      "gas": "EIA Los Angeles",
+      "cpi": "BLS CUURS49ASA0 (Los Angeles-Long Beach-Anaheim)",
+      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated"
+    },
+    {
+      "zip": "90042",
+      "metro": "Los Angeles, CA",
+      "tier": "mid",
+      "county": "Los Angeles County, CA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 11148.0,
+        "q1": 1421.01,
+        "median": 1913.06,
+        "q3": 2491.89,
+        "publishedMedian": 1913.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Los Angeles County, CA",
+      "gas": "EIA Los Angeles",
+      "cpi": "BLS CUURS49ASA0 (Los Angeles-Long Beach-Anaheim)",
+      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated"
+    },
+    {
+      "zip": "90024",
+      "metro": "Los Angeles, CA",
+      "tier": "expensive",
+      "county": "Los Angeles County, CA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 11103.0,
+        "q1": 2059.0,
+        "median": 2668.92,
+        "q3": null,
+        "publishedMedian": 2669.0
+      },
+      "rentRangeRatio": "missing: third quartile falls in the open-ended \"$3,500 or more\" bracket (the engine falls back to its estimate spread)",
+      "childcare": "NDCP 2022 Los Angeles County, CA",
+      "gas": "EIA Los Angeles",
+      "cpi": "BLS CUURS49ASA0 (Los Angeles-Long Beach-Anaheim)",
+      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated"
+    },
+    {
+      "zip": "91301",
+      "metro": "Los Angeles, CA",
+      "tier": "suburb",
+      "county": "Los Angeles County, CA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 1488.0,
+        "q1": 2611.62,
+        "median": 3183.8,
+        "q3": null,
+        "publishedMedian": 3184.0
+      },
+      "rentRangeRatio": "missing: third quartile falls in the open-ended \"$3,500 or more\" bracket (the engine falls back to its estimate spread)",
+      "childcare": "NDCP 2022 Los Angeles County, CA",
+      "gas": "EIA Los Angeles",
+      "cpi": "BLS CUURS49ASA0 (Los Angeles-Long Beach-Anaheim)",
+      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated"
+    },
+    {
+      "zip": "60621",
+      "metro": "Chicago, IL",
+      "tier": "cheap",
+      "county": "Cook County, IL",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7638.0,
+        "q1": 504.71,
+        "median": 1049.49,
+        "q3": 1351.61,
+        "publishedMedian": 1049.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Cook County, IL",
+      "gas": "EIA Chicago",
+      "cpi": "BLS CUURS23ASA0 (Chicago-Naperville-Elgin)",
+      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated"
+    },
+    {
+      "zip": "60618",
+      "metro": "Chicago, IL",
+      "tier": "mid",
+      "county": "Cook County, IL",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 18603.0,
+        "q1": 1259.86,
+        "median": 1610.94,
+        "q3": 2017.8,
+        "publishedMedian": 1611.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Cook County, IL",
+      "gas": "EIA Chicago",
+      "cpi": "BLS CUURS23ASA0 (Chicago-Naperville-Elgin)",
+      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated"
+    },
+    {
+      "zip": "60611",
+      "metro": "Chicago, IL",
+      "tier": "expensive",
+      "county": "Cook County, IL",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 13968.0,
+        "q1": 1965.43,
+        "median": 2479.28,
+        "q3": 3224.19,
+        "publishedMedian": 2479.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Cook County, IL",
+      "gas": "EIA Chicago",
+      "cpi": "BLS CUURS23ASA0 (Chicago-Naperville-Elgin)",
+      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated"
+    },
+    {
+      "zip": "60007",
+      "metro": "Chicago, IL",
+      "tier": "suburb",
+      "county": "Cook County, IL",
+      "countyLandShare": 96.09,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 3149.0,
+        "q1": 1312.31,
+        "median": 1614.78,
+        "q3": 1933.5,
+        "publishedMedian": 1615.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Cook County, IL",
+      "gas": "EIA Chicago",
+      "cpi": "BLS CUURS23ASA0 (Chicago-Naperville-Elgin)",
+      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated"
+    },
+    {
+      "zip": "77033",
+      "metro": "Houston, TX",
+      "tier": "cheap",
+      "county": "Harris County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 3500.0,
+        "q1": 731.78,
+        "median": 1326.09,
+        "q3": 1725.98,
+        "publishedMedian": 1326.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Harris County, TX",
+      "gas": "EIA Houston",
+      "cpi": "BLS CUURS37BSA0 (Houston-The Woodlands-Sugar Land)",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "77008",
+      "metro": "Houston, TX",
+      "tier": "mid",
+      "county": "Harris County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 8134.0,
+        "q1": 1303.27,
+        "median": 1686.24,
+        "q3": 2149.14,
+        "publishedMedian": 1686.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Harris County, TX",
+      "gas": "EIA Houston",
+      "cpi": "BLS CUURS37BSA0 (Houston-The Woodlands-Sugar Land)",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "77019",
+      "metro": "Houston, TX",
+      "tier": "expensive",
+      "county": "Harris County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 8331.0,
+        "q1": 1565.78,
+        "median": 1958.6,
+        "q3": 2375.66,
+        "publishedMedian": 1959.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Harris County, TX",
+      "gas": "EIA Houston",
+      "cpi": "BLS CUURS37BSA0 (Houston-The Woodlands-Sugar Land)",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "77449",
+      "metro": "Houston, TX",
+      "tier": "suburb",
+      "county": "Harris County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 12495.0,
+        "q1": 1549.34,
+        "median": 1863.41,
+        "q3": 2226.31,
+        "publishedMedian": 1863.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Harris County, TX",
+      "gas": "EIA Houston",
+      "cpi": "BLS CUURS37BSA0 (Houston-The Woodlands-Sugar Land)",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "85009",
+      "metro": "Phoenix, AZ",
+      "tier": "cheap",
+      "county": "Maricopa County, AZ",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 6633.0,
+        "q1": 935.92,
+        "median": 1207.82,
+        "q3": 1569.5,
+        "publishedMedian": 1208.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Maricopa County, AZ",
+      "gas": "EIA West Coast less California",
+      "cpi": "BLS CUURS48ASA0 (Phoenix-Mesa-Scottsdale)",
+      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated"
+    },
+    {
+      "zip": "85018",
+      "metro": "Phoenix, AZ",
+      "tier": "mid",
+      "county": "Maricopa County, AZ",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7423.0,
+        "q1": 1190.39,
+        "median": 1537.3,
+        "q3": 1965.88,
+        "publishedMedian": 1537.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Maricopa County, AZ",
+      "gas": "EIA West Coast less California",
+      "cpi": "BLS CUURS48ASA0 (Phoenix-Mesa-Scottsdale)",
+      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated"
+    },
+    {
+      "zip": "85253",
+      "metro": "Phoenix, AZ",
+      "tier": "expensive",
+      "county": "Maricopa County, AZ",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 1057.0,
+        "q1": 1717.09,
+        "median": 2017.56,
+        "q3": 2594.33,
+        "publishedMedian": 2018.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Maricopa County, AZ",
+      "gas": "EIA West Coast less California",
+      "cpi": "BLS CUURS48ASA0 (Phoenix-Mesa-Scottsdale)",
+      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated"
+    },
+    {
+      "zip": "85225",
+      "metro": "Phoenix, AZ",
+      "tier": "suburb",
+      "county": "Maricopa County, AZ",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 10453.0,
+        "q1": 1393.79,
+        "median": 1738.33,
+        "q3": 2072.47,
+        "publishedMedian": 1738.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Maricopa County, AZ",
+      "gas": "EIA West Coast less California",
+      "cpi": "BLS CUURS48ASA0 (Phoenix-Mesa-Scottsdale)",
+      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated"
+    },
+    {
+      "zip": "19132",
+      "metro": "Philadelphia, PA",
+      "tier": "cheap",
+      "county": "Philadelphia County, PA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 6791.0,
+        "q1": 785.68,
+        "median": 1094.96,
+        "q3": 1473.81,
+        "publishedMedian": 1095.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2020 Philadelphia County, PA (2022 lacks MCINFANT, MCTODDLER, MCPRESCHOOL, MCSA; latest complete year is 2020)",
+      "gas": "EIA Central Atlantic (PADD 1B)",
+      "cpi": "BLS CUURS12BSA0 (Philadelphia-Camden-Wilmington)",
+      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated"
+    },
+    {
+      "zip": "19125",
+      "metro": "Philadelphia, PA",
+      "tier": "mid",
+      "county": "Philadelphia County, PA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 5011.0,
+        "q1": 1232.07,
+        "median": 1782.28,
+        "q3": 2325.23,
+        "publishedMedian": 1782.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2020 Philadelphia County, PA (2022 lacks MCINFANT, MCTODDLER, MCPRESCHOOL, MCSA; latest complete year is 2020)",
+      "gas": "EIA Central Atlantic (PADD 1B)",
+      "cpi": "BLS CUURS12BSA0 (Philadelphia-Camden-Wilmington)",
+      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated"
+    },
+    {
+      "zip": "19103",
+      "metro": "Philadelphia, PA",
+      "tier": "expensive",
+      "county": "Philadelphia County, PA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 11900.0,
+        "q1": 1511.82,
+        "median": 2015.1,
+        "q3": 2571.86,
+        "publishedMedian": 2015.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2020 Philadelphia County, PA (2022 lacks MCINFANT, MCTODDLER, MCPRESCHOOL, MCSA; latest complete year is 2020)",
+      "gas": "EIA Central Atlantic (PADD 1B)",
+      "cpi": "BLS CUURS12BSA0 (Philadelphia-Camden-Wilmington)",
+      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated"
+    },
+    {
+      "zip": "19020",
+      "metro": "Philadelphia, PA",
+      "tier": "suburb",
+      "county": "Bucks County, PA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 8753.0,
+        "q1": 1307.31,
+        "median": 1622.38,
+        "q3": 1880.48,
+        "publishedMedian": 1622.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2020 Bucks County, PA (2022 lacks MCINFANT, MCTODDLER, MCPRESCHOOL, MCSA; latest complete year is 2020)",
+      "gas": "EIA Central Atlantic (PADD 1B)",
+      "cpi": "BLS CUURS12BSA0 (Philadelphia-Camden-Wilmington)",
+      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated"
+    },
+    {
+      "zip": "75216",
+      "metro": "Dallas-Fort Worth, TX",
+      "tier": "cheap",
+      "county": "Dallas County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7844.0,
+        "q1": 964.84,
+        "median": 1221.1,
+        "q3": 1487.27,
+        "publishedMedian": 1221.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Dallas County, TX",
+      "gas": "EIA Texas",
+      "cpi": "BLS CUURS37ASA0 (Dallas-Fort Worth-Arlington)",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "75206",
+      "metro": "Dallas-Fort Worth, TX",
+      "tier": "mid",
+      "county": "Dallas County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 16399.0,
+        "q1": 1410.71,
+        "median": 1776.68,
+        "q3": 2250.38,
+        "publishedMedian": 1777.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Dallas County, TX",
+      "gas": "EIA Texas",
+      "cpi": "BLS CUURS37ASA0 (Dallas-Fort Worth-Arlington)",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "75205",
+      "metro": "Dallas-Fort Worth, TX",
+      "tier": "expensive",
+      "county": "Dallas County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 4261.0,
+        "q1": 1752.78,
+        "median": 2528.58,
+        "q3": 3362.62,
+        "publishedMedian": 2529.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Dallas County, TX",
+      "gas": "EIA Texas",
+      "cpi": "BLS CUURS37ASA0 (Dallas-Fort Worth-Arlington)",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "75024",
+      "metro": "Dallas-Fort Worth, TX",
+      "tier": "suburb",
+      "county": "Collin County, TX",
+      "countyLandShare": 87.49,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 11736.0,
+        "q1": 1580.63,
+        "median": 1891.11,
+        "q3": 2355.15,
+        "publishedMedian": 1891.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Collin County, TX",
+      "gas": "EIA Texas",
+      "cpi": "BLS CUURS37ASA0 (Dallas-Fort Worth-Arlington)",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "78744",
+      "metro": "Austin, TX",
+      "tier": "cheap",
+      "county": "Travis County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 9936.0,
+        "q1": 1385.67,
+        "median": 1646.53,
+        "q3": 1926.51,
+        "publishedMedian": 1647.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Travis County, TX",
+      "gas": "EIA Texas",
+      "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Austin index))",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "78704",
+      "metro": "Austin, TX",
+      "tier": "mid",
+      "county": "Travis County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 18534.0,
+        "q1": 1370.44,
+        "median": 1800.87,
+        "q3": 2379.21,
+        "publishedMedian": 1801.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Travis County, TX",
+      "gas": "EIA Texas",
+      "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Austin index))",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "78703",
+      "metro": "Austin, TX",
+      "tier": "expensive",
+      "county": "Travis County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 5217.0,
+        "q1": 1461.51,
+        "median": 2181.36,
+        "q3": 3064.6,
+        "publishedMedian": 2181.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Travis County, TX",
+      "gas": "EIA Texas",
+      "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Austin index))",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "78660",
+      "metro": "Austin, TX",
+      "tier": "suburb",
+      "county": "Travis County, TX",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 15110.0,
+        "q1": 1493.1,
+        "median": 1862.65,
+        "q3": 2307.21,
+        "publishedMedian": 1863.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Travis County, TX",
+      "gas": "EIA Texas",
+      "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Austin index))",
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+    },
+    {
+      "zip": "30315",
+      "metro": "Atlanta, GA",
+      "tier": "cheap",
+      "county": "Fulton County, GA",
+      "countyLandShare": 99.32,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7301.0,
+        "q1": 698.99,
+        "median": 1124.17,
+        "q3": 1638.75,
+        "publishedMedian": 1124.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Fulton County, GA",
+      "gas": "EIA Lower Atlantic (PADD 1C)",
+      "cpi": "BLS CUURS35CSA0 (Atlanta-Sandy Springs-Roswell)",
+      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated"
+    },
+    {
+      "zip": "30316",
+      "metro": "Atlanta, GA",
+      "tier": "mid",
+      "county": "DeKalb County, GA",
+      "countyLandShare": 84.32,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 5833.0,
+        "q1": 1264.78,
+        "median": 1717.18,
+        "q3": 2248.86,
+        "publishedMedian": 1717.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 DeKalb County, GA",
+      "gas": "EIA Lower Atlantic (PADD 1C)",
+      "cpi": "BLS CUURS35CSA0 (Atlanta-Sandy Springs-Roswell)",
+      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated"
+    },
+    {
+      "zip": "30305",
+      "metro": "Atlanta, GA",
+      "tier": "expensive",
+      "county": "Fulton County, GA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7923.0,
+        "q1": 1548.6,
+        "median": 2022.24,
+        "q3": 2543.54,
+        "publishedMedian": 2022.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Fulton County, GA",
+      "gas": "EIA Lower Atlantic (PADD 1C)",
+      "cpi": "BLS CUURS35CSA0 (Atlanta-Sandy Springs-Roswell)",
+      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated"
+    },
+    {
+      "zip": "30350",
+      "metro": "Atlanta, GA",
+      "tier": "suburb",
+      "county": "Fulton County, GA",
+      "countyLandShare": 99.49,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 9573.0,
+        "q1": 1433.83,
+        "median": 1708.62,
+        "q3": 1975.55,
+        "publishedMedian": 1709.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Fulton County, GA",
+      "gas": "EIA Lower Atlantic (PADD 1C)",
+      "cpi": "BLS CUURS35CSA0 (Atlanta-Sandy Springs-Roswell)",
+      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated"
+    },
+    {
+      "zip": "33142",
+      "metro": "Miami, FL",
+      "tier": "cheap",
+      "county": "Miami-Dade County, FL",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 14276.0,
+        "q1": 854.3,
+        "median": 1365.66,
+        "q3": 1790.89,
+        "publishedMedian": 1366.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Miami-Dade County, FL",
+      "gas": "EIA Miami",
+      "cpi": "BLS CUURS35BSA0 (Miami-Fort Lauderdale-West Palm Beach)",
+      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated"
+    },
+    {
+      "zip": "33125",
+      "metro": "Miami, FL",
+      "tier": "mid",
+      "county": "Miami-Dade County, FL",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 15859.0,
+        "q1": 1028.75,
+        "median": 1534.62,
+        "q3": 2019.7,
+        "publishedMedian": 1535.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Miami-Dade County, FL",
+      "gas": "EIA Miami",
+      "cpi": "BLS CUURS35BSA0 (Miami-Fort Lauderdale-West Palm Beach)",
+      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated"
+    },
+    {
+      "zip": "33131",
+      "metro": "Miami, FL",
+      "tier": "expensive",
+      "county": "Miami-Dade County, FL",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 8092.0,
+        "q1": 2438.08,
+        "median": 3123.91,
+        "q3": null,
+        "publishedMedian": 3124.0
+      },
+      "rentRangeRatio": "missing: third quartile falls in the open-ended \"$3,500 or more\" bracket (the engine falls back to its estimate spread)",
+      "childcare": "NDCP 2022 Miami-Dade County, FL",
+      "gas": "EIA Miami",
+      "cpi": "BLS CUURS35BSA0 (Miami-Fort Lauderdale-West Palm Beach)",
+      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated"
+    },
+    {
+      "zip": "33186",
+      "metro": "Miami, FL",
+      "tier": "suburb",
+      "county": "Miami-Dade County, FL",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7482.0,
+        "q1": 1781.87,
+        "median": 2223.81,
+        "q3": 2747.41,
+        "publishedMedian": 2224.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Miami-Dade County, FL",
+      "gas": "EIA Miami",
+      "cpi": "BLS CUURS35BSA0 (Miami-Fort Lauderdale-West Palm Beach)",
+      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated"
+    },
+    {
+      "zip": "98118",
+      "metro": "Seattle, WA",
+      "tier": "cheap",
+      "county": "King County, WA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7896.0,
+        "q1": 1323.53,
+        "median": 1839.22,
+        "q3": 2629.73,
+        "publishedMedian": 1839.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 King County, WA",
+      "gas": "EIA Seattle",
+      "cpi": "BLS CUURS49DSA0 (Seattle-Tacoma-Bellevue)",
+      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated"
+    },
+    {
+      "zip": "98103",
+      "metro": "Seattle, WA",
+      "tier": "mid",
+      "county": "King County, WA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 14711.0,
+        "q1": 1596.44,
+        "median": 2032.14,
+        "q3": 2719.53,
+        "publishedMedian": 2032.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 King County, WA",
+      "gas": "EIA Seattle",
+      "cpi": "BLS CUURS49DSA0 (Seattle-Tacoma-Bellevue)",
+      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated"
+    },
+    {
+      "zip": "98101",
+      "metro": "Seattle, WA",
+      "tier": "expensive",
+      "county": "King County, WA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 9983.0,
+        "q1": 1613.1,
+        "median": 2483.42,
+        "q3": 3157.36,
+        "publishedMedian": 2483.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 King County, WA",
+      "gas": "EIA Seattle",
+      "cpi": "BLS CUURS49DSA0 (Seattle-Tacoma-Bellevue)",
+      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated"
+    },
+    {
+      "zip": "98052",
+      "metro": "Seattle, WA",
+      "tier": "suburb",
+      "county": "King County, WA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 18636.0,
+        "q1": 2050.71,
+        "median": 2405.44,
+        "q3": 2970.92,
+        "publishedMedian": 2405.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 King County, WA",
+      "gas": "EIA Seattle",
+      "cpi": "BLS CUURS49DSA0 (Seattle-Tacoma-Bellevue)",
+      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated"
+    },
+    {
+      "zip": "80219",
+      "metro": "Denver, CO",
+      "tier": "cheap",
+      "county": "Denver County, CO",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 8386.0,
+        "q1": 1053.24,
+        "median": 1538.83,
+        "q3": 2027.44,
+        "publishedMedian": 1539.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Denver County, CO",
+      "gas": "EIA Denver",
+      "cpi": "BLS CUURS48BSA0 (Denver-Aurora-Lakewood)",
+      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated"
+    },
+    {
+      "zip": "80205",
+      "metro": "Denver, CO",
+      "tier": "mid",
+      "county": "Denver County, CO",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 11211.0,
+        "q1": 1322.17,
+        "median": 1904.59,
+        "q3": 2416.84,
+        "publishedMedian": 1905.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Denver County, CO",
+      "gas": "EIA Denver",
+      "cpi": "BLS CUURS48BSA0 (Denver-Aurora-Lakewood)",
+      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated"
+    },
+    {
+      "zip": "80202",
+      "metro": "Denver, CO",
+      "tier": "expensive",
+      "county": "Denver County, CO",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 9489.0,
+        "q1": 1801.09,
+        "median": 2308.76,
+        "q3": 2962.87,
+        "publishedMedian": 2309.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Denver County, CO",
+      "gas": "EIA Denver",
+      "cpi": "BLS CUURS48BSA0 (Denver-Aurora-Lakewood)",
+      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated"
+    },
+    {
+      "zip": "80013",
+      "metro": "Denver, CO",
+      "tier": "suburb",
+      "county": "Arapahoe County, CO",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 6246.0,
+        "q1": 1780.42,
+        "median": 2200.51,
+        "q3": 2636.16,
+        "publishedMedian": 2201.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Arapahoe County, CO",
+      "gas": "EIA Denver",
+      "cpi": "BLS CUURS48BSA0 (Denver-Aurora-Lakewood)",
+      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated"
+    },
+    {
+      "zip": "02124",
+      "metro": "Boston, MA",
+      "tier": "cheap",
+      "county": "Suffolk County, MA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 11412.0,
+        "q1": 791.38,
+        "median": 1683.51,
+        "q3": 2430.4,
+        "publishedMedian": 1684.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Suffolk County, MA",
+      "gas": "EIA Boston",
+      "cpi": "BLS CUURS11ASA0 (Boston-Cambridge-Newton)",
+      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated"
+    },
+    {
+      "zip": "02130",
+      "metro": "Boston, MA",
+      "tier": "mid",
+      "county": "Suffolk County, MA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 9887.0,
+        "q1": 1517.58,
+        "median": 2426.23,
+        "q3": 3182.9,
+        "publishedMedian": 2426.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Suffolk County, MA",
+      "gas": "EIA Boston",
+      "cpi": "BLS CUURS11ASA0 (Boston-Cambridge-Newton)",
+      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated"
+    },
+    {
+      "zip": "02116",
+      "metro": "Boston, MA",
+      "tier": "expensive",
+      "county": "Suffolk County, MA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7124.0,
+        "q1": 1341.41,
+        "median": 2375.0,
+        "q3": null,
+        "publishedMedian": 2375.0
+      },
+      "rentRangeRatio": "missing: third quartile falls in the open-ended \"$3,500 or more\" bracket (the engine falls back to its estimate spread)",
+      "childcare": "NDCP 2022 Suffolk County, MA",
+      "gas": "EIA Boston",
+      "cpi": "BLS CUURS11ASA0 (Boston-Cambridge-Newton)",
+      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated"
+    },
+    {
+      "zip": "02184",
+      "metro": "Boston, MA",
+      "tier": "suburb",
+      "county": "Norfolk County, MA",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 3062.0,
+        "q1": 1205.41,
+        "median": 2024.03,
+        "q3": 2716.7,
+        "publishedMedian": 2024.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Norfolk County, MA",
+      "gas": "EIA Boston",
+      "cpi": "BLS CUURS11ASA0 (Boston-Cambridge-Newton)",
+      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated"
+    },
+    {
+      "zip": "37207",
+      "metro": "Nashville, TN",
+      "tier": "cheap",
+      "county": "Davidson County, TN",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7574.0,
+        "q1": 960.05,
+        "median": 1282.53,
+        "q3": 1696.3,
+        "publishedMedian": 1283.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Davidson County, TN",
+      "gas": "EIA Midwest (PADD 2)",
+      "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Nashville index))",
+      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated"
+    },
+    {
+      "zip": "37206",
+      "metro": "Nashville, TN",
+      "tier": "mid",
+      "county": "Davidson County, TN",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 6230.0,
+        "q1": 1021.97,
+        "median": 1658.36,
+        "q3": 2145.52,
+        "publishedMedian": 1658.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Davidson County, TN",
+      "gas": "EIA Midwest (PADD 2)",
+      "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Nashville index))",
+      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated"
+    },
+    {
+      "zip": "37215",
+      "metro": "Nashville, TN",
+      "tier": "expensive",
+      "county": "Davidson County, TN",
+      "countyLandShare": 98.35,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 2439.0,
+        "q1": 1601.85,
+        "median": 1983.42,
+        "q3": 2879.55,
+        "publishedMedian": 1983.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Davidson County, TN",
+      "gas": "EIA Midwest (PADD 2)",
+      "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Nashville index))",
+      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated"
+    },
+    {
+      "zip": "37075",
+      "metro": "Nashville, TN",
+      "tier": "suburb",
+      "county": "Sumner County, TN",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 7198.0,
+        "q1": 1333.31,
+        "median": 1655.57,
+        "q3": 2072.05,
+        "publishedMedian": 1656.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Sumner County, TN",
+      "gas": "EIA Midwest (PADD 2)",
+      "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Nashville index))",
+      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated"
+    },
+    {
+      "zip": "55411",
+      "metro": "Minneapolis-St. Paul, MN",
+      "tier": "cheap",
+      "county": "Hennepin County, MN",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 4507.0,
+        "q1": 609.57,
+        "median": 1226.41,
+        "q3": 1880.53,
+        "publishedMedian": 1226.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Hennepin County, MN",
+      "gas": "EIA Minnesota",
+      "cpi": "BLS CUURS24ASA0 (Minneapolis-St. Paul-Bloomington)",
+      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated"
+    },
+    {
+      "zip": "55408",
+      "metro": "Minneapolis-St. Paul, MN",
+      "tier": "mid",
+      "county": "Hennepin County, MN",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 13178.0,
+        "q1": 1098.71,
+        "median": 1364.11,
+        "q3": 1815.56,
+        "publishedMedian": 1364.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Hennepin County, MN",
+      "gas": "EIA Minnesota",
+      "cpi": "BLS CUURS24ASA0 (Minneapolis-St. Paul-Bloomington)",
+      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated"
+    },
+    {
+      "zip": "55401",
+      "metro": "Minneapolis-St. Paul, MN",
+      "tier": "expensive",
+      "county": "Hennepin County, MN",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 6122.0,
+        "q1": 1609.94,
+        "median": 2022.77,
+        "q3": 2493.69,
+        "publishedMedian": 2023.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Hennepin County, MN",
+      "gas": "EIA Minnesota",
+      "cpi": "BLS CUURS24ASA0 (Minneapolis-St. Paul-Bloomington)",
+      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated"
+    },
+    {
+      "zip": "55420",
+      "metro": "Minneapolis-St. Paul, MN",
+      "tier": "suburb",
+      "county": "Hennepin County, MN",
+      "countyLandShare": 100.0,
+      "rent": "HUD FY2026 SAFMR",
+      "acs": {
+        "cashRentUnits": 3009.0,
+        "q1": 1073.06,
+        "median": 1283.05,
+        "q3": 1685.78,
+        "publishedMedian": 1283.0
+      },
+      "rentRangeRatio": "ACS B25063",
+      "childcare": "NDCP 2022 Hennepin County, MN",
+      "gas": "EIA Minnesota",
+      "cpi": "BLS CUURS24ASA0 (Minneapolis-St. Paul-Bloomington)",
+      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated"
+    }
+  ]
+}

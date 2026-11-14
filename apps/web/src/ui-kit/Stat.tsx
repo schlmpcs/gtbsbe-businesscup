@@ -14,9 +14,9 @@ const TONE: Record<StatTone, string> = {
 };
 
 const SIZE = {
-  md: 'text-2xl',
+  md: 'text-3xl',
   lg: 'text-4xl',
-  display: 'text-display',
+  display: 'text-display leading-display',
 } as const;
 
 export type StatProps = {
@@ -53,7 +53,7 @@ export function Stat({
         <span>{label}</span>
         {isEstimate && <EstimateTag />}
       </div>
-      <div className={cx('font-semibold leading-tight tabular-nums', SIZE[size], TONE[tone])}>{value}</div>
+      <div className={cx('font-display font-extrabold leading-tight tabular-nums', SIZE[size], TONE[tone])}>{value}</div>
       {hint && <p className="text-sm text-text-muted">{hint}</p>}
       {source && <SourceNote source={source} variant={sourceVariant} />}
     </div>

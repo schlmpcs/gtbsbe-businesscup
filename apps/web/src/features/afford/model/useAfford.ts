@@ -4,6 +4,7 @@ import { canAfford, debtLoadThresholds, safetyCushionMonths } from '@lifeguessr/
 import { LoanInputSchema, PurchaseSchema, type ForecastPoint, type Purchase } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { afford as affordCopy } from '@/copy';
+import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
@@ -112,6 +113,10 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
       },
     };
   }, [profile, purchase]);
+
+  // The first verdict this page load: someone priced a purchase.
+  const verdict = result?.status === 'ready' ? result.data.verdict : null;
+  useTrackOnce(verdict !== null, 'afford_checked', { name: 'afford_checked', props: { verdict: verdict ?? 'fits' } });
 
   const parse = useParseConfirm('purchase', (p: Purchase) => setForm(formFromPurchase(p)), { parse: opts.parse });
 

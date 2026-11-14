@@ -6,8 +6,9 @@ export type GameSource = 'fixtures' | 'api';
 
 /**
  * `NEXT_PUBLIC_GAME_SOURCE=api` uses the server routes (/api/daily, /api/daily/clue,
- * /api/daily/guess; task T5). Anything else, including unset, plays on the fixture cards in the
- * browser, so the game works before T5 lands.
+ * /api/daily/guess; task T5): the server holds the answers, records clues, scores guesses and
+ * keeps the results the leaderboard and share cards read (needs the store, STORE_URL). Anything
+ * else, including unset, plays on the fixture cards in the browser with the same engine.
  */
 export function gameSource(): GameSource {
   return process.env.NEXT_PUBLIC_GAME_SOURCE === 'api' ? 'api' : 'fixtures';
@@ -22,4 +23,15 @@ export type SessionSource = 'local' | 'api';
  */
 export function sessionSource(): SessionSource {
   return process.env.NEXT_PUBLIC_SESSION_SOURCE === 'api' ? 'api' : 'local';
+}
+
+/** Whether funnel events are sent. */
+export type EventsSource = 'off' | 'api';
+
+/**
+ * `NEXT_PUBLIC_EVENTS_SOURCE=api` sends funnel events to POST /api/events (task T8, needs the
+ * store). Default: off, so a build without a store never calls a route that would answer 503.
+ */
+export function eventsSource(): EventsSource {
+  return process.env.NEXT_PUBLIC_EVENTS_SOURCE === 'api' ? 'api' : 'off';
 }

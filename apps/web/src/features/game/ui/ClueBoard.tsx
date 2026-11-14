@@ -5,8 +5,8 @@ import type { ClueId, ClueVM, ExploreCardVM } from '../model/types';
 import { ClueFacts } from './ClueFacts';
 
 /**
- * Props of the clue panel slot. The static ClueBoard below implements it today; the illustrated
- * <HouseScene> (T12) takes the same props and replaces it behind a flag (PlayScreen's `ClueSlot`).
+ * Props of the clue panel slot (PlayScreen's `ClueSlot`). The illustrated house (HouseSceneClues,
+ * T12) is the default; the static ClueBoard below takes the same props and is the fallback.
  */
 export type ClueBoardProps = {
   /** The home being explored: its clue rooms, layout, decor and the clue cost. */
@@ -22,14 +22,15 @@ function ClueRow({ clue, card, onOpenClue, disabled, large }: ClueBoardProps & {
   const room = t.clues.rooms[clue.id];
   const rowText = large ? 'text-xl' : 'text-base';
 
+  // Opened room: a black-bordered tile with what the room shows.
   if (clue.status === 'open') {
     return (
-      <div className={cx('flex flex-col gap-xs rounded-md bg-surface px-lg py-md', rowText)}>
+      <div className={cx('flex flex-col gap-xs rounded-lg border-2 border-ink bg-surface px-lg py-md shadow-sm', rowText)}>
         <div className="flex items-baseline justify-between gap-md">
-          <span className="font-semibold">{room}</span>
-          <span className="text-sm text-text-muted">{t.clues.opened}</span>
+          <span className="font-bold">{room}</span>
+          <span className="text-xs font-bold uppercase tracking-wide text-text-muted">{t.clues.opened}</span>
         </div>
-        <ClueFacts facts={clue.facts} />
+        <ClueFacts facts={clue.facts} className="text-sm font-medium" />
       </div>
     );
   }
@@ -43,6 +44,7 @@ function ClueRow({ clue, card, onOpenClue, disabled, large }: ClueBoardProps & {
           ? t.clues.closedHint(formatRate(card.clueCost))
           : t.clues.closedFreeHint;
 
+  // Closed room: the "peek" pill, white with an orange border.
   return (
     <div className="flex flex-col gap-xs">
       <button
@@ -51,16 +53,16 @@ function ClueRow({ clue, card, onOpenClue, disabled, large }: ClueBoardProps & {
         disabled={disabled || clue.status === 'opening'}
         aria-busy={clue.status === 'opening' || undefined}
         className={cx(
-          'flex w-full items-center justify-between gap-md rounded-md border border-border bg-bg px-lg py-md text-left',
-          'transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60',
+          'flex w-full flex-wrap items-baseline justify-between gap-x-md gap-y-xs rounded-full border-2 border-primary bg-surface px-lg py-sm text-left shadow-md',
+          'transition-colors hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-60',
           rowText,
         )}
       >
-        <span className="font-semibold">{room}</span>
-        <span className="text-sm text-text-muted">{hint}</span>
+        <span className="font-bold">{room}</span>
+        <span className="text-sm font-semibold text-primary">{hint}</span>
       </button>
       {clue.status === 'error' && (
-        <p role="alert" className="text-sm font-medium text-negative">
+        <p role="alert" className="px-md text-sm font-medium text-negative">
           {room}: {t.errors.clue}
         </p>
       )}
@@ -68,25 +70,30 @@ function ClueRow({ clue, card, onOpenClue, disabled, large }: ClueBoardProps & {
   );
 }
 
-/** Static clue panel (the cut-order fallback for the house scene): five tap-to-reveal rooms. */
+/** Static clue panel (the cut-order fallback for the house scene): five tap-to-reveal rooms in a framed tile. */
 export function ClueBoard(props: ClueBoardProps) {
   const { card, large } = props;
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-md">
-      <div className="flex flex-col gap-xs">
-        <h2 id={headingId} className={cx('font-semibold leading-tight', large ? 'text-2xl' : 'text-lg')}>
-          {t.clues.heading}
-        </h2>
-        <p className="text-sm text-text-muted">{t.clues.intro}</p>
+    <section
+      aria-labelledby={headingId}
+      className="min-w-0 rounded-xl bg-surface p-md text-text shadow-lg lg:-rotate-1"
+    >
+      <div className="flex flex-col gap-lg rounded-lg bg-surface-strong p-lg sm:p-xl">
+        <div className="flex flex-col gap-xs">
+          <h2 id={headingId} className={cx('font-display font-extrabold leading-tight', large ? 'text-4xl' : 'text-2xl')}>
+            {t.clues.heading}
+          </h2>
+          <p className="text-sm text-text-muted">{t.clues.intro}</p>
+        </div>
+        <ul className="grid grid-cols-1 gap-md sm:grid-cols-2">
+          {card.clues.map((clue) => (
+            <li key={clue.id} aria-live="polite">
+              <ClueRow clue={clue} {...props} />
+            </li>
+          ))}
+        </ul>
       </div>
-      <ul className="flex flex-col gap-sm">
-        {card.clues.map((clue) => (
-          <li key={clue.id} aria-live="polite">
-            <ClueRow clue={clue} {...props} />
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }

@@ -82,9 +82,16 @@ function loanFacts(loan: NonNullable<ExplainRequest['loanResult']>, facts: Facts
       ? 'Payoff: never (the payment does not cover the interest)'
       : `Paid off after: ${loan.payoffMonth} months`,
   );
-  facts.lines.push(`Debt payments as a share of take-home pay: ${formatRate(loan.debtLoadBefore)} before, ${formatRate(loan.debtLoadAfter)} after`);
+  // A null debt load = no take-home pay to divide by: said in words, with no number to restate.
+  const { debtLoadBefore: before, debtLoadAfter: after } = loan;
+  if (before === null || after === null) {
+    facts.lines.push('Take-home pay: none in the profile, so debt payments cannot be measured as a share of income');
+  }
+  const share = (load: number | null) => (load === null ? 'not measurable (no take-home pay)' : formatRate(load));
+  facts.lines.push(`Debt payments as a share of take-home pay: ${share(before)} before, ${share(after)} after`);
   facts.lines.push(`Change in net worth after 10 years: ${signedMoney(loan.effect10y)}`);
-  facts.numbers.push(loan.monthly, loan.totalInterest, loan.totalCost, loan.debtLoadBefore, loan.debtLoadAfter, loan.effect10y);
+  facts.numbers.push(loan.monthly, loan.totalInterest, loan.totalCost, loan.effect10y);
+  for (const load of [before, after]) if (load !== null) facts.numbers.push(load);
   if (loan.payoffMonth !== null) facts.numbers.push(loan.payoffMonth, loan.payoffMonth / 12); // months or years
 }
 
