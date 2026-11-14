@@ -238,6 +238,10 @@ export type ClientFunnelEvent =
   | { name: 'renewals_exported' }
   | { name: 'overpaying_checked'; props: { lines: number; above: number } }
   | { name: 'payoff_planned'; props: { method: 'avalanche'|'snowball' } }
+  | { name: 'duel_picked'; props: { round: DuelRound; correct: boolean } }
+  | { name: 'hint_opened'; props: { round: DuelRound } }
+  | { name: 'challenge_copied' }
+  | { name: 'own_guess_started' }
   | { name: 'play_started' }
   | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
   | { name: 'home_guessed'; props: { home: number; cluesOpened: number } }
