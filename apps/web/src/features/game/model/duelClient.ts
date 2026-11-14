@@ -1,18 +1,24 @@
 // Duel game data source (S2/S3 "Which life costs more?"), behind one interface like the slider
 // game's ./client:
+// - http (createHttpDuelClient): the server routes GET /api/daily?game=duel, POST /api/daily/pick
+//   and POST /api/daily/hint. The server holds the answers, records hints, scores each pick once
+//   and keeps the day's progress per anonymous id, so a reload (or another device with the same
+//   id) resumes where the player stopped.
 // - fixtures (./duelFixtureClient): the contract computed in the browser from the sample cards with
 //   the real engine (costOfLife + dailyDuelPairs + scoreDuelPick), so the duel plays without a server.
-// - api: the server routes (GET /api/daily duel mode, POST /api/daily/pick, POST /api/daily/hint)
-//   are not built yet (#110–#115); until they are, a duel API build answers "unavailable" instead
-//   of shipping the fixture answers. The fixture client holds the answers, so this module never
-//   imports it statically: see loadFixtureDuelClient.
+//   It holds the answers, so this module never imports it statically: see loadFixtureDuelClient.
 // The duel has its own flag, NEXT_PUBLIC_DUEL_SOURCE (default fixtures), separate from
-// NEXT_PUBLIC_GAME_SOURCE: production builds with GAME_SOURCE=api for the rest of the game and
-// session plumbing and still plays the duel in the browser. When #115 lands the HTTP client
-// replaces unavailableDuelClient and #120 sets NEXT_PUBLIC_DUEL_SOURCE=api.
-import type { DuelHint, DuelLetter, DuelRound, PickResult, PublicDuel } from '@lifeguessr/types';
-import { ApiError } from '@/lib/api/http';
+// NEXT_PUBLIC_GAME_SOURCE (the slider game, sessions plumbing and the leaderboard follow that one).
+// NEXT_PUBLIC_DUEL_SOURCE=api plays against the server; #120 switches production to it.
+import {
+  DUEL_ROUNDS, type DuelHint, type DuelLetter, type DuelRound, type PickResult, type PublicDuel,
+} from '@lifeguessr/types';
+import {
+  DuelDailyResponseSchema, HintReplySchema, PickReplySchema, type DuelProgressWire,
+} from '@/lib/api/gameSchemas';
+import { getJson, postJson } from '@/lib/api/http';
 import { duelSource, type GameSource } from '@/lib/config';
+import { getAnonId } from '@/state/anonId';
 
 /** What the source already recorded for this player today: picks (with their results) and hints. */
 export type DuelProgress = {
@@ -27,16 +33,74 @@ export interface DuelClient {
   readonly source: GameSource;
   /** Today's duels. `today` is the client's New York date; the source's date wins. */
   daily(today: string): Promise<DuelDay>;
-  /** Pick the costlier life. One pick per round per day: a repeat answers the stored result. */
+  /**
+   * Pick the costlier life. One pick per round per day: a repeat answers the stored result (the
+   * first pick's, even when the repeat named the other letter).
+   */
   pick(round: DuelRound, choice: DuelLetter, date: string): Promise<PickResult>;
   /** One more fact on both cards; the source records it (−10% points for the round). */
   hint(round: DuelRound, date: string): Promise<DuelHint>;
 }
 
+// ----- http (DU3–DU5 routes) -----------------------------------------------------------------------
+
+/**
+ * The server's progress (JSON object keys, so rounds are '1'..'5') as the browser's DuelProgress
+ * (numeric rounds). The day's `resultId` is not kept here: every stored PickResult carries it.
+ */
+export function duelProgressFromWire(wire: DuelProgressWire | undefined): DuelProgress {
+  const progress: DuelProgress = { picks: {}, hints: {} };
+  if (!wire) return progress;
+  for (const round of DUEL_ROUNDS) {
+    const key = String(round) as `${DuelRound}`;
+    const pick = wire.picks[key];
+    if (pick) progress.picks[round] = { choice: pick.choice, result: pick.result };
+    const hint = wire.hints[key];
+    if (hint) progress.hints[round] = { A: hint.A, B: hint.B };
+  }
+  return progress;
+}
+
+/**
+ * The duel against the server. The anonymous id goes in the `x-anon-id` header (and in the POST
+ * bodies the routes require), never in a URL; every reply is checked against its zod schema, so a
+ * reply that breaks the contract is an ApiError (`invalid`), not data. Errors keep their status
+ * and `code`: 409 `day_over` means the day on screen has ended (useDuel loads the new one).
+ */
+export function createHttpDuelClient(opts: { anonId?: () => string; base?: string } = {}): DuelClient {
+  const anonId = opts.anonId ?? getAnonId;
+  const base = opts.base ?? '';
+  return {
+    source: 'api',
+    async daily() {
+      // The server's date wins: it names the set it served, and pick/hint must name that set.
+      const res = await getJson(`${base}/api/daily?game=duel`, DuelDailyResponseSchema, { anonId: anonId() });
+      return { date: res.date, duels: res.duels, progress: duelProgressFromWire(res.progress) };
+    },
+    async pick(round, choice, date) {
+      const id = anonId();
+      // `replayed` only says whether this request scored; the result is the same either way.
+      const { replayed: _replayed, ...result } = await postJson(
+        `${base}/api/daily/pick`, { anonId: id, date, round, choice }, PickReplySchema, { anonId: id },
+      );
+      return result;
+    },
+    async hint(round, date) {
+      const id = anonId();
+      // `recorded: false` (a repeat, or an ask after the pick) has the same text and no effect on the score.
+      const { A, B } = await postJson(`${base}/api/daily/hint`, { anonId: id, date, round }, HintReplySchema, { anonId: id });
+      return { A, B };
+    },
+  };
+}
+
+// ----- source selection ----------------------------------------------------------------------------
+
 /**
  * Loads the fixture duel client, or null in a duel API build. Next inlines NEXT_PUBLIC_DUEL_SOURCE
  * at build time, so with NEXT_PUBLIC_DUEL_SOURCE=api the bundler drops the import() branch and the
- * fixture duel client gets no browser chunk. Keep the env read inline (see ./client).
+ * fixture duel client (and the sample duel cards it plays) gets no browser chunk. Keep the env read
+ * inline (see ./client). CI builds a duel API app and checks its chunks (scripts/check-client-bundle.mjs).
  */
 const loadFixtureDuelClient: (() => Promise<{ createFixtureDuelClient: () => DuelClient }>) | null =
   process.env.NEXT_PUBLIC_DUEL_SOURCE === 'api' ? null : () => import('./duelFixtureClient');
@@ -57,14 +121,8 @@ export function lazyDuelClient(source: GameSource, load: () => Promise<DuelClien
   };
 }
 
-/** The API duel until its routes land (#115): every call answers 501, which the screen shows as "unavailable". */
-function unavailableDuelClient(): DuelClient {
-  const fail = () => Promise.reject(new ApiError('The duel routes are not built yet', 501));
-  return { source: 'api', daily: fail, pick: fail, hint: fail };
-}
-
 export function createDuelClient(source: GameSource = duelSource()): DuelClient {
-  if (source === 'api') return unavailableDuelClient();
+  if (source === 'api') return createHttpDuelClient();
   const load = loadFixtureDuelClient;
   if (!load) throw new Error('This build plays the server duel (NEXT_PUBLIC_DUEL_SOURCE=api); it has no fixture duel.');
   return lazyDuelClient('fixtures', async () => (await load()).createFixtureDuelClient());

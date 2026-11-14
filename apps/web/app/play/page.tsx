@@ -1,8 +1,8 @@
 'use client';
 
 // /play is the daily game. By default it is the duel ("Which life costs more?": S2 Duel round, S3
-// Reveal and Day result; also at /duel), played in the browser until the duel routes land (#115,
-// #120). NEXT_PUBLIC_GAME_MODE=slider is the rollback to the slider game: S2 Explore the home +
+// Reveal and Day result; also at /duel), played in the browser or against the server routes per
+// NEXT_PUBLIC_DUEL_SOURCE (production switches to the server in #120). NEXT_PUBLIC_GAME_MODE=slider is the rollback to the slider game: S2 Explore the home +
 // guess, S3 Reveal and summary, S4 Streamer mode with ?stream=1. Thin: the hook builds the
 // view-model, the UI renders it.
 import { use } from 'react';

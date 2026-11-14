@@ -20,7 +20,7 @@ const CATALOG_RESTRICTION = {
 };
 
 // The browser modules that may load the sample cards (packages/data/fixtures/cards.ts):
-// - the fixture game client and the fixture duel client, which play them (an API build has no chunk for either);
+// - the fixture game client, which plays them (an API build has no chunk for it);
 // - S6 Closest life and the ladder progress, which show them openly as "sample lives" when today's
 //   game wasn't played. They are not the API game's answers: the API plays the catalog
 //   (packages/data/cards), which shares no card with the samples;
@@ -28,7 +28,6 @@ const CATALOG_RESTRICTION = {
 // - apps/web/src/fixtures/cards.ts, the re-export they import.
 const SAMPLE_CARD_MODULES = [
   'apps/web/src/features/game/model/fixtureClient.ts',
-  'apps/web/src/features/game/model/duelFixtureClient.ts', // the fixture duel (same rules as fixtureClient)
   'apps/web/src/features/ladder/model/useClosestLife.ts',
   'apps/web/src/features/ladder/model/useLadderProgress.ts',
   'apps/web/app/kit/samples.ts',
@@ -40,6 +39,22 @@ const SAMPLE_CARD_MESSAGE =
 const SAMPLE_CARD_RESTRICTIONS = [
   { name: '@/fixtures/cards', message: SAMPLE_CARD_MESSAGE },
   { name: '@lifeguessr/data/fixtures/cards', message: SAMPLE_CARD_MESSAGE },
+];
+
+// The browser modules that may load the fixture duel's cards (packages/data/fixtures/duelCards.ts):
+// only the fixture duel client, which plays them (a duel API build, NEXT_PUBLIC_DUEL_SOURCE=api, has
+// no chunk for it), and apps/web/src/fixtures/duelCards.ts, the re-export it imports. Nothing that
+// ships in every build may: a duel API build must carry none of these cards.
+const DUEL_SAMPLE_CARD_MODULES = [
+  'apps/web/src/features/game/model/duelFixtureClient.ts',
+  'apps/web/src/fixtures/duelCards.ts', // the re-export itself
+];
+
+const DUEL_SAMPLE_CARD_MESSAGE =
+  "The duel sample cards are the fixture duel's answers: browser code may load them only in DUEL_SAMPLE_CARD_MODULES (eslint.config.mjs).";
+const DUEL_SAMPLE_CARD_RESTRICTIONS = [
+  { name: '@/fixtures/duelCards', message: DUEL_SAMPLE_CARD_MESSAGE },
+  { name: '@lifeguessr/data/fixtures/duelCards', message: DUEL_SAMPLE_CARD_MESSAGE },
 ];
 
 const FIXTURE_CLIENT_RESTRICTION = {
@@ -90,18 +105,33 @@ export default defineConfig([
   // chunks: apps/web/scripts/check-client-bundle.mjs). (features/*/ui below is stricter still.)
   {
     files: ['apps/web/**/*.{ts,tsx}'],
-    ignores: [...BROWSER_RULE_IGNORES, ...SAMPLE_CARD_MODULES],
+    ignores: [...BROWSER_RULE_IGNORES, ...SAMPLE_CARD_MODULES, ...DUEL_SAMPLE_CARD_MODULES],
     rules: {
       'no-restricted-imports': [
         'error',
-        { paths: [CATALOG_RESTRICTION, ...SAMPLE_CARD_RESTRICTIONS], patterns: [FIXTURE_CLIENT_RESTRICTION] },
+        {
+          paths: [CATALOG_RESTRICTION, ...SAMPLE_CARD_RESTRICTIONS, ...DUEL_SAMPLE_CARD_RESTRICTIONS],
+          patterns: [FIXTURE_CLIENT_RESTRICTION],
+        },
       ],
     },
   },
   {
     files: SAMPLE_CARD_MODULES,
     rules: {
-      'no-restricted-imports': ['error', { paths: [CATALOG_RESTRICTION], patterns: [FIXTURE_CLIENT_RESTRICTION] }],
+      'no-restricted-imports': [
+        'error',
+        { paths: [CATALOG_RESTRICTION, ...DUEL_SAMPLE_CARD_RESTRICTIONS], patterns: [FIXTURE_CLIENT_RESTRICTION] },
+      ],
+    },
+  },
+  {
+    files: DUEL_SAMPLE_CARD_MODULES,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { paths: [CATALOG_RESTRICTION, ...SAMPLE_CARD_RESTRICTIONS], patterns: [FIXTURE_CLIENT_RESTRICTION] },
+      ],
     },
   },
 

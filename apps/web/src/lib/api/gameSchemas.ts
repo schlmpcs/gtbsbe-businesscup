@@ -149,7 +149,8 @@ export const DuelRoundKeySchema = z.enum(['1', '2', '3', '4', '5']);
  *   enough players picked), the rest is stored.
  * - `hints`: the TEXT of the hint of each round the server recorded a hint for, nothing else: the
  *   browser never gets a hint it did not ask for.
- * Maps onto the client's DuelProgress by turning the round keys into numbers (#115).
+ * The browser's HTTP duel client maps it onto DuelProgress by turning the round keys into numbers
+ * (duelProgressFromWire in features/game/model/duelClient.ts).
  */
 export const DuelProgressWireSchema = z.object({
   resultId: z.string().regex(/^[0-9a-f]{32}$/).nullable(),
