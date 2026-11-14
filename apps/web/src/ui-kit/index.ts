@@ -16,7 +16,7 @@ export {
   type ForecastChartProps,
   type ForecastChartSeries,
 } from './ForecastChart';
-export { formatMoney, formatRate, type FormatMoneyOptions } from './format';
+export { formatMoney, formatMonth, formatRate, type FormatMoneyOptions } from './format';
 export { Gauge, gaugeZone, type GaugeProps, type GaugeThresholds, type GaugeZone } from './Gauge';
 export {
   HouseScene,

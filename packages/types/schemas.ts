@@ -161,11 +161,18 @@ export const StatementItemSchema = z.object({
   day: z.number().int().min(1).max(31),
 });
 
+/** Days in a valid 'YYYY-MM' month (day 0 of the next month is the last day of this one). */
+const daysInMonth = (month: string) => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
+
 export const CategoryTotalsSchema = z.object({
   month: MonthSchema,
   totals: z.record(CostCategorySchema, MoneySchema),
   oneOffs: z.array(z.object({ label: z.string().min(1), amount: MoneySchema })),
   detectedPay: NonNegativeMoneySchema.optional(),  // monthly
+  lastDay: z.number().int().min(1).max(31).optional(),  // day of the month's latest statement line
+}).refine((m) => m.lastDay === undefined || m.lastDay <= daysInMonth(m.month), {
+  message: 'lastDay is past the end of the month',
+  path: ['lastDay'],
 });
 
 // ----- Pro (S15): requests and responses of /api/pro/* ---------------------------------------

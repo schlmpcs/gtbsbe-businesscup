@@ -215,7 +215,9 @@ drift   = projection − average; flag if |drift| > spread
 vsAverage = projectedSpend − Σ averages
 ```
 
-With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Without any upload, S1 shows the monthly spend implied by the profile and no drift flags. That also applies when there is history but no statement rows for the current calendar month.
+With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Without any upload, S1 shows the monthly spend implied by the profile and no drift flags. That also applies when there is history but no statement rows for the current calendar month; S1 then says that this month has no transactions yet (and, with 3 months of history, that only this month's statement is missing), never that more months are needed.
+
+`day` is how far the month in progress has data: S1 passes the day of the statement's latest line that month (`CategoryTotals.lastDay`), not today's date, since days after the statement ends have no data yet and would project the month too low. Statement months saved before `lastDay` existed fall back to today.
 
 Why bill categories are not extrapolated: rent paid on the 1st would project as rent × 30 on day 1, and as about twice the rent mid-month (the sample statement on Nov 14 would flag rent about $2,000 over). A bill is paid in one lump, so it is projected as the larger of what was paid and the usual amount, and it drifts only once it has really gone over. `car` mixes fixed insurance with variable gas, so it is floored at usual and not extrapolated either. The list, the 3-month window, the 10% share and the $25 floor are in `assumptions.ts` (`monthEnd*`). The sample std dev (n − 1) and the $25 floor keep a few dollars in a usually empty category from being called drift.
 

@@ -127,6 +127,72 @@ describe('useToday (S1)', () => {
     if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
     expect(result.current.monthEnd.data.historyMonths).toBe(2);
     expect(result.current.monthEnd.data.fromStatement).toBe(true);
+    expect(result.current.monthEnd.data.noAverage).toBe('history');
+  });
+
+  it('3 past months and no rows this month: the history is enough, only this month is missing', async () => {
+    useAppStore.getState().applyStatementTotals([
+      { month: '2026-08', totals: totals({ groceries: 450 }), oneOffs: [] },
+      { month: '2026-09', totals: totals({ groceries: 500 }), oneOffs: [] },
+      { month: '2026-10', totals: totals({ groceries: 550 }), oneOffs: [] },
+    ]);
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
+    const profile = useAppStore.getState().profile;
+    expect(result.current.monthEnd.data).toMatchObject({
+      // The engine's contract without a current month: the profile's monthly spend (here measured
+      // from the statements: groceries = mean of 450, 500, 550), no comparison, no drift flags.
+      projectedSpend: monthEnd(profile, []).projectedSpend,
+      vsAverage: null,
+      drifts: [],
+      historyMonths: 3,
+      fromStatement: false,
+      noAverage: 'thisMonth',
+      month: '2026-11',
+      asOfDay: null,
+    });
+    expect(profile.spending.groceries).toEqual({ value: 500, isEstimate: false });
+  });
+
+  it('projects this month as of the statement’s last line, not today', async () => {
+    const history = [
+      { month: '2026-08', totals: totals({ groceries: 500, eatingOut: 200 }), oneOffs: [] },
+      { month: '2026-09', totals: totals({ groceries: 500, eatingOut: 200 }), oneOffs: [] },
+      { month: '2026-10', totals: totals({ groceries: 500, eatingOut: 200 }), oneOffs: [] },
+    ];
+    const current = { month: '2026-11', totals: totals({ groceries: 160, eatingOut: 70 }), oneOffs: [], lastDay: 8 };
+    useAppStore.getState().applyStatementTotals([...history, current]);
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
+    const profile = useAppStore.getState().profile;
+    const asOf8 = monthEnd(profile, history, { month: '2026-11', day: 8, totals: current.totals });
+    const asOf14 = monthEnd(profile, history, { month: '2026-11', day: 14, totals: current.totals });
+    expect(result.current.monthEnd.data).toMatchObject({
+      projectedSpend: asOf8.projectedSpend, vsAverage: asOf8.vsAverage, fromStatement: true, noAverage: null, asOfDay: 8,
+    });
+    // (160 + 70) / 8 × 30 = $862.50 for the two daily categories, not (160 + 70) / 14 × 30 ≈ $492.86.
+    expect(result.current.monthEnd.data.projectedSpend - asOf14.projectedSpend).toBeCloseTo(862.5 - (230 / 14) * 30, 6);
+  });
+
+  it('without the statement’s last day (older saved data), falls back to today as the as-of day', async () => {
+    useAppStore.getState().applyStatementTotals([{ month: '2026-11', totals: totals({ groceries: 140 }), oneOffs: [] }]);
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
+    const profile = useAppStore.getState().profile;
+    expect(result.current.monthEnd.data.asOfDay).toBe(14);
+    expect(result.current.monthEnd.data.projectedSpend)
+      .toBe(monthEnd(profile, [], { month: '2026-11', day: 14, totals: totals({ groceries: 140 }) }).projectedSpend);
+  });
+
+  it('a statement month later than today is not this month', async () => {
+    useAppStore.getState().applyStatementTotals([{ month: '2026-12', totals: totals({ groceries: 140 }), oneOffs: [], lastDay: 3 }]);
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
+    expect(result.current.monthEnd.data).toMatchObject({ fromStatement: false, historyMonths: 0, noAverage: 'history', asOfDay: null });
   });
 
   it('marks the committed move done', async () => {

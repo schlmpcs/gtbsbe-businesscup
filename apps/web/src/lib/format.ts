@@ -54,3 +54,21 @@ export function formatRate(rate: Rate, digits = 1): string {
   const abs = f.format(Math.abs(rate));
   return rate < 0 && abs !== f.format(0) ? `${MINUS}${abs}` : abs;
 }
+
+const monthFormat = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' });
+const monthDayFormat = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+
+/**
+ * A 'YYYY-MM' month by name: formatMonth('2026-11') → "November"; with a day of that month,
+ * formatMonth('2026-11', 9) → "November 9". Anything else → "—".
+ */
+export function formatMonth(month: string, day?: number): string {
+  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month);
+  if (!m) return NOT_A_NUMBER;
+  const year = Number(m[1]);
+  const mon = Number(m[2]) - 1;
+  if (day === undefined) return monthFormat.format(new Date(Date.UTC(year, mon, 1)));
+  const last = new Date(Date.UTC(year, mon + 1, 0)).getUTCDate();
+  if (!Number.isInteger(day) || day < 1 || day > last) return NOT_A_NUMBER;
+  return monthDayFormat.format(new Date(Date.UTC(year, mon, day)));
+}

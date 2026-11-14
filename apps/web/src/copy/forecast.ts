@@ -66,8 +66,12 @@ export const forecast = {
     monthEnd: {
       title: 'This month',
       projected: 'Projected spending this month',
-      fromStatement: 'Projected from your statement so far this month.',
+      /** `asOf` = the day the statement goes up to, e.g. "November 9". */
+      fromStatement: (asOf: string) => `Projected from your statement, which goes up to ${asOf}.`,
       fromProfile: 'From the monthly spending in your profile. Upload a statement to track the month as it goes.',
+      /** There are statements, but none has lines for this month (`month` = "November"). */
+      noRowsThisMonth: (month: string) =>
+        `Your statements have no transactions for ${month} yet, so this is your usual month, from the monthly spending in your profile.`,
       vsAverage: 'Compared with your 3-month average',
       /** `amount` is signed: +$240 = spending more than the average. */
       vsAverageValue: (amount: string) => `${amount} vs your 3-month average`,
@@ -76,7 +80,10 @@ export const forecast = {
       /** `amount` is signed: +$80 = more than usual. */
       drift: (category: string, amount: string) => `${category}: ${amount} vs usual`,
       needHistory: (have: number) =>
-        `Drift flags need 3 months of statements to know your usual. You have ${have === 0 ? 'none' : have === 1 ? '1 month' : `${have} months`} so far, so this shows the projection only.`,
+        `Drift flags need 3 months of statements before this one to know your usual. You have ${have === 0 ? 'none' : have === 1 ? '1 month' : `${have} months`} so far, so this shows the projection only.`,
+      /** The 3 months of history are there; only this month's lines are missing. */
+      needThisMonth: (month: string) =>
+        `Drift flags compare this month with your 3-month average. Upload a statement with ${month}’s transactions to see them.`,
       takeHome: 'Take-home pay',
       perMonth: 'per month',
       upload: 'Upload a statement',
