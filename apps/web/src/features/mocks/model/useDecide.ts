@@ -4,7 +4,7 @@
 // come from the engine's simulate. The lease terms start from the illustrative fixture
 // (leaseScenarioSample, every value an estimate) and the user edits them.
 import { forecast, forecastMonths, hasEstimates, simulate, type ScheduledPurchase } from '@lifeguessr/engine';
-import type { Money, Profile } from '@lifeguessr/types';
+import type { Profile } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { mocks as copy } from '@/copy';
 import { leaseScenarioSample, LeaseScenarioSchema, type LeaseScenario } from '@/fixtures';
