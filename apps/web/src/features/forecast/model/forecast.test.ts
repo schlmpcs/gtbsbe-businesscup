@@ -8,7 +8,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api/http';
 import { areaByZip, cloneProfileDemo } from '@/fixtures';
-import { useAppStore } from '@/state';
+import { useAppStore, useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { howWeCalculate } from './howWeCalculate';
 import { useFuture } from './useFuture';
@@ -98,7 +98,21 @@ describe('useToday (S1)', () => {
     const top = rankMoves(cloneProfileDemo(), { rates })[0]!;
     expect(result.current.topMove).toEqual({ status: 'ready', data: { ...top, isCommitted: false, target: moveTarget(top) } });
     expect(result.current.committedMove).toBeNull();
-    expect(result.current.game).toEqual({ date: null, played: 0, total: 0, finished: false });
+    expect(result.current.game).toEqual({ date: null, played: 0, total: 0, finished: false, homes: [] });
+  });
+
+  it('lists today’s homes in play order with which ones were guessed', async () => {
+    const card = (id: string, metro: string) => ({ id, metro, layout: '1bed' as const, caption: '', decor: [] });
+    act(() => {
+      useGameStore.getState().startDay('2026-11-14', [card('a', 'Austin, TX'), card('b', 'Boise, ID')]);
+      useGameStore.setState({ reveals: { a: {} as never } });
+    });
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    expect(result.current.game).toEqual({
+      date: '2026-11-14', played: 1, total: 2, finished: false,
+      homes: [{ id: 'a', metro: 'Austin, TX', played: true }, { id: 'b', metro: 'Boise, ID', played: false }],
+    });
   });
 
   it('uses past statement months as history and this month as the month in progress', async () => {

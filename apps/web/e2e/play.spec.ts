@@ -1,7 +1,10 @@
-// /play (S2–S4) in a real browser on the fixture game: explore + clues + guess → reveal → summary,
+// /play (S2–S4) in a real browser on the fixture game: explore the house + clues + guess → reveal → summary,
 // and streamer mode's countdown. Runs on the phone and desktop projects.
 import { expect, test, type Page } from '@playwright/test';
+import { common } from '../src/copy/common';
 import { game as t } from '../src/copy/game';
+
+const scene = common.kit.houseScene;
 
 let pageErrors: string[] = [];
 
@@ -50,11 +53,20 @@ test('play 3 homes with clues, see each reveal, finish the day and share', async
     await expect(page.getByText(t.progress(i + 1, 5))).toBeVisible();
     await expect(page.getByText(t.multiplier.cost('10%'))).toBeVisible();
 
-    // Open one room: the button turns into the room's facts and the multiplier drops.
-    await page.getByRole('button', { name: new RegExp(`^${rooms[i]}`) }).click();
-    await expect(page.getByRole('button', { name: new RegExp(`^${rooms[i]}`) })).toHaveCount(0);
-    await expect(page.getByText(t.clues.opened)).toBeVisible();
+    // Open one room in the house: it zooms in, the close-up shows its props and facts, and the
+    // multiplier drops. The sprites are real files served from public/scene.
+    await page.getByRole('button', { name: rooms[i], exact: true }).click();
+    const closeUp = page.getByRole('region', { name: scene.closeUp(rooms[i]) });
+    await expect(closeUp).toBeVisible();
+    await expect(closeUp.getByText(t.clues.opened)).toBeVisible();
     await expect(page.getByText('90%', { exact: true })).toBeVisible();
+    const sprite = closeUp.locator('img').first();
+    await expect(sprite).toBeVisible();
+    await expect.poll(() => sprite.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await expectNoSideScroll(page);
+    await closeUp.getByRole('button', { name: scene.back }).click();
+    await expect(closeUp).toHaveCount(0);
+    await expect(page.getByRole('button', { name: rooms[i], exact: true })).toBeFocused();
 
     // Type an exact guess, then lock it in. Focusing the box swaps "1,200" for "1200" and selects it,
     // so keys typed straight after the tap replace the old guess instead of appending to it.

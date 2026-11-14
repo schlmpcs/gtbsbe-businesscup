@@ -1,6 +1,9 @@
-import { ScreenPage } from '../_components/ScreenPage';
+'use client';
 
-// S14: feature mocks (T11). Placeholder until its task lands.
+// S14 Monthly check-in (T11 mock): the view-model (fixtures + engine) feeds the screen.
+import { useCheckin } from '@/features/mocks/model/useMocks';
+import { CheckinScreen } from '@/features/mocks/ui/CheckinScreen';
+
 export default function CheckinPage() {
-  return <ScreenPage id="S14" />;
+  return <CheckinScreen vm={useCheckin()} />;
 }

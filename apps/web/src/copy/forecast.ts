@@ -101,6 +101,25 @@ export const forecast = {
       markDone: 'I did it',
       seeAll: 'See all moves',
     },
+    kicker: 'Daily game',
+    kickerNote: 'Same homes for everyone today. New ones tomorrow.',
+    homes: {
+      label: 'Today’s homes',
+      home: (n: number) => `Home ${n}`,
+      start: 'Start here',
+      played: 'Guessed',
+      /** Masked price shown before a guess (no number). */
+      hidden: '$?,???',
+      hiddenLabel: 'Price hidden until you guess',
+    },
+    score: {
+      label: 'Your day at a glance',
+      played: 'homes played today',
+      playedValue: (played: number, total: number) => `${played}/${total}`,
+      in10y: 'net worth in 10 years',
+      month: 'projected spending this month',
+      move: 'your best move adds in 10 years',
+    },
     tools: {
       title: 'Plan a decision',
       afford: { title: 'Can I Afford It?', body: 'Check a purchase against this month and the next 10 years.' },
@@ -127,10 +146,15 @@ export const forecast = {
     withMoveIn10y: 'With this move',
     committedIn10y: 'With your committed move',
     errorTitle: 'We could not build your forecast.',
+    /** Sticker on the illustration: what the compared move adds (amount already signed). */
+    artSticker: (amount: string, committed: boolean) => `${amount} from ${committed ? 'your move' : 'your top move'}`,
+    artStickerNone: 'Your next 10 years',
+    backCta: 'Back to Today',
   },
 
   moves: {
     heading: 'Next moves',
+    rank: (n: number) => `#${n}`,
     intro: 'Ranked by what each one adds to your net worth in 10 years, in today’s dollars.',
     effect: (amount: string) => `${amount} in 10 years`,
     effectLabel: 'Added to your net worth in 10 years',

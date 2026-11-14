@@ -1,5 +1,6 @@
 // Strings for the daily game (S2–S4). Owner: Amir (Y8).
 // Functions here only pick words; every number arrives already computed (and usually formatted).
+import type { SpriteId } from '@lifeguessr/engine';
 import type { AreaData, ClueId, KidAge, SceneLayout } from '@lifeguessr/types';
 
 type Tier = AreaData['tier'];
@@ -12,6 +13,41 @@ const kidAges: Record<KidAge, string> = {
   preschool: 'preschooler',
   schoolAge: 'school-age kid',
 };
+
+/** What each house-scene sprite shows (alt text and close-up captions). */
+const spriteLabels = {
+  'layout/studio': 'A studio',
+  'layout/1bed': 'A 1-bedroom home',
+  'layout/2bed': 'A 2-bedroom home',
+  'layout/3bed': 'A 3-bedroom home',
+  'layout/4bed': 'A 4-bedroom home',
+  'garage/none': 'A bike and a bus pass',
+  'garage/economy': 'An economy car',
+  'garage/mid': 'A mid-range car',
+  'garage/luxury': 'A luxury car',
+  'garage/loanTag': 'A car loan bill',
+  'kidsRoom/crib': 'A crib',
+  'kidsRoom/toddler': 'A toddler’s toys',
+  'kidsRoom/preschool': 'Preschool blocks',
+  'kidsRoom/schoolAge': 'A school backpack',
+  'kidsRoom/homeOffice': 'A home office',
+  'kitchen/takeout-0-1': 'One takeout bag',
+  'kitchen/takeout-2-3': 'A few takeout bags',
+  'kitchen/takeout-4-6': 'A stack of takeout bags',
+  'kitchen/takeout-7plus': 'A mountain of takeout bags',
+  'entry/coat-adult': 'An adult’s coat',
+  'entry/coat-kid': 'A kid’s coat',
+  'mailbox/tier-cheap': 'A lower-cost neighborhood sign',
+  'mailbox/tier-mid': 'A mid-priced neighborhood sign',
+  'mailbox/tier-expensive': 'An expensive neighborhood sign',
+  'mailbox/tier-suburb': 'A suburban neighborhood sign',
+  'decor/skyline': 'The city skyline in the window',
+  'decor/lamp': 'A lamp',
+  'decor/plant': 'A house plant',
+  'decor/bed': 'A bed',
+  'decor/bookshelf': 'A bookshelf',
+  'decor/tree': 'A tree',
+} satisfies Record<SpriteId, string>;
 
 export const game = {
   screens: {
@@ -58,14 +94,30 @@ export const game = {
     metro: 'Metro',
     layout: 'Layout',
     decor: 'Around the house',
-    /** A decor sprite id ('decor/plant') as words; decor never implies a cost. */
-    decorItem: (sprite: string) => (sprite.split('/').pop() ?? sprite).replace(/[-_]/g, ' '),
+    /** Accessible name of the chips under the caption (layout and decor). */
+    about: 'About this home',
   },
   multiplier: {
     label: 'Score multiplier',
     /** "Opening a room costs 10% of your points." */
     cost: (pct: string) => `Opening a room costs ${pct} of your points.`,
     floor: 'Your multiplier is at its floor: more rooms are free now.',
+  },
+
+  // ----- S2/S3: today's strip and score bar -----
+  day: {
+    label: 'Today’s homes',
+    now: 'Now',
+    points: (points: string) => `+${points}`,
+    homeDone: (n: number, points: string) => `Home ${n}: ${points} points`,
+    homeNow: (n: number) => `Home ${n}: playing now`,
+    homeLater: (n: number) => `Home ${n}: not played yet`,
+  },
+  score: {
+    label: 'Your score',
+    maxPerHome: 'max for this home',
+    multiplier: (opened: number) => `multiplier, ${plural(opened, 'room', 'rooms')} peeked`,
+    total: 'your total today',
   },
   clues: {
     heading: 'Look around',
@@ -82,6 +134,19 @@ export const game = {
     opening: 'Opening…',
     opened: 'Opened',
     lockedHint: 'Locked in',
+  },
+  /** The illustrated house (T12, <HouseScene>). */
+  scene: {
+    /** Short tag on a closed room: what opening it costs. */
+    costBadge: (pct: string) => `−${pct}`,
+    freeBadge: 'Free',
+    errorBadge: 'Retry',
+    placeholderArt: 'Placeholder illustrations until the final art lands.',
+    /** What each sprite shows (alt text and close-up captions). Every sprite id has a line. */
+    sprites: spriteLabels,
+    /** A sprite id as words (falls back to the id's last part for an id this list doesn't know). */
+    sprite: (id: string): string =>
+      (spriteLabels as Record<string, string>)[id] ?? (id.split('/').pop() ?? id).replace(/[-_]/g, ' '),
   },
   facts: {
     noCar: 'No car: a bike and a bus pass.',
@@ -106,13 +171,20 @@ export const game = {
     hint: 'Rent, car, childcare, food and the rest, per month.',
     input: 'Or type it',
     inputSuffix: '/mo',
+    perMonth: 'a month',
     lockIn: (amount: string) => `Lock in ${amount}`,
     locking: 'Locking in…',
   },
 
   // ----- S4: streamer -----
   streamer: {
-    countdown: 'Time left',
+    countdown: 'Lock in before the timer',
+    live: 'Live',
+    guessLabel: 'Streamer’s guess',
+    realCost: 'Real cost',
+    /** Placeholder shown instead of the answer until the guess is locked in (not a number). */
+    hiddenCost: '$?,???',
+    hiddenCostLabel: 'Hidden until the guess is locked in',
     seconds: (n: number) => `${n}s`,
     secondsLabel: (n: number) => plural(n, 'second', 'seconds') + ' left',
     start: 'Start countdown',
@@ -125,6 +197,13 @@ export const game = {
   // ----- S3: the reveal -----
   reveal: {
     actualLabel: 'Their month',
+    costsHeading: 'This life costs',
+    perMonth: 'a month',
+    eyebrow: (progress: string, metro: string) => `${progress} · ${metro}`,
+    pointsSticker: (points: string) => `+${points} points`,
+    missedBy: (amount: string) => `Missed by ${amount}`,
+    inRangeSticker: 'In range',
+    sourceShort: (name: string, year: number) => `${name} · ${year}`,
     actualHint: 'Most likely, per month',
     range: (low: string, high: string) => `Typical range ${low} to ${high}`,
     yourGuess: 'Your guess',

@@ -64,12 +64,21 @@ payment = (r === 0) ? P / n : P * r / (1 - (1 + r) ** -n)
 each month: interest = balance * r
             principal = min(payment + extra − interest, balance)   (the last payment only clears what is left)
             balance  -= principal
-totalInterest = Σ interest; payoffMonth = first month balance = 0
+totalInterest = Σ interest; totalCost = downPayment + Σ payments; payoffMonth = first month balance = 0
 if payment + extra ≤ interest in month 0 → payoffMonth = null (never pays off); the UI warns
-debtLoad = Σ monthly debt payments / takeHomePay
+debtLoad = Σ required monthly debt payments / takeHomePay
+effect10y = forecast(with the purchase financed by this loan).in10y.mid − forecast(without).in10y.mid
 ```
 
 Test against a known value: $28,000 at 6.9% (`apr: 0.069`) for 36 months gives $863.28/month (863.279…; checked). Hard-code it in the test.
+
+Implementation details (T3, `packages/engine/loan/`):
+- `amortize({ principal, apr, payment, extraPayment })` is the schedule for any fixed payment; `loan()` calls it with the level payment. A payment that never covers the interest returns `payoffMonth: null` and an empty schedule; so does a loan that would take longer than 1,200 months. The level payment of a valid `LoanInput` always covers the interest, so `null` from `loan()` needs a payment that doesn't (the `amortize` and `payoffOrder` paths).
+- Numerics: with a level payment the principal part grows by (1 + r) a month, and the schedule carries it forward that way instead of as `payment − interest`, which cancels to 0 when the payment barely beats the interest (e.g. 100% APR over 600 months). It is the same schedule, without the rounding.
+- Debt load counts **required** payments only (not extra payments): each debt's minimum, using the card formula for a card whose minimum is an estimate, capped at what is owed, and 0 for a paid-off debt. These are the same numbers as the simulation's month 1, so Loan Lab and Can I Afford It? agree. With take-home pay ≤ 0, the load is `Infinity` when anything is owed and 0 otherwise.
+- `effect10y` is in today's dollars, like `Move.effect10y`. `loan(p, l, { rates })` and `compareLoans(p, ls, { rates })` take the area's rates (Loan Lab passes them the way S10 does). The thing bought counts as consumption, not an asset (as in Can I Afford It?), so this is the 10-year cost of buying it this way. `compareLoans` runs the baseline forecast once.
+- `payoffOrder`: a fixed monthly budget = Σ today's required payments + each debt's own `extraPayment` + `extra`. Each month every debt gets its required payment, and the rest goes to the debts in order (avalanche = highest APR first, ties to the smaller balance; snowball = smallest balance first, ties to the higher APR). Debts that are paid off, and card minimums that shrink, free money for the next debt. `order` lists only the debts that have a balance.
+- Invalid input throws a `RangeError`: negative or non-finite numbers, a down payment above the amount, a term that is not a whole number of months in 1..1200, a duplicate debt id, an unknown debt kind or payoff method. API inputs are also checked by the zod schemas before they reach the engine.
 
 ### Forecast (Amir, Y2)
 
@@ -141,10 +150,11 @@ Measuring from the nearest edge, not from the mid, keeps the score continuous: a
 | `entry` | `adults`, `kids` | coats and shoes per person | groceries |
 | `mailbox` | `zip`, `tier` | ZIP + neighborhood tier sign | rentUtilities |
 
-- Props without a `clue` are decor (plants, lamps, posters) and must not suggest a cost (no luxury decor in a cheap home).
-- Car price bands and takeout buckets live in `scene.ts` as named constants.
-- `<HouseScene>` renders the layout, the decor and closed rooms. A tap zooms into the room, calls `/api/daily/clue`, and then shows that room's props and facts. It works with labeled placeholder rectangles before the sprite kit lands.
-- Tests: a snapshot of `sceneOf` for every fixture card, plus a consistency test that every clue maps to a `CostBreakdown` item.
+- Props without a `clue` are decor (plants, lamps, posters) and must not suggest a cost (no luxury decor in a cheap home). Decor depends only on the layout (skyline, lamp and plant in the living room, a tree in the yard, one bed per bedroom; a studio has a sleeping loft and the bed in the living room), so two homes with the same layout look the same until a room is opened.
+- Car price bands (`CAR_PRICE_BANDS`: economy < $25k ≤ mid ≤ $45k < luxury), takeout buckets (`TAKEOUT_BUCKETS`) and the clue → cost-line map (`CLUE_COST_CATEGORIES`) live in `scene.ts` as named constants. `sceneOf` throws when the area is not the card's ZIP.
+- Sprite ids (`SPRITE_IDS`) are file paths under `apps/web/public/scene/` (`garage/luxury` → `garage/luxury.svg`). The placeholder kit there is drawn in the Dollhouse palette; the D1 kit replaces it one-for-one by id. The ids, the layout shells' 400 × 320 room grid and what each sprite stands for are in `apps/web/public/scene/README.md`.
+- `<HouseScene>` (`apps/web/src/ui-kit/HouseScene.tsx`) renders the layout shell, the decor and the closed rooms (each shows what opening it costs). A tap zooms the house into the room (CSS transform; instant with reduced motion), raises `onOpenRoom` (the game view-model's `openClue` → `/api/daily/clue` or the fixture client), and the close-up under the house shows the room's props and facts. Esc or "Back to the house" zooms out and returns focus to the room. `features/game/ui/HouseSceneClues.tsx` maps the view-model onto it and is `PlayScreen`'s default `ClueSlot`; the static `ClueBoard` takes the same props and stays as the fallback.
+- Tests (`packages/engine/scene.test.ts`): a snapshot of `sceneOf` for every fixture card, and a consistency test over every fixture card (and the full deck from `@lifeguessr/data` when present) that turns each clue's props back into the cost lines they stand for and compares them with `costOfLife`: no-car sprite ⇔ no car lines, band ⇔ price, loan tag ⇔ loan payment line (amount checked), childcare = Σ the area's price per kid prop, groceries = coats, the takeout pile = the bucket of the meals the eating-out line prices, rent = the layout's bedrooms, tier sign = the area's tier; and every cost line of a card is covered by a clue or the layout.
 
 ### Next Moves (Amir, Y3)
 
@@ -194,13 +204,22 @@ Implementation notes (full detail in the header of `packages/engine/afford.ts`):
 ### Month-end (Aibek, T9)
 
 ```
-projection (per category) = current month total so far / day × days in month   (oneOffs excluded)
-average = mean of last 3 full months per category (excluding oneOffs)
-spread  = max(std dev, 10% of average)
+usual (per category)      = mean of the last 3 full months, or the profile's value with fewer months
+projection (per category):
+  bill categories         = max(spent so far, usual)       (rentUtilities, childcare, subscriptions, car)
+  every other category    = current month total so far / day × days in month
+projectedSpend            = Σ projections                   (debtPayments excluded; oneOffs are not in totals)
+average = mean of last 3 full months per category
+spread  = max(sample std dev, 10% of average, $25)
 drift   = projection − average; flag if |drift| > spread
+vsAverage = projectedSpend − Σ averages
 ```
 
-With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Without any upload, S1 shows the monthly spend implied by the profile and no drift flags.
+With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Without any upload, S1 shows the monthly spend implied by the profile and no drift flags. That also applies when there is history but no statement rows for the current calendar month.
+
+Why bill categories are not extrapolated: rent paid on the 1st would project as rent × 30 on day 1, and as about twice the rent mid-month (the sample statement on Nov 14 would flag rent about $2,000 over). A bill is paid in one lump, so it is projected as the larger of what was paid and the usual amount, and it drifts only once it has really gone over. `car` mixes fixed insurance with variable gas, so it is floored at usual and not extrapolated either. The list, the 3-month window, the 10% share and the $25 floor are in `assumptions.ts` (`monthEnd*`). The sample std dev (n − 1) and the $25 floor keep a few dollars in a usually empty category from being called drift.
+
+Other rules: only months strictly before the current month count as history; a negative category total (refunds above spending) counts as 0; drifts are sorted by size. Malformed input (a bad `YYYY-MM`, a day outside the month, a non-finite total, the same month twice) throws a `RangeError`.
 
 ## AI usage rules
 
