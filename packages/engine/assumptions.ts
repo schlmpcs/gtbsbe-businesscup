@@ -1,7 +1,7 @@
 // Every constant the engine uses, in one place (docs/ENGINEERING.md → Default assumptions).
 // Each carries a `source` or `assumption: true`; the UI lists them in a "How we calculate" panel.
 // Rates are decimals per year. `note` is developer documentation, not user-facing copy.
-import type { CostCategory, Money, Rate, Source } from '@lifeguessr/types';
+import type { CostCategory, Money, Rate, ServiceCategory, Source, StatementClass } from '@lifeguessr/types';
 
 export type Assumption<T> =
   | { value: T; source: Source; assumption?: false; note?: string }
@@ -382,6 +382,200 @@ export const aiForecastSanity = {
 
 // ----- end Y15 --------------------------------------------------------------------------------
 
+// ----- M3: subscription audit (detectSubscriptions) --------------------------------------------
+// What counts as a recurring charge. The detector prefers to miss a subscription over calling rent
+// one, so every threshold errs on the strict side; a pattern with no catalogue match is `low`
+// confidence and is not counted until the user confirms it.
+
+/** Fewest charges that make a monthly or quarterly series (one missed period allowed between charges). */
+export const subsMinCharges = {
+  value: 2,
+  assumption: true,
+  note: 'Two charges in consecutive periods is the least that looks like a pattern; with an unknown merchant that is only `low` confidence.',
+} satisfies Assumption<number>;
+
+/** How far a charge's day of month may sit from the series' usual day (month-end days clamp to the month's length). */
+export const subsDayWindow = {
+  value: 3,
+  assumption: true,
+  note: 'Banks post weekend and holiday charges a day or two late; a wider window starts matching unrelated purchases.',
+} satisfies Assumption<number>;
+
+/** Charges within this share of each other are the same price (a steady amount), not a price change. */
+export const subsAmountTolerance = {
+  value: 0.03,
+  assumption: true,
+  note: 'Absorbs currency and sales-tax jitter on a steady charge; anything further apart is a step the detector must explain.',
+} satisfies Assumption<number>;
+
+/** A rise is flagged `priceUp` when the new amount is at least this many times the old steady amount... */
+export const subsPriceUpMinRatio = {
+  value: 1.05,
+  assumption: true,
+  note: 'Above the amount tolerance: a 3 to 5% step is kept in the series but not called a price rise.',
+} satisfies Assumption<number>;
+
+/** ...and at least this many dollars above it, so a few cents on a cheap plan is not a "price rise". */
+export const subsPriceUpMinDollars = {
+  value: 0.5 as Money,
+  assumption: true,
+  note: 'A 5% rise on a $2.99 plan is 15 cents; not worth an alert.',
+} satisfies Assumption<Money>;
+
+/** The old steady amount must have been charged at least this many times before a step counts as a price change. */
+export const subsSteadyMinCharges = {
+  value: 2,
+  assumption: true,
+  note: 'One charge is not a steady amount: a lone different charge on the usual day is more likely a one-off than a new price.',
+} satisfies Assumption<number>;
+
+/**
+ * A step more than this many times bigger or smaller (either way) is a different charge, not a price change.
+ * The same factor bounds a lone charge of a service that sells only monthly plans against a plan's price.
+ */
+export const subsStepMaxRatio = {
+  value: 2,
+  assumption: true,
+  note: 'Keeps an annual fee or a one-off on the billing day from being read as a price change. A smaller first charge can still be an intro price (below). Also keeps a one-off purchase or a yearly prepayment from a known vendor (a $1,299 store order, a $264 annual plan) from being read as one monthly bill: a lone charge counts only within this factor of a monthly plan price.',
+} satisfies Assumption<number>;
+
+/** `introEnded`: the first charges were at most this share of the amount that followed. */
+export const subsIntroMaxRatio = {
+  value: 0.5,
+  assumption: true,
+  note: 'Intro offers are typically half price or less; a milder jump reads as a price rise instead.',
+} satisfies Assumption<number>;
+
+/** `introEnded`: an intro price lasts at most this many charges (a longer run at the low price is the price). */
+export const subsIntroMaxCharges = {
+  value: 2,
+  assumption: true,
+  note: 'Typical trials and intro offers run one or two billing cycles.',
+} satisfies Assumption<number>;
+
+/** A series is `stopped` when its last charge is older than this many billing periods before the last day of the statement. */
+export const subsStoppedAfterPeriods = {
+  value: 1.5,
+  assumption: true,
+  note: 'One missed period plus half a period of slack for late posting; the statement may simply end before the next charge.',
+} satisfies Assumption<number>;
+
+/** Calendar days in an average month, to measure "1.5 billing periods" in days. */
+export const subsDaysPerMonth = {
+  value: 30.4375,
+  assumption: true,
+  note: '365.25 ÷ 12.',
+} satisfies Assumption<number>;
+
+/** Categories where owning several services is usually duplication (`overlap`); a gym and a language app are not. */
+export const subsOverlapCategories = {
+  value: ['video', 'music', 'news', 'cloud'] as readonly ServiceCategory[],
+  assumption: true,
+  note: 'Services that compete for the same job: two streaming video plans, two music plans, two news sites, two cloud storage plans.',
+} satisfies Assumption<readonly ServiceCategory[]>;
+
+/** Statement classes the detector looks at with no catalogue match; rent, loans, groceries and the like never. */
+export const subsCandidateClasses = {
+  value: ['subscriptions', 'other'] as readonly StatementClass[],
+  assumption: true,
+  note: 'A catalogue match overrides the class (a known service is a subscription whatever the categorizer said).',
+} satisfies Assumption<readonly StatementClass[]>;
+
+/** A charge within this share of a catalogue plan price is that plan (prices drift, so not exact). */
+export const subsPlanPriceTolerance = {
+  value: 0.1,
+  assumption: true,
+  note: 'The catalogue is a dated snapshot; a plan that went up 7% in a year should still be recognised.',
+} satisfies Assumption<number>;
+
+/** Smallest steady amount reported: below it a charge is a card check or a rounding artefact, not a subscription. */
+export const subsMinAmount = {
+  value: 0.5 as Money,
+  assumption: true,
+  note: 'Real $0.99 plans exist (cloud storage), so the floor is low; it also keeps the monthly figure of a yearly charge above zero cents.',
+} satisfies Assumption<Money>;
+
+/** Billing periods that may pass with no charge between two charges of one series (a failed payment, a paused month). */
+export const subsMissedPeriodsAllowed = {
+  value: 1,
+  assumption: true,
+  note: 'One missed month is a hiccup; two in a row is a series that ended.',
+} satisfies Assumption<number>;
+
+/** A monthly or quarterly series needs this many pairs of charges in adjacent periods. */
+export const subsMinAdjacentPairs = {
+  value: 1,
+  assumption: true,
+  note: 'Charges every other month are a two-month cycle, not a monthly charge that skips a month each time.',
+} satisfies Assumption<number>;
+
+/** Months that two charges of a yearly or quarterly plan may be off from a whole year or quarter and still be the same series. */
+export const subsPlanGapSlackMonths = {
+  value: { yearly: 1, quarterly: 0 },
+  assumption: true,
+  note: 'A yearly renewal drifts a month with the billing date and the statement; a quarter is short enough to be exact.',
+} satisfies Assumption<{ yearly: number; quarterly: number }>;
+
+/** Whether a single sighting (one charge of a known service, no pattern) that already looks stopped is still reported. */
+export const subsReportStoppedSightings = {
+  value: false,
+  assumption: true,
+  note: 'One old charge shows no recurrence: it is more likely a one-off than a subscription that has been cancelled.',
+} satisfies Assumption<boolean>;
+
+/** More than this share of a lane's months with two or more charges means a weekly or multi-per-month pattern, not a monthly one. */
+export const subsDoubledMonthsMaxShare = {
+  value: 0.5,
+  assumption: true,
+  note: 'An occasional double charge is a retry or a duplicate and is counted once; a charge in most months twice over is not a monthly subscription.',
+} satisfies Assumption<number>;
+
+/** Charges at which a pattern is `high` confidence (a catalogue match with fewer is `medium`, or `high` with the minimum of 2). */
+export const subsHighConfidenceMinCharges = {
+  value: 3,
+  assumption: true,
+  note: 'Three charges in a row is a pattern; two could be a coincidence unless the catalogue knows the merchant.',
+} satisfies Assumption<number>;
+
+/**
+ * Classes in which a pattern with no catalogue match can be `high` confidence. Any other class that is
+ * still a candidate (`other`: a transfer to a person, rent, a regular shop) stays `low` at any number
+ * of charges: shown to the user to confirm, not counted in the totals until confirmed.
+ */
+export const subsPatternHighClasses = {
+  value: ['subscriptions'] as readonly StatementClass[],
+  assumption: true,
+  note: 'Owner decision on the issue\'s two confidence rules: the categorizer calling a recurring line a subscription is the evidence that lifts a pattern with no catalogue entry.',
+} satisfies Assumption<readonly StatementClass[]>;
+
+/** The M3 assumptions, spread into `assumptions` below. */
+export const subscriptionAssumptions = {
+  subsMinCharges,
+  subsDayWindow,
+  subsAmountTolerance,
+  subsPriceUpMinRatio,
+  subsPriceUpMinDollars,
+  subsSteadyMinCharges,
+  subsStepMaxRatio,
+  subsIntroMaxRatio,
+  subsIntroMaxCharges,
+  subsStoppedAfterPeriods,
+  subsDaysPerMonth,
+  subsOverlapCategories,
+  subsCandidateClasses,
+  subsPlanPriceTolerance,
+  subsMinAmount,
+  subsMissedPeriodsAllowed,
+  subsMinAdjacentPairs,
+  subsPlanGapSlackMonths,
+  subsReportStoppedSightings,
+  subsDoubledMonthsMaxShare,
+  subsHighConfidenceMinCharges,
+  subsPatternHighClasses,
+} as const;
+
+// ----- end M3 ---------------------------------------------------------------------------------
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
@@ -408,6 +602,7 @@ export const assumptions = {
   oneOffHintMinAmount,
   oneOffOutlierMinAmount,
   oneOffOutlierMultiple,
+  ...subscriptionAssumptions,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;
