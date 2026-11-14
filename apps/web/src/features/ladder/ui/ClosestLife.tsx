@@ -1,14 +1,18 @@
 // S6 Closest life (Design v3, Figma 202:1931): pick one of today's lives (or a sample life) as the
-// starting profile. White cards in a row: a house cutout (picked by household shape, decorative
-// only), the city, one muted line, a big "$X / month". The chosen card gets an orange inset border
-// and a "That's me" sticker; the others a small source tag. Each card keeps its cost lines with
-// sources one tap away. The orange CTA ("Start from this life →") appears once a life is picked.
+// starting profile. White cards in a grid, built to scan: a house cutout (picked by household shape,
+// decorative only, never the same picture on two neighbouring cards), the household as the headline
+// ("1 adult · studio"), the metro as one muted line, a big "$X / month". The chosen card gets an
+// orange inset border and a "That's me" sticker; the others a small source tag. The full household,
+// the car, the range and the cost lines with sources sit under "Costs & sources". The orange CTA
+// ("Start from this life →") is disabled until a life is picked.
 import { common, ladder } from '@/copy';
-import { Art, BarBreakdown, cx, EstimateTag, formatMoney, Sticker, Tag, type ArtName } from '@/ui-kit';
+import { Art, BarBreakdown, Button, cx, EstimateTag, formatMoney, Sticker, Tag, type ArtName } from '@/ui-kit';
 import type { ClosestLifeVM, LadderProgressVM, LifeCandidateVM } from '../model/types';
 import { LadderShell } from './LadderShell';
 
 const t = ladder.closest;
+
+const HOME_ART = ['home-apartment', 'home-suburb', 'home-family', 'home-large'] as const satisfies readonly ArtName[];
 
 /** Decorative house cutout by household shape (never data). */
 function artFor(c: Pick<LifeCandidateVM, 'kids' | 'bedrooms'>): ArtName {
@@ -17,25 +21,52 @@ function artFor(c: Pick<LifeCandidateVM, 'kids' | 'bedrooms'>): ArtName {
   return c.bedrooms <= 1 ? 'home-apartment' : 'home-suburb';
 }
 
+/**
+ * One picture per card, in list order. When the household rule gives a card the same picture as the
+ * card before it, rotate through the other home pictures by the card's index so neighbours differ.
+ */
+export function artsFor(candidates: readonly Pick<LifeCandidateVM, 'kids' | 'bedrooms'>[]): ArtName[] {
+  const arts: ArtName[] = [];
+  candidates.forEach((c, i) => {
+    const prev = arts[i - 1];
+    let art: ArtName = artFor(c);
+    for (let k = 0; art === prev && k < HOME_ART.length; k++) art = HOME_ART[(i + k) % HOME_ART.length]!;
+    arts.push(art);
+  });
+  return arts;
+}
+
 export type ClosestLifeProps = { vm: ClosestLifeVM; progress: LadderProgressVM };
 
 export function ClosestLife({ vm, progress }: ClosestLifeProps) {
   const chosen = vm.candidates.find((c) => c.cardId === vm.chosenCardId);
+  const arts = artsFor(vm.candidates);
   return (
     <LadderShell
       screen="S6"
       progress={progress}
       loading={vm.status === 'loading'}
-      // No CTA until a life is picked: picking a card is this screen's action.
-      primary={chosen ? undefined : null}
+      // Picking a card is this screen's action: the CTA waits for it.
+      primary={
+        chosen ? undefined : (
+          <Button size="lg" disabled>
+            {ladder.shell.cta.S6}
+          </Button>
+        )
+      }
     >
       {vm.selfGuess !== null && (
         <p className="-mt-md text-sm text-text-muted">{t.sortedByGuess(formatMoney(vm.selfGuess))}</p>
       )}
       <ul aria-label={t.listLabel} className="grid grid-cols-1 gap-xl pt-sm sm:grid-cols-2 lg:grid-cols-3">
-        {vm.candidates.map((c) => (
+        {vm.candidates.map((c, i) => (
           <li key={c.cardId} className="min-w-0">
-            <Candidate candidate={c} chosen={c.cardId === vm.chosenCardId} onChoose={() => vm.choose(c.cardId)} />
+            <Candidate
+              candidate={c}
+              art={arts[i]!}
+              chosen={c.cardId === vm.chosenCardId}
+              onChoose={() => vm.choose(c.cardId)}
+            />
           </li>
         ))}
       </ul>
@@ -51,10 +82,12 @@ export function ClosestLife({ vm, progress }: ClosestLifeProps) {
 
 function Candidate({
   candidate: c,
+  art,
   chosen,
   onChoose,
 }: {
   candidate: LifeCandidateVM;
+  art: ArtName;
   chosen: boolean;
   onChoose: () => void;
 }) {
@@ -90,14 +123,13 @@ function Candidate({
         </Tag>
       )}
 
-      <Art name={artFor(c)} className="mx-auto w-4/5 pt-lg" imgClassName="aspect-square" />
+      <Art name={art} className="mx-auto w-4/5 pt-lg" imgClassName="aspect-square" />
 
       <div className="flex min-w-0 flex-col gap-xs">
-        <h2 className="font-display text-2xl font-extrabold leading-tight">{c.metro}</h2>
-        <p className="text-sm text-text-muted">
-          {t.household(c.adults, c.kids, c.bedrooms)} ·{' '}
-          {c.carPrice !== null ? t.car(formatMoney(c.carPrice)) : t.noCar}
-        </p>
+        <h2 className="font-display text-2xl font-extrabold leading-tight">
+          {t.headline(c.adults, c.kids.length, c.bedrooms)}
+        </h2>
+        <p className="text-sm text-text-muted">{c.metro}</p>
         {c.available ? (
           <p className="flex flex-wrap items-baseline gap-x-sm">
             <span
@@ -120,6 +152,10 @@ function Candidate({
           <summary className="cursor-pointer text-xs font-medium text-text-muted">{t.costsToggle}</summary>
           <div className="mt-md flex flex-col gap-sm">
             <p className="text-xs text-text-muted">{c.caption}</p>
+            <p className="text-xs text-text-muted">
+              {t.household(c.adults, c.kids, c.bedrooms)} ·{' '}
+              {c.carPrice !== null ? t.car(formatMoney(c.carPrice)) : t.noCar}
+            </p>
             <p className="text-xs text-text-muted tabular-nums">
               {t.monthlyRange(formatMoney(c.monthly.low), formatMoney(c.monthly.high))}
             </p>

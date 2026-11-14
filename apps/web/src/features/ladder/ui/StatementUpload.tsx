@@ -91,9 +91,15 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
               </div>
               {readFile !== null && (
                 <div className="flex flex-col items-center gap-xs">
-                  <Button variant="secondary" onClick={vm.trySample} disabled={vm.status === 'reading'}>
+                  {/* Outlined in ink: the screen's only orange button is the footer CTA. */}
+                  <button
+                    type="button"
+                    onClick={vm.trySample}
+                    disabled={vm.status === 'reading'}
+                    className="inline-flex items-center justify-center rounded-lg border-2 border-ink px-lg py-md text-base font-bold text-text transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
+                  >
                     {t.trySample}
-                  </Button>
+                  </button>
                   <p className="text-xs text-text-muted">{t.trySampleHint}</p>
                 </div>
               )}

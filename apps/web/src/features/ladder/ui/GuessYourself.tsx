@@ -5,7 +5,7 @@
 import { ladder } from '@/copy';
 import { Art, Button, Card, cx, EstimateTag, formatMoney, formatRate, Slider, Sticker } from '@/ui-kit';
 import type { GuessYourselfVM, LadderProgressVM, SelfGuessComparisonVM } from '../model/types';
-import { LadderShell } from './LadderShell';
+import { LadderShell, LadderTextButton } from './LadderShell';
 
 const t = ladder.guess;
 
@@ -15,8 +15,9 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
   const { guess, savedGuess, bridge, comparison } = vm;
   const isSaved = savedGuess !== null && savedGuess === guess.value;
 
-  // Before the first save, locking the guess is the one orange CTA. After it, the CTA goes on to the
-  // next rung (the shell's default) and changing the guess is the text action on the left.
+  // Before the first save, locking the guess is the one orange CTA (skipping is the text action).
+  // After it, the CTA goes on to the next rung (the shell's default) and changing the guess is the
+  // text action on the left.
   const lock = (
     <Button size="lg" onClick={vm.submit}>
       {t.submit}
@@ -24,9 +25,9 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
   );
   const update = (
     <div className="flex flex-wrap items-center gap-md">
-      <Button variant="secondary" onClick={vm.submit} disabled={isSaved}>
+      <LadderTextButton onClick={vm.submit} disabled={isSaved}>
         {t.update}
-      </Button>
+      </LadderTextButton>
       {isSaved && (
         <span role="status" className="text-sm font-semibold text-positive">
           {t.saved}
@@ -41,7 +42,7 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
       progress={progress}
       loading={vm.status === 'loading'}
       primary={savedGuess === null ? lock : undefined}
-      secondary={savedGuess === null ? null : update}
+      secondary={savedGuess === null ? undefined : update}
       aside={
         <div className="relative flex flex-col items-center">
           <Art name="empty-plot" className="w-full max-w-(--container-md)" />
