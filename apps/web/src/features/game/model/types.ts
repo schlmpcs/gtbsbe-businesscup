@@ -319,6 +319,7 @@ export type DuelVM = {
   openHint: () => void;
   /** Next round, or the day result after round 5. */
   next: () => void;
+  guessOwn: () => void;
   copyChallenge: () => void;
   copyStatus: DuelCopyStatus;
   share: () => void;

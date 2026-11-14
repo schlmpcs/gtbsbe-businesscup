@@ -34,6 +34,16 @@ describe('masks', () => {
     expect(maskOf(FUNNEL_EVENT_NAMES)).toBe(2n ** BigInt(FUNNEL_EVENT_NAMES.length) - 1n);
   });
 
+  it('keeps forty event names distinct', () => {
+    const names = FUNNEL_EVENT_NAMES as unknown as string[];
+    const originalLength = names.length;
+    try {
+      while (names.length < 40) names.push(`future_test_event_${names.length}`);
+      expect(new Set(names.map(eventBit)).size).toBe(40);
+      expect(maskOf(names)).toBe((1n << 40n) - 1n);
+    } finally { names.length = originalLength; }
+  });
+
   it('keep the first event of each id', () => {
     const a = ev({ name: 'forecast_viewed' });
     const b = ev({ name: 'paywall_viewed' });
@@ -45,6 +55,16 @@ describe('buildFunnelReport', () => {
   const w = { from: new Date('2026-11-07T00:00:00Z'), to: new Date('2026-11-14T00:00:00Z') };
   const m = (...names: string[]) => maskOf(names);
   const none = { guesses: 0, cluesOpened: 0, blind: 0 };
+
+  it('counts slider and duel players in the same funnel', () => {
+    const report = buildFunnelReport(w, [
+      { mask: m('play_started', 'home_guessed', 'game_finished'), users: 1 },
+      { mask: m('play_started', 'duel_picked', 'game_finished'), users: 1 },
+    ], none);
+    expect(step(report, 'play_started')?.users).toBe(2);
+    expect(step(report, 'game_finished')?.funnel).toBe(2);
+    expect(report.events.duel_picked).toBe(1);
+  });
 
   it('counts people per step, people through every earlier step, and the conversion between steps', () => {
     const report = buildFunnelReport(
