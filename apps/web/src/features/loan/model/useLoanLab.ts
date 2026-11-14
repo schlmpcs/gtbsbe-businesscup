@@ -5,7 +5,7 @@ import { LoanInputSchema, type LoanInput, type Money } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { loanOffersSample } from '@/fixtures';
 import { runEngine } from '@/lib/model/errors';
-import { debtLoadGauge } from '@/lib/model/profile';
+import { areaRates, debtLoadGauge } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { useAppReady, useAppStore } from '@/state';
@@ -40,7 +40,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
   const offerVMs: LoanOfferVM[] = useMemo(() => {
     const checked = offers.map((o) => ({ offer: o, invalid: invalidFieldsOf(o.input) }));
     const validInputs = checked.filter((c) => c.invalid.length === 0).map((c) => c.offer.input);
-    const compared = runEngine(() => compareLoans(profile, validInputs));
+    const compared = runEngine(() => compareLoans(profile, validInputs, { rates: areaRates(profile) }));
     let k = 0;
     const rows = checked.map(({ offer, invalid }) => {
       if (invalid.length > 0) return { offer, invalid, result: null, error: null };
@@ -77,7 +77,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
     const base = selected.result;
     const max = Math.max(EXTRA_MAX_FLOOR, Math.ceil(base.monthly / EXTRA_STEP) * EXTRA_STEP);
     const value = snap(extraPayment, 0, max, EXTRA_STEP);
-    const withExtra = value > 0 ? runEngine(() => loan(profile, { ...selected.input, extraPayment: value })) : null;
+    const withExtra = value > 0 ? runEngine(() => loan(profile, { ...selected.input, extraPayment: value }, { rates: areaRates(profile) })) : null;
     const r = withExtra?.status === 'ready' ? withExtra.data : base;
     return {
       ...linearSliderVM(value, 0, max, EXTRA_STEP),
