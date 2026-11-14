@@ -49,7 +49,7 @@ describePostgres('migrate (Postgres)', () => {
     await store.check();
     await store.check();
     expect(await tables(schema)).toEqual([
-      'funnel_events', 'game_clues', 'game_results', 'pro_checkout_sessions', 'pro_entitlements', 'schema_migrations', 'sessions',
+      'duel_days', 'duel_hints', 'duel_picks', 'funnel_events', 'game_clues', 'game_results', 'pro_checkout_sessions', 'pro_entitlements', 'schema_migrations', 'sessions',
     ]);
     expect(await applied(schema)).toEqual(MIGRATIONS.map((x) => ({ version: x.version, name: x.name, checksum: checksumOf(x.sql) })));
 
