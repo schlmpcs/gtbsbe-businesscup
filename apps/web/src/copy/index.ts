@@ -41,3 +41,5 @@ export { goal } from './goal';
 export { avatar } from './avatar';
 export { yearsPhrase } from './ai';
 export { lifeEvents } from './lifeEvents';
+export { cushion } from './cushion';
+export { workTime } from './workTime';

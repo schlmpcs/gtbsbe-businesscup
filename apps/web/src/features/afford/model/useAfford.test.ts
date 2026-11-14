@@ -47,6 +47,8 @@ describe('useAfford (S11)', () => {
       failsOn: expected.failsOn ?? null,
     });
     expect(r.data.horizons.map((h) => h.month)).toEqual([1, 12, 60, 120]);
+    // $1,200 at $5,200/month over 40-hour weeks ($30/h) = 40 h = 5 days → 1 week of work.
+    expect(r.data.workTime).toEqual({ unit: 'weeks', amount: 1, per: false, hoursPerWeek: 40, isEstimate: false });
     const ten = r.data.horizons[3]!;
     expect(ten.with).toEqual(expected.with.points[120]);
     expect(ten.deltaMid).toBeCloseTo(expected.with.points[120]!.mid - expected.without.points[120]!.mid, 6);

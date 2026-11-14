@@ -1,6 +1,6 @@
 // S11 Can I Afford It?: purchase form → engine canAfford (verdict, wait, rule, with / without
 // forecasts), free text via /api/ai/parse (confirmed first), and the wishlist.
-import { canAfford, debtLoadThresholds, safetyCushionMonths } from '@lifeguessr/engine';
+import { canAfford, debtLoadThresholds, safetyCushionMonths, workTime } from '@lifeguessr/engine';
 import { LoanInputSchema, PurchaseSchema, type ForecastPoint, type Purchase } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { afford as affordCopy } from '@/copy';
@@ -11,7 +11,7 @@ import type { Loadable } from '@/lib/model/types';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { SCREEN_ROUTES } from '@/lib/screens';
 import { useAppReady, useAppStore, useProfile, usePro } from '@/state';
-import type { AffordFormVM, AffordHorizonVM, AffordResultVM, AffordRulesVM, AffordVM } from './types';
+import type { AffordFormVM, AffordHorizonVM, AffordResultVM, AffordRulesVM, AffordVM, AffordWorkTimeVM } from './types';
 
 const HORIZONS = [1, 12, 60, 120] as const;
 
@@ -97,6 +97,11 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
       const wo = at(a.without.points, month);
       return { month, with: w, without: wo, deltaMid: w.mid - wo.mid };
     });
+    // The price per occurrence in work time, from take-home pay (null without pay).
+    const wt = workTime(purchase.amount, profile.takeHomePay);
+    const work: AffordWorkTimeVM | null = wt
+      ? { unit: wt.best.unit, amount: wt.best.amount, per: purchase.recurring, hoursPerWeek: wt.hoursPerWeek, isEstimate: wt.isEstimate }
+      : null;
     return {
       status: 'ready',
       data: {
@@ -110,6 +115,7 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
         withPoints: a.with.points,
         withoutPoints: a.without.points,
         horizons,
+        workTime: work,
       },
     };
   }, [profile, purchase]);

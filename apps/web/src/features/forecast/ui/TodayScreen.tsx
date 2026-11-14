@@ -16,6 +16,7 @@ import {
   type ArtName,
 } from '@/ui-kit';
 import type { MonthEndVM, MoveVM, TodayVM } from '../model/types';
+import { CushionCard } from './CushionCard';
 import {
   bandText,
   ErrorNote,
@@ -74,6 +75,7 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
           <MonthCard vm={vm} uploadHref={links.upload} Link={Link} />
           <MoveCard vm={vm} futureHref={links.future} Link={Link} />
           <GameCard vm={vm} playHref={links.play} Link={Link} />
+          <CushionCard vm={vm} />
         </div>
 
         <WhatIfRow links={links} Link={Link} />
