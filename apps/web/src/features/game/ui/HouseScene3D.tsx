@@ -121,7 +121,8 @@ function Scene({ card, onOpenClue, disabled = false, large = false }: ClueBoardP
             className={cx(
               'mt-md grid grid-cols-1 gap-sm sm:grid-cols-2 lg:pointer-events-none lg:absolute lg:inset-0 lg:mt-0 lg:block',
               'transition-opacity duration-300 motion-reduce:transition-none',
-              zoomed && 'opacity-0 lg:opacity-0',
+              // While zoomed: no gap on phones (the list collapses), invisible over the art on wide screens.
+              zoomed && 'max-lg:hidden lg:opacity-0',
             )}
           >
             {card.clues.map((clue) => {
