@@ -61,6 +61,20 @@ async function expectNoSideScroll(page: Page) {
 
 const h1 = (page: Page) => page.getByRole('heading', { level: 1 });
 
+/**
+ * Resolves when a batch with this event has been stored (200). Start it before the action and
+ * await it before leaving the page: an event sent on pagehide (keepalive) does reach the server,
+ * but Playwright does not reliably report requests from a document that is unloading. With events
+ * off it resolves at once.
+ */
+function stored(page: Page, name: ClientFunnelEvent['name']): Promise<unknown> {
+  if (!EVENTS_ON) return Promise.resolve();
+  return page.waitForResponse(
+    (res) => res.url().endsWith('/api/events') && res.status() === 200 && (res.request().postData() ?? '').includes(`"name":"${name}"`),
+    { timeout: 10_000 },
+  );
+}
+
 test('demo path: 3 homes → own guess → sliders → forecast → statement → Loan Lab', async ({ page, isMobile }) => {
   test.setTimeout(120_000);
 
@@ -91,6 +105,8 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
     await page.getByRole('button', { name: game.reveal.next }).click();
   }
   await expect(page.getByText(game.progress(4, 5))).toBeVisible();
+  // The game's events leave in their own batch before the next page (see `stored`).
+  if (EVENTS_ON) await expect.poll(() => sentEvents.filter((e) => e.name === 'home_guessed').length, { timeout: 10_000 }).toBe(3);
 
   // ----- 2. Guess your own month (S5) -----
   await page.goto('/me/guess');
@@ -98,16 +114,21 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   const own = page.getByRole('slider', { name: ladder.guess.sliderLabel });
   await own.focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
+  const ownGuess = stored(page, 'own_guess_submitted');
   await page.getByRole('button', { name: ladder.guess.submit }).click();
   await expect(page.getByRole('region', { name: ladder.guess.compareTitle })).toBeVisible();
   await expect(page.getByTestId('guess-verdict')).not.toBeEmpty();
+
+  await ownGuess;
 
   // ----- 3. Closest life (S6), from today's homes -----
   await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S6) }).click();
   await expect(page).toHaveURL(/\/me\/closest$/);
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
+  const chosen = stored(page, 'closest_life_chosen');
   await choose.click();
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
+  await chosen;
 
   // ----- 4. Sliders (S7): the month and the 10-year number follow -----
   await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S7) }).click();
@@ -115,12 +136,15 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
   const costBefore = await monthCost.textContent();
+  const adjusted = stored(page, 'sliders_adjusted');
   await eatingOut.focus();
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
   await expect(monthCost).not.toHaveText(costBefore ?? '');
+  await adjusted;
   await expectNoSideScroll(page);
 
   // ----- 5. You in 10 years (S10): the range band and the next moves -----
+  const viewed = stored(page, 'forecast_viewed');
   await page.getByRole('link', { name: ladder.shell.futureCta }).click();
   await expect(page).toHaveURL(/\/future$/);
   await expect(h1(page)).toHaveText(forecast.future.title);
@@ -129,6 +153,7 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   await expect(chart.locator('.recharts-area-area').first()).toBeVisible();
   await expect(page.getByTestId('in10y').getByText(/^Likely between −?\$[\d,]+ and −?\$[\d,]+$/)).toBeVisible();
   await expect(page.getByTestId('moves').getByRole('article').first()).toBeVisible();
+  await viewed;
 
   // ----- 6. Upload the sample statement (S9): estimates become measured, the range tightens -----
   await page.goto('/me/upload');
@@ -137,9 +162,11 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   const rangeBefore = await range.textContent();
   await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
   await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).toBeVisible();
+  const applied = stored(page, 'statement_applied');
   await page.getByRole('button', { name: ladder.upload.apply }).click();
   await expect(page.getByText(ladder.upload.applied)).toBeVisible();
   await expect(range).not.toHaveText(rangeBefore ?? '');
+  await applied;
 
   // ----- 7. Loan Lab (S12): three offers side by side, the debt-load gauge, pick another -----
   await page.goto('/loan');
