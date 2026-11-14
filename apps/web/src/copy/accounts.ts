@@ -1,0 +1,35 @@
+// Strings for Accounts, Account detail and Add account (MP11).
+export const accounts = {
+  title: 'Accounts',
+  periods: { '1m': '1 month', '3m': '3 months', '1y': '1 year', all: 'All' },
+  summaryModes: { totals: 'Totals', percent: 'Percent' },
+  add: 'Add account',
+  exportCsv: 'Export CSV',
+  pickType: 'What kind of account?',
+  back: 'Back',
+  close: 'Close',
+  submit: 'Add',
+  /** `labelKey` of each add-account form field. */
+  fields: {
+    name: 'Name',
+    balance: 'Balance',
+    apr: 'Interest rate (APR)',
+    minPayment: 'Minimum payment (per month)',
+    debtKind: 'Loan type',
+    growth: 'Expected change per year',
+  },
+  debtKinds: { auto: 'Auto', student: 'Student', personal: 'Personal', bnpl: 'Buy now, pay later' },
+  errors: { required: 'Required', invalid: 'Enter a valid number' },
+  detail: {
+    balance: 'Balance',
+    type: 'Type',
+    creditLimit: 'Credit limit',
+    apr: 'APR',
+    minPayment: 'Minimum payment',
+    lastUpdated: 'Last updated',
+    created: 'Created',
+    excluded: 'Left out of net worth',
+    transactions: 'Transactions',
+  },
+  estimate: 'Estimate',
+} as const;
