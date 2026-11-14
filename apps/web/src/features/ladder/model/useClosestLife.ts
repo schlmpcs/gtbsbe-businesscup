@@ -3,7 +3,7 @@
 import { cardToProfile, costOfLife } from '@lifeguessr/engine';
 import type { CostBreakdown, LifeCard } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
-import { cardsSample } from '@/fixtures';
+import { cardsSample } from '@/fixtures/cards';
 import { areaForZip } from '@/lib/areas';
 import { track } from '@/lib/events';
 import { useAppReady, useAppStore, useGameStore } from '@/state';

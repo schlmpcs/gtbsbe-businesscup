@@ -6,13 +6,15 @@
 //
 // The sample statement CSV is plain text, not JSON: read it with `readStatementSampleCsv` from
 // '@lifeguessr/data/fixtures/node' (Node only: tests, scripts, server routes).
+//
+// The sample life cards are not here: they live in '@lifeguessr/data/fixtures/cards' (see the note
+// in cards.ts), so importing this barrel never puts game answers in a browser bundle.
 import {
-  AreaDataSchema, CategoryTotalsSchema, LifeCardSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema, sourced,
-  type AreaData, type CategoryTotals, type LifeCard, type LoanInput, type Money, type Profile, type Sourced,
+  AreaDataSchema, CategoryTotalsSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema, sourced,
+  type AreaData, type CategoryTotals, type LoanInput, type Money, type Profile, type Sourced,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import areaDataJson from './areaData.sample.json';
-import cardsJson from './cards.sample.json';
 import leaseScenarioJson from './leaseScenario.sample.json';
 import loanOffersJson from './loanOffers.sample.json';
 import profileJson from './profile.demo.json';
@@ -28,9 +30,6 @@ const deepFreeze = <T>(value: T): T => {
 
 /** Sample AreaData for 4 Dallas-Fort Worth ZIPs, one per tier (cheap, mid, expensive, suburb). */
 export const areaDataSample: readonly AreaData[] = deepFreeze(AreaDataSchema.array().parse(areaDataJson));
-
-/** Sample life cards spanning cheap → expensive. Server-side only during play (holds the answer). */
-export const cardsSample: readonly LifeCard[] = deepFreeze(LifeCardSchema.array().parse(cardsJson));
 
 /** The demo profile: a 32-year-old with a card balance and an auto loan; some fields estimated. */
 export const profileDemo: Readonly<Profile> = deepFreeze(ProfileSchema.parse(profileJson));
@@ -99,13 +98,6 @@ export function areaByZip(zip: string): AreaData {
   const area = areaDataSample.find((a) => a.zip === zip);
   if (!area) throw new Error(`No fixture AreaData for ZIP ${zip}`);
   return area;
-}
-
-/** A fixture life card by id; throws if it does not exist. */
-export function cardById(id: string): LifeCard {
-  const card = cardsSample.find((c) => c.id === id);
-  if (!card) throw new Error(`No fixture LifeCard with id ${id}`);
-  return card;
 }
 
 /** A mutable deep copy of the demo profile (the exported one is frozen). */

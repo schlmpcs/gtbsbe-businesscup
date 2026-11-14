@@ -1,7 +1,8 @@
 // Sample props for the /kit showcase, all from the canonical fixtures and the engine (no hand-typed numbers).
 import { applyPatch, forecast, rankMoves, sceneOf } from '@lifeguessr/engine';
 import type { CostCategory } from '@lifeguessr/types';
-import { areaByZip, cardsSample, loanOffersSample, profileDemo } from '@/fixtures';
+import { areaByZip, loanOffersSample, profileDemo } from '@/fixtures';
+import { cardsSample } from '@/fixtures/cards';
 import { common, kitShowcase } from '@/copy';
 import type { BarBreakdownItem } from '@/ui-kit';
 

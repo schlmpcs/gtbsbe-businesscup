@@ -8,6 +8,7 @@
     "./areas": "./areas.ts",
     "./cards": "./cards.ts",
     "./fixtures": "./fixtures/index.ts",
+    "./fixtures/cards": "./fixtures/cards.ts",
     "./fixtures/node": "./fixtures/node.ts",
     "./fixtures/*.json": "./fixtures/*.json",
     "./fixtures/*.csv": "./fixtures/*.csv"

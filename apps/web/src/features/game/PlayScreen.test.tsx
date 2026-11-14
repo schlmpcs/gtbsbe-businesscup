@@ -5,7 +5,8 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { common, game as t } from '@/copy';
 import { resetClientState } from '@/test/clientState';
-import { createFixtureGameClient, type GameClient } from './model/client';
+import type { GameClient } from './model/client';
+import { createFixtureGameClient } from './model/fixtureClient';
 import { usePlay, type UsePlayOptions } from './model/usePlay';
 import { ClueBoard } from './ui/ClueBoard';
 import { PlayScreen } from './ui/PlayScreen';

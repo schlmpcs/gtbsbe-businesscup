@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { AREA_TIERS, COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import {
-  areaByZip, areaDataSample, cardsSample, leaseScenarioFixture, LeaseScenarioFixtureSchema, leaseScenarioSample, LeaseScenarioSchema, loanOffersSample, profileDemo, statementTotalsSample,
+  areaByZip, areaDataSample, leaseScenarioFixture, LeaseScenarioFixtureSchema, leaseScenarioSample, LeaseScenarioSchema, loanOffersSample, profileDemo, statementTotalsSample,
 } from './index';
+import { cardsSample } from './cards';
 import { readStatementSampleCsv } from './node';
 
 describe('fixtures', () => {

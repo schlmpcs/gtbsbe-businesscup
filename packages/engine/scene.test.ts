@@ -6,7 +6,8 @@
 // lines they stand for and compared with costOfLife, so the picture cannot contradict the numbers.
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { areaByZip, areaDataSample, cardsSample } from '@lifeguessr/data/fixtures';
+import { areaByZip, areaDataSample } from '@lifeguessr/data/fixtures';
+import { cardsSample } from '@lifeguessr/data/fixtures/cards';
 import {
   CLUE_IDS, COST_CATEGORIES,
   type AreaData, type ClueId, type CostCategory, type KidAge, type LifeCard, type SceneProp,
