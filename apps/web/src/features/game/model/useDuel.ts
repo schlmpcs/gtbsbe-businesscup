@@ -148,7 +148,7 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
         if (mounted.current) setPicking(null);
       });
     },
-    [client, day, round, picking, progress.picks, viewIndex, setIndex],
+    [client, day, round, picking, progress.picks, progress.hints, viewIndex, setIndex],
   );
 
   const openHint = useCallback(() => {
