@@ -37,6 +37,8 @@ export type ForecastChartProps = {
   compare?: ForecastChartSeries;
   /** Draw the low–high bands (default true). */
   showBand?: boolean;
+  /** What the band means, as the legend names it (default: the range from the numbers we estimated). */
+  bandLabel?: string;
   /** Formats y values, tooltip and table cells (default compact dollars: $48K). */
   formatValue?: (value: number) => string;
   /** Small print under the chart (e.g. "In today's dollars"). */
@@ -108,6 +110,7 @@ export function ForecastChart({
   series,
   compare,
   showBand = true,
+  bandLabel,
   formatValue = defaultFormat,
   footnote,
   className,
@@ -235,7 +238,7 @@ export function ForecastChart({
         {showBand && (
           <li className="flex items-center gap-xs">
             <Swatch color={MAIN} band />
-            {t.rangeLegend}
+            {bandLabel ?? t.rangeLegend}
           </li>
         )}
       </ul>

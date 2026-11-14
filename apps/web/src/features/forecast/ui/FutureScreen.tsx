@@ -109,6 +109,7 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
           series={{ label: f.seriesLabel, points: vm.points }}
           compare={vm.withMove ? { label: f.withMoveLabel(compareTitle), points: vm.withMove.points } : undefined}
           showBand={!vm.band.isZero}
+          bandLabel={band.label}
         />
         <div className="mt-md rounded-md bg-surface p-md text-sm" data-testid="band-note">
           <p className="font-semibold">{band.label}</p>

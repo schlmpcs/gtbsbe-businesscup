@@ -263,6 +263,24 @@ describe('FutureScreen (S10)', () => {
     expect(within(how).queryByText(t.how.intro)).not.toBeInTheDocument();
   });
 
+  it('names the band’s source in the chart legend: the model’s uncertainty for an AI answer, the inputs for rules', async () => {
+    const rules = render(<Future />);
+    const rulesChart = await screen.findByRole('figure', { name: t.future.chartTitle });
+    expect(within(screen.getByTestId('in10y')).getByTestId('forecast-source')).toHaveAttribute('data-source', 'rules');
+    expect(within(rulesChart).getByText(t.band.label)).toBeInTheDocument();
+    expect(within(rulesChart).queryByText(t.band.model.label)).not.toBeInTheDocument();
+    rules.unmount();
+    resetClientState();
+
+    route = mockForecastRoute((body) => aiAnswer(body));
+    render(<Future />);
+    const headline = await screen.findByTestId('in10y');
+    await waitFor(() => expect(within(headline).getByTestId('forecast-source')).toHaveAttribute('data-source', 'ai'));
+    const aiChart = screen.getByRole('figure', { name: t.future.chartTitle });
+    expect(within(aiChart).getByText(t.band.model.label)).toBeInTheDocument();
+    expect(within(aiChart).queryByText(t.band.label)).not.toBeInTheDocument();
+  });
+
   it('says the forecast is updating while a new answer is on its way', async () => {
     render(<Future />);
     const headline = await screen.findByTestId('in10y');
