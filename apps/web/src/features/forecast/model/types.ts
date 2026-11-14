@@ -3,17 +3,17 @@
 // Hooks: useToday (S1) in ./useToday.ts, useFuture (S10) in ./useFuture.ts.
 import type { MoveCandidate } from '@lifeguessr/engine';
 import type {
-  Goal, GoalStatus, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, Money, Move, MoveKind, Profile, Rate, Source,
+  Goal, GoalStatus, SavingToReach, MovesTowardGoal, CostCategory, ForecastBundle, ForecastPoint, ForecastSource, HorizonYears, Money, Move, MoveKind, Profile, Rate, Source,
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 import type { ProfileOrigin } from '@/state';
 
 export type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 export type { ProfileOrigin } from '@/state';
-export type { CostCategory, ForecastPoint, ForecastSource, Money, MoveKind, Source } from '@lifeguessr/types';
+export type { CostCategory, ForecastPoint, ForecastSource, HorizonYears, Money, MoveKind, Source } from '@lifeguessr/types';
 
 /**
- * What the 10-year range band is made of: 'inputs' = the numbers we estimated (rules forecast),
+ * What the range band is made of: 'inputs' = the numbers we estimated (rules forecast),
  * 'model' = the AI forecaster's own uncertainty.
  */
 export type BandKind = 'inputs' | 'model';
@@ -34,17 +34,27 @@ export type ForecastState =
   | { status: 'ready'; source: ForecastSource; answer: ForecastAnswer; isRefreshing: boolean; isStale: boolean }
   | { status: 'error'; error: VMError };
 
-/** A Next Move as the UI shows it. Copy comes from `kind` (+ `category`). */
+/**
+ * A Next Move as the UI shows it. Copy comes from `kind` (+ `category`). The number to show is `effect`
+ * (at `horizonYears`); `effect10y` stays the 10-year effect from the same answer (what a commit stores).
+ */
 export type MoveVM = Move & {
   /** `move.id === profile.committedMoveId`. */
   isCommitted: boolean;
   /** What the move sets, read from its patch, for a one-line detail. Null when the patch has neither. */
   target: MoveTarget | null;
   /**
-   * Where `effect10y` came from: the forecast the ranking used. Null for a stored committed move
-   * that is not in the current ranking (its number is the one frozen when it was committed).
+   * Where `effect` and `effect10y` came from: the forecast the ranking used. Null for a stored committed
+   * move that is not in the current ranking (its number is the one frozen when it was committed).
    */
   source: ForecastSource | null;
+  /**
+   * Scenario − base net worth at `horizonYears`, today's dollars: what the list is ranked by. For a stored
+   * committed move that is not ranked, its frozen `effect10y` (and `horizonYears` is 10).
+   */
+  effect: Money;
+  /** The year `effect` is measured at. */
+  horizonYears: HorizonYears;
 };
 
 /** The concrete change a move makes: a monthly extra debt payment, or a category's new monthly amount. */
@@ -52,11 +62,26 @@ export type MoveTarget =
   | { kind: 'extraPayment'; debtId: string; monthly: Money }
   | { kind: 'spendingTo'; category: CostCategory; monthly: Money };
 
-/** The ranked moves (engine rankCandidates over the forecast's scenarios, top 3) and the unlock state. */
+/**
+ * The ranked moves (engine rankCandidates over the forecast's scenarios by the effect at the chosen year,
+ * top 3), the unlock state and the forecast horizon (one for the app, remembered in the store).
+ */
 export type NextMovesVM = {
   moves: Loadable<MoveVM[]>;
   /** The forecast the ranking and the screen's numbers come from. */
   forecast: ForecastState;
+  /** The year the numbers and the ranking are read at (default 10). */
+  horizonYears: HorizonYears;
+  /**
+   * False until the saved state is loaded: `horizonYears` is then the default (10), not necessarily the
+   * user's pick, so screens show no year-specific title or intro yet, and the picker is off with no year
+   * chosen (no "10 years" flash for someone who picked 3).
+   */
+  horizonReady: boolean;
+  /** The years the picker offers (FORECAST_HORIZONS). */
+  horizons: readonly HorizonYears[];
+  /** Pick the year: reads the same answer again (no request); counted when it changes. */
+  setHorizonYears: (years: HorizonYears) => void;
   /**
    * True until the forecast for the current profile has arrived (first load, or after the profile changed): the
    * moves on screen are then the previous profile's, so `commit` and `markDone` do nothing and their buttons are
@@ -102,7 +127,7 @@ export type TodayHomeVM = { id: string; metro: string; played: boolean };
 
 /** S1 Today. */
 export type TodayVM = {
-  /** Saved state loaded. The 10-year number has its own `forecastStatus`: it may take a while. */
+  /** Saved state loaded. The forecast number has its own `forecastStatus`: it may take a while. */
   status: 'loading' | 'ready';
   /**
    * First visit: no profile of the user's own (nor the sample life asked for), nothing entered, no
@@ -119,26 +144,33 @@ export type TodayVM = {
   /** 'loading' until the first forecast arrives (up to the client timeout); 'error' only when nothing could be computed. */
   forecastStatus: 'loading' | 'ready' | 'error';
   forecastError: VMError | null;
-  /** Who made the 10-year number: the AI forecaster or the rules engine. Null until there is one. */
+  /** Who made the forecast number: the AI forecaster or the rules engine. Null until there is one. */
   source: ForecastSource | null;
-  /** Net worth in 10 years, today's dollars, with the range band (a zero point until `forecastStatus` is 'ready'). */
-  in10y: ForecastPoint;
+  /** The year picked on S10 (store), which the number and the move gains are read at. */
+  horizonYears: HorizonYears;
+  /** False until the saved state is loaded (see NextMovesVM.horizonReady): no year-specific title yet. */
+  horizonReady: boolean;
+  /**
+   * Net worth at `horizonYears`, today's dollars, with the range band (a zero point until `forecastStatus`
+   * is 'ready').
+   */
+  atHorizon: ForecastPoint;
   /** True when the band has no width (no estimated input for the rules, a single number from the model). */
-  in10yBandIsZero: boolean;
+  bandIsZero: boolean;
   /** What the band means: the numbers we estimated, or the model's own uncertainty. */
-  in10yBandKind: BandKind;
+  bandKind: BandKind;
   /** The move the user committed to, if any. */
   committedMove: MoveVM | null;
   /** Mark the committed move done. Does nothing while `actionsDisabled`. */
   markCommittedDone: () => void;
   /**
-   * A newer answer is on its way (the profile changed, or a rules answer is being asked for again): the 10-year
+   * A newer answer is on its way (the profile changed, or a rules answer is being asked for again): the
    * number on screen may be the previous one's. Same flag as FutureVM.isRefreshing.
    */
   isRefreshing: boolean;
   /** The forecast is loading or out of date for the profile: the move buttons are disabled (see NextMovesVM.actionsDisabled). */
   actionsDisabled: boolean;
-  /** Best move right now (first of rankMoves), or why there is none. */
+  /** Best move right now at the chosen year (first of the ranking), or why there is none. */
   topMove: Loadable<MoveVM | null>;
   /** Daily game call to action. */
   game: {
@@ -151,18 +183,19 @@ export type TodayVM = {
   };
 };
 
-/** S10 You in 10 years + Next Moves. */
+/** S10 You in N years (the picked horizon) + Next Moves. */
 export type FutureVM = NextMovesVM & {
   status: 'loading' | 'ready' | 'error';
   error: VMError | null;
   todaysDollars: boolean;
   setTodaysDollars: (on: boolean) => void;
-  /** Monthly points, month 0 (today) to 120, for the chart and its range band. */
+  /** Monthly points, month 0 (today) to 12·horizonYears, for the chart and its range band. */
   points: ForecastPoint[];
-  /** One point per year (months 0, 12, …, 120). */
+  /** One point per year (months 0, 12, …, 12·horizonYears). */
   yearly: ForecastPoint[];
   today: ForecastPoint;
-  in10y: ForecastPoint;
+  /** Net worth at `horizonYears` (month 12·horizonYears), in the shown dollars. */
+  atHorizon: ForecastPoint;
   /** Who made the numbers on screen (also on each move). Null until there is an answer. */
   source: ForecastSource | null;
   /**
@@ -175,8 +208,8 @@ export type FutureVM = NextMovesVM & {
    * estimated. 'model' (AI forecast): the model's own range, zero when it gave a single number.
    */
   band: { isZero: boolean; kind: BandKind; estimatedFields: EstimatedField[] };
-  /** In-10-years with the committed move applied (from the same answer), for a "with your move" line. */
-  committedPreview: { moveId: string; in10y: ForecastPoint } | null;
+  /** Net worth at `horizonYears` with the committed move applied (from the same answer), for a "with your move" line. */
+  committedPreview: { moveId: string; point: ForecastPoint } | null;
   /**
    * The move the chart can compare against: the committed move while it is ranked, otherwise the
    * top-ranked move. Null when there is no move.
@@ -185,8 +218,11 @@ export type FutureVM = NextMovesVM & {
   /** Whether the chart shows the "with this move" line. */
   compareOn: boolean;
   setCompareOn: (on: boolean) => void;
-  /** The forecast with `compareMove`'s patch applied (same answer and dollars); null while off. */
-  withMove: { moveId: string; points: ForecastPoint[]; in10y: ForecastPoint } | null;
+  /**
+   * The forecast with `compareMove`'s patch applied (same answer, dollars and months as `points`), and its
+   * point at `horizonYears`; null while off.
+   */
+  withMove: { moveId: string; points: ForecastPoint[]; point: ForecastPoint } | null;
   /** "Why?" text per move id (POST /api/ai/explain); absent until asked for that move. */
   explanations: Record<string, Loadable<ExplanationVM>>;
   /** Ask for the explanation of one move (again, after an error). */

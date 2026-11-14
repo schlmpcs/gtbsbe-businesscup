@@ -15,11 +15,12 @@ import {
   type ProStatus, type Profile, type ProfilePatch, type Purchase, type StatementItem,
   type SessionErrorCode, type SessionState,
   CLIENT_EVENT_NAMES, ClientEventEnvelopeSchema, EVENTS_BATCH_MAX, type EVENTS_ERROR_CODES, EventsRequestSchema,
-  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, EVENT_MASK_BITS, type FunnelReportSchema, type SERVER_EVENT_NAMES,
+  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelReportSchema, type SERVER_EVENT_NAMES,
   type ClientEventEnvelope, type ClientFunnelEvent, type EventsErrorCode, type EventsRequest, type FunnelReport,
   type ServerFunnelEvent,
   ForecastBundleSchema, ForecastPointSchema, ForecastSchema, YearAnchorSchema,
   type Forecast, type ForecastBundle, type ForecastPoint, type ForecastSource, type YearAnchor,
+  FORECAST_HORIZONS, HorizonYearsSchema, type ExplainRequest, type HorizonYears, type Money,
   DuelHintRequestSchema, DuelPickRequestSchema, type DuelHintSchema, PickResultSchema, PublicDuelSchema,
   type DuelHint, type DuelHintRequest, type DuelPickRequest, type PickResult, type PublicDuel,
 } from './index';
@@ -328,9 +329,9 @@ describe('Funnel event contracts', () => {
     for (const name of CLIENT_EVENT_NAMES) {
       expect(ClientEventEnvelopeSchema.options.some((o) => o.shape.name.value === name)).toBe(true);
     }
-    // The funnel is made of known events; the mask uses safe integer arithmetic and Postgres bigint.
+    // Postgres bigint reserves its sign bit.
     for (const step of FUNNEL_STEPS) expect(FUNNEL_EVENT_NAMES).toContain(step);
-    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(EVENT_MASK_BITS);
+    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(63);
   });
 
   it('accepts the events the app sends', () => {
@@ -347,6 +348,7 @@ describe('Funnel event contracts', () => {
       { id, name: 'loan_compared', props: { offers: 3 } },
       { id, name: 'paywall_viewed' },
       { id, name: 'sample_loaded' },
+      { id, name: 'forecast_horizon_changed', props: { years: 3 } },
     ];
     expect(EventsRequestSchema.safeParse({ anonId, events }).success).toBe(true);
   });
@@ -362,6 +364,10 @@ describe('Funnel event contracts', () => {
     ['a fractional count', { id, name: 'home_guessed', props: { home: 1, cluesOpened: 1.5 } }],
     ['an amount where a count goes', { id, name: 'loan_compared', props: { offers: 28_000 } }],
     ['an id that is not a UUID', { id: 'abc', name: 'forecast_viewed' }],
+    ['a horizon outside the picker', { id, name: 'forecast_horizon_changed', props: { years: 7 } }],
+    ['a horizon event without props', { id, name: 'forecast_horizon_changed' }],
+    ['a horizon given as a string', { id, name: 'forecast_horizon_changed', props: { years: '3' } }],
+    ['a field beside the horizon', { id, name: 'forecast_horizon_changed', props: { years: 3, from: 10 } }],
   ])('refuses %s', (_why, ev) => {
     expect(ClientEventEnvelopeSchema.safeParse(ev).success).toBe(false);
   });
@@ -372,6 +378,43 @@ describe('Funnel event contracts', () => {
     expect(EventsRequestSchema.safeParse({ anonId, events: batch(EVENTS_BATCH_MAX + 1) }).success).toBe(false);
     expect(EventsRequestSchema.safeParse({ anonId, events: [] }).success).toBe(false);
     expect(EventsRequestSchema.safeParse({ anonId, events: batch(1), extra: true }).success).toBe(false);
+  });
+});
+
+describe('Forecast horizon contracts', () => {
+  const id = '6b1d4c55-0b7e-4a4e-9a51-0c4b1f2f9d10';
+
+  it('lists the picker horizons, and the type, schema and constant agree', () => {
+    expect(FORECAST_HORIZONS).toEqual([1, 3, 5, 10]);
+    expectTypeOf<HorizonYears>().toEqualTypeOf<(typeof FORECAST_HORIZONS)[number]>();
+    expectTypeOf<HorizonYears>().toEqualTypeOf<1 | 3 | 5 | 10>();
+    expectTypeOf<z.infer<typeof HorizonYearsSchema>>().toEqualTypeOf<HorizonYears>();
+  });
+
+  it.each(FORECAST_HORIZONS)('accepts %i years', (years) => {
+    expect(HorizonYearsSchema.safeParse(years).success).toBe(true);
+  });
+
+  it.each([0, 2, 4, 7, 15, -1, 3.5, '10', null, undefined])('refuses %j years', (years) => {
+    expect(HorizonYearsSchema.safeParse(years).success).toBe(false);
+  });
+
+  it('carries the shown horizon and its effect on an explain request, as an optional field', () => {
+    expectTypeOf<NonNullable<ExplainRequest['horizon']>>().toEqualTypeOf<{ years: HorizonYears; effect: Money }>();
+    expectTypeOf<{ loanResult: NonNullable<ExplainRequest['loanResult']> }>().toExtend<ExplainRequest>();
+  });
+
+  it('accepts the horizon event with a picker value', () => {
+    for (const years of FORECAST_HORIZONS) {
+      const ev = { id, name: 'forecast_horizon_changed', props: { years } };
+      expect(ClientEventEnvelopeSchema.safeParse(ev).success).toBe(true);
+    }
+  });
+
+  it('is a client event and not a funnel step', () => {
+    expect(CLIENT_EVENT_NAMES).toContain('forecast_horizon_changed');
+    expect(FUNNEL_EVENT_NAMES).toContain('forecast_horizon_changed');
+    expect(FUNNEL_STEPS).not.toContain('forecast_horizon_changed' as never);
   });
 });
 

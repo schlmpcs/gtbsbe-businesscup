@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { ANON_ID_KEY, getAnonId } from './anonId';
 import { useHydrated } from './hydration';
-import { APP_STORE_KEY, isSampleActive, useAppStore } from './store';
+import { APP_STORE_KEY, initialAppData, isSampleActive, useAppStore } from './store';
 
 const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
@@ -64,6 +64,30 @@ describe('app store', () => {
     expect(s.profile.doneMoveIds).toEqual([move.id]);
     expect(s.profile.committedMoveId).toBeUndefined();
     expect(s.committedMove).toBeNull();
+  });
+
+  it('remembers the forecast horizon: 10 years by default, saved, and back to 10 on reset', () => {
+    expect(useAppStore.getState().horizonYears).toBe(10);
+    useAppStore.getState().setHorizonYears(3);
+    expect(useAppStore.getState().horizonYears).toBe(3);
+    expect(JSON.parse(localStorage.getItem(APP_STORE_KEY)!).state.horizonYears).toBe(3);
+    useAppStore.getState().reset();
+    expect(useAppStore.getState().horizonYears).toBe(10);
+  });
+
+  it.each([
+    ['without the field', undefined],
+    ['with a horizon the picker does not offer', 7],
+  ])('hydrates a saved state %s to 10 years, keeping the saved profile', async (_label, saved) => {
+    useAppStore.getState().setSpending('rentUtilities', 1800);
+    const stored = JSON.parse(localStorage.getItem(APP_STORE_KEY)!);
+    if (saved === undefined) delete stored.state.horizonYears;
+    else stored.state.horizonYears = saved;
+    useAppStore.setState({ profile: initialAppData().profile }); // (persisted too: written over below)
+    localStorage.setItem(APP_STORE_KEY, JSON.stringify(stored));
+    await useAppStore.persist.rehydrate();
+    expect(useAppStore.getState().horizonYears).toBe(10);
+    expect(useAppStore.getState().profile.spending.rentUtilities.value).toBe(1800);
   });
 
   it('loads the sample life only without a profile of the user’s own; an edit or "Use mine" ends it', async () => {

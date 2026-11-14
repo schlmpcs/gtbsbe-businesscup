@@ -1,5 +1,5 @@
-// S1 Today: month-end card (engine monthEnd), You in 10 years (the AI forecast, else rules), the
-// committed / top move and the daily game call to action.
+// S1 Today: month-end card (engine monthEnd), You in N years (the AI forecast, else rules, at the
+// horizon picked on S10), the committed / top move and the daily game call to action.
 import { monthEnd, monthEndHistoryMonths, type CurrentMonth } from '@lifeguessr/engine';
 import { useMemo } from 'react';
 import { localMonthDay } from '@/lib/dates';
@@ -25,7 +25,7 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);
   const nextMoves = useNextMoves(profile);
-  const { forecast } = nextMoves;
+  const { forecast, horizonYears } = nextMoves;
   const now = opts.now;
 
   const monthEndVM: Loadable<MonthEndVM> = useMemo(() => {
@@ -61,8 +61,8 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     };
   }, [profile, statementMonths, now]);
 
-  // The 10-year number in today's dollars, from the answer (S10 can also show nominal; S1 never does).
-  const shown = useMemo(() => shownForecast(forecast, true), [forecast]);
+  // The number at the picked year in today's dollars, from the answer (S10 can also show nominal; S1 never does).
+  const shown = useMemo(() => shownForecast(forecast, true, horizonYears), [forecast, horizonYears]);
 
   const rankedMoves = nextMoves.moves.status === 'ready' ? nextMoves.moves.data : NO_MOVES;
   // The committed move as ranked now (current number and label) when it is on the list, else as stored.
@@ -98,9 +98,11 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     forecastStatus: shown.status,
     forecastError: shown.error,
     source: shown.source,
-    in10y: shown.in10y,
-    in10yBandIsZero: shown.band.isZero,
-    in10yBandKind: shown.band.kind,
+    horizonYears,
+    horizonReady: nextMoves.horizonReady,
+    atHorizon: shown.atHorizon,
+    bandIsZero: shown.band.isZero,
+    bandKind: shown.band.kind,
     isRefreshing: forecast.status === 'ready' && forecast.isRefreshing,
     committedMove: committed,
     markCommittedDone: () => {

@@ -162,6 +162,9 @@ export const YearAnchorSchema = z.object({
 
 export const ForecastSourceSchema = z.enum(['ai', 'rules']);
 
+/** A horizon the forecast picker offers. Kept in step with FORECAST_HORIZONS by schemas.test.ts. */
+export const HorizonYearsSchema = z.union([z.literal(1), z.literal(3), z.literal(5), z.literal(10)]);
+
 export const ForecastBundleSchema = z.object({
   source: ForecastSourceSchema,
   model: z.string().optional(),
@@ -415,6 +418,7 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   bare('avatar_preview_viewed'),
   bare('avatar_stats_viewed'),
   bare('sample_loaded'),
+  withProps('forecast_horizon_changed', { years: HorizonYearsSchema }),
   withProps('goal_set', {years:z.number().int().min(1).max(30)}),
   withProps('goal_verdict_shown', {verdict:z.enum(['onTrack','withinRange','behind'])}),
   bare('goal_cleared'),

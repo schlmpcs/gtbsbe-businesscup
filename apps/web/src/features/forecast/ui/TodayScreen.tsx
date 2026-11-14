@@ -1,4 +1,4 @@
-// S1 Today: the daily game hero, You in 10 years, the move to make, this month and the planning tools.
+// S1 Today: the daily game hero, You in N years (the year picked on S10), the move to make, this month and the planning tools.
 // Presentational: everything comes from TodayVM; links come from the route page.
 import { common, forecast as t, screenTitles, type ScreenId } from '@/copy';
 import {
@@ -80,7 +80,7 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
         )}
 
         <div className="grid items-stretch gap-xl lg:grid-cols-12">
-          <In10yCard vm={vm} futureHref={links.future} Link={Link} />
+          <HorizonCard vm={vm} futureHref={links.future} Link={Link} />
           <MoveCard vm={vm} futureHref={links.future} Link={Link} />
         </div>
 
@@ -277,17 +277,18 @@ function HomesRow({ homes }: { homes: TodayHomeVM[] }) {
   );
 }
 
-function In10yCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; Link: LinkComponent }) {
+/** You in N years: the net worth at the year picked on S10 (a neutral title until the saved year is in). */
+function HorizonCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; Link: LinkComponent }) {
   const ready = vm.status === 'ready';
   return (
     <section
-      aria-labelledby="in10y-heading"
-      data-testid="in10y"
+      aria-labelledby="at-horizon-heading"
+      data-testid="at-horizon"
       className={cx(CARD, 'flex flex-col gap-lg sm:flex-row sm:items-center lg:col-span-7')}
     >
       <div className="min-w-0 flex-1">
-        <h2 id="in10y-heading" className="font-display text-2xl font-extrabold leading-tight">
-          {t.today.future.title}
+        <h2 id="at-horizon-heading" className="font-display text-2xl font-extrabold leading-tight">
+          {vm.horizonReady ? t.today.future.title(vm.horizonYears) : t.today.future.titleNeutral}
         </h2>
         <div className="mt-md">
           {!ready || vm.forecastStatus === 'loading' ? (
@@ -297,18 +298,18 @@ function In10yCard({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; 
           ) : (
             <Stack gap="sm">
               <div className="flex flex-wrap items-center gap-sm">
-                <span className={EYEBROW}>{t.netWorthIn10y}</span>
-                {!vm.in10yBandIsZero && <EstimateTag />}
+                <span className={EYEBROW}>{t.netWorthAt(vm.horizonYears)}</span>
+                {!vm.bandIsZero && <EstimateTag />}
               </div>
               <p className="font-display text-6xl font-extrabold leading-display tracking-tight break-words sm:text-7xl">
-                <Money value={vm.in10y.mid} />
+                <Money value={vm.atHorizon.mid} />
               </p>
               <p className="text-sm text-text-muted">{t.today.future.hint}</p>
-              <RangeText point={vm.in10y} isZero={vm.in10yBandIsZero} className="text-base" />
+              <RangeText point={vm.atHorizon} isZero={vm.bandIsZero} className="text-base" />
               <div className="flex flex-wrap items-center gap-sm">
                 <SourceTag source={vm.source} />
-                {!vm.in10yBandIsZero && (
-                  <span className="text-xs text-text-muted">{bandText(vm.in10yBandKind, false).label}</span>
+                {!vm.bandIsZero && (
+                  <span className="text-xs text-text-muted">{bandText(vm.bandKind, false).label}</span>
                 )}
                 <span aria-live="polite" className="text-xs text-text-muted" data-testid="forecast-refreshing">
                   {vm.isRefreshing ? t.future.refreshing : null}
@@ -435,7 +436,7 @@ function MoveSummary({ move, onDone, disabled = false }: { move: MoveVM; onDone?
   return (
     <Stack gap="sm">
       <p className="font-display text-4xl font-extrabold leading-display tracking-tight text-primary tabular-nums">
-        {t.moves.effect(formatMoney(move.effect10y, { signed: true }))}
+        {t.moves.effect(formatMoney(move.effect, { signed: true }), move.horizonYears)}
       </p>
       <SourceTag source={move.source} />
       <p className="text-lg font-bold">{moveTitle(move)}</p>

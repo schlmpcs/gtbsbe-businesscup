@@ -199,7 +199,24 @@ describe('useCheckin (S14)', () => {
     const stored = { ...rankMoves(cloneProfileDemo(), { rates })[0]!, id: 'cutCategory:gone', kind: 'cutCategory' as const };
     act(() => useAppStore.getState().commitMove(stored));
     await waitFor(() => expect(result.current.move.committed?.id).toBe('cutCategory:gone'));
-    expect(result.current.move.committed).toMatchObject({ source: null, effect10y: stored.effect10y });
+    // Its number is the frozen 10-year one, and it says so (the screen's year may be another).
+    expect(result.current.move.committed).toMatchObject({
+      source: null, effect10y: stored.effect10y, effect: stored.effect10y, horizonYears: 10,
+    });
+  });
+
+  it('measures the suggestions, and the committed move while it is ranked, at the picked year', async () => {
+    useAppStore.getState().setHorizonYears(3);
+    const { result } = await ready();
+    const { suggestions } = result.current.move;
+    expect(suggestions.status).toBe('ready');
+    const listed = suggestions.status === 'ready' ? suggestions.data : [];
+    expect(listed.length).toBeGreaterThan(0);
+    expect(listed.map((m) => m.horizonYears)).toEqual(listed.map(() => 3));
+
+    act(() => result.current.move.commit(listed[0]!.id));
+    await waitFor(() => expect(result.current.move.committed).toMatchObject({ id: listed[0]!.id, horizonYears: 3, effect: listed[0]!.effect }));
+    expect(result.current.move.committed?.effect10y).not.toBe(result.current.move.committed?.effect); // 10 years apart
   });
 
   it('"I did it" works at once, like S1: the rules forecast for this profile is on screen while the answer is on its way', async () => {

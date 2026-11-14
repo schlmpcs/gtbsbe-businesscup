@@ -57,6 +57,32 @@ describe('explainResult', () => {
     }
   });
 
+  it('posts the horizon with the move, and only its contract fields', async () => {
+    const fetchMock = stubFetch(200, { text: 'One. Two.', source: 'template' });
+    for (const years of [1, 3, 5, 10] as const) {
+      await explainResult({ move, horizon: { years, effect: 3_232.5, extra: 'x' } as { years: typeof years; effect: number } });
+      const posted = JSON.parse(fetchMock.mock.calls.at(-1)![1].body as string);
+      expect(posted).toEqual({ move, horizon: { years, effect: 3_232.5 } });
+      expect(ExplainRequestSchema.safeParse(posted).success).toBe(true);
+    }
+  });
+
+  it('posts no horizon key when there is none', async () => {
+    const fetchMock = stubFetch(200, { text: 'One. Two.', source: 'template' });
+    await explainResult({ move });
+    expect('horizon' in JSON.parse(fetchMock.mock.calls[0]![1].body as string)).toBe(false);
+  });
+
+  it('forwards a horizon given with a loan result too (the server ignores it there)', async () => {
+    const fetchMock = stubFetch(200, { text: 'One. Two.', source: 'template' });
+    const base = loan(profileWith([], 5_200), { amount: 12_000, apr: 0.09, termMonths: 36 });
+    await explainResult({ move, loanResult: base, horizon: { years: 5, effect: 100 } });
+    const sent = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as ExplainRequest;
+    expect(sent.horizon).toEqual({ years: 5, effect: 100 });
+    expect(sent.move).toEqual(move);
+    expect(sent.loanResult?.monthly).toBe(base.monthly);
+  });
+
   it('drops the loan schedule', async () => {
     const fetchMock = stubFetch(200, { text: 'One. Two.', source: 'template' });
     await explainResult({

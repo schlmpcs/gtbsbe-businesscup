@@ -19,7 +19,7 @@ export {
   type ScheduledPurchase, type Scenario,
 } from './simulate';
 export {
-  anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, scenarioEffectIssues,
+  anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, pointAt, scenarioEffectIssues,
 } from './anchors';
 export { forecastFacts, rulesBundle, type ForecastFacts } from './bundle';
 export {
