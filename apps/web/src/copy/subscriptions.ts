@@ -12,7 +12,7 @@ export const subscriptions = {
     S21: 'Subscription audit',
   },
   intro:
-    'Guess what you spend on subscriptions, tick what you pay for, then add a bank statement to find the ones you forgot. It works without an account or a profile.',
+    'Add a bank statement and we find your recurring charges for you; you confirm or hide each one. No statement? Tick what you pay for by hand instead. It works without an account or a profile.',
   loading: 'Loading…',
   /** `/tools/subscriptions?stream=1`: streamer mode never shows anyone's own money. */
   streamer: {
@@ -112,7 +112,7 @@ export const subscriptions = {
   },
 
   statement: {
-    title: 'Find the ones you forgot',
+    title: 'Find your subscriptions',
     readOnDevice: 'Your statement is read on this device.',
     pickerLabel: 'Bank statement (CSV)',
     pickerHint: 'Your bank’s CSV export. Three to six months works best.',
@@ -121,6 +121,7 @@ export const subscriptions = {
     reading: 'Reading your statement…',
     dismiss: 'Dismiss',
     replace: 'Use another statement',
+    byHand: 'No statement? Tick them by hand',
   },
 
   findings: {

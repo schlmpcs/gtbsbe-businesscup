@@ -1,9 +1,11 @@
-// S21 Subscription audit (M5, issue #81): the view-model of `/tools/subscriptions`.
+// S21 Subscription audit (M5, issue #81; JF8 #140): the view-model of `/tools/subscriptions`.
 //
-//   guess → ticks → reveal → statement → findings → plan
+//   statement → findings → plan          (detection first)
+//   guess → ticks → reveal → plan        (the by-hand fallback when there is no statement)
 //
-// Cold first: the guess, the ticks and the reveal need no profile, no game and no upload. A statement
-// is the upgrade; everything it finds stays in this browser (`store`). The cancel plan is one Next Move
+// Detection first: a statement already read on this page (S9) is used straight away and the tool opens on
+// what it found; otherwise it opens on the upload. The guess, the ticks and the reveal need no profile and
+// no upload, and stay as the fallback. Everything a statement finds stays in this browser (`store`). The cancel plan is one Next Move
 // candidate (`plan.candidate`); its 10-year number is measured by `useCancelResult`, which a screen
 // mounts only while something is marked, so this hook never asks the forecast route.
 //
@@ -30,6 +32,7 @@ import {
   missBucketOf, missFactor, monthlyOf, pruneMarks, tickServices,
 } from './audit';
 import { GUESS_PRESETS, SURVEY } from './constants';
+import type { StatementRead } from '@/features/upload/model/lastStatementRead';
 import { readStatementForAudit, toStatementError } from './readForAudit';
 import { emptyToolState, type SubscriptionsStore, type SubscriptionsToolState } from './state';
 import type {
@@ -50,9 +53,14 @@ export type SubscriptionsDeps = {
   categorize?: typeof categorizeStatement;
   /** Saves the renewals calendar file (lib/download `downloadRenewalsCalendar`). */
   downloadRenewals?: typeof downloadRenewalsCalendar;
+  /**
+   * A statement already read on this page (S9), taken once (features/upload `takeStatementRead`). When the
+   * tool has no findings yet, it is audited on open and the tool starts on "What we found". Default: none.
+   */
+  importedStatement?: () => StatementRead | null;
 };
 
-const STEP_ORDER: readonly SubscriptionsStep[] = ['guess', 'ticks', 'reveal', 'statement', 'findings', 'plan'];
+const STEP_ORDER: readonly SubscriptionsStep[] = ['statement', 'findings', 'guess', 'ticks', 'reveal', 'plan'];
 
 const directionOf = (miss: MissBucket | null): RevealVM['direction'] =>
   miss === null ? null : miss === 'under0.5' || miss === '0.5to0.8' ? 'lower' : miss === '0.8to1.25' ? 'close' : 'higher';
@@ -60,7 +68,7 @@ const directionOf = (miss: MissBucket | null): RevealVM['direction'] =>
 /** The step to start on: where the saved state leaves off. */
 function defaultStep(state: SubscriptionsToolState): SubscriptionsStep {
   if (state.audit) return 'findings';
-  return state.ticks.length > 0 || state.guess !== undefined ? 'ticks' : 'guess';
+  return state.ticks.length > 0 || state.guess !== undefined ? 'ticks' : 'statement';
 }
 
 /** `value` once in the list: added when absent. */
@@ -150,7 +158,9 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const [start, setStart] = useState<SubscriptionsStep | null>(null);
   if (ready && start === null) setStart(defaultStep(state));
   const [chosen, setChosen] = useState<SubscriptionsStep | null>(null);
-  const resting = start !== null && availability[start] ? start : 'guess';
+  // Opened with nothing saved, then findings arrived (a statement read on S9, audited on open): rest on them.
+  const startAt = start === 'statement' && hasAudit ? 'findings' : start;
+  const resting = startAt !== null && availability[startAt] ? startAt : 'statement';
   const step: SubscriptionsStep = chosen !== null && availability[chosen] ? chosen : resting;
   const steps: StepVM[] = STEP_ORDER.map((id) => ({ id, available: availability[id] }));
 
@@ -249,6 +259,50 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);
 
+  /**
+   * Audits a statement's masked lines (engine `detectSubscriptions`) and keeps the findings. Throws what the
+   * store throws. Moving to the findings is the caller's.
+   */
+  const auditStatement = useCallback(
+    ({ items, classes }: StatementRead) => {
+      const classOf = classes
+        ? ((map) => (label: string): StatementClass | undefined => map.get(label))(new Map(classes.map((c) => [c.label, c.class])))
+        : undefined;
+      const audit = detectSubscriptions(items, { classOf, catalogue });
+      const ids = new Set(audit.findings.map((f) => f.id));
+      update((s) => ({
+        ...s,
+        audit,
+        // A choice about a finding that is not in the new audit has nothing to apply to. The marks are
+        // kept as made and resolved against the new audit; the write drops those that no longer count.
+        confirmed: s.confirmed.filter((id) => ids.has(id)),
+        dismissed: s.dismissed.filter((id) => ids.has(id)),
+      }));
+      const flagged = audit.findings.filter((f) => f.flags.length > 0).length;
+      if (flagged > 0) emit({ name: 'subs_flagged', props: { count: flagged } });
+    },
+    [catalogue, update, emit],
+  );
+
+  // A statement already read on this page (S9) is audited once the saved state has loaded, unless the tool
+  // already holds findings: no second upload, no manual step. The screen then rests on the findings
+  // (`startAt` above). If it cannot be kept, the tool simply stays on the upload.
+  const takeImported = deps.importedStatement;
+  const importChecked = useRef(false);
+  useEffect(() => {
+    if (!ready || importChecked.current) return;
+    importChecked.current = true;
+    if (latest.current.audit || !takeImported) return;
+    const read = takeImported();
+    if (!read || read.items.length === 0) return;
+    emit({ name: 'subs_started', props: { path: 'statement' } }, 'subs:started:statement');
+    try {
+      auditStatement(read);
+    } catch {
+      // the store refused it: nothing was kept, the upload is still there
+    }
+  }, [ready, takeImported, auditStatement, emit]);
+
   const uploadStatement = useCallback(
     (file: File) => {
       abort.current?.abort();
@@ -260,23 +314,9 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
         ({ items, classes }) => {
           if (controller.signal.aborted) return;
           try {
-            const classOf = classes
-              ? ((map) => (label: string): StatementClass | undefined => map.get(label))(new Map(classes.map((c) => [c.label, c.class])))
-              : undefined;
-            const audit = detectSubscriptions(items, { classOf, catalogue });
-            const ids = new Set(audit.findings.map((f) => f.id));
-            update((s) => ({
-              ...s,
-              audit,
-              // A choice about a finding that is not in the new audit has nothing to apply to. The marks are
-              // kept as made and resolved against the new audit; the write drops those that no longer count.
-              confirmed: s.confirmed.filter((id) => ids.has(id)),
-              dismissed: s.dismissed.filter((id) => ids.has(id)),
-            }));
+            auditStatement({ items, classes });
             setUpload({ status: 'idle', error: null });
             setChosen('findings');
-            const flagged = audit.findings.filter((f) => f.flags.length > 0).length;
-            if (flagged > 0) emit({ name: 'subs_flagged', props: { count: flagged } });
           } catch (err) {
             setUpload({ status: 'error', error: toVMError(err) });
           }
@@ -287,7 +327,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
         },
       );
     },
-    [categorize, catalogue, update, emit, setChosen],
+    [categorize, auditStatement, emit, setChosen],
   );
   const dismissError = useCallback(() => setUpload({ status: 'idle', error: null }), []);
 
@@ -443,7 +483,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     abort.current?.abort();
     latest.current = emptyToolState();
     clear();
-    setChosen('guess');
+    setChosen('statement');
     setUpload({ status: 'idle', error: null });
     setExported(null);
   }, [clear, setChosen]);

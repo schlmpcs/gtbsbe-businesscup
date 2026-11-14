@@ -118,7 +118,7 @@ describe('wiring: the real catalogue and the real store slice', () => {
 
     const view = renderWired();
     await ready(view);
-    expect(view.result.current.vm.step).toBe('guess');
+    expect(view.result.current.vm.step).toBe('statement');
     expect(view.result.current.deps.store.state).toBeUndefined();
     act(() => view.result.current.vm.ticks.toggle('netflix')); // and it saves again
     expect(savedSlice().ticks).toEqual([{ serviceId: 'netflix', planId: 'default' }]);

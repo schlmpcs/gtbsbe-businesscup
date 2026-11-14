@@ -30,6 +30,7 @@ beforeEach(() => {
 /** Guess $40 and tick Netflix (standard), Spotify and Planet Fitness: $17.99 + $11.99 + $24.99 = $54.97 a month. */
 async function coldPath(user: ReturnType<typeof userEvent.setup>) {
   render(<Tool />);
+  await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
   const guess = await screen.findByLabelText(t.guess.label);
   await user.clear(guess);
   await user.type(guess, '40');
@@ -69,20 +70,22 @@ describe('SubscriptionsScreen: the cold path', () => {
   it('a guess skipped: the total on its own, no factor', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     await user.click(screen.getByRole('button', { name: t.ticks.next }));
     expect(screen.getByText(t.reveal.noGuess)).toBeInTheDocument();
     expect(screen.queryByText(/Guess ÷ total/)).not.toBeInTheDocument();
   });
 
-  it('the steps ahead of what is possible are off: no statement, no findings and no plan yet', async () => {
+  it('opens on the statement (detection first); the steps ahead of what is possible are off: no findings, no gap, no plan yet', async () => {
     render(<Tool />);
-    await screen.findByLabelText(t.guess.label);
+    await screen.findByLabelText(t.statement.pickerLabel);
+    expect(screen.getByRole('button', { name: t.statement.byHand })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.findings) })).toBeDisabled();
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) })).toBeDisabled();
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.reveal) })).toBeDisabled();
-    expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.guess) })).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.statement) })).toHaveAttribute('aria-current', 'step');
   });
 });
 
@@ -93,7 +96,8 @@ describe('SubscriptionsScreen: no forecast request before there is something to 
     const user = userEvent.setup();
     render(<Tool />);
     await settle();
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
     expect(screen.getByText(t.plan.empty)).toBeInTheDocument();
@@ -104,7 +108,8 @@ describe('SubscriptionsScreen: no forecast request before there is something to 
   it('the first mark on the plan step asks once, for one scenario: the cancel plan', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
     await settle();
@@ -118,7 +123,8 @@ describe('SubscriptionsScreen: no forecast request before there is something to 
   it('a mark that is saved but not on screen (another step) asks nothing', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
     await user.click(screen.getByRole('checkbox', { name: t.plan.mark('Spotify') }));
@@ -134,7 +140,8 @@ describe('SubscriptionsScreen: the next move follows the plan', () => {
   it('marking more after adding the move offers to update it', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     await user.click(screen.getByRole('checkbox', { name: 'Netflix' }));
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
@@ -158,7 +165,8 @@ describe('SubscriptionsScreen: estimate tags', () => {
   it('every tick price is tagged an estimate, a checked catalogue price included, on a catalogue shaped like the real one', async () => {
     const user = userEvent.setup();
     render(<Tool catalogue={realisticCatalogue} />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument(); // one plan per service: no plan picker
     for (const name of ['Netflix', 'Spotify', 'Planet Fitness']) {
       const row = screen.getByRole('checkbox', { name }).closest('li')!;
@@ -170,7 +178,8 @@ describe('SubscriptionsScreen: estimate tags', () => {
   it('the cancel saving carries the tag next to the number when a marked line is an estimate, and not when none is', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
     const plan = screen.getByRole('heading', { name: t.plan.title }).closest('section')!;
@@ -349,7 +358,8 @@ describe('SubscriptionsScreen: privacy copy says what the privacy design says', 
   it('names what is saved here, what leaves the browser and to whom, that it is not stored, and what the plan’s forecast sends', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     const keep = screen.getByRole('heading', { name: t.keep.title }).closest('section')!;
     const text = keep.textContent ?? '';
     // Saved in this browser only, and clearable.
@@ -379,7 +389,8 @@ describe('SubscriptionsScreen: privacy copy says what the privacy design says', 
   it('lists every field a finding keeps, the last charge, the next one expected, the price before a rise and the charge count included', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     const keep = screen.getByRole('heading', { name: t.keep.title }).closest('section')!;
     const saved = within(keep).getAllByRole('listitem').map((li) => li.textContent).join(' | ');
     for (const field of [/merchant name/, /how many charges/, /last charge/, /next one expected/, /price before a rise/]) {
@@ -390,7 +401,8 @@ describe('SubscriptionsScreen: privacy copy says what the privacy design says', 
   it('says what Clear removes and what it does not: the plan line and the next move stay until they are changed in the plan', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     const keep = screen.getByRole('heading', { name: t.keep.title }).closest('section')!;
     expect(within(keep).getByRole('button', { name: t.keep.clear })).toBeInTheDocument();
@@ -406,7 +418,8 @@ describe('SubscriptionsScreen: what we keep', () => {
   it('says what stays in the browser and clears it on request', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
+    await user.click(screen.getByRole('button', { name: t.guess.next }));
     const keep = screen.getByRole('heading', { name: t.keep.title }).closest('section')!;
     expect(within(keep).getByText(t.keep.tag)).toBeInTheDocument();
     expect(within(keep).getByText(t.keep.none)).toBeInTheDocument();
@@ -414,7 +427,7 @@ describe('SubscriptionsScreen: what we keep', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     expect(within(keep).getByText(t.keep.gist)).toBeInTheDocument();
     await user.click(within(keep).getByRole('button', { name: t.keep.clear }));
-    await waitFor(() => expect(screen.getByLabelText(t.guess.label)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText(t.statement.pickerLabel)).toBeInTheDocument());
     expect(within(keep).getByText(t.keep.none)).toBeInTheDocument();
     await act(async () => {});
   });
