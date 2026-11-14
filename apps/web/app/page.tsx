@@ -18,8 +18,9 @@ const links: TodayLinks = {
   loan: SCREEN_ROUTES.S12,
   decide: SCREEN_ROUTES.S13,
   checkin: SCREEN_ROUTES.S14,
-  profile: SCREEN_ROUTES.S5,
-  upload: SCREEN_ROUTES.S9,
+  // First visit: the no-typing onboarding (a statement: generated, a ready-made life's, or your CSV).
+  profile: '/start',
+  upload: '/start',
   spend: '/spend',
   bills: '/tools/bills',
 };

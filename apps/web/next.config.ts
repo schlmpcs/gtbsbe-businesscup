@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
     // default font.
     outputFileTracingIncludes: {
       '/api/share': ['./node_modules/@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-{400,800}-normal.woff'],
+      // The simulated bank connection on /start reads the synthetic statements by path.
+      '/api/statement/demo-bank': ['../../packages/data/fixtures/synthetic-statements/*.csv'],
     },
   }),
 };

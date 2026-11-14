@@ -26,6 +26,7 @@ export {
   type HouseSceneRoomStatus,
 } from './HouseScene';
 export { PageHeader, type PageHeaderProps } from './PageHeader';
+export { Photo, type PhotoProps } from './Photo';
 export { Row, Stack, type Gap, type LayoutProps, type RowProps } from './Layout';
 export { LockNotice, type LockNoticeProps } from './LockNotice';
 export { Money, Percent, type MoneyProps, type PercentProps } from './Money';

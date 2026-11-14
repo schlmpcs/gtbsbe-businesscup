@@ -17,6 +17,7 @@
     "@lifeguessr/data": "workspace:*",
     "@lifeguessr/engine": "workspace:*",
     "@lifeguessr/types": "workspace:*",
+    "motion": "12.23.12",
     "next": "16.4.6",
     "pg": "8.23.1",
     "react": "19.3.1",

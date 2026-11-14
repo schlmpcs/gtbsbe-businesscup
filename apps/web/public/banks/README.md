@@ -1,0 +1,1 @@
+Bank logos from Simple Icons 13.21.0 (CC0, simpleicons.org), colored with each brand's color. The logos are the banks' trademarks; they are shown only in the bank picker of the simulated "Connect your bank" demo on /start, which asks for no credentials and is labeled as simulated.

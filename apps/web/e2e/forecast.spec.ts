@@ -40,7 +40,7 @@ test('first visit: Today explains the app; Try with sample data opens the foreca
   await expect(page.getByText(f.body)).toBeVisible();
   await expect(page.getByText(f.note)).toBeVisible();
   const hero = page.getByTestId('today-first-visit');
-  await expect(hero.getByRole('link', { name: f.start })).toHaveAttribute('href', '/me/guess');
+  await expect(hero.getByRole('link', { name: f.start })).toHaveAttribute('href', '/start');
   await expect(hero.getByTestId('play').getByRole('link', { name: f.play, exact: true })).toHaveAttribute('href', '/play');
   await expect(page.getByTestId('at-horizon')).toHaveCount(0); // no numbers on a first visit
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
