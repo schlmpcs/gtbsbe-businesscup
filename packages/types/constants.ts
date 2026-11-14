@@ -1,6 +1,8 @@
 // Value lists for the unions in ./index.ts (runtime iteration, zod enums). Each `satisfies` line
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
-import type { AreaData, ClueId, CostCategory, Debt, KidAge, MoveKind, ProErrorCode, ProPlan, ProSource } from './index';
+import type {
+  AreaData, ClueId, CostCategory, Debt, KidAge, MoveKind, ProErrorCode, ProPlan, ProSource, SessionErrorCode,
+} from './index';
 
 export const COST_CATEGORIES = [
   'rentUtilities', 'car', 'childcare', 'groceries',
@@ -33,3 +35,11 @@ export const PRO_PRICES = {
   yearly: { amount: 39.99, interval: 'year' },
   monthly: { amount: 6.99, interval: 'month' },
 } as const satisfies Record<ProPlan, { amount: number; interval: 'year' | 'month' }>;
+
+// ----- Sessions (T4) -------------------------------------------------------------------------
+
+export const SESSION_ERROR_CODES = [
+  'bad_request', 'too_large', 'rate_limited', 'unavailable', 'not_paid',
+] as const satisfies readonly SessionErrorCode[];
+/** Most purchases one saved wishlist may hold. */
+export const SESSION_WISHLIST_MAX = 50;

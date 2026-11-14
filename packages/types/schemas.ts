@@ -8,7 +8,10 @@
 // Rate schemas reject percent numbers (22.8 instead of 0.228) on purpose: that is the most
 // likely LLM/user mistake and it would silently break every forecast.
 import { z } from 'zod';
-import { AREA_TIERS, COST_CATEGORIES, DEBT_KINDS, KID_AGES, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES } from './constants';
+import {
+  AREA_TIERS, COST_CATEGORIES, DEBT_KINDS, KID_AGES, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES, SESSION_ERROR_CODES,
+  SESSION_WISHLIST_MAX,
+} from './constants';
 
 // ----- primitives ----------------------------------------------------------------------------
 
@@ -215,4 +218,41 @@ export const ProMutationResponseSchema = z.object({ ok: z.literal(true), status:
 export const ProErrorResponseSchema = z.object({
   ok: z.literal(false),
   error: z.object({ code: ProErrorCodeSchema, retryAfterSeconds: z.number().optional() }).loose(),
+});
+
+// ----- Sessions (T4): POST /api/session ------------------------------------------------------
+
+/**
+ * The anonymous id: `crypto.randomUUID()` in the browser. Lower-cased here, so one id always
+ * maps to one saved session whatever case a client sends.
+ */
+export const AnonIdSchema = z.uuid().transform((id) => id.toLowerCase());
+
+/**
+ * POST /api/session: `{ anonId }` alone loads the saved state; with `profile` and/or `wishlist`
+ * it replaces those fields (each one whole) and answers the new state. Unknown fields are refused,
+ * so nothing is silently dropped.
+ */
+export const SessionRequestSchema = z.strictObject({
+  anonId: AnonIdSchema,
+  profile: ProfileSchema.optional(),
+  wishlist: z.array(PurchaseSchema).max(SESSION_WISHLIST_MAX).optional(),
+});
+
+export const SessionStateSchema = z.object({
+  profile: ProfileSchema.optional(),
+  wishlist: z.array(PurchaseSchema),
+  revision: z.number().int().min(0),
+  updatedAt: z.iso.datetime().nullable(),
+});
+
+/** The reply of POST and GET /api/session. */
+export const SessionResponseSchema = SessionStateSchema.extend({ ok: z.literal(true) });
+
+export const SessionErrorCodeSchema = z.enum(SESSION_ERROR_CODES);
+
+/** Any failed /api/session reply. `retryAfterSeconds` accompanies `rate_limited`. */
+export const SessionErrorResponseSchema = z.object({
+  ok: z.literal(false),
+  error: z.object({ code: SessionErrorCodeSchema, retryAfterSeconds: z.number().optional() }).loose(),
 });

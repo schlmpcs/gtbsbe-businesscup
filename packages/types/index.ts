@@ -124,5 +124,14 @@ export type ProErrorCode =
   | 'session_mismatch'    // confirm: the session belongs to another anonymous id, or is already claimed
   | 'invalid_code';       // demo-unlock: wrong code, or demo unlock is switched off
 
+// ----- Sessions (T4): POST /api/session ----------------------------------------------------
+// The profile and wishlist saved under the anonymous id, so a reload restores them without an
+// account. `revision` counts saves (0 = nothing saved yet); `updatedAt` is ISO 8601 UTC.
+export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
+export type SessionErrorCode =
+  | 'bad_request' | 'too_large' | 'rate_limited'
+  | 'unavailable'         // the store is not configured or cannot be reached (503)
+  | 'not_paid';           // the save would add to the wishlist, which is a Pro feature (402)
+
 export * from './constants';
 export * from './schemas';
