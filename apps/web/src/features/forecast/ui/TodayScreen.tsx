@@ -10,6 +10,8 @@ export type TodayLinks = {
   future: string;
   afford: string;
   loan: string;
+  decide: string;
+  checkin: string;
   /** Start of "build your profile" (S5 Guess yourself). */
   profile: string;
   upload: string;
@@ -84,6 +86,8 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
           <ul className="mt-md grid gap-md sm:grid-cols-3">
             <ToolLink href={links.afford} {...t.today.tools.afford} Link={Link} />
             <ToolLink href={links.loan} {...t.today.tools.loan} Link={Link} />
+            <ToolLink href={links.decide} {...t.today.tools.decide} Link={Link} />
+            <ToolLink href={links.checkin} {...t.today.tools.checkin} Link={Link} />
             <ToolLink
               href={links.profile}
               {...(ready && !vm.isDemoProfile ? t.today.tools.profileEdit : t.today.tools.profile)}

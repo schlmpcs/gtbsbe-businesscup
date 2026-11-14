@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { AREA_TIERS } from '@lifeguessr/types';
-import { areaByZip, areaDataSample, cardsSample, loanOffersSample, profileDemo } from './index';
+import { AREA_TIERS, COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
+import {
+  areaByZip, areaDataSample, carDecisionSample, cardsSample, loanOffersSample, profileDemo, statementTotalsSample,
+} from './index';
 import { readStatementSampleCsv } from './node';
 
 describe('fixtures', () => {
@@ -54,5 +56,52 @@ describe('fixtures', () => {
     expect(lines.some((l) => /Zelle payment (to|from) [A-Z][a-z]+ [A-Z][a-z]+/.test(l))).toBe(true);
     expect(lines.some((l) => /VENMO/i.test(l))).toBe(true);
     expect(lines.some((l) => l.includes('AMAZON PRIME'))).toBe(true);
+  });
+
+  it('include two car decision paths with different prices and terms', () => {
+    const { pathA, pathB } = carDecisionSample;
+    expect(pathA.amount).not.toBe(pathB.amount);
+    expect(pathA.termMonths).not.toBe(pathB.termMonths);
+  });
+
+  it('have statement totals equal to the sample CSV categorized with a fixed merchant table', () => {
+    // First match wins. 'pay' = detectedPay; 'skip' = not spending (transfers, money in) or a one-off.
+    const rules: [string, CostCategory | 'pay' | 'skip'][] = [
+      ['PAYROLL', 'pay'], ['Online Transfer to SAV', 'skip'], ['Zelle payment from', 'skip'], ['VENMO PAYMENT', 'skip'],
+      ['AMAZON PRIME', 'skip'], ['ANIMAL HOSPITAL', 'skip'],
+      ['OAKWOOD APTS', 'rentUtilities'], ['TXU ENERGY', 'rentUtilities'], ['ATMOS ENERGY', 'rentUtilities'], ['SPECTRUM', 'rentUtilities'],
+      ['SHELL OIL', 'car'], ['EXXON', 'car'], ['QT ', 'car'], ['PROGRESSIVE', 'car'],
+      ['TOM THUMB', 'groceries'], ['ALDI', 'groceries'], ['KROGER', 'groceries'], ['WALMART SUPERCENTER', 'groceries'],
+      ['WHATABURGER', 'eatingOut'], ['TACO BELL', 'eatingOut'], ['STARBUCKS', 'eatingOut'], ['UBER *EATS', 'eatingOut'],
+      ['DOORDASH', 'eatingOut'], ['CHIPOTLE', 'eatingOut'], ['HOPDODDY', 'eatingOut'],
+      ['SPOTIFY', 'subscriptions'], ['NETFLIX', 'subscriptions'], ['APPLE.COM/BILL', 'subscriptions'], ['PLANET FITNESS', 'subscriptions'],
+      ['TOYOTA FINANCIAL', 'debtPayments'], ['CAPITAL ONE', 'debtPayments'],
+      ['TARGET', 'other'], ['CVS', 'other'], ['AMAZON MKTPL', 'other'], ['HOME DEPOT', 'other'],
+      ['ATM WITHDRAWAL', 'other'], ['Zelle payment to', 'other'], ['VENMO *', 'other'],
+    ];
+    const months = new Map<string, { totals: Record<CostCategory, number>; pay: number }>();
+    for (const line of readStatementSampleCsv().trim().split('\n').slice(1)) {
+      const [, date, description, amount] = line.split(',');
+      const [mm, , yyyy] = date!.split('/');
+      const month = `${yyyy}-${mm}`;
+      if (month >= '2026-11') continue; // November is partial
+      const rule = rules.find(([key]) => description!.includes(key));
+      expect(rule, description).toBeDefined();
+      let m = months.get(month);
+      if (!m) {
+        m = { totals: Object.fromEntries(COST_CATEGORIES.map((c) => [c, 0])) as Record<CostCategory, number>, pay: 0 };
+        months.set(month, m);
+      }
+      const out = -Number(amount); // CSV: negative = money out
+      if (rule![1] === 'pay') m.pay -= out;
+      else if (rule![1] !== 'skip') m.totals[rule![1]] += out;
+    }
+    expect(statementTotalsSample.map((m) => m.month)).toEqual([...months.keys()].sort());
+    for (const m of statementTotalsSample) {
+      const expected = months.get(m.month)!;
+      for (const c of COST_CATEGORIES) expect(m.totals[c], `${m.month} ${c}`).toBeCloseTo(expected.totals[c], 2);
+      expect(m.detectedPay).toBeCloseTo(expected.pay, 2);
+      expect(m.oneOffs).toEqual([]);
+    }
   });
 });

@@ -6,6 +6,7 @@
 export { BarBreakdown, type BarBreakdownItem, type BarBreakdownProps } from './BarBreakdown';
 export { Button, buttonClassName, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 export { Card, type CardProps } from './Card';
+export { Choice, type ChoiceOption, type ChoiceProps } from './Choice';
 export { cx } from './cx';
 export { EstimateTag } from './EstimateTag';
 export { Field, useFieldControl, type FieldProps } from './Field';

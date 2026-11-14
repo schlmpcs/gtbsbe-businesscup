@@ -1,0 +1,4 @@
+{
+  "pathA": { "amount": 28000, "apr": 0.0549, "termMonths": 60, "downPayment": 3000, "fees": 495 },
+  "pathB": { "amount": 15000, "apr": 0.079, "termMonths": 36, "downPayment": 1500, "fees": 0 }
+}

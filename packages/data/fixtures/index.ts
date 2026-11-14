@@ -7,13 +7,15 @@
 // The sample statement CSV is plain text, not JSON: read it with `readStatementSampleCsv` from
 // '@lifeguessr/data/fixtures/node' (Node only: tests, scripts, server routes).
 import {
-  AreaDataSchema, LifeCardSchema, LoanInputSchema, ProfileSchema,
-  type AreaData, type LifeCard, type LoanInput, type Profile,
+  AreaDataSchema, CategoryTotalsSchema, LifeCardSchema, LoanInputSchema, ProfileSchema,
+  type AreaData, type CategoryTotals, type LifeCard, type LoanInput, type Profile,
 } from '@lifeguessr/types';
 import areaDataJson from './areaData.sample.json';
+import cardDecisionJson from './carDecision.sample.json';
 import cardsJson from './cards.sample.json';
 import loanOffersJson from './loanOffers.sample.json';
 import profileJson from './profile.demo.json';
+import statementTotalsJson from './statementTotals.sample.json';
 
 const deepFreeze = <T>(value: T): T => {
   if (value && typeof value === 'object') {
@@ -34,6 +36,26 @@ export const profileDemo: Readonly<Profile> = deepFreeze(ProfileSchema.parse(pro
 
 /** Three loan offers for the Loan Lab compare (same $28,000 car, different APR/term/fees). */
 export const loanOffersSample: readonly LoanInput[] = deepFreeze(LoanInputSchema.array().parse(loanOffersJson));
+
+/**
+ * S13 (Decision: the car) starting offers, one per path: A = a newer car on a long loan, B = a cheaper
+ * used car on a short one. Sample inputs the user edits, like the Loan Lab offers (not market data).
+ */
+export const carDecisionSample: Readonly<{ pathA: LoanInput; pathB: LoanInput }> = deepFreeze({
+  pathA: LoanInputSchema.parse(cardDecisionJson.pathA),
+  pathB: LoanInputSchema.parse(cardDecisionJson.pathB),
+});
+
+/**
+ * Category totals of the four full months (Jul–Oct 2026) of statement.sample.csv, oldest first: what
+ * the statement categorizer produces for it, so screens that read statement history (S14 check-in)
+ * work before an upload. Categorized with a fixed merchant table (fixtures.test.ts recomputes the
+ * totals from the CSV); paychecks go to `detectedPay`; transfers, money received and the two one-off
+ * charges (a vet bill, a yearly Prime renewal) are left out. November is partial, so it is not here.
+ */
+export const statementTotalsSample: readonly CategoryTotals[] = deepFreeze(
+  CategoryTotalsSchema.array().parse(statementTotalsJson),
+);
 
 /** AreaData for a fixture ZIP; throws if the ZIP is not in the fixtures. */
 export function areaByZip(zip: string): AreaData {
