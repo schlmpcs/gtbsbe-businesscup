@@ -1,13 +1,14 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { cx } from './cx';
 
-export type StickerTone = 'primary' | 'ink' | 'positive' | 'soft';
+export type StickerTone = 'primary' | 'ink' | 'positive' | 'soft' | 'white';
 
 const TONE: Record<StickerTone, string> = {
   primary: 'bg-primary text-on-primary',
   ink: 'bg-ink text-on-primary',
   positive: 'bg-positive text-on-primary',
   soft: 'bg-primary-soft text-primary',
+  white: 'bg-surface text-text',
 };
 
 export type StickerProps = {
@@ -25,7 +26,7 @@ export function Sticker({ children, tone = 'primary', tilt = 0, className }: Sti
     <span
       style={style}
       className={cx(
-        'inline-flex w-fit items-center gap-xs rounded-full px-md py-xs text-xs font-bold uppercase tracking-wide',
+        'inline-flex w-fit items-center gap-xs rounded-full px-md py-xs text-xs font-bold uppercase tracking-wide shadow-md',
         TONE[tone],
         className,
       )}
