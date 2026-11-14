@@ -1,5 +1,6 @@
 // Strings for the daily game (S2–S4). Owner: Amir (Y8).
 // Functions here only pick words; every number arrives already computed (and usually formatted).
+import type { SpriteId } from '@lifeguessr/engine';
 import type { AreaData, ClueId, KidAge, SceneLayout } from '@lifeguessr/types';
 
 type Tier = AreaData['tier'];
@@ -12,6 +13,41 @@ const kidAges: Record<KidAge, string> = {
   preschool: 'preschooler',
   schoolAge: 'school-age kid',
 };
+
+/** What each house-scene sprite shows (alt text and close-up captions). */
+const spriteLabels = {
+  'layout/studio': 'A studio',
+  'layout/1bed': 'A 1-bedroom home',
+  'layout/2bed': 'A 2-bedroom home',
+  'layout/3bed': 'A 3-bedroom home',
+  'layout/4bed': 'A 4-bedroom home',
+  'garage/none': 'A bike and a bus pass',
+  'garage/economy': 'An economy car',
+  'garage/mid': 'A mid-range car',
+  'garage/luxury': 'A luxury car',
+  'garage/loanTag': 'A car loan bill',
+  'kidsRoom/crib': 'A crib',
+  'kidsRoom/toddler': 'A toddler’s toys',
+  'kidsRoom/preschool': 'Preschool blocks',
+  'kidsRoom/schoolAge': 'A school backpack',
+  'kidsRoom/homeOffice': 'A home office',
+  'kitchen/takeout-0-1': 'One takeout bag',
+  'kitchen/takeout-2-3': 'A few takeout bags',
+  'kitchen/takeout-4-6': 'A stack of takeout bags',
+  'kitchen/takeout-7plus': 'A mountain of takeout bags',
+  'entry/coat-adult': 'An adult’s coat',
+  'entry/coat-kid': 'A kid’s coat',
+  'mailbox/tier-cheap': 'A lower-cost neighborhood sign',
+  'mailbox/tier-mid': 'A mid-priced neighborhood sign',
+  'mailbox/tier-expensive': 'An expensive neighborhood sign',
+  'mailbox/tier-suburb': 'A suburban neighborhood sign',
+  'decor/skyline': 'The city skyline in the window',
+  'decor/lamp': 'A lamp',
+  'decor/plant': 'A house plant',
+  'decor/bed': 'A bed',
+  'decor/bookshelf': 'A bookshelf',
+  'decor/tree': 'A tree',
+} satisfies Record<SpriteId, string>;
 
 export const game = {
   screens: {
@@ -60,8 +96,6 @@ export const game = {
     decor: 'Around the house',
     /** Accessible name of the chips under the caption (layout and decor). */
     about: 'About this home',
-    /** A decor sprite id ('decor/plant') as words; decor never implies a cost. */
-    decorItem: (sprite: string) => (sprite.split('/').pop() ?? sprite).replace(/[-_]/g, ' '),
   },
   multiplier: {
     label: 'Score multiplier',
@@ -100,6 +134,19 @@ export const game = {
     opening: 'Opening…',
     opened: 'Opened',
     lockedHint: 'Locked in',
+  },
+  /** The illustrated house (T12, <HouseScene>). */
+  scene: {
+    /** Short tag on a closed room: what opening it costs. */
+    costBadge: (pct: string) => `−${pct}`,
+    freeBadge: 'Free',
+    errorBadge: 'Retry',
+    placeholderArt: 'Placeholder illustrations until the final art lands.',
+    /** What each sprite shows (alt text and close-up captions). Every sprite id has a line. */
+    sprites: spriteLabels,
+    /** A sprite id as words (falls back to the id's last part for an id this list doesn't know). */
+    sprite: (id: string): string =>
+      (spriteLabels as Record<string, string>)[id] ?? (id.split('/').pop() ?? id).replace(/[-_]/g, ' '),
   },
   facts: {
     noCar: 'No car: a bike and a bus pass.',

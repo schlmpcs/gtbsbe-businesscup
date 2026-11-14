@@ -9,10 +9,12 @@ export type HomeCardProps = {
   progressLabel?: string | null;
   /** Streamer mode: on the orange page, white type. */
   large?: boolean;
+  /** List the decor as chips (off when the house scene draws it). */
+  showDecor?: boolean;
 };
 
-/** What is visible before any clue: the metro (big), the caption, layout and decor chips, and the clue cost. */
-export function HomeCard({ card, progressLabel = null, large = false }: HomeCardProps) {
+/** What is visible before any clue: the metro (big), the caption, layout (and decor) chips, and the clue cost. */
+export function HomeCard({ card, progressLabel = null, large = false, showDecor = true }: HomeCardProps) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="flex min-w-0 flex-col gap-md">
@@ -32,12 +34,12 @@ export function HomeCard({ card, progressLabel = null, large = false }: HomeCard
         <li className="rounded-full bg-surface px-md py-xs text-sm font-semibold text-text shadow-sm">
           {t.home.layouts[card.layout]}
         </li>
-        {card.decor.map((d, i) => (
+        {showDecor && card.decor.map((d, i) => (
           <li
             key={`${d.sprite}-${i}`}
             className="rounded-full border border-border bg-surface px-md py-xs text-sm text-text"
           >
-            {t.home.decorItem(d.sprite)}
+            {t.scene.sprite(d.sprite)}
           </li>
         ))}
       </ul>

@@ -19,7 +19,11 @@ export {
 export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordOptions } from './afford';
 export { monthEnd, type CurrentMonth } from './month';
 export { statementTotals, merchantKey, type ClassifiedStatementItem } from './statement';
-export { sceneOf, CAR_PRICE_BANDS, TAKEOUT_BUCKETS, SPRITE_IDS } from './scene';
+export {
+  sceneOf, carSprite, takeoutSprite, CAR_PRICE_BANDS, TAKEOUT_BUCKETS, CLUE_COST_CATEGORIES, LAYOUT_COST_CATEGORY,
+  LAYOUTS, LAYOUT_BEDROOMS, KID_SPRITES, DECOR_SPRITE_IDS, DECOR_ROOMS, SPRITE_IDS,
+  type DecorRoom, type SpriteId,
+} from './scene';
 export {
   loan, compareLoans, payoffOrder, amortize, amortizedPayment, MAX_SIMULATION_MONTHS,
   type Amortization, type LoanOptions,

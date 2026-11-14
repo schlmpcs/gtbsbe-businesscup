@@ -1,13 +1,17 @@
 // Sample props for the /kit showcase, all from the canonical fixtures and the engine (no hand-typed numbers).
-import { applyPatch, forecast, rankMoves } from '@lifeguessr/engine';
+import { applyPatch, forecast, rankMoves, sceneOf } from '@lifeguessr/engine';
 import type { CostCategory } from '@lifeguessr/types';
-import { areaByZip, loanOffersSample, profileDemo } from '@/fixtures';
+import { areaByZip, cardsSample, loanOffersSample, profileDemo } from '@/fixtures';
 import { common, kitShowcase } from '@/copy';
 import type { BarBreakdownItem } from '@/ui-kit';
 
 export const demoProfile = profileDemo;
 export const demoArea = areaByZip(profileDemo.zip ?? '75206');
 export const demoLoanOffers = loanOffersSample;
+
+/** The house scene of the richest fixture card (car loan, kids), straight from the engine. */
+const sceneCard = cardsSample.find((c) => c.car && c.kids.length > 0) ?? cardsSample[0]!;
+export const demoScene = sceneOf(sceneCard, areaByZip(sceneCard.zip));
 
 /** The demo profile's monthly spending as breakdown rows; defaulted fields keep their estimate flag. */
 export const profileSpendingItems: BarBreakdownItem[] = (
