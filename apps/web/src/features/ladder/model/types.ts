@@ -209,10 +209,32 @@ export type StatementMonthVM = {
   detectedPay: Money | null;
 };
 
+/** Why a statement file couldn't be used (read in the browser, before anything was sent). */
+export type StatementUnreadableReason =
+  | 'notCsv' | 'tooLarge' | 'tooMany' | 'empty' | 'malformed' | 'noColumns' | 'noTransactions';
+
+export type StatementUploadError = VMError | { kind: 'unreadable'; reason: StatementUnreadableReason };
+
+/** What the last file held, shown with the review. */
+export type StatementReadVM = {
+  transactions: number;
+  skippedPending: number;
+  /** Lines that weren't transactions (totals, notes, balance lines). */
+  skippedOther: number;
+  /** First and last transaction date, 'YYYY-MM-DD'. */
+  from: string;
+  to: string;
+  /** Who sorted the labels into categories; the totals are always summed in code. */
+  categorizedBy: 'ai' | 'rules' | 'mixed';
+};
+
 /** S9 Statement upload (screen state; parsing and categorizing are T6/T7 in features/upload). */
 export type StatementUploadVM = {
-  status: 'loading' | 'idle' | 'review' | 'applied' | 'error';
-  error: VMError | null;
+  /** 'reading': a file is being parsed in the browser and categorized. */
+  status: 'loading' | 'idle' | 'reading' | 'review' | 'applied' | 'error';
+  error: StatementUploadError | null;
+  /** The file behind `pending` (null before a file was read, and after apply or discard). */
+  lastRead: StatementReadVM | null;
   /** Months waiting for the user to confirm. */
   pending: StatementMonthVM[];
   /** Months already merged into the profile ('YYYY-MM', oldest first). */
@@ -227,7 +249,7 @@ export type StatementUploadVM = {
   whatWeKeep: { months: string[]; categories: CostCategory[]; takeHomePay: boolean; savedProfileToServer: boolean };
   /**
    * Read a CSV statement in the browser and categorize it (T6/T7), ending in `submitTotals`.
-   * null until that pipeline is wired: the screen then shows the file picker as unavailable.
+   * null when no reader is available: the screen then shows the file picker as unavailable.
    */
   readFile: ((file: File) => void) | null;
   /** The seam for T6/T7: CategoryTotals from /api/statement/categorize. Validated, then reviewed. */

@@ -262,6 +262,32 @@ export const movesAssumptions = {
 
 // ----- end Y3 ---------------------------------------------------------------------------------
 
+// ----- statements (T7): which charges count as one-offs -----------------------------------------
+// A one-off (a vet bill, a yearly membership) is kept out of the monthly category totals so it
+// doesn't inflate the averages that replace the estimates. Only a merchant that appears in one
+// month of a statement covering two or more months can be a one-off; rent, childcare and debt
+// payments never are. Then either the categorizer says the merchant is typically one-off or
+// yearly, or the charge is an outlier for its category.
+
+/** Smallest charge a "typically one-off or yearly" merchant hint applies to (coffee isn't a one-off). */
+export const oneOffHintMinAmount = {
+  value: 50 as Money,
+  assumption: true,
+  note: 'Below this, a charge is too small to distort a monthly average.',
+} satisfies Assumption<Money>;
+
+/** Smallest charge the outlier rule flags without a merchant hint. */
+export const oneOffOutlierMinAmount = {
+  value: 400 as Money,
+  assumption: true,
+} satisfies Assumption<Money>;
+
+/** The outlier rule: at least this many times the median charge of the same category in the statement. */
+export const oneOffOutlierMultiple = {
+  value: 5,
+  assumption: true,
+} satisfies Assumption<number>;
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
@@ -283,6 +309,9 @@ export const assumptions = {
   weeksPerMonth,
   minForecastMonths,
   ...movesAssumptions,
+  oneOffHintMinAmount,
+  oneOffOutlierMinAmount,
+  oneOffOutlierMultiple,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;

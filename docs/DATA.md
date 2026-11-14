@@ -28,7 +28,7 @@ About 60 ZIPs across 15 metros. Suggested metros: New York, Los Angeles, Chicago
 
 ## Output shape
 
-`packages/data/out/areas.json` is an array of `AreaData` (see ARCHITECTURE.md). Fixtures are in `packages/data/fixtures/` (`areaData.sample.json` with 3 ZIPs, `cards.sample.json`, `profile.demo.json`, `statement.sample.csv`, `loanOffers.sample.json`), so the engine and UI can start before the pipeline lands. This is the only fixture location; `apps/web/src/fixtures` re-exports it. Life cards (`cards.json`, 50 cards + 2 creator packs) are built here too, from `areas.json`.
+`packages/data/out/areas.json` is an array of `AreaData` (see ARCHITECTURE.md). Fixtures are in `packages/data/fixtures/` (`areaData.sample.json` with 3 ZIPs, `cards.sample.json`, `profile.demo.json`, `statement.sample.csv`, `loanOffers.sample.json`, plus `statement.debit-credit.csv`, `statement.signed-bank.csv` and `statement.credit-card.csv`: one synthetic export per amount layout the CSV reader handles), so the engine and UI can start before the pipeline lands. This is the only fixture location; `apps/web/src/fixtures` re-exports it. Life cards (`cards.json`, 50 cards + 2 creator packs) are built here too, from `areas.json`.
 
 ## Refresh
 

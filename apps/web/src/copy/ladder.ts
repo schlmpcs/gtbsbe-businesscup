@@ -27,7 +27,14 @@ const kidAges: Record<KidAge, string> = {
   schoolAge: 'school-age kid',
 };
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many: string) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
+
+/** 'YYYY-MM-DD' → "Oct 3, 2026" (falls back to the raw text when it is not a date). */
+function dayName(date: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const name = m ? MONTH_NAMES[Number(m[2]) - 1] : undefined;
+  return m && name ? `${name} ${Number(m[3])}, ${m[1]}` : date;
+}
 
 export const ladder = {
   screens: {
@@ -227,8 +234,20 @@ export const ladder = {
     pickerHint: 'A CSV export from your bank. It is read on this device.',
     pickerUnavailable:
       'Reading statements isn’t switched on in this build yet. Until it is, your forecast uses the sliders and balance sheet.',
+    reading: 'Reading your statement…',
     errors: {
       badInput: 'We couldn’t use that statement: its months or totals didn’t look right. Try another file.',
+      unreadable: {
+        notCsv: 'That isn’t a CSV file. In your bank’s website or app, look for “Download transactions” and pick CSV.',
+        tooLarge: 'That file is too big. Export a shorter period, such as the last 3 to 6 months.',
+        tooMany: 'That file has too many transactions for one upload. Export a shorter period, such as the last 6 months.',
+        empty: 'That file is empty.',
+        malformed: 'That file isn’t a well-formed CSV (a quote is never closed). Try exporting it again.',
+        noColumns: 'We couldn’t find date, description and amount columns in that file. Try your bank’s CSV export.',
+        noTransactions: 'We found the columns but no transactions in that file.',
+      },
+      rateLimited: 'Too many uploads in a short time. Wait a minute and try again.',
+      network: 'We couldn’t reach the server to sort your statement. Check your connection and try again.',
       unknown: 'Something went wrong with that statement. Try again.',
     },
     dismiss: 'Dismiss',
@@ -240,6 +259,19 @@ export const ladder = {
     },
     reviewTitle: 'Check your months',
     reviewNote: 'Nothing changes until you confirm. Each category becomes your average over these months.',
+    readSummary: (transactions: number, from: string, to: string) =>
+      `Read ${plural(transactions, 'transaction', 'transactions')} from ${dayName(from)} to ${dayName(to)}.`,
+    skipped: (pending: number, other: number) =>
+      [
+        pending > 0 ? `${plural(pending, 'pending line', 'pending lines')} (they count once they post)` : null,
+        other > 0 ? `${plural(other, 'line that isn’t a transaction', 'lines that aren’t transactions')}` : null,
+      ].filter(Boolean).join(' and ') + ' left out.',
+    categorizedBy: {
+      ai: 'Sorted into categories by AI from the masked labels. Every total is added up in code.',
+      rules: 'Sorted into categories by keyword rules. Every total is added up in code.',
+      mixed: 'Sorted into categories by AI and keyword rules. Every total is added up in code.',
+    },
+    excludedNote: 'Transfers between your own accounts and money from other people are not counted as spending or pay.',
     monthLabel: (month: string) => `Spending in ${monthName(month)}`,
     detectedPay: (amount: string) => `Take-home pay found: ${amount}`,
     oneOffsTitle: 'Left out as one-off charges (not kept)',
@@ -272,7 +304,7 @@ export const ladder = {
         'account numbers or names',
       ],
       sentTitle: 'What leaves your browser:',
-      sent: 'only each line’s merchant label (with personal names masked), amount, month and day of month, to sort it into categories. They are not stored.',
+      sent: 'only each line’s merchant label (with personal names and account numbers masked), amount, month and day of month, to sort it into categories. They are not stored. Only the labels, without amounts or dates, may go on to our AI provider to sort them, under its no-training, zero-retention option.',
     },
   },
 } as const;
