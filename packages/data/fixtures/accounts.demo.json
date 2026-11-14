@@ -1,0 +1,121 @@
+[
+  {
+    "id": "checking-1",
+    "group": "cash",
+    "name": "Checking",
+    "balance": {
+      "value": 1300,
+      "isEstimate": false
+    },
+    "history": [
+      {
+        "month": "2026-10",
+        "balance": 1150
+      },
+      {
+        "month": "2026-11",
+        "balance": 1300
+      }
+    ]
+  },
+  {
+    "id": "savings-1",
+    "group": "cash",
+    "name": "Savings",
+    "balance": {
+      "value": 2500,
+      "isEstimate": false
+    },
+    "history": [
+      {
+        "month": "2026-10",
+        "balance": 2300
+      },
+      {
+        "month": "2026-11",
+        "balance": 2500
+      }
+    ]
+  },
+  {
+    "id": "retirement-1",
+    "group": "retirement",
+    "name": "401(k)",
+    "balance": {
+      "value": 14500,
+      "isEstimate": true
+    },
+    "history": [
+      {
+        "month": "2026-11",
+        "balance": 14500
+      }
+    ]
+  },
+  {
+    "id": "card-1",
+    "group": "creditCard",
+    "name": "Credit card",
+    "balance": {
+      "value": 6400,
+      "isEstimate": false
+    },
+    "apr": 0.2436,
+    "minPayment": {
+      "value": 193.92,
+      "isEstimate": true
+    },
+    "history": [
+      {
+        "month": "2026-10",
+        "balance": 6550
+      },
+      {
+        "month": "2026-11",
+        "balance": 6400
+      }
+    ]
+  },
+  {
+    "id": "auto-1",
+    "group": "loan",
+    "name": "Auto loan",
+    "balance": {
+      "value": 17800,
+      "isEstimate": false
+    },
+    "apr": 0.074,
+    "minPayment": {
+      "value": 412,
+      "isEstimate": false
+    },
+    "debtKind": "auto",
+    "history": [
+      {
+        "month": "2026-10",
+        "balance": 18100
+      },
+      {
+        "month": "2026-11",
+        "balance": 17800
+      }
+    ]
+  },
+  {
+    "id": "vehicle-1",
+    "group": "vehicle",
+    "name": "Car",
+    "balance": {
+      "value": 19500,
+      "isEstimate": true
+    },
+    "growth": -0.15,
+    "excluded": true,
+    "history": [
+      {
+        "month": "2026-11",
+        "balance": 19500
+      }
+    ]
+  }
+]

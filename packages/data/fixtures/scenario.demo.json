@@ -1,0 +1,62 @@
+{
+  "id": "baseline",
+  "name": "Baseline",
+  "icon": "home",
+  "assumptions": {
+    "retireAge": 67,
+    "endAge": 90,
+    "inflation": 0.03,
+    "display": "today",
+    "expenses": {
+      "mode": "budget"
+    },
+    "growth": {},
+    "withdrawalOrder": [
+      "cash",
+      "investments",
+      "retirement"
+    ],
+    "savingsSplit": [
+      {
+        "group": "cash",
+        "share": 1
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "ev-retire",
+      "type": "retire",
+      "year": 2061,
+      "enabled": true
+    },
+    {
+      "id": "ev-social-security",
+      "type": "socialSecurity",
+      "year": 2061,
+      "enabled": true,
+      "monthly": {
+        "value": 2080.0,
+        "isEstimate": true
+      }
+    },
+    {
+      "id": "ev-buy-home",
+      "type": "buyHome",
+      "year": 2029,
+      "enabled": true,
+      "homeValue": 615400.0,
+      "downPayment": 123080.0,
+      "payCash": false,
+      "termYears": 30,
+      "rate": 0.065,
+      "propertyTaxRate": 0.01625,
+      "insuranceMonthly": {
+        "value": 292.82,
+        "isEstimate": true
+      },
+      "upkeepRate": 0.01,
+      "replaceHousing": true
+    }
+  ]
+}

@@ -400,3 +400,4 @@ export * from './subscriptions';
 export * from './subscriptionAudit';
 export * from './avatar';
 export * from './together';
+export * from './plan';
