@@ -1129,6 +1129,31 @@ describe('a store that refuses a save', () => {
 });
 
 describe('what stays in this browser', () => {
+  it('Clear forgets what this tool saved and leaves the plan line and the next move as they are (the copy says so)', async () => {
+    const tool = renderTool();
+    await ready(tool);
+    await uploaded(tool);
+    act(() => tool.result.current.vm.plan.markCancel('netflix-com-ca'));
+    await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
+    act(() => tool.result.current.cancel.addAsMove());
+    act(() => tool.result.current.vm.apply.applyToProfile());
+    act(() => tool.result.current.vm.clearLocalData());
+    expect(tool.result.current.store.state).toBeUndefined();
+    expect(useAppStore.getState().profile.spending.subscriptions).toEqual({ value: 69.54, isEstimate: false });
+    expect(useAppStore.getState().committedMove?.id).toBe(CANCEL_MOVE_ID);
+  });
+
+  it('sends the categorizer only the masked label, amount, month and day of each line, so the privacy copy cannot drift from the code', async () => {
+    const categorize = fakeCategorize();
+    const tool = renderTool({ categorize });
+    await ready(tool);
+    await uploaded(tool);
+    const sent = categorize.calls.flatMap((c) => c.items);
+    expect(sent).toHaveLength(170);
+    for (const item of sent) expect(Object.keys(item).sort()).toEqual(['amount', 'day', 'label', 'month']);
+    expect(JSON.stringify(sent)).not.toMatch(/Tom Becker|Maria Lopez|Daniel Kim|PRIYA SHAH|Jake Morris|DEBIT_CARD|2026-11-12/);
+  });
+
   it('clearLocalData forgets everything the tool kept', async () => {
     const tool = renderTool();
     await ready(tool);

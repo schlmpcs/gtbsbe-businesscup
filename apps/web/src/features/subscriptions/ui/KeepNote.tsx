@@ -44,6 +44,7 @@ export function KeepNote({ hasLocalData, onClear }: KeepNoteProps) {
                 ))}
               </ul>
             </div>
+            <p className="text-text-muted">{t.keep.masking}</p>
             <p className="rounded-md bg-bg p-md">
               <span className="font-semibold">{t.keep.sentTitle}</span> {t.keep.sent}
             </p>
@@ -51,11 +52,12 @@ export function KeepNote({ hasLocalData, onClear }: KeepNoteProps) {
           </Stack>
         </details>
         {hasLocalData && (
-          <div>
+          <Stack gap="xs" className="items-start">
             <Button size="sm" variant="secondary" onClick={onClear}>
               {t.keep.clear}
             </Button>
-          </div>
+            <p className="text-xs text-text-muted">{t.keep.clearNote}</p>
+          </Stack>
         )}
       </Stack>
     </Card>

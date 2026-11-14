@@ -346,8 +346,37 @@ describe('SubscriptionsScreen: privacy copy says what the privacy design says', 
     expect(t.keep.forecastSent).toMatch(/numbers in your profile/);
     expect(t.keep.forecastSent).toMatch(/cancel plan/);
     expect(t.keep.forecastSent).toMatch(/Anthropic/);
-    // Never saved.
+    // Never saved; and the claim about names is the masker's, no stronger.
     expect(text).toMatch(/statement file or its lines/);
+    expect(t.keep.never.join(' ')).not.toMatch(/personal names|account numbers/);
+    expect(within(keep).getByText(t.keep.masking)).toBeInTheDocument();
+    expect(t.keep.masking).toMatch(/payment-app and transfer lines/);
+    expect(t.keep.masking).toMatch(/named after a person|person’s name/);
+  });
+
+  it('lists every field a finding keeps, the last charge, the next one expected, the price before a rise and the charge count included', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    const keep = screen.getByRole('heading', { name: t.keep.title }).closest('section')!;
+    const saved = within(keep).getAllByRole('listitem').map((li) => li.textContent).join(' | ');
+    for (const field of [/merchant name/, /how many charges/, /last charge/, /next one expected/, /price before a rise/]) {
+      expect(saved).toMatch(field);
+    }
+  });
+
+  it('says what Clear removes and what it does not: the plan line and the next move stay until they are changed in the plan', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
+    const keep = screen.getByRole('heading', { name: t.keep.title }).closest('section')!;
+    expect(within(keep).getByRole('button', { name: t.keep.clear })).toBeInTheDocument();
+    expect(t.keep.clear).toMatch(/guess, ticks, choices and findings/);
+    expect(within(keep).getByText(t.keep.clearNote)).toBeInTheDocument();
+    expect(t.keep.clearNote).toMatch(/subscriptions line/);
+    expect(t.keep.clearNote).toMatch(/next move/);
+    expect(t.keep.clearNote).toMatch(/until you change them in your plan/);
   });
 });
 

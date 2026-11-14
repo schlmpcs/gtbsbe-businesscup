@@ -243,19 +243,23 @@ export const subscriptions = {
     savedTitle: 'Saved in this browser:',
     saved: [
       'your guess, and the services you ticked with the plan you picked',
-      'the recurring charges found in your statement: the merchant name as it appears there, the amount, the day, how often, and when the next one is expected',
+      'the recurring charges found in your statement: the merchant name as it appears there, the amount and how often, how many charges were seen, the month and day of the last charge and of the next one expected, the price before a rise, and whether it looks stopped',
       'your choices about them: confirmed, not a subscription, marked to cancel',
     ],
     savedWhere: 'These stay on this device. The saved findings are never sent to our server.',
     neverTitle: 'We never save:',
-    never: ['the statement file or its lines', 'account numbers or personal names'],
+    never: ['the statement file or its lines'],
+    masking:
+      'Before a label is saved or sent, account and card numbers are masked, and so are personal names on payment-app and transfer lines. A merchant whose name is a person’s name stays as it appears on your statement.',
     sentTitle: 'What leaves your browser to find them:',
     sent: 'only each line’s merchant label (account numbers masked, and personal names on payment-app and transfer lines), amount, month and day of month, to sort it into categories. We don’t store the labels or the lines. Only the labels, without amounts or dates, may go on to our AI provider, Anthropic, just to sort them; it doesn’t use API data to train its models.',
     forecastSent:
       'When you use the cancel plan, the numbers in your profile and the change you marked (no names or account numbers) go to our AI provider, Anthropic, to work out the 10-year number. It doesn’t use API data to train its models.',
     kept: '✓',
     notKeptMark: '✕',
-    clear: 'Clear what this tool saved',
+    clear: 'Clear the guess, ticks, choices and findings saved here',
+    clearNote:
+      'This does not change your plan. If you used this in your plan or added it as your next move, the subscriptions line and the move stay until you change them in your plan.',
     cleared: 'Cleared.',
   },
 } as const;
