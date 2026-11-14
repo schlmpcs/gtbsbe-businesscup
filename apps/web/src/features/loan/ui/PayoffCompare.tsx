@@ -77,7 +77,7 @@ export function PayoffCompare({ vm }: { vm: PayoffPlannerVM }) {
       </div>
       {vm.savings ? (
         <p data-testid="payoff-savings" className="text-lg font-semibold">
-          <span className="text-text-muted">{t.planner.savings.title(t.planner.method.names[vm.method])}: </span>
+          <span className="text-text-muted">{t.planner.savings.title(t.planner.method.names[vm.method])}</span>{' '}
           <span className={vm.savings.interest.kind === 'saves' ? 'text-positive' : undefined}>{interestText(vm.savings.interest)}</span>
           {vm.savings.months && (
             <>

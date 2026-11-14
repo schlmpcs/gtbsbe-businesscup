@@ -10,6 +10,7 @@ import { cloneProfileDemo } from '@/fixtures';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import { plannerOptions } from '@/test/payoff';
+import { formatMoney } from '@/ui-kit';
 import { addMonths } from './model/payoffDates';
 import type { PayoffPlannerVM } from './model/types';
 import { useLoanLab } from './model/useLoanLab';
@@ -35,6 +36,8 @@ async function open(over: Parameters<typeof plannerOptions>[0] = {}, patch?: Par
 
 const compare = () => screen.getByRole('table', { name: t.planner.compare.caption });
 const BAD = /Infinity|NaN|undefined|\[object|null/;
+/** A dollar figure of $1,000,000 or more: the engine's own search stops at $1,000,000 a month, and no balance here is that big. */
+const FIGURE_OVER_THE_LIMIT = /\$\d{1,3}(,\d{3}){2,}/;
 
 describe('Loan Lab with the planner', () => {
   it('replaces the payoff order card with the planner section', async () => {
@@ -92,7 +95,7 @@ describe('the comparison', () => {
 
   it('says what the picked method saves against minimums: $1,200 less interest, 6 months sooner', async () => {
     await open();
-    expect(screen.getByTestId('payoff-savings')).toHaveTextContent(`${t.planner.savings.title(t.planner.method.names.avalanche)}: $1,200 less interest · 6 months sooner`);
+    expect(screen.getByTestId('payoff-savings')).toHaveTextContent(`${t.planner.savings.title(t.planner.method.names.avalanche)} $1,200 less interest · 6 months sooner`);
   });
 
   it('says "more interest" and "later" for a method that does worse than minimums, never a negative saving', async () => {
@@ -167,14 +170,16 @@ describe('a plan that never pays off', () => {
     expect(within(section).getByText(t.planner.never.body)).toBeInTheDocument();
     expect(within(section).getByText(t.planner.never.fix('$313', 10))).toBeInTheDocument();
     expect(section).not.toHaveTextContent(BAD);
-    expect(section.textContent).not.toContain('4,000,000'); // the 100-year interest is not shown anywhere
+    // The 100 simulated years of interest ($40 trillion in this answer) are shown nowhere.
+    expect(formatMoney(4e13)).toMatch(FIGURE_OVER_THE_LIMIT); // so this check can fail
+    expect(section.textContent).not.toMatch(FIGURE_OVER_THE_LIMIT);
     expect(screen.queryByTestId('payoff-savings')).toBeNull();
   });
 
   it('says so when no extra could clear it', async () => {
     const { section } = await open({ engineOptions: { ...never, solve: { extra: 1_000_000, reachable: false } } });
     expect(within(section).getByText(t.planner.never.fixNone)).toBeInTheDocument();
-    expect(section.textContent).not.toContain('1,000,000');
+    expect(section.textContent).not.toMatch(FIGURE_OVER_THE_LIMIT);
   });
 
   it('says minimums never pay off when only they do not, and still shows the picked plan\'s date', async () => {
@@ -251,7 +256,7 @@ describe('the target date', () => {
     await open({ engineOptions: { solve: { extra: 1_000_000, reachable: false } } });
     fireEvent.change(month(), { target: { value: '2026-12' } });
     expect(result()).toHaveTextContent(t.planner.target.unreachable('December 2026'));
-    expect(result().textContent).not.toContain('1,000,000');
+    expect(result().textContent).not.toMatch(FIGURE_OVER_THE_LIMIT);
   });
 
   it('offers only months from next month to 100 years on, and explains a month in the past or too far', async () => {
@@ -262,6 +267,12 @@ describe('the target date', () => {
     expect(within(section).getByText(t.planner.target.past)).toBeInTheDocument();
     fireEvent.change(month(), { target: { value: addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS + 1)!.month } });
     expect(within(section).getByText(t.planner.target.tooFar(PAYOFF_TIMELINE_MAX_MONTHS / 12))).toBeInTheDocument();
+  });
+
+  it('shows the month format as the box\'s placeholder, from the copy', async () => {
+    await open();
+    expect(month().placeholder).toBe(t.planner.target.placeholder);
+    expect(t.planner.target.placeholder).not.toBe('');
   });
 
   it('explains text that is not a month (a browser without a month picker), and clears with the button', async () => {

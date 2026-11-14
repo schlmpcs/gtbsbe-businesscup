@@ -65,6 +65,10 @@ describe('payoff planner copy', () => {
     expect(loan.planner.target.needsMore('$72')).toBe('That is $72 more than you have set.');
   });
 
+  it('leads the savings sentence with its own colon, so the screen puts no punctuation of its own', () => {
+    expect(loan.planner.savings.title('Avalanche')).toBe('Avalanche against minimums only:');
+  });
+
   it('has a sentence for a plan that costs more than minimums only, that does not read as a saving', () => {
     expect(loan.planner.savings.interestCosts('$300')).toBe('$300 more interest');
     expect(loan.planner.savings.monthsCosts(165)).toBe('165 months later');

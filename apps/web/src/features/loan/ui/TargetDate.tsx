@@ -15,7 +15,7 @@ function MonthInput({ value, min, max, onChange }: { value: string; min?: string
       value={value}
       min={min}
       max={max}
-      placeholder="YYYY-MM"
+      placeholder={t.planner.target.placeholder}
       onChange={(e) => onChange(e.target.value)}
       className={cx(
         'rounded-md border bg-bg px-md py-md text-base tabular-nums',

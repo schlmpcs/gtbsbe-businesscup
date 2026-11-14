@@ -178,7 +178,8 @@ export const loan = {
     },
 
     savings: {
-      title: (method: string) => `${method} against minimums only`,
+      /** Leads the sentence, so it ends with its own colon. */
+      title: (method: string) => `${method} against minimums only:`,
       interestSaves: (amount: string) => `${amount} less interest`,
       interestCosts: (amount: string) => `${amount} more interest`,
       interestSame: 'About the same interest',
@@ -216,6 +217,8 @@ export const loan = {
       title: 'Debt-free by a date',
       label: 'Debt-free by',
       hint: 'Pick a month to see the extra payment it would take.',
+      /** Shown in a box that wants a year and month, where the browser has no month picker. */
+      placeholder: 'YYYY-MM',
       clear: 'Clear',
       invalid: 'Enter a month, like 2030-12.',
       past: 'Pick a month after this one.',
