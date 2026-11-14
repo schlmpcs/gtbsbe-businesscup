@@ -1,5 +1,6 @@
 // S9 Statement upload: the file picker (unavailable until the T6/T7 reader is wired into the
-// view-model), the review of categorized months before they enter the profile, and "What we keep".
+// view-model), the "connect your bank app" option (not built yet, shown as coming soon), the review
+// of categorized months before they enter the profile, and "What we keep".
 import { useId } from 'react';
 import { common, ladder } from '@/copy';
 import { BarBreakdown, Button, Card, formatMoney, Row, Stack } from '@/ui-kit';
@@ -14,6 +15,7 @@ export type StatementUploadProps = { vm: StatementUploadVM; progress: LadderProg
 export function StatementUpload({ vm, progress }: StatementUploadProps) {
   const inputId = useId();
   const noteId = useId();
+  const bankNoteId = useId();
   const { readFile } = vm;
 
   return (
@@ -39,6 +41,19 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
           <p id={noteId} className="text-xs text-text-muted">
             {readFile === null ? t.pickerUnavailable : t.pickerHint}
           </p>
+        </Stack>
+      </Card>
+
+      <Card title={t.bank.title}>
+        <Stack gap="sm">
+          <p id={bankNoteId} className="text-sm text-text-muted">
+            {t.bank.note}
+          </p>
+          <Row>
+            <Button variant="secondary" disabled aria-describedby={bankNoteId}>
+              {t.bank.button} · {t.bank.soon}
+            </Button>
+          </Row>
         </Stack>
       </Card>
 

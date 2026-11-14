@@ -232,6 +232,12 @@ export const ladder = {
       unknown: 'Something went wrong with that statement. Try again.',
     },
     dismiss: 'Dismiss',
+    bank: {
+      title: 'Or connect your bank app',
+      note: 'Read-only, through a secure partner: we never see your password and can’t move money. Not switched on in this build yet; use a CSV export for now.',
+      button: 'Connect bank',
+      soon: 'Coming soon',
+    },
     reviewTitle: 'Check your months',
     reviewNote: 'Nothing changes until you confirm. Each category becomes your average over these months.',
     monthLabel: (month: string) => `Spending in ${monthName(month)}`,

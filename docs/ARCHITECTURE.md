@@ -74,7 +74,7 @@ lifeguessr/
 | S6 | Closest life | `/me/closest` | ladder | Real |
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
 | S8 | Balance sheet | `/me/balance` | ladder | Real |
-| S9 | Statement upload + "What we keep" | `/me/upload` | upload (logic) + ladder (ui) | Real |
+| S9 | Statement upload + "What we keep" (+ "connect your bank app", coming soon) | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: Mock) |
 | S10 | You in 10 years + Next Moves | `/future` | forecast | Real |
 | S11 | Can I Afford It? | `/afford` | afford | Real |
 | S12 | Loan Lab | `/loan` | loan | Real |
@@ -262,5 +262,6 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - The server receives only `StatementItem`s: merchant label, amount, month and day of month. The day lets the server detect subscriptions and yearly charges. It returns totals; raw items are not stored.
 - Labels pass through the LLM provider for categorizing. Use the provider's no-training / zero-retention option, and say so in the "What we keep" panel.
 - Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
+- Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
 - Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test` or `demo`), when, and the Stripe test Checkout Session ID. No card data or email ever reaches our server; the test checkout page belongs to Stripe.

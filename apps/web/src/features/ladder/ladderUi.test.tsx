@@ -70,6 +70,13 @@ describe('StatementUpload (S9)', () => {
     expect(screen.queryByText(ladder.upload.keep.server)).toBeNull();
   });
 
+  it('offers connecting a bank app as coming soon, not as a working option', () => {
+    render(<StatementUpload vm={uploadVM()} progress={progress} />);
+    const connect = screen.getByRole('button', { name: `${ladder.upload.bank.button} · ${ladder.upload.bank.soon}` });
+    expect(connect).toBeDisabled();
+    expect(connect).toHaveAccessibleDescription(ladder.upload.bank.note);
+  });
+
   it('with a reader: the picker hands the file over', async () => {
     const readFile = vi.fn();
     render(<StatementUpload vm={uploadVM({ readFile })} progress={progress} />);

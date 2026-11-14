@@ -44,7 +44,7 @@ US adults aged 25–45 with a job, bills and at least one big decision ahead. Ty
 | F4 | **Closest Life**: pick one of today's cards as your starting point | Real |
 | F5 | **Quick Sliders**: rent, car, food, subscriptions and savings (~30 s) | Real |
 | F6 | **Balance Sheet in 6 taps**: age, take-home pay, cash, retirement, card balance and APR, other loans; skipped fields become estimates | Real |
-| F7 | **Make It Exact**: CSV statement upload (parsed in the browser) that tightens the range | Real (CSV); PDF if time allows |
+| F7 | **Make It Exact**: CSV statement upload (parsed in the browser) that tightens the range; or connect a bank app (read-only, through an aggregator), as most US budgeting apps do | Real (CSV); PDF if time allows; bank connect = "coming soon" button |
 | F8 | **You in 10 Years**: forecast line with a range band, in today's dollars by default | Real |
 | F9 | **Next Moves**: top 3 moves ranked by 10-year dollar effect; levels; an "I'm doing this" commitment | Real (level 1) |
 | F10 | **Decisions**: car, moving city, having a kid, job offer, wedding (Path A vs B) | Mock (car example) |
