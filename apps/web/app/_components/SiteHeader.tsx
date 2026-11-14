@@ -9,8 +9,9 @@ import { buttonClassName, cx } from '@/ui-kit';
 
 const t = common.siteNav;
 
-function isActive(pathname: string, href: string): boolean {
-  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+function isActive(pathname: string, href: string, match: readonly string[] = []): boolean {
+  if (href === '/') return pathname === '/';
+  return [href, ...match].some((h) => pathname === h || pathname.startsWith(`${h}/`));
 }
 
 export function SiteHeader() {
@@ -31,7 +32,7 @@ export function SiteHeader() {
       <nav aria-label={t.label} className="ml-auto hidden md:block">
         <ul className="flex items-center gap-xl text-sm">
           {t.links.map((l) => {
-            const active = isActive(pathname, l.href);
+            const active = isActive(pathname, l.href, 'match' in l ? l.match : undefined);
             return (
               <li key={l.href}>
                 <Link
