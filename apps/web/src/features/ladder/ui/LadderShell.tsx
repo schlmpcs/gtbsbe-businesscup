@@ -99,10 +99,9 @@ export function LadderShell({
       {t.cta[screen]}
     </a>
   );
+  // S9 passes its own (none: its "No statement?" card is the way out by hand).
   const defaultSecondary =
-    screen === 'S9' ? (
-      <LadderTextLink href={progress.byHandHref} label={t.skip.byHand} />
-    ) : screen === 'S7' ? (
+    screen === 'S7' ? (
       <LadderTextLink href={rungHref(progress, 'S9')} label={t.skip.statement} />
     ) : isLast ? (
       <LadderTextLink href={progress.futureHref} label={t.skip.last} />

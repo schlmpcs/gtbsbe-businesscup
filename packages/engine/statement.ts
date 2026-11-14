@@ -10,11 +10,19 @@
 // - 'transfer' lines (between the user's own accounts, or money received from a person) are left
 //   out; money out sorted as 'pay' makes no sense and counts as 'other';
 // - `lastDay` = the day of the month's latest line of any kind (how far the statement goes), so
-//   month-end can project the month in progress from the days that have data.
+//   month-end can project the month in progress from the days that have data; `firstDay` = the
+//   earliest, so a statement that starts mid-month isn't averaged as if it covered the whole month.
+//
+// `statementAverages` turns the months into the monthly values that replace the profile's
+// estimates: the mean of the months the statement covers in full.
 import {
   COST_CATEGORIES, type CategoryTotals, type CostCategory, type Money, type StatementClass, type StatementItem,
 } from '@lifeguessr/types';
-import { oneOffHintMinAmount, oneOffOutlierMinAmount, oneOffOutlierMultiple } from './assumptions';
+import {
+  oneOffHintMinAmount, oneOffOutlierMinAmount, oneOffOutlierMultiple, statementEssentialCategories,
+  statementFullMonthSlackDays,
+} from './assumptions';
+import { daysInMonth } from './month';
 
 export type ClassifiedStatementItem = StatementItem & {
   cls: StatementClass;
@@ -62,15 +70,16 @@ type MonthAcc = {
   refunds: Map<CostCategory, number>;
   payCents: number;
   oneOffs: { label: string; cents: number }[];
+  firstDay: number;
   lastDay: number;
 };
 
 /**
- * Sums classified statement lines into one CategoryTotals per month, oldest first. Every category
- * is present in `totals` (0 when the statement shows none); `detectedPay` only when pay was found.
+ * Which lines are one-offs (see the rules at the top), in the order given. Only money out in a cost
+ * category can be one; everything else is false.
  */
-export function statementTotals(items: readonly ClassifiedStatementItem[]): CategoryTotals[] {
-  const months = [...new Set(items.map((i) => i.month))].sort();
+export function oneOffFlags(items: readonly ClassifiedStatementItem[]): boolean[] {
+  const months = new Set(items.map((i) => i.month));
 
   // Which merchants recur across months, and the typical charge per category (for the outlier rule).
   const monthsByMerchant = new Map<string, Set<string>>();
@@ -88,28 +97,41 @@ export function statementTotals(items: readonly ClassifiedStatementItem[]): Cate
   }
   const medianByCategory = new Map([...chargesByCategory].map(([c, v]) => [c, median(v)]));
 
-  const isOneOff = (item: ClassifiedStatementItem, category: CostCategory): boolean => {
-    if (months.length < 2 || NEVER_ONE_OFF.has(category)) return false;
+  return items.map((item) => {
+    const category = spendCategory(item);
+    if (category === null || toCents(item.amount) <= 0) return false;
+    if (months.size < 2 || NEVER_ONE_OFF.has(category)) return false;
     if ((monthsByMerchant.get(merchantKey(item.label))?.size ?? 0) !== 1) return false;
     if (item.oneOffHint && item.amount >= oneOffHintMinAmount.value) return true;
     return item.amount >= oneOffOutlierMinAmount.value
       && item.amount >= oneOffOutlierMultiple.value * (medianByCategory.get(category) ?? 0);
-  };
+  });
+}
+
+/**
+ * Sums classified statement lines into one CategoryTotals per month, oldest first. Every category
+ * is present in `totals` (0 when the statement shows none); `detectedPay` only when pay was found.
+ */
+export function statementTotals(items: readonly ClassifiedStatementItem[]): CategoryTotals[] {
+  const months = [...new Set(items.map((i) => i.month))].sort();
+  const oneOff = oneOffFlags(items);
 
   const acc = new Map<string, MonthAcc>(
-    months.map((m) => [m, { spend: new Map(), refunds: new Map(), payCents: 0, oneOffs: [], lastDay: 0 }]),
+    months.map((m) => [m, { spend: new Map(), refunds: new Map(), payCents: 0, oneOffs: [], firstDay: 31, lastDay: 0 }]),
   );
   const add = (map: Map<CostCategory, number>, c: CostCategory, cents: number) => map.set(c, (map.get(c) ?? 0) + cents);
 
-  for (const item of items) {
+  items.forEach((item, i) => {
     const m = acc.get(item.month)!;
-    m.lastDay = Math.max(m.lastDay, item.day); // every dated line counts, even one left out below
+    // Every dated line counts toward how far the statement goes, even one left out below.
+    m.firstDay = Math.min(m.firstDay, item.day);
+    m.lastDay = Math.max(m.lastDay, item.day);
     const cents = toCents(item.amount);
-    if (cents === 0) continue;
+    if (cents === 0) return;
     if (cents > 0) {
       const category = spendCategory(item);
-      if (category === null) continue;
-      if (isOneOff(item, category)) m.oneOffs.push({ label: item.label, cents });
+      if (category === null) return;
+      if (oneOff[i]) m.oneOffs.push({ label: item.label, cents });
       else add(m.spend, category, cents);
     } else if (item.cls === 'pay') {
       m.payCents += -cents;
@@ -117,7 +139,7 @@ export function statementTotals(items: readonly ClassifiedStatementItem[]): Cate
       add(m.refunds, item.cls, -cents);
     }
     // money in sorted as 'transfer': left out
-  }
+  });
 
   return months.map((month): CategoryTotals => {
     const m = acc.get(month)!;
@@ -128,7 +150,58 @@ export function statementTotals(items: readonly ClassifiedStatementItem[]): Cate
       .sort((a, b) => b.cents - a.cents)
       .map((o) => ({ label: o.label, amount: toDollars(o.cents) }));
     return {
-      month, totals, oneOffs, ...(m.payCents > 0 ? { detectedPay: toDollars(m.payCents) } : {}), lastDay: m.lastDay,
+      month, totals, oneOffs, ...(m.payCents > 0 ? { detectedPay: toDollars(m.payCents) } : {}),
+      firstDay: m.firstDay, lastDay: m.lastDay,
     };
   });
+}
+
+/**
+ * The statement covers this month (nearly) in full: its first line is within the slack of the 1st
+ * and its last within the slack of the month's end. Months saved before `firstDay`/`lastDay`
+ * existed count as full, as they always did.
+ */
+export function isFullStatementMonth(m: Pick<CategoryTotals, 'month' | 'firstDay' | 'lastDay'>): boolean {
+  const slack = statementFullMonthSlackDays.value;
+  return (m.firstDay ?? 1) <= 1 + slack && (m.lastDay ?? daysInMonth(m.month)) >= daysInMonth(m.month) - slack;
+}
+
+/** The months the averages are taken over: the full ones, or every month when none is full (a two-week export). */
+export function averagedStatementMonths<T extends Pick<CategoryTotals, 'month' | 'firstDay' | 'lastDay'>>(months: readonly T[]): T[] {
+  const full = months.filter(isFullStatementMonth);
+  return full.length > 0 ? full : [...months];
+}
+
+export type StatementAverages = {
+  /**
+   * Monthly spending per category: the mean over the averaged months. An essential category
+   * (`statementEssentialCategories`) the statement shows none of is left out: a statement without
+   * rent says the rent is paid elsewhere, not that it is $0.
+   */
+  spending: Partial<Record<CostCategory, Money>>;
+  /** Mean take-home pay over the averaged months that had pay; null when none had. */
+  takeHomePay: Money | null;
+  /** The months the means were taken over ('YYYY-MM', oldest first). */
+  months: string[];
+};
+
+/** Statement months → the monthly values that replace the profile's estimates (measured). */
+export function statementAverages(months: readonly CategoryTotals[]): StatementAverages {
+  const used = averagedStatementMonths(months);
+  if (used.length === 0) return { spending: {}, takeHomePay: null, months: [] };
+  const essential: readonly CostCategory[] = statementEssentialCategories.value;
+  const spending: Partial<Record<CostCategory, Money>> = {};
+  for (const c of COST_CATEGORIES) {
+    const values = used.map((m) => m.totals[c]).filter((v): v is Money => typeof v === 'number' && Number.isFinite(v));
+    if (values.length === 0) continue;
+    const mean = Math.max(0, values.reduce((s, v) => s + v, 0) / values.length);
+    if (mean === 0 && essential.includes(c)) continue;
+    spending[c] = mean;
+  }
+  const pays = used.map((m) => m.detectedPay).filter((v): v is Money => typeof v === 'number' && v > 0);
+  return {
+    spending,
+    takeHomePay: pays.length > 0 ? pays.reduce((s, v) => s + v, 0) / pays.length : null,
+    months: used.map((m) => m.month).sort(),
+  };
 }

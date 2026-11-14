@@ -288,7 +288,7 @@ Parsing a line ("coffee 5, taxi 18, groceries 64") is local first (`features/spe
 
 ### Statements (Aibek, T6/T7)
 
-The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/statement/*` (browser) → `POST /api/statement/categorize` → `statementTotals` (engine).
+The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/statement/*` (browser) → `POST /api/statement/categorize` → `statementTotals` (engine). S9 opens with a fork: a bank CSV (most accurate, about a minute) or, without one, the S7 sliders and free text as the fallback.
 
 **Reading the CSV (browser, `lib/statement/read.ts`).** The header row is found by name anywhere in the first 30 rows (banks put summaries above it); a file without a header has its columns inferred from the cells. Dates: ISO, `MM/DD/YYYY`, `M/D/YY`, `YYYY/MM/DD`, `Oct 1, 2026` (US order, never DD/MM). Amounts: `$1,234.50`, `(12.50)`, `-$12.50`, `12.50-`. The sign convention is detected, in this order: separate Debit/Credit columns; a Debit/Credit type column; pay deposits (they are money in); else the sign most lines have (most lines are spending). Pending lines and lines that aren't transactions are skipped and counted, shown on the review. Comma, semicolon and tab separators, BOM and CRLF are handled.
 
@@ -303,6 +303,17 @@ The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/st
 - Money out in a cost category → that category's month total; money out sorted as `transfer` (own accounts, investments) is left out.
 - Money in sorted as `pay` → `detectedPay`; as a cost category → a refund off that category (never below 0); as `transfer` (money from people, interest, own accounts) → left out.
 - One-off: a merchant (label without digits and masks) seen in only one month of a statement covering 2+ months, not rent/utilities, childcare or debt payments, and either flagged by the categorizer with an amount ≥ `oneOffHintMinAmount`, or ≥ `oneOffOutlierMinAmount` and ≥ `oneOffOutlierMultiple` × that category's median charge. One-offs are listed in `oneOffs` and left out of `totals`; the browser drops their labels when the months are applied.
+- `firstDay` / `lastDay`: the day of the month's earliest and latest line of any kind (how much of the month the statement covers).
+
+**Averages (engine, `statementAverages`).** The profile's spending (measured) is the mean of each category over the months the statement covers in full: first line within `statementFullMonthSlackDays` (7) of the 1st and last line within 7 days of the month's end. An export that runs to Nov 12 or starts on Aug 17 holds only part of that month, which would pull every category and pay down (the sample's November: groceries $169 against ~$520). With no full month (a two-week export), every month is used. An essential category (`statementEssentialCategories`: rent and utilities, groceries) with $0 in every averaged month is left out: a card-only statement without rent says the rent is paid elsewhere, not that it is $0, so the profile keeps its value and S9 asks (below). The review marks a partial month; S7 says which months the sliders came from.
+
+**Follow-up questions (JF6; engine `statementFollowUps`, server `statement/followUps.ts`).** At most `MAX_STATEMENT_FOLLOW_UPS` (3), in this order:
+
+1. `missing`: an essential category with nothing in any full month → "do you pay for it another way?"; the user may type a monthly amount, which becomes that category's value (measured: they said it) when the months are applied. It is not written into the months, so month-end never treats it as history.
+2. `cash`: ATM and cash withdrawals, grouped into one question → which category the cash mostly pays for.
+3. `merchant`: money out sorted as `other`, grouped by `merchantKey` (a store that sells everything, a payment to `[name]`), biggest first → which category it mostly is.
+
+Cash and merchants are asked from `statementFollowUpMinMonthly` ($20) a month, averaged like the profile (full months, one-offs left out, refunds from the merchant subtracted). Every amount is code; the model only words the question. It sees the kind and the masked label (or the category's name), never an amount; its question must be short, end with "?", contain no number (digits or number words, `extractNumbers`) and no mask, with one retry listing the problems; otherwise the screen's template (`copy/ladder.ts`) is used, and without an API key nothing is sent. The categorize reply carries `lines` (each request line's class, in order) so the browser can apply an answer: `applyFollowUpAnswers` re-sorts the group's `other` lines and `statementTotals` sums the months again, the same function the server used. The classified lines stay in memory; only the category totals are saved. Each question can be skipped (nothing changes).
 
 ## AI usage rules
 

@@ -13,9 +13,10 @@ it.each([
   const create = vi.fn().mockResolvedValue(reply(JSON.stringify({ labels: [{ id: 1, class: 'other', oneOff: false }] })));
   const client = { messages: { create } } as unknown as LlmClient;
   const result = await categorizeStatement([{ label, amount: 25, month: '2026-10', day: 1 }], client);
-  expect(create).toHaveBeenCalledOnce();
-  const prompt = create.mock.calls[0]![0].messages[0].content;
-  expect(prompt).toContain('[name]');
-  expect(prompt).not.toMatch(/John Power|Jane Water|Sam Grill|Mary Kitchen|Pat Pub|1234|10\/01/);
+  expect(create.mock.calls[0]![0].messages[0].content).toContain('[name]');
+  // Every call, the follow-up wording included (a $25 'other' line is worth a question), sees the masked label only.
+  for (const [params] of create.mock.calls) {
+    expect(params.messages[0].content).not.toMatch(/John Power|Jane Water|Sam Grill|Mary Kitchen|Pat Pub|1234|10\/01/);
+  }
   expect(JSON.stringify(result)).not.toMatch(/John Power|Jane Water|Sam Grill|Mary Kitchen|Pat Pub/);
 });
