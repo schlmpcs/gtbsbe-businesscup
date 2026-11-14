@@ -53,6 +53,7 @@ All monthly. `t` = month index starting at 0. Defaults live in `assumptions.ts` 
 | `safetyCushionMonths` | 1 month of spending | For Can I Afford It? |
 | `clueCost`, `clueFloor` | 0.10 per opened clue, floor 0.50 | Game tuning, not finance; tune after playtests |
 | `avgMealPrice`, `monthlyGallons`, `kidGroceryFactor` | from BLS CE / national averages | Source-tagged or assumption |
+| `payCardExtraShareOfSurplus`, `payCardExtraStep`, `cutCategoryShare`, `cancelSubscriptionsShare` | 0.5 of the surplus in $10 steps, 0.20, 0.5 | Next Moves sizes; assumptions |
 
 ### Loan amortization (Aibek, T3)
 
@@ -155,6 +156,13 @@ Level 1 candidates:
 - `cancelSubscriptions`: only when a statement was uploaded and subscriptions were detected.
 
 Level 2 unlocks once a level 1 move is in `doneMoveIds`, or is `committedMoveId` and has been checked in on. It adds: retirementMatch, hsa, refinance, negotiateRent (local rent data), reshopInsurance. These need inputs the profile doesn't have yet (employer match, insurance quote), so they stay in the mock path for the hackathon.
+
+Implementation details (Y3, `packages/engine/moves.ts`):
+- `effect10y` is in today's dollars (what S10 shows), with the same `rates` for both forecasts; pass the area's inflation as on S10. The order is the same in nominal dollars.
+- `payCardFirst` size: `payCardExtraShareOfSurplus` (0.5) of this month's surplus, rounded down to a multiple of `payCardExtraStep` ($10), capped by the card balance, added to any existing `extraPayment`. No surplus or no card with a balance: no move.
+- `cancelSubscriptions` needs `opts.subscriptionsDetected` from the caller (a statement upload found subscription charges). The Profile has no statement flag, and `isEstimate: false` also means "typed in the Quick Sliders", so the engine can't infer it. It cancels `cancelSubscriptionsShare` (0.5) of subscriptions; while it is offered, `cutCategory` leaves subscriptions out so two moves never target one line.
+- Ids: `payCardFirst:<debt id>`, `cutCategory:<category>`, `cancelSubscriptions`. A done move never comes back; the next one of its kind takes its place (next card by APR, next largest category). Moves under $1 of effect are dropped.
+- The committed move is always returned while it applies and helps; outside the top 3 it takes the third slot. Level 2 unlocks when a level 1 move is done or committed (the check-in is a mock).
 
 ### Can I Afford It? (Amir, Y4)
 

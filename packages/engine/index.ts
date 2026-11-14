@@ -12,7 +12,10 @@ export {
   type Simulation, type SimulationMonth, type SimulateOptions, type ForecastRates,
   type ScheduledPurchase, type Scenario,
 } from './simulate';
-export { rankMoves } from './moves';
+export {
+  rankMoves, movesLevel, isLevelUnlocked, moveKindOf, MOVE_LEVELS, MOVES_SHOWN, DISCRETIONARY_CATEGORIES,
+  type RankMovesOptions,
+} from './moves';
 export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordOptions } from './afford';
 export { monthEnd, type CurrentMonth } from './month';
 export { sceneOf, CAR_PRICE_BANDS, TAKEOUT_BUCKETS, SPRITE_IDS } from './scene';

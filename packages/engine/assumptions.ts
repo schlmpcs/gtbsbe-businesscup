@@ -222,6 +222,46 @@ export const minForecastMonths = {
   note: 'Product rule: "You in 10 years".',
 } satisfies Assumption<number>;
 
+// ----- Y3: Next Moves (rankMoves) -------------------------------------------------------------
+
+/** Next Moves, payCardFirst: share of this month's surplus put toward the card as an extra payment. */
+export const payCardExtraShareOfSurplus = {
+  value: 0.5,
+  assumption: true,
+  note: 'Half of what is left after spending and minimum payments; the other half keeps building cash. Capped by the card balance.',
+} satisfies Assumption<number>;
+
+/** Next Moves, payCardFirst: the extra payment is rounded down to a multiple of this many dollars. */
+export const payCardExtraStep = {
+  value: 10 as Money,
+  assumption: true,
+  note: 'A round amount a person can set up ("pay $250 extra a month"); not a financial input.',
+} satisfies Assumption<Money>;
+
+/** Next Moves, cutCategory: share cut from the largest discretionary category (spec: 20%). */
+export const cutCategoryShare = {
+  value: 0.2,
+  assumption: true,
+  note: 'ENGINEERING.md → Next Moves.',
+} satisfies Assumption<number>;
+
+/** Next Moves, cancelSubscriptions: share of statement-detected subscription spend cancelled. */
+export const cancelSubscriptionsShare = {
+  value: 0.5,
+  assumption: true,
+  note: 'Cancel the ones you no longer use and keep the rest. Placeholder until sourced; the statement gives totals, not which ones are unused.',
+} satisfies Assumption<number>;
+
+/** The Y3 assumptions, spread into `assumptions` below. */
+export const movesAssumptions = {
+  payCardExtraShareOfSurplus,
+  payCardExtraStep,
+  cutCategoryShare,
+  cancelSubscriptionsShare,
+} as const;
+
+// ----- end Y3 ---------------------------------------------------------------------------------
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
@@ -242,6 +282,7 @@ export const assumptions = {
   kidGroceryFactor,
   weeksPerMonth,
   minForecastMonths,
+  ...movesAssumptions,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;
