@@ -7,6 +7,10 @@ export * from './assumptions';
 export * from './errors';
 export { costOfLife, cardToProfile } from './cost';
 export { scoreGuess } from './score';
+export {
+  dailyDuelPairs, scoreDuelPick, duelCategoryLines, duelMultiplier, duelDifference, duelGap, duelBlindSpot,
+  DUEL_ROUND_COUNT, type DuelCandidate, type DuelPair, type DuelPickScore, type DuelLessonId,
+} from './duel';
 export { forecast, applyPatch, type ForecastOptions } from './forecast';
 export {
   simulate, forecastMonths, resolveRates, monthlyRate, inflationAnnualOf, cardMinPaymentFor,
