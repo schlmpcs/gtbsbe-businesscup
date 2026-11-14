@@ -43,7 +43,10 @@
 // cheapestWay: the payment method with the highest net worth at month 120 (mid), over cash, card
 // (paid off from the surplus) and, only when the user gave loan terms, that loan. Without loan terms
 // a loan is not compared: there is no sourced default for a personal loan's APR and term, and a
-// made-up one would decide the answer. Ties go to cash, then card.
+// made-up one would decide the answer. Ties go to cash, then card. Only ways that fit now (no rule
+// broken by buying now, paid that way) compete: a way that fails is never the recommendation. When
+// none fits, cheapestWay is the cheapest way overall and `cheapestWayFits` is false, so the UI says
+// that no way to pay fits right now instead of recommending one.
 import type { AffordResult, Money, Profile, Purchase, Rate } from '@lifeguessr/types';
 import { debtLoadThresholds, safetyCushionMonths } from './assumptions';
 import { forecast } from './forecast';
@@ -71,6 +74,12 @@ export type AffordOptions = {
 
 type Rule = NonNullable<AffordResult['failsOn']>;
 type Way = AffordResult['cheapestWay'];
+
+/** canAfford's result: the shared AffordResult plus whether `cheapestWay` fits now. */
+export type AffordCheck = AffordResult & {
+  /** False when no way to pay fits now; `cheapestWay` is then the cheapest way overall. */
+  cheapestWayFits: boolean;
+};
 const RULES: readonly Rule[] = ['cushion', 'debtLoad', 'cardRevolves'];
 
 /** Margins below −tolerance fail (absorbs floating-point dust). */
@@ -129,7 +138,7 @@ const scheduled = (x: Purchase, startMonth: number): ScheduledPurchase => ({
  * Verdict (fits / wait / no) for a purchase over the 12 months from when it is made, with and
  * without it; see the header for the rules and how `baselineFails` interacts with the verdict.
  */
-export function canAfford(p: Profile, x: Purchase, opts: AffordOptions = {}): AffordResult {
+export function canAfford(p: Profile, x: Purchase, opts: AffordOptions = {}): AffordCheck {
   if (!Number.isFinite(x.amount) || x.amount <= 0) throw new RangeError(`Invalid purchase amount: ${x.amount}`);
   const rates = resolveRates(opts.rates);
 
@@ -140,13 +149,13 @@ export function canAfford(p: Profile, x: Purchase, opts: AffordOptions = {}): Af
     baselineFails = RULES.some((r) => fails(r, baseMargins[m]![r]));
   }
 
-  /** The first rule the purchase made in month `start + 1` breaks within its window, or null. */
-  const firstFailure = (start: number): Rule | null => {
-    const sim = simulate(p, start + AFFORD_CHECK_MONTHS, { rates, extra: [scheduled(x, start)] });
+  /** The first rule purchase `y` made in month `start + 1` breaks within its window, or null. */
+  const firstFailure = (start: number, y: Purchase = x): Rule | null => {
+    const sim = simulate(p, start + AFFORD_CHECK_MONTHS, { rates, extra: [scheduled(y, start)] });
     const cardId = sim.payoffCardIds[0] ?? null;
     for (let m = start + 1; m <= start + AFFORD_CHECK_MONTHS; m++) {
       const revolving = cardId === null ? null : revolvingAt(sim, cardId, m);
-      const withIt = marginsOf(sim.path[m]!, recurringMonthly(x, start, m, rates.inflationAnnual), revolving);
+      const withIt = marginsOf(sim.path[m]!, recurringMonthly(y, start, m, rates.inflationAnnual), revolving);
       const without = baseMargins[m]!;
       for (const r of RULES) {
         if (!fails(r, withIt[r])) continue;
@@ -166,6 +175,7 @@ export function canAfford(p: Profile, x: Purchase, opts: AffordOptions = {}): Af
     }
   }
   const verdict: AffordResult['verdict'] = now === null ? 'fits' : waitMonths !== undefined ? 'wait' : 'no';
+  const cheapest = cheapestWay(p, x, rates, (y) => (y === x ? now === null : firstFailure(0, y) === null));
 
   return {
     verdict,
@@ -174,26 +184,30 @@ export function canAfford(p: Profile, x: Purchase, opts: AffordOptions = {}): Af
     baselineFails,
     with: forecast(p, AFFORD_YEARS, { rates, extra: [scheduled(x, 0)] }),
     without: forecast(p, AFFORD_YEARS, { rates }),
-    cheapestWay: cheapestWay(p, x, rates),
+    cheapestWay: cheapest.way,
+    cheapestWayFits: cheapest.fits,
   };
 }
 
-/** The payment method with the highest net worth after 10 years (mid); ties go to the earlier way. */
-function cheapestWay(p: Profile, x: Purchase, rates: ForecastRates): Way {
+/**
+ * The payment method with the highest net worth after 10 years (mid) among those that fit now;
+ * ties go to the earlier way. When none fits: the highest overall, with `fits: false`.
+ */
+function cheapestWay(p: Profile, x: Purchase, rates: ForecastRates, fitsNow: (y: Purchase) => boolean): { way: Way; fits: boolean } {
   const months = forecastMonths(AFFORD_YEARS);
   const ways: [Way, Purchase][] = [
-    ['cash', { ...x, payWith: 'cash' }],
-    ['card', { ...x, payWith: 'card' }],
+    ['cash', x.payWith === 'cash' ? x : { ...x, payWith: 'cash' }],
+    ['card', x.payWith === 'card' ? x : { ...x, payWith: 'card' }],
   ];
   if (typeof x.payWith === 'object') ways.push(['loan', x]);
-  let best: Way = 'cash';
-  let bestNetWorth = Number.NEGATIVE_INFINITY;
+  let best: { way: Way; netWorth: number } | null = null;
+  let bestFitting: { way: Way; netWorth: number } | null = null;
   for (const [way, purchase] of ways) {
     const netWorth = simulate(p, months, { rates, extra: [scheduled(purchase, 0)] }).path[months]!.netWorth;
-    if (netWorth > bestNetWorth + TOLERANCE.cushion) {
-      best = way;
-      bestNetWorth = netWorth;
+    if (best === null || netWorth > best.netWorth + TOLERANCE.cushion) best = { way, netWorth };
+    if ((bestFitting === null || netWorth > bestFitting.netWorth + TOLERANCE.cushion) && fitsNow(purchase)) {
+      bestFitting = { way, netWorth };
     }
   }
-  return best;
+  return bestFitting !== null ? { way: bestFitting.way, fits: true } : { way: best!.way, fits: false };
 }

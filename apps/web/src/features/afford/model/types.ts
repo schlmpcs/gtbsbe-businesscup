@@ -33,6 +33,12 @@ export type AffordResultVM = {
   /** The plan already breaks a rule without the purchase: say so instead of blaming the purchase. */
   baselineFails: boolean;
   cheapestWay: AffordResult['cheapestWay'];
+  /** False when no way to pay fits now: the UI says so instead of recommending `cheapestWay`. */
+  cheapestWayFits: boolean;
+  /** The outcome first: net worth in 10 years with and without (mid, nominal). */
+  outcome: AffordOutcomeVM;
+  /** The goal effect, when a goal is set; null otherwise. */
+  goalEffect: AffordGoalEffectVM | null;
   /** canAfford's forecasts are nominal (not today's dollars). */
   todaysDollars: false;
   /**
@@ -44,6 +50,22 @@ export type AffordResultVM = {
   withoutPoints: ForecastPoint[];
   /** This month, 12 months, 5 years, 10 years. */
   horizons: AffordHorizonVM[];
+};
+
+/** Net worth in 10 years with vs without; `cost` = without − with (below 0 = the purchase adds net worth). */
+export type AffordOutcomeVM = { with10y: Money; without10y: Money; cost: Money };
+
+/**
+ * When the plan reaches the goal's target (today's dollars), with the purchase vs without.
+ * `reachYear` = calendar year it is reached with the purchase (null = not within the goal's years
+ * + 10). `delayMonths` = how much later than without (0 = no change; null when either never gets there).
+ */
+export type AffordGoalEffectVM = {
+  target: Money;
+  reachYear: number | null;
+  delayMonths: number | null;
+  /** Reached with the purchase by the goal's own date. */
+  onTime: boolean;
 };
 
 /** The thresholds canAfford checks (engine assumptions), so the UI can name them in its copy. */

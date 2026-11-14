@@ -1,7 +1,7 @@
 'use client';
 
 import { afford as t, forecast } from '@/copy';
-import { Art, Card, cx, ForecastChart, formatRate, Money, Stack, Sticker, Tag } from '@/ui-kit';
+import { Art, Card, cx, ForecastChart, formatMoney, formatRate, Money, Stack, Sticker, Tag } from '@/ui-kit';
 import type { ReactNode } from 'react';
 import type { AffordResultVM, AffordRulesVM, AffordVM, PayWithChoice, VMError } from '../model/types';
 import { Skeleton } from './controls';
@@ -93,22 +93,51 @@ function Fact({ value, label, note }: { value: ReactNode; label: string; note?: 
   );
 }
 
+/** The goal effect in one sentence (null when no goal is set). */
+function goalText(g: NonNullable<AffordResultVM['goalEffect']>): string {
+  const target = formatMoney(g.target, { compact: true });
+  if (g.reachYear === null || g.delayMonths === null) return t.result.goal.never(target);
+  if (!g.onTime) return t.result.goal.late(target, g.reachYear, g.delayMonths);
+  return g.delayMonths === 0 ? t.result.goal.sameTime(target, g.reachYear) : t.result.goal.later(target, g.reachYear, g.delayMonths);
+}
+
+/** The cost phrased as an effect on the user, never a bare signed number. */
+function costText(cost: number): string {
+  const amount = formatMoney(Math.abs(cost));
+  if (amount === formatMoney(0)) return t.result.outcome.free;
+  return cost > 0 ? t.result.outcome.costs(amount) : t.result.outcome.adds(amount);
+}
+
 /**
- * The fact cards: net worth vs not buying in 1 and 10 years (rules engine, labeled) and the cheapest way
- * to pay. Every number comes from the view-model.
+ * Outcome first: net worth in 10 years with vs without (rules engine, labeled), the cost in words,
+ * the goal effect, and the cheapest way to pay that fits. Every number comes from the view-model.
  */
 function Facts({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWithChoice }) {
-  const shown = data.horizons.filter((h) => h.month === 120 || h.month === 12).sort((a, b) => b.month - a.month);
+  const o = data.outcome;
   return (
     <div data-testid={data.horizons.length > 0 ? 'afford-horizons' : undefined} className="flex flex-col gap-sm">
+      <section data-testid="afford-outcome" aria-label={t.result.outcome.label} className="flex flex-col gap-xs rounded-xl bg-surface p-xl shadow-md">
+        <p className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+          {t.result.outcome.withVsWithout(formatMoney(o.with10y, { compact: true }), formatMoney(o.without10y, { compact: true }))}
+        </p>
+        <p className="text-lg text-text-muted">{costText(o.cost)}</p>
+        {data.goalEffect && (
+          <p data-testid="afford-goal-effect" className="text-lg font-semibold">
+            {goalText(data.goalEffect)}
+          </p>
+        )}
+      </section>
       <dl aria-label={t.result.effectsLabel} className="grid grid-cols-1 gap-md sm:grid-cols-3">
-        {shown.map((h) => (
-          <Fact key={h.month} value={<Money value={h.deltaMid} signed />} label={t.result.effects[h.month]!} />
-        ))}
         <Fact
-          value={t.result.cheapestWays[data.cheapestWay]}
+          value={data.cheapestWayFits ? t.result.cheapestWays[data.cheapestWay] : t.result.cheapestNone}
           label={t.result.cheapestTitle}
-          note={data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent}
+          note={
+            !data.cheapestWayFits
+              ? t.result.cheapestNoneNote
+              : data.cheapestWay === chosenWay
+                ? t.result.cheapestSame
+                : t.result.cheapestDifferent
+          }
         />
       </dl>
       {data.horizons.length > 0 && <SourceLabel source={data.forecastSource} className="self-start" />}

@@ -97,3 +97,18 @@ export function movesTowardGoal(
     },
   };
 }
+
+/** How far past the goal's own date goalReachMonth looks (so a delay past it still has a month). */
+export const GOAL_REACH_SLACK_YEARS = 10;
+
+/**
+ * The first month (1-based, from now) the mid forecast reaches the goal's target in today's
+ * dollars, or null if it doesn't within the goal's years + GOAL_REACH_SLACK_YEARS. With
+ * `opts.extra` it answers "when do I reach it if I make this purchase?".
+ */
+export function goalReachMonth(p: Profile, goal: Goal, opts: ForecastOptions = {}): number | null {
+  GoalSchema.parse(goal);
+  const points = forecast(p, goal.years + GOAL_REACH_SLACK_YEARS, { ...opts, todaysDollars: true }).points;
+  for (let m = 1; m < points.length; m++) if (points[m]!.mid >= goal.target) return m;
+  return null;
+}

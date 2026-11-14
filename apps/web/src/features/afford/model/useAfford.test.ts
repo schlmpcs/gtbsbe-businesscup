@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { canAfford, debtLoadThresholds, inflationAnnualOf, safetyCushionMonths } from '@lifeguessr/engine';
-import type { Purchase } from '@lifeguessr/types';
+import { COST_CATEGORIES, type CostCategory, type Profile, type Purchase } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getArea } from '@lifeguessr/data/areas';
@@ -9,7 +9,7 @@ import type { ParseFn } from '@/lib/model/useParseConfirm';
 import { useAppStore, useProStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { fakeProAdapter, PRO_DEMO, resetProState, statusInfo } from '@/test/pro';
-import { purchaseFromForm, useAfford } from './useAfford';
+import { affordGoalEffect, purchaseFromForm, useAfford } from './useAfford';
 
 beforeEach(() => {
   resetClientState();
@@ -50,6 +50,23 @@ describe('useAfford (S11)', () => {
     const ten = r.data.horizons[3]!;
     expect(ten.with).toEqual(expected.with.points[120]);
     expect(ten.deltaMid).toBeCloseTo(expected.with.points[120]!.mid - expected.without.points[120]!.mid, 6);
+    // Outcome first: with vs without in 10 years, and the cost as a positive "costs you" amount.
+    expect(r.data.outcome.with10y).toBe(expected.with.in10y.mid);
+    expect(r.data.outcome.without10y).toBe(expected.without.in10y.mid);
+    expect(r.data.outcome.cost).toBeCloseTo(-ten.deltaMid, 6);
+    expect(r.data.cheapestWayFits).toBe(expected.cheapestWayFits);
+    expect(r.data.goalEffect).toBeNull(); // no goal set
+  });
+
+  it('with a goal set, the result says when the goal is reached with the purchase', async () => {
+    act(() => useAppStore.getState().setGoal({ target: 100_000, years: 10 }));
+    const { result } = renderHook(() => useAfford());
+    await waitForReady(result);
+    act(() => result.current.setAmount(1200));
+    const r = result.current.result!;
+    if (r.status !== 'ready') throw new Error('not ready');
+    expect(r.data.goalEffect).not.toBeNull();
+    expect(r.data.goalEffect!.target).toBe(100_000);
   });
 
   it('a loan needs APR and term; the form reports the missing fields', async () => {
@@ -119,5 +136,34 @@ describe('useAfford (S11)', () => {
     expect(result.current.purchase).toEqual(saved);
     act(() => result.current.removeFromWishlist(savedId));
     expect(result.current.wishlist).toEqual([]);
+  });
+});
+
+describe('affordGoalEffect', () => {
+  it('hand-checked: reached 3 months later, still within the goal year', () => {
+    // No growth: net worth = 5,000 + 1,000·m. $10,000 in month 5 without; after a $2,500 cash
+    // purchase 2,500 + 1,000·m ≥ 10,000 in month 8. From mid-November 2026 (month index 10),
+    // month 8 lands in 2026 + floor((10 + 8) / 12) = 2027; 8 ≤ 12 months, so on time.
+    const spending = Object.fromEntries(
+      COST_CATEGORIES.map((c) => [c, { value: c === 'other' ? 4000 : 0, isEstimate: false }]),
+    ) as Record<CostCategory, { value: number; isEstimate: boolean }>;
+    const p: Profile = {
+      age: { value: 30, isEstimate: false },
+      takeHomePay: { value: 5000, isEstimate: false },
+      spending,
+      cash: { value: 5000, isEstimate: false },
+      retirement: { value: 0, isEstimate: false },
+      retirementShare: { value: 0, isEstimate: false },
+      debts: [],
+      doneMoveIds: [],
+    };
+    const zero = { inflationAnnual: 0, cashYieldAnnual: 0, returnAnnualNominal: 0 };
+    const buy: Purchase = { label: 'Car', amount: 2500, recurring: false, payWith: 'cash' };
+    expect(affordGoalEffect(p, { target: 10_000, years: 1 }, buy, zero, new Date(2026, 10, 15))).toEqual({
+      target: 10_000,
+      reachYear: 2027,
+      delayMonths: 3,
+      onTime: true,
+    });
   });
 });
