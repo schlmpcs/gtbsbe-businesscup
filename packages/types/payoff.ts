@@ -3,6 +3,13 @@ import type { Money } from './index';
 
 export const PayoffMethodSchema = z.enum(['avalanche', 'snowball', 'minimum']);
 export type PayoffMethod = z.infer<typeof PayoffMethodSchema>;
+/**
+ * One payoff plan. `monthsToDebtFree` is null when the payments never clear the debts. Then
+ * `totalInterest`, `totalPaid` and `interestSavedVsMinimum` cover only the 100 simulated years
+ * (1,200 months, the engine's MAX_SIMULATION_MONTHS), where the balance is still growing or unpaid:
+ * they are where the simulation stopped, not totals to show anyone. `monthsSavedVsMinimum` is null
+ * then too, and can be negative when this plan finishes later than the minimum-only plan.
+ */
 export type PayoffPlan = {
   method: PayoffMethod;
   order: string[];
