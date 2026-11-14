@@ -8,6 +8,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { ProDemoUnlockRequestSchema } from '@lifeguessr/types';
 import { json, readJsonBody } from '@/server/ai/http';
+import { recordServerEvent } from '@/server/events/http';
 import { demoUnlock } from '@/server/pro/config';
 import { guardProRequest, MAX_PRO_BODY_BYTES, proError, storeFailure } from '@/server/pro/http';
 import { getEntitlementStore, proStatusOf } from '@/server/pro/store';
@@ -39,6 +40,7 @@ export async function POST(req: Request): Promise<Response> {
       source: 'demo',
       since: new Date().toISOString(),
     });
+    await recordServerEvent(gate.anonId, { name: 'pro_promo_redeemed' });
     return json({ ok: true, status: proStatusOf(entitlement) });
   } catch (err) {
     return storeFailure(err);

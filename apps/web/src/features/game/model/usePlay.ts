@@ -5,6 +5,7 @@ import { CLUE_IDS, type ClueId, type Money } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api/http';
 import { usEasternDate } from '@/lib/dates';
+import { track, useTrackOnce } from '@/lib/events';
 import { toVMError } from '@/lib/model/errors';
 import { logScale, logSliderVM, snap } from '@/lib/model/slider';
 import type { VMError } from '@/lib/model/types';
@@ -31,6 +32,18 @@ const guessScale = logScale(GUESS_MIN, GUESS_MAX);
 /** The server closed the set on screen (its day ended): load the new one instead of an error. */
 const isDayOver = (err: unknown) => err instanceof ApiError && err.code === 'day_over';
 const clampGuess = (v: Money) => snap(v, GUESS_MIN, GUESS_MAX, GUESS_STEP);
+
+/**
+ * Funnel: a home was guessed (with how many rooms were open when it was scored), and the day was
+ * finished when that was the last one. Read after the reveal is stored.
+ */
+function trackGuess(home: number, cluesOpened: number): void {
+  const game = useGameStore.getState();
+  track({ name: 'home_guessed', props: { home, cluesOpened } }, { once: `guess:${game.date}:${home}` });
+  if (game.cards.length > 0 && game.cards.every((c) => game.reveals[c.id])) {
+    track({ name: 'game_finished', props: { homes: game.cards.length } }, { once: `finished:${game.date}` });
+  }
+}
 
 export function usePlay(opts: UsePlayOptions = {}): PlayVM {
   const ready = useAppReady();
@@ -104,8 +117,12 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
       if (already || opening[key] || useGameStore.getState().reveals[current.id]) return;
       setOpening((o) => ({ ...o, [key]: true }));
       setClueErrors(({ [key]: _drop, ...rest }) => rest);
+      const home = index + 1;
       client.clue(current.id, clue, useGameStore.getState().date).then(
-        (reveal) => useGameStore.getState().addClue(reveal),
+        (reveal) => {
+          useGameStore.getState().addClue(reveal);
+          track({ name: 'clue_opened', props: { home, clue } }, { once: `clue:${key}` });
+        },
         (err: unknown) => {
           if (!mounted.current) return;
           if (isDayOver(err)) setAttempt((a) => a + 1);
@@ -115,7 +132,7 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
         if (mounted.current) setOpening(({ [key]: _done, ...rest }) => rest);
       });
     },
-    [client, current, opening],
+    [client, current, index, opening],
   );
 
   const setGuess = useCallback(
@@ -134,12 +151,14 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     if (state.guesses[current.id] === undefined) state.setGuess(current.id, value);
     setSubmitting(current.id);
     setGuessErrors(({ [current.id]: _drop, ...rest }) => rest);
+    const home = index + 1;
     client.guess(current.id, value, state.date).then(
       ({ guess, reveal }) => {
         // The amount the source scored: a repeat answers the first guess, not this slider value.
         const s = useGameStore.getState();
         s.setGuess(current.id, guess);
         s.setReveal(current.id, reveal);
+        trackGuess(home, reveal.cluesOpened.length);
       },
       (err: unknown) => {
         if (!mounted.current) return;
@@ -149,7 +168,7 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     ).finally(() => {
       if (mounted.current) setSubmitting(null);
     });
-  }, [client, current, submitting]);
+  }, [client, current, index, submitting]);
 
   const next = useCallback(() => {
     const s = useGameStore.getState();
@@ -251,6 +270,7 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     setShareStatus('sharing');
     shareImpl(shareText).then(
       (outcome) => {
+        if (outcome === 'shared' || outcome === 'copied') track({ name: 'result_shared', props: { via: outcome === 'shared' ? 'share' : 'copy' } });
         if (mounted.current) setShareStatus(outcome === 'cancelled' ? 'idle' : outcome);
       },
       () => {
@@ -273,6 +293,8 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
   const latest = loaded?.attempt === attempt ? loaded : null;
   const haveCards = total > 0 && (date === usEasternDate() || (latest !== null && latest.error === null));
   const status: PlayVM['status'] = !ready ? 'loading' : haveCards ? 'ready' : latest?.error ? 'error' : 'loading';
+  // Someone saw today's first home (or came back to an unfinished day).
+  useTrackOnce(status === 'ready' && phase !== 'summary', `play_started:${date}`, { name: 'play_started' });
   return {
     status,
     error: status === 'error' ? (latest?.error ?? null) : null,
