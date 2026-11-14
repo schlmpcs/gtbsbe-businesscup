@@ -1,9 +1,10 @@
-// Server-only: the app's store (sessions now; the T5 game and T8 events add theirs here).
+// Server-only: the app's store (sessions, the T5 daily game; T8 events add theirs here).
 //
 //   getStore()            the process-wide Store for STORE_URL (Postgres), or in memory in dev and
 //                         tests. Throws StoreUnavailableError('not_configured') in production
 //                         without STORE_URL: it never falls back to memory there.
 //   store.sessions        SessionStore (./sessions.ts)
+//   store.game            GameStore (./game.ts): clues opened, scored guesses, leaderboard
 //   store.db              the Postgres connection (null in memory), for server modules that own
 //                         their tables, e.g. Pro entitlements (server/pro/store.ts)
 //   storeHealth()         { status, backend, reason } for /api/health, with a short timeout
@@ -14,6 +15,9 @@
 // below, and add a migration (./migrations/index.ts explains the rules).
 import { storeConfig } from './config';
 import { StoreUnavailableError, type StoreUnavailableReason } from './errors';
+import type { GameStore } from './game';
+import { createMemoryGameStore } from './game.memory';
+import { createPostgresGameStore } from './game.postgres';
 import { createDb, type Db, type DbOptions } from './postgres';
 import type { SessionStore } from './sessions';
 import { createMemorySessionStore } from './sessions.memory';
@@ -23,10 +27,12 @@ export { StoreUnavailableError, type StoreUnavailableReason } from './errors';
 export { anonKey } from './anonKey';
 export type { Db, Tx } from './postgres';
 export type { SaveOptions, SaveResult, SessionState, SessionStore, SessionUpdate } from './sessions';
+export type { GameStore, Leaderboard, PlayerDay, PlayKey, StoredResult, SubmitOutcome } from './game';
 
 export interface Store {
   readonly backend: 'postgres' | 'memory';
   readonly sessions: SessionStore;
+  readonly game: GameStore;
   /** The Postgres connection, or null for the memory store. */
   readonly db: Db | null;
   /** Resolves when the store is usable (connected and migrated); throws StoreUnavailableError otherwise. */
@@ -39,6 +45,7 @@ export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
   return {
     backend: 'postgres',
     sessions: createPostgresSessionStore(db),
+    game: createPostgresGameStore(db),
     db,
     check: () => db.check(),
     close: () => db.close(),
@@ -49,6 +56,7 @@ export function createMemoryStore(): Store {
   return {
     backend: 'memory',
     sessions: createMemorySessionStore(),
+    game: createMemoryGameStore(),
     db: null,
     check: async () => {},
     close: async () => {},

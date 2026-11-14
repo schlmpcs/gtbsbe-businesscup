@@ -3,6 +3,7 @@
 
 import { CLUE_IDS, type ClueId, type Money } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ApiError } from '@/lib/api/http';
 import { usEasternDate } from '@/lib/dates';
 import { toVMError } from '@/lib/model/errors';
 import { logScale, logSliderVM, snap } from '@/lib/model/slider';
@@ -26,6 +27,9 @@ export type UsePlayOptions = {
 };
 
 const guessScale = logScale(GUESS_MIN, GUESS_MAX);
+
+/** The server closed the set on screen (its day ended): load the new one instead of an error. */
+const isDayOver = (err: unknown) => err instanceof ApiError && err.code === 'day_over';
 const clampGuess = (v: Money) => snap(v, GUESS_MIN, GUESS_MAX, GUESS_STEP);
 
 export function usePlay(opts: UsePlayOptions = {}): PlayVM {
@@ -66,7 +70,9 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     client.daily(today).then(
       (set) => {
         if (cancelled) return;
-        useGameStore.getState().startDay(set.date, set.cards);
+        const store = useGameStore.getState();
+        store.startDay(set.date, set.cards);
+        if (set.progress) store.mergeProgress(set.progress);
         setLoaded({ attempt, error: null });
       },
       (err: unknown) => {
@@ -98,10 +104,12 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
       if (already || opening[key] || useGameStore.getState().reveals[current.id]) return;
       setOpening((o) => ({ ...o, [key]: true }));
       setClueErrors(({ [key]: _drop, ...rest }) => rest);
-      client.clue(current.id, clue).then(
+      client.clue(current.id, clue, useGameStore.getState().date).then(
         (reveal) => useGameStore.getState().addClue(reveal),
         (err: unknown) => {
-          if (mounted.current) setClueErrors((e) => ({ ...e, [key]: toVMError(err) }));
+          if (!mounted.current) return;
+          if (isDayOver(err)) setAttempt((a) => a + 1);
+          else setClueErrors((e) => ({ ...e, [key]: toVMError(err) }));
         },
       ).finally(() => {
         if (mounted.current) setOpening(({ [key]: _done, ...rest }) => rest);
@@ -126,10 +134,17 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     if (state.guesses[current.id] === undefined) state.setGuess(current.id, value);
     setSubmitting(current.id);
     setGuessErrors(({ [current.id]: _drop, ...rest }) => rest);
-    client.guess(current.id, value).then(
-      (reveal) => useGameStore.getState().setReveal(current.id, reveal),
+    client.guess(current.id, value, state.date).then(
+      ({ guess, reveal }) => {
+        // The amount the source scored: a repeat answers the first guess, not this slider value.
+        const s = useGameStore.getState();
+        s.setGuess(current.id, guess);
+        s.setReveal(current.id, reveal);
+      },
       (err: unknown) => {
-        if (mounted.current) setGuessErrors((e) => ({ ...e, [current.id]: toVMError(err) }));
+        if (!mounted.current) return;
+        if (isDayOver(err)) setAttempt((a) => a + 1);
+        else setGuessErrors((e) => ({ ...e, [current.id]: toVMError(err) }));
       },
     ).finally(() => {
       if (mounted.current) setSubmitting(null);

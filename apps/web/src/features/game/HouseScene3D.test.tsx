@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 // The 3D house scene on the real view-model and fixture game client: the empty layout render first,
 // and a room's 3D props only in its close-up after it is opened (they come from its ClueReveal).
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { common, game as t } from '@/copy';
+import { ANON, setupGameTestEnv, TODAY } from '@/server/game/testUtils';
 import { resetClientState } from '@/test/clientState';
-import { createFixtureGameClient, type GameClient } from './model/client';
+import { createRouteFetch } from '@/test/gameRoutes';
+import { createFixtureGameClient, createHttpGameClient, type GameClient } from './model/client';
 import { usePlay } from './model/usePlay';
 import { PlayScreen } from './ui/PlayScreen';
 
@@ -43,5 +45,26 @@ describe('HouseScene3D (default clue panel)', () => {
     fireEvent.click(within(closeUp).getByRole('button', { name: common.kit.houseScene.back }));
     expect(screen.queryByRole('region', { name: common.kit.houseScene.closeUp(t.clues.rooms.kitchen) })).toBeNull();
     expect(screen.getByRole('button', { name: t.clues.rooms.kitchen })).toHaveAttribute('data-status', 'open');
+  });
+});
+
+describe('HouseScene3D in API mode', () => {
+  const getStore = setupGameTestEnv();
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('a room tap goes through POST /api/daily/clue, which records it before the room opens', async () => {
+    const routes = createRouteFetch();
+    vi.stubGlobal('fetch', routes.fetch);
+    client = createHttpGameClient({ anonId: () => ANON });
+    render(<Play />);
+    await screen.findByText(t.progress(1, 5));
+
+    fireEvent.click(screen.getByRole('button', { name: t.clues.rooms.garage }));
+    await waitFor(() => expect(screen.getByRole('button', { name: t.clues.rooms.garage })).toHaveAttribute('data-status', 'open'));
+    const clueCalls = routes.calls.filter((c) => c.path === '/api/daily/clue');
+    expect(clueCalls).toHaveLength(1);
+    expect(clueCalls[0]!.body).toMatchObject({ anonId: ANON, clue: 'garage', date: TODAY });
+    const cardId = (clueCalls[0]!.body as { cardId: string }).cardId;
+    expect((await getStore().game.playerDay(TODAY, ANON)).clues).toEqual({ [cardId]: ['garage'] });
   });
 });

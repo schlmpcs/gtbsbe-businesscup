@@ -1,9 +1,11 @@
 // zod schemas for the game contracts (docs/ARCHITECTURE.md → Contracts: PublicCard, ClueReveal,
-// GuessReveal). Used to validate /api/daily* responses and the game state restored from storage.
+// GuessReveal) and the T5 routes' requests and replies (/api/daily, /api/daily/clue,
+// /api/daily/guess, /api/leaderboard). The routes validate their input with these, the browser
+// validates the replies, and the game state restored from storage goes through them too.
 // They live here, not in packages/types, so the shared contracts don't change in this task.
 import {
-  AreaTierSchema, CLUE_IDS, CostCategorySchema, KidAgeSchema, LifeCardSchema, MoneySchema, SourceSchema,
-  type ClueReveal, type CostBreakdown, type GuessReveal, type PublicCard,
+  AnonIdSchema, AreaTierSchema, CLUE_IDS, CostCategorySchema, KidAgeSchema, LifeCardSchema, MoneySchema, SourceSchema,
+  type ClueReveal, type CostBreakdown, type GuessReveal, type Money, type PublicCard,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 
@@ -62,9 +64,105 @@ export const GuessRevealSchema = z.object({
   cluesOpened: z.array(ClueIdSchema),
 }) satisfies z.ZodType<GuessReveal, unknown>;
 
-/** GET /api/daily: today's cards (bare array, or `{ date, cards }`). */
+// ----- T5 routes ---------------------------------------------------------------------------------
+
+/** A daily set's US Eastern calendar date, 'YYYY-MM-DD'. */
+export const PlayDateSchema = z.iso.date();
+
+/** A life card id as the routes accept it (the catalog's ids look like `lc-001`). */
+export const CardIdSchema = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/, 'not a card id');
+
+/** Largest monthly guess the routes accept ($1M a month; the slider stops at $15k). */
+export const MAX_GUESS: Money = 1_000_000;
+
+/**
+ * POST /api/daily/clue. `date` is the set's date from GET /api/daily; without it the server uses
+ * today's. A set stays open for a short grace period after US Eastern midnight, then answers 409
+ * `day_over`.
+ */
+export const ClueRequestSchema = z.strictObject({
+  anonId: AnonIdSchema,
+  cardId: CardIdSchema,
+  clue: ClueIdSchema,
+  date: PlayDateSchema.optional(),
+});
+export type ClueRequest = z.input<typeof ClueRequestSchema>;
+
+/** POST /api/daily/guess: a monthly cost in dollars. The client never sends clues or a score. */
+export const GuessRequestSchema = z.strictObject({
+  anonId: AnonIdSchema,
+  cardId: CardIdSchema,
+  guess: z.number().positive().max(MAX_GUESS),
+  date: PlayDateSchema.optional(),
+});
+export type GuessRequest = z.input<typeof GuessRequestSchema>;
+
+/** A scored guess: the amount guessed and the server's reveal. */
+export type PlayedGuess = { guess: Money; reveal: GuessReveal };
+
+export const PlayedGuessSchema = z.object({ guess: MoneySchema, reveal: GuessRevealSchema });
+
+/**
+ * POST /api/daily/guess reply: the GuessReveal plus the amount it scored and whether it is a
+ * stored result answered again (a repeated guess for the same card never scores twice).
+ */
+export const GuessReplySchema = GuessRevealSchema.extend({ guess: MoneySchema, replayed: z.boolean() });
+
+/**
+ * What the server already holds for this player today (GET /api/daily with x-anon-id): the clues
+ * it recorded per card, in the order they were opened, and the guesses it scored. The browser
+ * merges it in, so a cleared tab shows the same clues and results the server will count.
+ */
+export type DailyProgress = { clues: Record<string, ClueReveal[]>; guesses: Record<string, PlayedGuess> };
+
+export const DailyProgressSchema = z.object({
+  clues: z.record(z.string(), z.array(ClueRevealSchema)),
+  guesses: z.record(z.string(), PlayedGuessSchema),
+});
+
+/** GET /api/daily: today's cards (bare array, or `{ date, cards, progress? }`). */
 export const DailyResponseSchema = z.union([
-  z.array(PublicCardSchema).transform((cards) => ({ date: null, cards })),
-  z.object({ date: z.string().nullable().optional(), cards: z.array(PublicCardSchema) })
-    .transform((d) => ({ date: d.date ?? null, cards: d.cards })),
+  z.array(PublicCardSchema).transform((cards) => ({ date: null, cards, progress: null })),
+  z.object({
+    date: z.string().nullable().optional(),
+    cards: z.array(PublicCardSchema),
+    progress: DailyProgressSchema.optional(),
+  }).transform((d) => ({ date: d.date ?? null, cards: d.cards, progress: d.progress ?? null })),
 ]);
+
+/** One player on the day's leaderboard. `handle` is made up from a hash: no id, no PII. */
+export const LeaderboardEntrySchema = z.object({
+  rank: z.number().int().min(1),
+  handle: z.string(),
+  points: z.number().int().min(0),
+  played: z.number().int().min(0),
+  inRange: z.number().int().min(0),
+  /** True on the caller's own row (when the request carried its x-anon-id). */
+  you: z.boolean(),
+});
+export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
+
+/**
+ * GET /api/leaderboard?date=YYYY-MM-DD (header x-anon-id optional): the day's players ranked by
+ * the points of their stored guesses. Players with equal points share a rank; among them the one
+ * who finished first is listed first. `rank` and `todayStats` are the caller's own (null without
+ * an id, or before their first guess).
+ */
+export const LeaderboardResponseSchema = z.object({
+  ok: z.literal(true),
+  date: PlayDateSchema,
+  players: z.number().int().min(0),
+  entries: z.array(LeaderboardEntrySchema),
+  rank: z.number().int().min(1).nullable(),
+  todayStats: LeaderboardEntrySchema.omit({ rank: true, you: true }).nullable(),
+});
+export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
+
+/** Error codes of the game routes (`{ ok: false, error: { code } }`). */
+export const GAME_ERROR_CODES = [
+  'bad_request', 'too_large', 'rate_limited', 'unavailable',
+  'not_in_set',   // the card is not in that day's set (404)
+  'day_over',     // the set's day has ended (409): load GET /api/daily again
+  'not_found',    // /api/share: no stored result with that id (404)
+] as const;
+export type GameErrorCode = (typeof GAME_ERROR_CODES)[number];
