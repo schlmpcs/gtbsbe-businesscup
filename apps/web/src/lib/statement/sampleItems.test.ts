@@ -8,7 +8,7 @@
 // changed, packages/data/fixtures/subscriptions.expected.json by hand.
 import { readStatementSampleCsv } from '@lifeguessr/data/fixtures/node';
 import { merchantKey } from '@lifeguessr/engine';
-import type { StatementItem } from '@lifeguessr/types';
+import { KnownServiceSchema, type StatementItem } from '@lifeguessr/types';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -104,5 +104,31 @@ describe('subscriptionsExpected (the golden audit) agrees with the statement it 
     expect(subscriptionsExpected.asOf).toEqual({ month: '2026-11', day: 12 });
     const latest = statementItemsSample.at(-1)!;
     expect(subscriptionsExpected.asOf).toEqual({ month: latest.month, day: latest.day });
+  });
+});
+
+describe('catalogue matchers are written the way merchantKey writes keys', () => {
+  // KnownServiceSchema only takes upper-case words and single spaces as matchers. That is merchantKey's
+  // whole output alphabet, so the key of any real label must pass; a schema stricter than the function
+  // would turn away a matcher that can match.
+  const service = {
+    id: 'service', name: 'Service', category: 'other', plans: [{ id: 'plan', name: 'Plan', price: 1, cadence: 'monthly' }],
+    priceYear: 2026, source: { name: 'Illustrative test source', year: 2026 }, isEstimate: true,
+  };
+
+  it('accepts the merchantKey of every line of the sample statement as a matcher', async () => {
+    const { statementItemsSample } = await loadFixtures();
+    for (const { label } of statementItemsSample) {
+      const key = merchantKey(label);
+      expect(key, label).not.toBe('');
+      expect(KnownServiceSchema.safeParse({ ...service, matchers: [key] }).success, `${label} -> ${key}`).toBe(true);
+    }
+  });
+
+  it('refuses a matcher no merchantKey could equal', () => {
+    for (const matcher of ['netflix com', 'NETFLIX.COM', 'NETFLIX 2026', 'AMAZON PRIME*']) {
+      expect(merchantKey(matcher), matcher).not.toBe(matcher);
+      expect(KnownServiceSchema.safeParse({ ...service, matchers: [matcher] }).success, matcher).toBe(false);
+    }
   });
 });

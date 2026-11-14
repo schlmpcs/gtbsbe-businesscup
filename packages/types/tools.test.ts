@@ -1,14 +1,16 @@
 // M1: the contracts of the three micro-tools (subscription audit, overpaying check, debt payoff
 // planner). Every sample below is written by hand, with the numbers worked out in the comments;
 // nothing here is read back from an implementation. The committed fixtures (the sample statement's
-// items and its golden audit) are checked in packages/data/fixtures/fixtures.test.ts.
+// items and its golden audit) are checked in packages/data/fixtures/tools.test.ts (against the
+// schemas and hand-worked figures) and apps/web/src/lib/statement/sampleItems.test.ts (against the
+// CSV reader).
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
   BENCHMARK_LINES, BENCHMARK_POSITIONS, CADENCES, CADENCE_MONTHS, CLIENT_EVENT_NAMES, EVENT_COUNT_MAX, EVENTS_BATCH_MAX, FUNNEL_EVENT_NAMES,
   FUNNEL_STEPS, MISS_BUCKETS, OVERPAYING_COVERAGES, OVERPAYING_SKIP_REASONS, PAYOFF_METHODS, SERVER_EVENT_NAMES,
-  SERVICE_CATEGORIES, STATEMENT_CLASSES, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_FLAGS, SUBSCRIPTION_ORIGINS,
-  SUBSCRIPTION_STATUSES, TOOL_IDS,
+  SERVICE_CATEGORIES, STATEMENT_CLASSES, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_FINDINGS_MAX, SUBSCRIPTION_FLAGS,
+  SUBSCRIPTION_ORIGINS, SUBSCRIPTION_STATUSES, TOOL_IDS,
   BenchmarkSchema, ClientEventEnvelopeSchema, EventsRequestSchema, KnownServiceSchema, MissBucketSchema,
   OverpayingResultSchema, PayoffComparisonSchema, PayoffPlanSchema, StatementCategorizeResponseSchema,
   SubscriptionAuditSchema, SubscriptionFindingSchema, ToolIdSchema, type ServicePlanSchema,
@@ -83,6 +85,23 @@ describe('KnownService (the catalogue entry)', () => {
     good(KnownServiceSchema, service);
     good(KnownServiceSchema, { ...service, id: 'apple', name: 'Apple', category: 'other', matchers: ['APPLE COM BILL'], ambiguous: true });
   });
+
+  it('accepts matchers as merchantKey() writes them: upper-case words and single spaces', () => {
+    for (const matcher of ['NETFLIX', 'SPOTIFY USA', 'PLANET FITNESS CLUB FEES', 'AMAZON PRIME', 'APPLE COM BILL', 'AT T']) {
+      good(KnownServiceSchema, { ...service, matchers: [matcher] });
+    }
+    good(KnownServiceSchema, { ...service, matchers: ['NETFLIX', 'NETFLIX COM'] });   // different matchers, one of them a prefix of the other
+  });
+
+  it.each([
+    ['a lower-case matcher (merchantKey never produces one, so it could never match)', { ...service, matchers: ['netflix com'] }],
+    ['a mixed-case matcher', { ...service, matchers: ['Netflix'] }],
+    ['the same matcher twice', { ...service, matchers: ['NETFLIX COM', 'NETFLIX COM'] }],
+    ['the same matcher twice among others', { ...service, matchers: ['NETFLIX', 'NETFLIX COM', 'NETFLIX'] }],
+    ['two spaces in a row', { ...service, matchers: ['NETFLIX  COM'] }],
+    ['a leading space', { ...service, matchers: [' NETFLIX'] }],
+    ['a trailing space', { ...service, matchers: ['NETFLIX '] }],
+  ])('refuses %s', (_why, value) => bad(KnownServiceSchema, value));
 
   it.each([
     ['no plan', { ...service, plans: [] }],
@@ -177,7 +196,19 @@ describe('SubscriptionFinding and SubscriptionAudit', () => {
     ['a label that is empty', { ...netflix, label: '' }],
     ['an id that is not a short string', { ...netflix, id: 'x'.repeat(101) }],
     ['a previous amount of zero', { ...netflix, flags: ['priceUp'], previousAmount: 0 }],
+    ['a list of overlapping findings without the overlap flag', { ...netflix, overlapsWith: ['hulu-com'] }],
+    ['a list of overlapping findings under another flag', { ...netflix, flags: ['priceUp'], previousAmount: 15.49, overlapsWith: ['hulu-com'] }],
+    ['a previous amount without the priceUp flag', { ...netflix, previousAmount: 15.49 }],
+    ['a previous amount under another flag', { ...netflix, flags: ['introEnded'], previousAmount: 0.99 }],
   ])('refuses %s', (_why, value) => bad(SubscriptionFindingSchema, value));
+
+  it('takes monthly and yearly as the exact figure or as rounded to the cent (Money stays unrounded dollars)', () => {
+    // 139 ÷ 12 = 11.58333…; to the cent that is 11.58. Both are fine; 11.60 is not the monthly cost of $139 a year.
+    good(SubscriptionFindingSchema, { ...prime, monthly: 139 / 12 });
+    good(SubscriptionFindingSchema, { ...prime, monthly: 11.58 });
+    bad(SubscriptionFindingSchema, { ...prime, monthly: 11.6 });
+    good(SubscriptionFindingSchema, { ...netflix, yearly: 17.99 * 12 });            // 215.88 up to float noise
+  });
 
   describe('the audit', () => {
     // 17.99 + 11.58 = 29.57 a month (rounded to cents once); 215.88 + 139 = 354.88 a year.
@@ -198,14 +229,26 @@ describe('SubscriptionFinding and SubscriptionAudit', () => {
       ['a fractional month count', { ...audit, monthsCovered: 1.5 }],
       ['findings but no as-of date', { ...audit, asOf: null }],
       ['a day the as-of month does not have', { ...audit, asOf: { month: '2026-11', day: 31 } }],
-      ['two findings with the same id', { ...audit, findings: [netflix, netflix] }],
+      // 17.99 × 2 = 35.98 a month and 215.88 × 2 = 431.76 a year, so only the repeated id is wrong here.
+      ['two findings with the same id', { ...audit, findings: [netflix, netflix], monthlyTotal: 35.98, yearlyTotal: 431.76 }],
       ['an overlap with a finding that is not in the audit', {
         ...audit, findings: [{ ...netflix, flags: ['overlap'], overlapsWith: ['hulu-com'] }, prime],
       }],
       ['a finding that overlaps itself', {
         ...audit, findings: [{ ...netflix, flags: ['overlap'], overlapsWith: ['netflix-com-ca'] }, prime],
       }],
+      ['a finding with an overlap list but no overlap flag', { ...audit, findings: [{ ...netflix, overlapsWith: ['amazon-prime-amzn-com-bill-wa'] }, prime] }],
+      ['a finding with a previous amount but no priceUp flag', { ...audit, findings: [{ ...netflix, previousAmount: 15.49 }, prime] }],
       ['findings that is not a list', { ...audit, findings: netflix }],
+      // Netflix was last charged on 7 November 2026 and Prime on 9 August.
+      ['an as-of day before the last charge of a finding', { ...audit, asOf: { month: '2026-11', day: 6 } }],
+      ['an as-of month before the last charge of a finding', { ...audit, asOf: { month: '2026-07', day: 31 } }],
+      // Both findings are active and at least medium confidence, so both are counted: 29.57 a month, 354.88 a year.
+      ['totals of zero beside active findings that are not low confidence', { ...audit, monthlyTotal: 0, yearlyTotal: 0 }],
+      ['a monthly total that leaves out an active medium-confidence finding (Netflix alone is 17.99)', { ...audit, monthlyTotal: 17.99 }],
+      ['a yearly total that leaves out an active medium-confidence finding (Netflix alone is 215.88)', { ...audit, yearlyTotal: 215.88 }],
+      ['a monthly total above every finding put together', { ...audit, monthlyTotal: 40 }],
+      ['a yearly total above every finding put together', { ...audit, yearlyTotal: 400 }],
     ])('refuses %s', (_why, value) => bad(SubscriptionAuditSchema, value));
 
     it('accepts an overlap between two findings that are both in the audit', () => {
@@ -213,9 +256,69 @@ describe('SubscriptionFinding and SubscriptionAudit', () => {
         ...netflix, id: 'hulu-com', merchantKey: 'HULU COM', label: 'HULU.COM', serviceId: 'hulu',
         flags: ['overlap'], overlapsWith: ['netflix-com-ca'],
       };
+      // Both cost 17.99 a month (215.88 a year): 35.98 and 431.76 together.
       good(SubscriptionAuditSchema, {
-        ...audit, findings: [{ ...netflix, flags: ['overlap'], overlapsWith: ['hulu-com'] }, hulu],
+        ...audit, findings: [{ ...netflix, flags: ['overlap'], overlapsWith: ['hulu-com'] }, hulu], monthlyTotal: 35.98, yearlyTotal: 431.76,
       });
+    });
+
+    it('accepts an as-of date on the day of the newest charge, and later', () => {
+      good(SubscriptionAuditSchema, { ...audit, asOf: { month: '2026-11', day: 7 } });
+      good(SubscriptionAuditSchema, { ...audit, asOf: { month: '2027-01', day: 1 } });
+    });
+
+    describe('totals count the active findings that are not low confidence, and never more than all findings', () => {
+      // Spotify seen twice at the same price: only a pattern, so low confidence ("to confirm").
+      const toConfirm: SubscriptionFinding = {
+        ...netflix, id: 'spotify-usa-ny', merchantKey: 'SPOTIFY USA NY', label: 'SPOTIFY USA # NY', serviceId: 'spotify', category: 'music',
+        amount: 11.99, monthly: 11.99, yearly: 143.88, chargesSeen: 2,
+        lastCharge: { month: '2026-11', day: 12 }, nextExpected: { month: '2026-12', day: 12 }, confidence: 'low',
+      };
+      // Hulu stopped: last charged in July, and no next date.
+      const stopped: SubscriptionFinding = {
+        ...netflix, id: 'hulu-com', merchantKey: 'HULU COM', label: 'HULU.COM', serviceId: 'hulu',
+        amount: 9.99, monthly: 9.99, yearly: 119.88, lastCharge: { month: '2026-07', day: 7 }, nextExpected: null, status: 'stopped',
+      };
+      const asOf = { month: '2026-11', day: 12 };
+
+      it('leaves a low-confidence finding out until it is confirmed, then counts it', () => {
+        // Not confirmed: Netflix only, 17.99 a month and 215.88 a year.
+        good(SubscriptionAuditSchema, { findings: [netflix, toConfirm], monthlyTotal: 17.99, yearlyTotal: 215.88, monthsCovered: 5, asOf });
+        // Confirmed: 17.99 + 11.99 = 29.98 a month and 215.88 + 143.88 = 359.76 a year.
+        good(SubscriptionAuditSchema, { findings: [netflix, toConfirm], monthlyTotal: 29.98, yearlyTotal: 359.76, monthsCovered: 5, asOf });
+      });
+
+      it('does not need a stopped finding in the totals', () => {
+        good(SubscriptionAuditSchema, { findings: [netflix, stopped], monthlyTotal: 17.99, yearlyTotal: 215.88, monthsCovered: 5, asOf });
+      });
+
+      it('takes the totals of an audit that holds only findings to confirm as zero', () => {
+        good(SubscriptionAuditSchema, { findings: [toConfirm], monthlyTotal: 0, yearlyTotal: 0, monthsCovered: 2, asOf });
+      });
+
+      it('refuses totals above all the findings, stopped and low-confidence ones included', () => {
+        // All three together: 17.99 + 11.99 + 9.99 = 39.97 a month and 215.88 + 143.88 + 119.88 = 479.64 a year.
+        good(SubscriptionAuditSchema, { findings: [netflix, toConfirm, stopped], monthlyTotal: 39.97, yearlyTotal: 479.64, monthsCovered: 5, asOf });
+        bad(SubscriptionAuditSchema, { findings: [netflix, toConfirm, stopped], monthlyTotal: 45, yearlyTotal: 479.64, monthsCovered: 5, asOf });
+        bad(SubscriptionAuditSchema, { findings: [netflix, toConfirm, stopped], monthlyTotal: 39.97, yearlyTotal: 500, monthsCovered: 5, asOf });
+      });
+    });
+
+    it('holds at most SUBSCRIPTION_FINDINGS_MAX findings, which is also the largest count an event can name', () => {
+      // n copies of Netflix under different ids: n × 17.99 a month and n × 215.88 a year.
+      const many = (n: number): SubscriptionAudit => ({
+        findings: Array.from({ length: n }, (_, i) => ({ ...netflix, id: `service-${i}` })),
+        monthlyTotal: n * 17.99, yearlyTotal: n * 215.88, monthsCovered: 5, asOf: { month: '2026-11', day: 12 },
+      });
+      const atCap = many(SUBSCRIPTION_FINDINGS_MAX);
+      expect(atCap.findings).toHaveLength(SUBSCRIPTION_FINDINGS_MAX);
+      good(SubscriptionAuditSchema, atCap);
+      bad(SubscriptionAuditSchema, many(SUBSCRIPTION_FINDINGS_MAX + 1));
+      // The audit's whole finding list can be flagged, or marked to cancel, in one event.
+      const eventId = '6b1d4c55-0b7e-4a4e-9a51-0c4b1f2f9d10';
+      for (const name of ['subs_flagged', 'subs_cancel_marked']) {
+        good(ClientEventEnvelopeSchema, { id: eventId, name, props: { count: atCap.findings.length } });
+      }
     });
   });
 });
@@ -448,6 +551,19 @@ describe('the micro-tool funnel events', () => {
     for (const event of events) good(ClientEventEnvelopeSchema, event);
     expect(events.length).toBeLessThanOrEqual(EVENTS_BATCH_MAX);
     good(EventsRequestSchema, { anonId, events });
+  });
+
+  it('lets subs_flagged and subs_cancel_marked count as many findings as an audit may hold, and not one more', () => {
+    // One finding more than an event may count would make the whole POST /api/events batch a 400, and the
+    // browser drops a batch it gets a 400 for. So the two caps are one constant.
+    expect(EVENT_COUNT_MAX).toBe(SUBSCRIPTION_FINDINGS_MAX);
+    for (const name of ['subs_flagged', 'subs_cancel_marked'] as const) {
+      good(ClientEventEnvelopeSchema, { id, name, props: { count: SUBSCRIPTION_FINDINGS_MAX } });
+      bad(ClientEventEnvelopeSchema, { id, name, props: { count: SUBSCRIPTION_FINDINGS_MAX + 1 } });
+    }
+    good(EventsRequestSchema, {
+      anonId, events: [{ id, name: 'play_started' }, { id, name: 'subs_flagged', props: { count: SUBSCRIPTION_FINDINGS_MAX } }],
+    });
   });
 
   it.each([

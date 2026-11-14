@@ -92,10 +92,17 @@ export const EVENTS_BATCH_MAX = 25;
 export const FUNNEL_MAX_DAYS = 90;
 /** Most homes in one day's set: the bound on `home` in event props. */
 export const EVENT_HOMES_MAX = 10;
-/** Largest count an event prop may carry (findings flagged or marked to cancel): a bound, not a target. */
-export const EVENT_COUNT_MAX = 100;
 
 // ----- Micro-tools (M1) ------------------------------------------------------------------------
+
+/**
+ * Most findings one SubscriptionAudit may hold. It is also the largest count a `subs_flagged` or
+ * `subs_cancel_marked` event may carry (EVENT_COUNT_MAX below), so an audit that fits the schema can
+ * always be counted: an event over its cap fails the whole POST /api/events batch.
+ */
+export const SUBSCRIPTION_FINDINGS_MAX = 500;
+/** Largest count an event prop may carry (findings flagged or marked to cancel): the audit's own cap. */
+export const EVENT_COUNT_MAX = SUBSCRIPTION_FINDINGS_MAX;
 
 export const TOOL_IDS = ['subscriptions', 'overpaying', 'payoff'] as const satisfies readonly ToolId[];
 /** Guess ÷ actual, lowest first: under 0.5, 0.5 to 0.8, 0.8 to 1.25, 1.25 to 2, over 2. */

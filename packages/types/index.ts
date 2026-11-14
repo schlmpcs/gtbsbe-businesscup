@@ -210,7 +210,9 @@ export type SubscriptionFinding = {
   /** Absent when no catalogue entry matched, or the matching entry is `ambiguous` (never guessed). */
   serviceId?: string; category: ServiceCategory;
   cadence: Cadence; amount: Money;                 // typical charge per cadence
-  monthly: Money; yearly: Money;                   // normalized, to whole cents: amount ÷ 1, 3 or 12 months, and amount × 12 ÷ that
+  // Normalized: monthly = amount ÷ 1, 3 or 12 (monthly, quarterly, yearly), yearly = amount × 12 ÷ that.
+  // Money is unrounded; M3 rounds each to the cent once, at the end. The schema takes the exact figure or the rounded one.
+  monthly: Money; yearly: Money;
   chargesSeen: number; lastCharge: ChargeDate | null;
   nextExpected: ChargeDate | null;                 // null when stopped, and for a tick
   status: 'active' | 'stopped'; flags: SubscriptionFlag[];
@@ -221,7 +223,10 @@ export type SubscriptionFinding = {
 export type SubscriptionAudit = {
   /** Ordered by `yearly` descending, then `id`. */
   findings: SubscriptionFinding[];
-  monthlyTotal: Money; yearlyTotal: Money;         // of the counted findings (see auditTotals in M3), rounded to cents once
+  // Of the counted findings (auditTotals in M3: active, and confirmed or not low confidence); M3 rounds them to the
+  // cent once, at the end. The schema only bounds them: at least the active findings that are not low confidence,
+  // at most all findings together. Which findings were confirmed is not in the audit, so the exact sum is not checked.
+  monthlyTotal: Money; yearlyTotal: Money;
   /** Calendar months with at least one statement line; the month in progress counts. */
   monthsCovered: number;
   /** The latest day in the statement ("today" for the audit: it never reads the clock); null for no lines. */
