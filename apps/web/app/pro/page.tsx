@@ -16,10 +16,7 @@ export default async function ProPage({ searchParams }: PageProps<'/pro'>) {
   const checkout = single(query.checkout);
   return (
     <main className="mx-auto w-full max-w-(--container-2xl) px-lg py-xl">
-      {/* Same heading as the ScreenPage shell (the e2e smoke test finds every screen by its id). */}
-      <h1 className="text-2xl font-semibold leading-tight">
-        <span className="text-text-muted">S15</span> {screenTitles.S15}
-      </h1>
+      <h1 className="text-2xl font-semibold leading-tight">{screenTitles.S15}</h1>
       <ProScreen checkoutReturn={checkout ? { checkout, sessionId: single(query.session_id) } : undefined} />
     </main>
   );

@@ -1,13 +1,14 @@
 'use client';
 
-// S10 You in 10 years + Next Moves (`/future`): thin route. The view-model hook feeds the screen.
-// `?sample=1` ("Try with sample data" on S1) loads the sample life first.
+// S10 You in 10 years + Next Moves (`/future`): thin route. The view-model hooks feed the screen.
+// `?sample=1` ("See a sample life" on S1) loads the sample life first.
 import Link from 'next/link';
 import { use } from 'react';
-import { useGoal } from '@/features/forecast/model/useGoal';
-import { GoalCard } from '@/features/forecast/ui/GoalCard';
 import { useFuture } from '@/features/forecast/model/useFuture';
+import { useGoal } from '@/features/forecast/model/useGoal';
+import { useNumberHero } from '@/features/forecast/model/useYourNumber';
 import { FutureScreen } from '@/features/forecast/ui/FutureScreen';
+import { GoalCard } from '@/features/forecast/ui/GoalCard';
 import { SCREEN_ROUTES } from '@/lib/screens';
 
 const links = { today: SCREEN_ROUTES.S1, makeExact: SCREEN_ROUTES.S9 };
@@ -15,6 +16,7 @@ const links = { today: SCREEN_ROUTES.S1, makeExact: SCREEN_ROUTES.S9 };
 export default function FuturePage({ searchParams }: { searchParams: Promise<{ sample?: string | string[] }> }) {
   const { sample } = use(searchParams);
   const vm = useFuture({ sample: sample === '1' });
+  const hero = useNumberHero();
   const goal = useGoal();
-  return <><FutureScreen vm={vm} links={links} Link={Link} /><div className="mx-auto max-w-(--container-md) px-lg pb-xl"><GoalCard vm={goal}/></div></>;
+  return <FutureScreen vm={vm} hero={hero} goal={<GoalCard vm={goal} />} links={links} Link={Link} />;
 }

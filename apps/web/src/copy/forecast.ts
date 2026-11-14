@@ -81,14 +81,32 @@ export const forecast = {
     title: 'Today',
     /** First visit (no profile, no game yet): what the app is, in one look. No user numbers. */
     firstVisit: {
-      title: 'Which life costs more?',
-      body: 'Guess what strangers’ lives cost. Then see where yours is going.',
-      play: 'Play',
-      sample: 'Try with sample data',
-      note: 'No sign-up. About a minute.',
+      title: 'Know your number.',
+      body: 'See what you’re worth today, what you’ll be worth in 10 years, and which decisions change it.',
+      play: 'Play: guess a stranger’s month',
+      sample: 'See a sample life',
+      note: 'No sign-up. No bank login.',
+      tour: 'Take the 2-minute tour',
       stepsLabel: 'How it works',
-      steps: ['Play 5 quick rounds', 'Price your own month', 'See you in 10 years'],
-      vs: 'vs',
+      steps: [
+        { title: 'Guess strangers’ lives', body: 'Peek inside a home and guess what that life costs a month.' },
+        { title: 'Guess your own', body: 'Price your own month, then make it exact with a statement.' },
+        { title: 'See your number and moves', body: 'Your net worth in 10 years and the moves that raise it, in dollars.' },
+      ],
+      /** The sample-life card: every number computed by the rules engine on the demo profile. */
+      card: {
+        title: 'Sample life',
+        computed: 'Sample life, computed by the rules engine',
+        who: (age: number, takeHome: string) => `Age ${age}, ${takeHome} a month take-home, a card balance and a car loan.`,
+        month: 'Her month',
+        monthHint: 'Spending + debt payments',
+        today: 'Net worth today',
+        number: (year: number) => `Her number in ${year}`,
+        goal: (target: string, year: number) => `Goal: ${target} by ${year}`,
+        moves: 'Top moves',
+        moveEffect: (amount: string) => `${amount} to her number`,
+        cta: 'Open this life',
+      },
     },
     monthEnd: {
       title: 'This month',
@@ -159,6 +177,23 @@ export const forecast = {
     title: 'You in 10 years',
     headline: 'Net worth in 10 years',
     todayLabel: 'Today',
+    /** The "Your number" hero: the rules forecast (never the AI one), today's dollars. */
+    hero: {
+      number: (year: number) => `Your number in ${year}`,
+      today: 'Today',
+      source: 'Rules forecast, today’s dollars',
+      goal: (target: string, year: number) => `Goal: ${target} by ${year}`,
+      sampleGoal: (target: string, year: number) => `Sample goal: ${target} by ${year}`,
+      /** gap > 0: short of the goal at the projected middle. */
+      short: (amount: string) => `${amount} short`,
+      /** gap <= 0: the projected middle reaches the goal. */
+      ahead: (amount: string) => `${amount} ahead`,
+      verdict: {
+        onTrack: 'On track',
+        withinRange: 'Within range',
+        behind: 'Behind',
+      },
+    },
     chartTitle: 'Your net worth over the next 10 years',
     seriesLabel: 'Your plan',
     withMoveLabel: (title: string) => `With: ${title}`,
@@ -178,8 +213,8 @@ export const forecast = {
     heading: 'Next moves',
     rank: (n: number) => `#${n}`,
     intro: 'Ranked by 10-year gain, in today’s dollars.',
-    effect: (amount: string) => `${amount} in 10 years`,
-    effectLabel: 'Net worth gain in 10 years',
+    effect: (amount: string) => `${amount} to your number`,
+    effectLabel: 'To your number in 10 years',
     /** Title of a move; `categoryLabel` = common.categories[move.category] when the move has one. */
     title: (kind: MoveKind, categoryLabel?: string) => moveTitles[kind](categoryLabel ?? 'one category'),
     detail: {

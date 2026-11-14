@@ -251,6 +251,6 @@ export function usePaywall({ checkoutReturn, navigate = assignLocation }: UsePay
     error,
     retry,
     pro: status.pro ? { source: status.source, plan: status.plan ?? null, sinceLabel: sinceFormat.format(new Date(status.since)) } : null,
-    continueHref: SCREEN_ROUTES.S11,
+    continueHref: SCREEN_ROUTES.S10,
   };
 }

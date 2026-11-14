@@ -1,8 +1,11 @@
 'use client';
 
-// S1 Today (`/`): thin route. The view-model hook feeds the presentational screen.
+// S1 Today (`/`): thin route. The view-model hooks feed the presentational screen; the first visit
+// shows a sample life computed by the engine and opens the 2-minute tour.
 import Link from 'next/link';
 import { useToday } from '@/features/forecast/model/useToday';
+import { useSampleLife } from '@/features/forecast/model/useYourNumber';
+import { useTourOpen } from '@/features/tour/model/useTour';
 import { TodayScreen, type TodayLinks } from '@/features/forecast/ui/TodayScreen';
 import { SCREEN_IDS, SCREEN_ROUTES } from '@/lib/screens';
 
@@ -22,5 +25,7 @@ const links: TodayLinks = {
 
 export default function TodayPage() {
   const vm = useToday();
-  return <TodayScreen vm={vm} links={links} screens={screens} Link={Link} />;
+  const sample = useSampleLife();
+  const { show: openTour } = useTourOpen();
+  return <TodayScreen vm={vm} sample={sample} onTour={openTour} links={links} screens={screens} Link={Link} />;
 }

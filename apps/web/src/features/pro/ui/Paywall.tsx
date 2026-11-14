@@ -37,7 +37,10 @@ export function Paywall(vm: PaywallProps) {
         </Sticker>
 
         {offer && (
-          <h2 className="font-display text-display leading-display font-extrabold sm:text-7xl sm:leading-display">{copy.headline}</h2>
+          <>
+            <h2 className="font-display text-display leading-display font-extrabold sm:text-7xl sm:leading-display">{copy.headline}</h2>
+            <p className="max-w-(--container-lg) text-lg">{copy.subline}</p>
+          </>
         )}
 
         {/* One polite live region for every status change on the screen (loading, Stripe return, errors). */}

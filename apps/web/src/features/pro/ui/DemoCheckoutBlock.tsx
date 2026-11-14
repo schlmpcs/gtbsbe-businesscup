@@ -22,7 +22,7 @@ export function DemoCheckoutBlock({ plan, busy, disabled, error, onPay }: Props)
   const noteId = useId();
   const price = <Money value={plan.amount} cents />;
   return (
-    <Card title={copy.demoCheckout.title} headingLevel={3} className="w-full max-w-md text-left text-ink">
+    <Card title={copy.demoCheckout.title} headingLevel={3} className="w-full max-w-(--container-md) text-left text-ink">
       <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-lg gap-y-sm text-sm">
         <dt className="text-ink/60">{copy.demoCheckout.orderLabel}</dt>
         <dd className="flex flex-wrap items-baseline justify-between gap-x-md">

@@ -7,6 +7,7 @@ import '@fontsource/bricolage-grotesque/800.css';
 import './globals.css';
 import { SampleBanner } from './_components/SampleBanner';
 import { SiteHeader } from './_components/SiteHeader';
+import { Tour } from './_components/Tour';
 
 export const metadata: Metadata = {
   title: common.appName,
@@ -23,9 +24,12 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="en">
       <body className="min-h-dvh bg-bg text-text antialiased">
         <SiteHeader />
+        <Tour />
         <SampleBanner />
         {children}
-        <footer className="mx-auto w-full max-w-(--container-2xl) px-lg pb-xl text-xs text-text-muted">{common.disclaimer}</footer>
+        <footer className="mx-auto w-full max-w-(--container-7xl) px-lg pb-xl text-xs text-text-muted">
+          {common.sourcesNote} {common.disclaimer}
+        </footer>
       </body>
     </html>
   );

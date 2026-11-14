@@ -1,15 +1,36 @@
 import { common, forecast, goal as t } from '@/copy';
-import { Button, Card, NumberInput, formatMoney, formatRate } from '@/ui-kit';
+import { Button, Card, LockNotice, NumberInput, formatMoney, formatRate } from '@/ui-kit';
 import type { GoalVM } from '../model/types';
 /** Presentational rules-based goal card; all calculations and state arrive from its model. */
 export function GoalCard({ vm }: { vm: GoalVM }) {
+  // Goal setting and tracking is Pro: free users see the lock, and their number stays free above.
+  if (vm.access !== 'open') {
+    return (
+      <Card className="flex flex-col gap-md" data-testid="goal-card" data-access={vm.access}>
+        <h2 className="text-xl font-bold">{t.title}</h2>
+        {vm.access === 'loading' ? (
+          <p aria-busy="true" className="text-sm text-text-muted">
+            {t.checkingPro}
+          </p>
+        ) : (
+          <LockNotice
+            title={t.lock.title}
+            body={t.lock.body}
+            ctaLabel={t.lock.cta}
+            href={vm.proHref}
+            className="bg-surface-strong"
+          />
+        )}
+      </Card>
+    );
+  }
   const target = vm.goal?.target ?? vm.presets.targets[1]!,
     years = vm.goal?.years ?? 10;
   const status = vm.status.status === 'ready' ? vm.status.data : null;
   const saving = vm.saving.status === 'ready' ? vm.saving.data : null;
   const moves = vm.moves.status === 'ready' ? vm.moves.data : null;
   return (
-    <Card className="flex flex-col gap-md" data-testid="goal-card">
+    <Card className="flex flex-col gap-md" data-testid="goal-card" data-access={vm.access}>
       <h2 className="text-xl font-bold">{t.title}</h2>
       <p className="text-sm text-text-muted">{t.computed}</p>
       <label>

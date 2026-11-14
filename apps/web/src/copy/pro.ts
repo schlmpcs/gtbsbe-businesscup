@@ -8,7 +8,8 @@ export const pro = {
     stripe: 'Demo · Stripe test mode, no real charge',
     demo: 'Demo · simulated checkout, nothing is charged',
   },
-  headline: 'Keep playing your future.',
+  headline: 'Track your number.',
+  subline: 'Your number stays free. Pro keeps track of it: month by month, against a goal.',
   loading: 'Checking your Pro status…',
 
   plans: {
@@ -23,7 +24,11 @@ export const pro = {
   /** Only what Pro unlocks in this build (no promises of unbuilt features). */
   includes: {
     title: 'What Pro includes',
-    now: ['Save purchases to a wishlist in Can I Afford It?'],
+    now: [
+      'Monthly check-in, with your history saved',
+      'Goal tracking: on track, within range or behind, and the gap',
+      'Save purchases to a wishlist in Can I Afford It?',
+    ],
   },
 
   checkout: {
@@ -62,7 +67,7 @@ export const pro = {
 
   active: {
     successTitle: 'You are Pro',
-    successBody: 'Your wishlist is unlocked.',
+    successBody: 'Goal tracking, check-ins and your wishlist are unlocked.',
     title: 'You already have Pro',
     sourceLabel: 'Unlocked with',
     sources: {
@@ -72,7 +77,7 @@ export const pro = {
     } satisfies Record<ProSource, string>,
     planLabel: 'Plan',
     sinceLabel: 'Since',
-    continue: 'Go to Can I Afford It?',
+    continue: 'Set a goal for your number',
   },
 
   errors: {
