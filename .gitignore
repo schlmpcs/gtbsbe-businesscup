@@ -4,6 +4,7 @@
 # Dependencies and builds
 node_modules/
 .next/
+next-env.d.ts
 .vercel/
 .turbo/
 *.tsbuildinfo
