@@ -60,6 +60,8 @@ import { type ExtraAssetGroup, type SimulateOptions, type YearlyRates, monthlyRa
 export type PlanOptions = { yearlyRates?: YearlyRates };
 
 const EXTRA_GROUPS: readonly ExtraAssetGroup[] = ['investments', 'realEstate', 'vehicle', 'otherAsset'];
+/** Module-level copy of ASSET_GROUPS for the per-year loops (one binding lookup at load). */
+const GROUPS: readonly AssetGroup[] = [...ASSET_GROUPS];
 
 /** Same year: Retire before everything, Social Security after (see planEvents.ts → socialSecurity). */
 const sameYearRank = (e: PlanEvent) => (e.type === 'retire' ? 0 : e.type === 'socialSecurity' ? 2 : 1);
@@ -125,9 +127,10 @@ export function plan(
     newDebts,
     newAssets,
     ...(opts.yearlyRates && { yearlyRates: opts.yearlyRates }),
+    granularity: 'year',
   });
+  // path[0] = today, path[y + 1] = the end of plan year y (flows summed over that year).
   const path = sim.path;
-  const debtApr = sim.debtApr ?? {};
 
   // 5. Deflator at path index m.
   let priceAt: number[] | null = null;
@@ -165,88 +168,74 @@ export function plan(
   }
   const groupUsed = new Set<AssetGroup>();
   for (const m of path) {
-    for (const g of ASSET_GROUPS) {
+    for (const g of GROUPS) {
       const f = m.groups![g];
       if (f.balance !== 0 || f.deposits !== 0) groupUsed.add(g);
     }
   }
-  const liabilityIds = new Set(live.filter((x) => !(ASSET_GROUPS as readonly string[]).includes(x.group)).map((x) => x.id));
+  const liabilityIds = new Set(live.filter((x) => !(GROUPS as readonly string[]).includes(x.group)).map((x) => x.id));
+  // The rows every year has, in order: one per included account (its group's share, or its debt),
+  // then the groups' own rows.
+  const accountShare = new Map<string, number>();
+  for (const list of groupAccounts.values()) for (const x of list) accountShare.set(x.id, x.share);
+  const fixedRows: ({ id: string; debt: true } | { id: string; debt: false; group: AssetGroup; share: number })[] = [];
+  for (const acc of live) {
+    if (liabilityIds.has(acc.id)) fixedRows.push({ id: acc.id, debt: true });
+    else fixedRows.push({ id: acc.id, debt: false, group: acc.group as AssetGroup, share: accountShare.get(acc.id)! });
+  }
+  for (const g of GROUPS) {
+    if (!groupUsed.has(g)) continue;
+    for (const r of ownRows.get(g) ?? []) fixedRows.push({ id: r.id, debt: false, group: g, share: r.share });
+  }
+  const eventsByYear = new Map<number, string[]>();
+  for (const ev of enabled) {
+    const y = Math.max(ev.year, asOfYear);
+    const list = eventsByYear.get(y);
+    if (list) list.push(ev.id);
+    else eventsByYear.set(y, [ev.id]);
+  }
 
   // 4. One PlanYear per calendar year.
   const years: PlanYear[] = [];
   for (let y = 0; y < yearCount; y++) {
     const year = asOfYear + y;
-    const from = y === 0 ? 0 : 12 * y - offset;
-    const to = 12 * (y + 1) - offset;
-    const s = path[from]!;
-    const e = path[to]!;
-    const d = deflatorAt(to);
+    const s = path[y]!;
+    const e = path[y + 1]!;
+    const d = deflatorAt(e.month);
     const $ = (v: Money) => v / d;
+    const groups = e.groups!;
+    const debtFlows = e.debtFlows!;
 
-    let income = 0, windfalls = 0, spending = 0, debtPayments = 0, oneOffCosts = 0, drawn = 0;
-    const flows = Object.fromEntries(ASSET_GROUPS.map((g) => [g, { growth: 0, deposits: 0, withdrawals: 0 }])) as
-      Record<AssetGroup, { growth: Money; deposits: Money; withdrawals: Money }>;
+    const income = e.income;
+    const windfalls = e.oneOffIncome!;
+    const spending = e.spending;
+    const debtPayments = e.debtPayments;
+    const oneOffCosts = e.purchasesCash;
+    let drawn = 0;
+    for (const g of GROUPS) if (g !== 'cash') drawn += groups[g].withdrawals;
     const debtIds = Object.keys(e.debts);
-    const interest: Record<string, Money> = {};
-    const borrowed: Record<string, Money> = {};
-    for (const id of debtIds) { interest[id] = 0; borrowed[id] = 0; }
-    for (let m = from + 1; m <= to; m++) {
-      const pm = path[m]!;
-      const prev = path[m - 1]!;
-      income += pm.income;
-      windfalls += pm.oneOffIncome ?? 0;
-      spending += pm.spending;
-      debtPayments += pm.debtPayments;
-      oneOffCosts += pm.purchasesCash;
-      for (const g of ASSET_GROUPS) {
-        const f = pm.groups![g];
-        flows[g].growth += f.growth;
-        flows[g].deposits += f.deposits;
-        flows[g].withdrawals += f.withdrawals;
-        if (g !== 'cash') drawn += f.withdrawals;
-      }
-      for (const id of debtIds) {
-        const before = prev.debts[id];
-        if (before === undefined) {
-          if (pm.debts[id] !== undefined) borrowed[id]! += pm.debts[id]!; // opened this month
-        } else if (before > PAID_OFF_EPSILON) {
-          interest[id]! += before * ((debtApr[id] ?? 0) / 12);
-        }
-      }
-    }
 
     const rows: PlanAccountRow[] = [];
     const groupRow = (accountId: string, g: AssetGroup, share: number): PlanAccountRow => ({
       accountId,
       start: $(s.groups![g].balance * share),
-      growth: $(flows[g].growth * share),
-      deposits: $(flows[g].deposits * share),
-      withdrawals: $(flows[g].withdrawals * share),
-      end: $(e.groups![g].balance * share),
+      growth: $(groups[g].growth * share),
+      deposits: $(groups[g].deposits * share),
+      withdrawals: $(groups[g].withdrawals * share),
+      end: $(groups[g].balance * share),
     });
     const debtRow = (id: string): PlanAccountRow => {
       const start = s.debts[id] ?? 0;
       const end = e.debts[id] ?? 0;
-      const g = interest[id] ?? 0;
-      const dep = borrowed[id] ?? 0;
+      const g = debtFlows[id]?.interest ?? 0;
+      const dep = debtFlows[id]?.borrowed ?? 0;
       return { accountId: id, start: $(start), growth: $(g), deposits: $(dep), withdrawals: $(start + g + dep - end), end: $(end) };
     };
-    for (const acc of live) {
-      if (liabilityIds.has(acc.id)) {
-        rows.push(debtRow(acc.id));
-      } else {
-        const g = acc.group as AssetGroup;
-        rows.push(groupRow(acc.id, g, groupAccounts.get(g)!.find((x) => x.id === acc.id)!.share));
-      }
-    }
-    for (const g of ASSET_GROUPS) {
-      if (!groupUsed.has(g)) continue;
-      for (const r of ownRows.get(g) ?? []) rows.push(groupRow(r.id, g, r.share));
-    }
+    for (const r of fixedRows) rows.push(r.debt ? debtRow(r.id) : groupRow(r.id, r.group, r.share));
     for (const id of debtIds) if (!liabilityIds.has(id)) rows.push(debtRow(id));
 
     let assets = 0;
-    for (const g of ASSET_GROUPS) assets += e.groups![g].balance;
+    for (const g of GROUPS) assets += groups[g].balance;
     const expenses = spending + debtPayments + oneOffCosts;
     years.push({
       year,
@@ -266,7 +255,7 @@ export function plan(
         withdrawals: $(drawn),
         net: $(income + windfalls - expenses),
       },
-      events: enabled.filter((ev) => Math.max(ev.year, asOfYear) === year).map((ev) => ev.id),
+      events: [...(eventsByYear.get(year) ?? [])],
     });
   }
 
@@ -276,7 +265,7 @@ export function plan(
   const first = years[0]!;
   const last = years[years.length - 1]!;
   const atRetirement = years.find((py) => py.age === retireAge) ?? (retireAge < first.age ? first : last);
-  const short = years.find((py, i) => (path[12 * (i + 1) - offset]!.shortfall ?? 0) > PAID_OFF_EPSILON);
+  const short = years.find((_py, i) => (path[i + 1]!.shortfall ?? 0) > PAID_OFF_EPSILON);
   return {
     years,
     kpis: {
