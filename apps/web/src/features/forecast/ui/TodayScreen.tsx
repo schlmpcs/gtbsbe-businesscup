@@ -84,16 +84,16 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
               <Stack gap="sm">
                 <Stat
                   label={t.netWorthIn10y}
-                  value={<Money value={vm.in10y.mid} />}
+                  value={<Money value={vm.atHorizon.mid} />}
                   size="display"
-                  isEstimate={!vm.in10yBandIsZero}
+                  isEstimate={!vm.bandIsZero}
                   hint={t.today.future.hint}
                 />
-                <RangeText point={vm.in10y} isZero={vm.in10yBandIsZero} />
+                <RangeText point={vm.atHorizon} isZero={vm.bandIsZero} />
                 <div className="flex flex-wrap items-center gap-sm">
                   <SourceTag source={vm.source} />
-                  {!vm.in10yBandIsZero && (
-                    <span className="text-xs text-text-muted">{bandText(vm.in10yBandKind, false).label}</span>
+                  {!vm.bandIsZero && (
+                    <span className="text-xs text-text-muted">{bandText(vm.bandKind, false).label}</span>
                   )}
                   <span aria-live="polite" className="text-xs text-text-muted" data-testid="forecast-refreshing">
                     {vm.isRefreshing ? t.future.refreshing : null}
@@ -324,7 +324,7 @@ function MoveSummary({ move, onDone, disabled = false }: { move: MoveVM; onDone?
       </Stack>
       <div className="flex flex-col items-start gap-xs sm:items-end">
         <p className="font-display text-4xl font-extrabold leading-tight text-positive tabular-nums">
-          {t.moves.effect(formatMoney(move.effect10y, { signed: true }))}
+          {t.moves.effect(formatMoney(move.effect, { signed: true }))}
         </p>
         <SourceTag source={move.source} />
       </div>

@@ -93,3 +93,18 @@ describe('screens that count a view', () => {
     expect(await tracked()).toContainEqual({ name: 'move_committed', props: { kind: first!.kind } });
   });
 });
+
+describe('the forecast horizon', () => {
+  it('counts a change of the year shown, not a pick of the year already shown', async () => {
+    const future = renderHook(() => useFuture());
+    await waitForReady(future.result);
+    act(() => future.result.current.setHorizonYears(10)); // already shown
+    act(() => future.result.current.setHorizonYears(3));
+    act(() => future.result.current.setHorizonYears(3));
+    act(() => future.result.current.setHorizonYears(1));
+    expect((await tracked()).filter((e) => e.name === 'forecast_horizon_changed')).toEqual([
+      { name: 'forecast_horizon_changed', props: { years: 3 } },
+      { name: 'forecast_horizon_changed', props: { years: 1 } },
+    ]);
+  });
+});

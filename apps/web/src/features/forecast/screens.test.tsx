@@ -60,7 +60,7 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
         month: '2026-11', asOfDay: null, takeHome: { value: 5200, isEstimate: false },
       },
     },
-    in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, in10yBandKind: 'inputs',
+    horizonYears: 10, atHorizon: { month: 120, low: 1, mid: 2, high: 3 }, bandIsZero: false, bandKind: 'inputs',
     forecastStatus: 'ready', forecastError: null, source: 'rules', isRefreshing: false, actionsDisabled: false, committedMove: null,
     markCommittedDone: () => {}, topMove: { status: 'ready', data: null },
     game: { date: null, played: 0, total: 0, finished: false, homes: [] },
@@ -139,7 +139,7 @@ describe('TodayScreen (S1)', () => {
   it('disables “I did it” while the forecast is refreshing', () => {
     const committed = {
       id: 'cutCategory:other', kind: 'cutCategory' as const, level: 1 as const, effect10y: 1234,
-      patch: { spending: { other: 100 } }, isCommitted: true,
+      effect: 1234, horizonYears: 10 as const, patch: { spending: { other: 100 } }, isCommitted: true,
       target: { kind: 'spendingTo' as const, category: 'other' as const, monthly: 100 }, source: 'rules' as const,
     };
     const { rerender } = render(<TodayScreen vm={todayVm({ committedMove: committed })} links={links} screens={[]} Link={A} />);

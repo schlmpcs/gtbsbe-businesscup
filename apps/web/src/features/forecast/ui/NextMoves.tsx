@@ -97,7 +97,7 @@ function MoveItem({
 
           <div>
             <p className="font-display text-5xl font-extrabold leading-tight text-positive tabular-nums">
-              {formatMoney(move.effect10y, { signed: true })}
+              {formatMoney(move.effect, { signed: true })}
             </p>
             <p className="text-xs text-text-muted">{m.effectLabel}</p>
             <SourceTag source={move.source} className="mt-xs" />

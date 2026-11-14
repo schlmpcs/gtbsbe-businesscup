@@ -78,9 +78,9 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
             {!vm.band.isZero && <EstimateTag className="normal-case" />}
           </div>
           <p className="mt-sm font-display text-display leading-display font-extrabold tabular-nums break-words sm:text-8xl sm:leading-display">
-            <Money value={vm.in10y.mid} />
+            <Money value={vm.atHorizon.mid} />
           </p>
-          <RangeText point={vm.in10y} isZero={vm.band.isZero} className="mt-md text-lg" />
+          <RangeText point={vm.atHorizon} isZero={vm.band.isZero} className="mt-md text-lg" />
           <SourceTag source={vm.source} className="mt-xs border-on-primary/40" />
           <p className="mt-xs text-sm text-text-muted">{dollarsNote}</p>
           <p aria-live="polite" className="mt-xs text-sm text-text-muted" data-testid="forecast-refreshing">
@@ -94,13 +94,13 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
             {vm.committedPreview && (
               <span data-testid="committed-preview">
                 <span className="text-text-muted">{f.committedIn10y}: </span>
-                <Money value={vm.committedPreview.in10y.mid} className="font-bold" />
+                <Money value={vm.committedPreview.point.mid} className="font-bold" />
               </span>
             )}
             {vm.withMove && !vm.committedPreview && (
               <span>
                 <span className="text-text-muted">{f.withMoveIn10y}: </span>
-                <Money value={vm.withMove.in10y.mid} className="font-bold" />
+                <Money value={vm.withMove.point.mid} className="font-bold" />
               </span>
             )}
           </div>

@@ -1,26 +1,26 @@
-// "Why?" on a Next Move: POST /api/ai/explain for one move, kept per move until the move changes.
-// The server writes the two sentences (or its template fallback); no number comes from the model.
-import type { ForecastSource } from '@lifeguessr/types';
+// "Why?" on a Next Move: POST /api/ai/explain for one move at the shown horizon, kept per move until
+// the move or the horizon changes. The server writes the two sentences (or its template fallback); no
+// number comes from the model.
+import type { ForecastSource, HorizonYears, Money } from '@lifeguessr/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { explainResult, type ExplainInput, type ExplainOptions, type ExplainResult } from '@/lib/api/aiExplain';
 import { toVMError } from '@/lib/model/errors';
 import { getAnonId } from '@/state/anonId';
-import type { ExplanationVM, Loadable } from './types';
+import type { ExplanationVM, Loadable, MoveVM } from './types';
 
 /** The explain call (swappable in tests). */
 export type ExplainFn = (input: ExplainInput, opts: ExplainOptions) => Promise<ExplainResult>;
 
-type Entry = { effect10y: number; source: ForecastSource | null; state: Loadable<ExplanationVM> };
-
-/** A move with the forecast it was measured by (the VMs of S10 carry it): the server words the sentence by it. */
-type ExplainableMove = NonNullable<ExplainInput['move']>;
+/** What an explanation was asked for: the move's effect at that year, from that source. */
+type Entry = { effect: Money; source: ForecastSource | null; horizonYears: HorizonYears; state: Loadable<ExplanationVM> };
 
 /**
  * Explanations by move id. An entry counts only while the move it was asked for is unchanged (same
- * effect10y from the same source): when the profile changes, or the model's answer replaces the
- * rules', the move's number changes and the old sentence is about another one.
+ * effect, from the same source, at the same horizon): when the profile changes, the model's answer
+ * replaces the rules', or another year is picked, the move's number changes and the old sentence is
+ * about another one. Picking the year back shows it again.
  */
-export function useMoveExplain(moves: readonly ExplainableMove[], explain: ExplainFn = explainResult) {
+export function useMoveExplain(moves: readonly MoveVM[], explain: ExplainFn = explainResult) {
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const controllers = useRef(new Map<string, AbortController>());
   useEffect(() => {
@@ -35,20 +35,20 @@ export function useMoveExplain(moves: readonly ExplainableMove[], explain: Expla
       controllers.current.get(moveId)?.abort();
       const controller = new AbortController();
       controllers.current.set(moveId, controller);
-      const { effect10y } = move;
-      const source = move.source ?? null;
-      setEntries((e) => ({ ...e, [moveId]: { effect10y, source, state: { status: 'loading' } } }));
-      explain({ move }, { anonId: getAnonId(), signal: controller.signal }).then(
+      const key = { effect: move.effect, source: move.source, horizonYears: move.horizonYears };
+      setEntries((e) => ({ ...e, [moveId]: { ...key, state: { status: 'loading' } } }));
+      const input: ExplainInput = { move, horizon: { years: move.horizonYears, effect: move.effect } };
+      explain(input, { anonId: getAnonId(), signal: controller.signal }).then(
         (res) => {
           if (controller.signal.aborted) return;
           setEntries((e) => ({
             ...e,
-            [moveId]: { effect10y, source, state: { status: 'ready', data: { text: res.text, fromAi: res.source === 'ai' } } },
+            [moveId]: { ...key, state: { status: 'ready', data: { text: res.text, fromAi: res.source === 'ai' } } },
           }));
         },
         (err: unknown) => {
           if (controller.signal.aborted) return;
-          setEntries((e) => ({ ...e, [moveId]: { effect10y, source, state: { status: 'error', error: toVMError(err) } } }));
+          setEntries((e) => ({ ...e, [moveId]: { ...key, state: { status: 'error', error: toVMError(err) } } }));
         },
       );
     },
@@ -58,7 +58,9 @@ export function useMoveExplain(moves: readonly ExplainableMove[], explain: Expla
   const explanations: Record<string, Loadable<ExplanationVM>> = {};
   for (const m of moves) {
     const entry = entries[m.id];
-    if (entry && entry.effect10y === m.effect10y && entry.source === (m.source ?? null)) explanations[m.id] = entry.state;
+    if (entry && entry.effect === m.effect && entry.source === m.source && entry.horizonYears === m.horizonYears) {
+      explanations[m.id] = entry.state;
+    }
   }
 
   return { explanations, explain: request };

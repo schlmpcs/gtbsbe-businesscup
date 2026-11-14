@@ -1,14 +1,15 @@
 // The app's client state (Zustand), persisted to localStorage: the Profile, where it came from,
-// the user's own guess, statement history (category totals only), the wishlist and the committed
-// Next Move. The anonymous id lives separately (./anonId).
+// the user's own guess, statement history (category totals only), the wishlist, the committed
+// Next Move and the forecast horizon picked on S10. The anonymous id lives separately (./anonId).
 //
 // Persistence uses `skipHydration`: the server render and the first client render both see the
 // defaults, then `useHydrated()` (./hydration) loads the saved state, so React never sees a
 // hydration mismatch. Screen hooks report `status: 'loading'` until then.
 import { applyPatch } from '@lifeguessr/engine';
 import {
-  CategoryTotalsSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema, PurchaseSchema, CostCategorySchema,
-  type CategoryTotals, type CostCategory, type Money, type Move, type Profile, type ProfilePatch, type Purchase,
+  CategoryTotalsSchema, HorizonYearsSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema, PurchaseSchema, CostCategorySchema,
+  type CategoryTotals, type CostCategory, type HorizonYears, type Money, type Move, type Profile, type ProfilePatch,
+  type Purchase,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
@@ -44,6 +45,11 @@ export type AppData = {
   wishlist: WishlistItem[];
   /** The Next Move the user committed to (its id is also `profile.committedMoveId`). */
   committedMove: Move | null;
+  /**
+   * The year S1 and S10 show the forecast and the move gains at (picked on S10). Client state only: it
+   * is not part of the Profile and never reaches the forecast request.
+   */
+  horizonYears: HorizonYears;
 };
 
 export type AppActions = {
@@ -72,6 +78,7 @@ export type AppActions = {
   uncommitMove: () => void;
   /** The user did a move: its patch enters the profile and it joins doneMoveIds. */
   markMoveDone: (move: Move) => void;
+  setHorizonYears: (years: HorizonYears) => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -92,6 +99,7 @@ export function initialAppData(): AppData {
     subscriptionsDetected: false,
     wishlist: [],
     committedMove: null,
+    horizonYears: 10,
   };
 }
 
@@ -124,6 +132,7 @@ const persistedFields = {
   subscriptionsDetected: z.boolean(),
   wishlist: z.array(WishlistItemSchema),
   committedMove: MoveSchema.nullable(),
+  horizonYears: HorizonYearsSchema,
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -200,6 +209,7 @@ export const useAppStore = create<AppState>()(
           delete profile.committedMoveId;
           return { profile, committedMove: null };
         }),
+      setHorizonYears: (years) => set({ horizonYears: HorizonYearsSchema.parse(years) }),
       setGoal: goal => set({goal:GoalSchema.parse(goal)}),
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
@@ -222,6 +232,7 @@ export const useAppStore = create<AppState>()(
         subscriptionsDetected: s.subscriptionsDetected,
         wishlist: s.wishlist,
         committedMove: s.committedMove,
+        horizonYears: s.horizonYears,
       }),
       merge: mergePersisted,
     },
