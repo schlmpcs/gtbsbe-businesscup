@@ -1,4 +1,4 @@
-// S1 Today: the daily game, You in 10 years, this month, the move to make, and the planning tools.
+// S1 Today: the daily game, You in N years (the year picked on S10), this month, the move to make, and the planning tools.
 // Presentational: everything comes from TodayVM; links come from the route page.
 import { common, forecast as t, screenTitles, type ScreenId } from '@/copy';
 import {
@@ -75,7 +75,7 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
         )}
 
         <div className="grid items-start gap-xl lg:grid-cols-2">
-          <Card title={t.today.future.title} data-testid="in10y" style={tilt(-1)}>
+          <Card title={t.today.future.title(vm.horizonYears)} data-testid="at-horizon" style={tilt(-1)}>
             {!ready || vm.forecastStatus === 'loading' ? (
               <Skeleton />
             ) : vm.forecastStatus === 'error' && vm.forecastError ? (
@@ -83,7 +83,7 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
             ) : (
               <Stack gap="sm">
                 <Stat
-                  label={t.netWorthIn10y}
+                  label={t.netWorthAt(vm.horizonYears)}
                   value={<Money value={vm.atHorizon.mid} />}
                   size="display"
                   isEstimate={!vm.bandIsZero}
@@ -324,7 +324,7 @@ function MoveSummary({ move, onDone, disabled = false }: { move: MoveVM; onDone?
       </Stack>
       <div className="flex flex-col items-start gap-xs sm:items-end">
         <p className="font-display text-4xl font-extrabold leading-tight text-positive tabular-nums">
-          {t.moves.effect(formatMoney(move.effect, { signed: true }))}
+          {t.moves.effect(formatMoney(move.effect, { signed: true }), move.horizonYears)}
         </p>
         <SourceTag source={move.source} />
       </div>

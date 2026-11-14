@@ -2,7 +2,7 @@
 
 // S14 Monthly check-in (Figma S14). Presentational: every number comes from useCheckin() (engine
 // monthEnd on the user's statements or the labelled sample statement; simulate / rankMoves for the
-// move; the ranked suggestions say who made their 10-year numbers).
+// move; the ranked suggestions say who made their numbers, at the year picked on S10).
 import { useId } from 'react';
 import { common, forecast, mocks } from '@/copy';
 import {
@@ -157,7 +157,7 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
             <span className="text-xl font-bold">{title}</span>
           </div>
           <div className="flex flex-col items-end gap-xs">
-            <span className="text-sm font-semibold text-positive tabular-nums">{m.effect(formatMoney(c.effect10y, { signed: true }))}</span>
+            <span className="text-sm font-semibold text-positive tabular-nums">{m.effect(formatMoney(c.effect, { signed: true }), c.horizonYears)}</span>
             {c.source && (
               <Tag data-testid="forecast-source" data-source={c.source}>
                 {forecast.source[c.source]}
@@ -205,7 +205,7 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-sm rounded-lg bg-surface-strong p-md">
                 <div className="flex min-w-0 flex-col">
                   <span className="font-semibold">{moveTitle(s)}</span>
-                  <span className="text-sm text-positive tabular-nums">{m.effect(formatMoney(s.effect10y, { signed: true }))}</span>
+                  <span className="text-sm text-positive tabular-nums">{m.effect(formatMoney(s.effect, { signed: true }), s.horizonYears)}</span>
                   {s.source && (
                     <Tag data-testid="forecast-source" data-source={s.source} className="mt-xs">
                       {forecast.source[s.source]}

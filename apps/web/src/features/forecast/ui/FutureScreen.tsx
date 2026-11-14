@@ -1,7 +1,7 @@
-// S10 You in 10 years + Next Moves: the headline number with its range, the forecast chart with the
-// range band, a comparison with a move, the ranked moves and "How we calculate".
-import { forecast as t } from '@/copy';
-import { Art, buttonClassName, Card, cx, EstimateTag, ForecastChart, Money, Stack, Sticker } from '@/ui-kit';
+// S10 You in N years + Next Moves: the year picker, the headline number with its range, the forecast
+// chart with the range band, a comparison with a move, the ranked moves and "How we calculate".
+import { forecast as t, yearsPhrase } from '@/copy';
+import { Art, buttonClassName, Card, Choice, cx, EstimateTag, ForecastChart, Money, Stack, Sticker } from '@/ui-kit';
 import type { FutureVM } from '../model/types';
 import { HowWeCalculate } from './HowWeCalculate';
 import { NextMoves } from './NextMoves';
@@ -34,8 +34,10 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
         {/* Orange hero band, full width on every screen size. */}
         <div className={cx(FULL_BLEED_PRIMARY, 'py-2xl sm:py-3xl')}>
           <header className={cx(ON_ARENA, 'mb-xl')}>
-            <h1 className="text-sm font-bold uppercase tracking-wide">{f.title}</h1>
+            <h1 className="text-sm font-bold uppercase tracking-wide">{f.title(vm.horizonYears)}</h1>
           </header>
+
+          <HorizonPicker vm={vm} />
 
           {loading ? (
             <Card>
@@ -64,6 +66,29 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
   );
 }
 
+/**
+ * The year the headline, chart and moves are read at. A white tile on the orange hero, so the segments
+ * and their focus ring keep the colors they have everywhere else (white text on orange would hide the
+ * unchosen ones). The kit's Choice has string values: the years go in and out as strings here.
+ */
+function HorizonPicker({ vm }: { vm: FutureVM }) {
+  const options = vm.horizons.map((years) => ({ value: String(years), label: yearsPhrase(years) }));
+  return (
+    <Card className="mb-xl w-fit max-w-full text-text">
+      <Choice
+        legend={t.future.horizonLabel}
+        name="horizon"
+        value={String(vm.horizonYears)}
+        options={options}
+        onChange={(value) => {
+          const years = vm.horizons.find((y) => String(y) === value);
+          if (years !== undefined) vm.setHorizonYears(years);
+        }}
+      />
+    </Card>
+  );
+}
+
 function Forecast({ vm, links, Link }: FutureScreenProps) {
   const f = t.future;
   const dollarsNote = vm.todaysDollars ? t.todaysDollarsNote : t.futureDollarsNote;
@@ -72,9 +97,9 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
   return (
     <div className="grid gap-2xl lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
       <Stack gap="xl" className="min-w-0">
-        <div data-testid="in10y" className={ON_ARENA}>
+        <div data-testid="at-horizon" className={ON_ARENA}>
           <div className="flex flex-wrap items-center gap-sm text-sm font-bold uppercase tracking-wide">
-            <span>{f.headline}</span>
+            <span>{f.headline(vm.horizonYears)}</span>
             {!vm.band.isZero && <EstimateTag className="normal-case" />}
           </div>
           <p className="mt-sm font-display text-display leading-display font-extrabold tabular-nums break-words sm:text-8xl sm:leading-display">
@@ -93,13 +118,13 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
             </span>
             {vm.committedPreview && (
               <span data-testid="committed-preview">
-                <span className="text-text-muted">{f.committedIn10y}: </span>
+                <span className="text-text-muted">{f.committedAt}: </span>
                 <Money value={vm.committedPreview.point.mid} className="font-bold" />
               </span>
             )}
             {vm.withMove && !vm.committedPreview && (
               <span>
-                <span className="text-text-muted">{f.withMoveIn10y}: </span>
+                <span className="text-text-muted">{f.withMoveAt}: </span>
                 <Money value={vm.withMove.point.mid} className="font-bold" />
               </span>
             )}
@@ -118,7 +143,7 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
             )}
           </div>
           <ForecastChart
-            title={f.chartTitle}
+            title={f.chartTitle(vm.horizonYears)}
             series={{ label: f.seriesLabel, points: vm.points }}
             compare={vm.withMove ? { label: f.withMoveLabel(compareTitle), points: vm.withMove.points } : undefined}
             showBand={!vm.band.isZero}

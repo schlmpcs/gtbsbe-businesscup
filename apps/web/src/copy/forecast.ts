@@ -2,6 +2,7 @@
 // Functions take values already formatted by the UI (formatMoney / formatRate); no math here.
 import type { MoveKind } from '@lifeguessr/types';
 import type { VMError } from '@/lib/model/types';
+import { yearsPhrase } from './ai';
 
 /** Next Move titles by kind. Level 2 kinds appear only in the locked preview. */
 const moveTitles: Record<MoveKind, (category: string) => string> = {
@@ -15,10 +16,16 @@ const moveTitles: Record<MoveKind, (category: string) => string> = {
   reshopInsurance: () => 'Compare car insurance quotes',
 };
 
+/** "Net worth in 3 years" (singular at 1). The years are the picked horizon (S10 picker, S1). */
+const netWorthAt = (years: number) => `Net worth in ${yearsPhrase(years)}`;
+/** "You in 3 years" (singular at 1). */
+const youIn = (years: number) => `You in ${yearsPhrase(years)}`;
+
 export const forecast = {
   screens: {
     S1: 'Today',
-    S10: 'You in 10 years',
+    /** The screen's name in navigation: its title follows the picked year, so this one names no number. */
+    S10: 'Your future',
   },
 
   /** Shared by S1 and S10. */
@@ -62,7 +69,7 @@ export const forecast = {
     makeExact: 'Make it exact',
   },
   range: (low: string, high: string) => `Likely between ${low} and ${high}`,
-  netWorthIn10y: 'Net worth in 10 years',
+  netWorthAt,
   errors: {
     notImplemented: 'This part of the forecast is still being built.',
     unavailable: 'This is not available right now.',
@@ -103,7 +110,7 @@ export const forecast = {
       upload: 'Upload a statement',
     },
     future: {
-      title: 'You in 10 years',
+      title: youIn,
       hint: 'In today’s dollars',
       cta: 'See your forecast',
     },
@@ -143,18 +150,21 @@ export const forecast = {
     allScreens: 'All screens',
   },
 
-  /** S10 You in 10 years + Next Moves. */
+  /** S10 You in N years + Next Moves (N = the picked horizon: 1, 3, 5 or 10). */
   future: {
-    title: 'You in 10 years',
-    headline: 'Net worth in 10 years',
+    title: youIn,
+    /** The picker's visible label (a legend); its options are `yearsPhrase(years)`. */
+    horizonLabel: 'Look ahead',
+    headline: netWorthAt,
     todayLabel: 'Today',
-    chartTitle: 'Your net worth over the next 10 years',
+    chartTitle: (years: number) => `Your net worth over the next ${years === 1 ? 'year' : `${years} years`}`,
     seriesLabel: 'Your plan',
     withMoveLabel: (title: string) => `With: ${title}`,
     todaysDollarsToggle: 'Show in today’s dollars',
     compareToggle: (title: string) => `Compare with: ${title}`,
-    withMoveIn10y: 'With this move',
-    committedIn10y: 'With your committed move',
+    /** The number beside them is the net worth at the picked year, so these name no year. */
+    withMoveAt: 'With this move',
+    committedAt: 'With your committed move',
     errorTitle: 'We could not build your forecast.',
     /** Sticker on the illustration (no number: the amounts are shown once, above and in the moves). */
     artSticker: 'If nothing changes',
@@ -166,9 +176,10 @@ export const forecast = {
   moves: {
     heading: 'Next moves',
     rank: (n: number) => `#${n}`,
-    intro: 'Ranked by 10-year gain, in today’s dollars.',
-    effect: (amount: string) => `${amount} in 10 years`,
-    effectLabel: 'Net worth gain in 10 years',
+    intro: (years: number) => `Ranked by ${years}-year gain, in today’s dollars.`,
+    /** `years` is the year the move's own gain is measured at (MoveVM.horizonYears), not the screen's. */
+    effect: (amount: string, years: number) => `${amount} in ${yearsPhrase(years)}`,
+    effectLabel: (years: number) => `Net worth gain in ${yearsPhrase(years)}`,
     /** Title of a move; `categoryLabel` = common.categories[move.category] when the move has one. */
     title: (kind: MoveKind, categoryLabel?: string) => moveTitles[kind](categoryLabel ?? 'one category'),
     detail: {

@@ -1,4 +1,4 @@
-// Next Moves (S10): the top 3 moves with their 10-year effect, commit / done, "Why?", and the
+// Next Moves (S10): the top 3 moves with their effect at the picked year, commit / done, "Why?", and the
 // level 2 preview. Presentational: everything comes from the view-model.
 import { forecast as t } from '@/copy';
 import { Button, Card, cx, formatMoney, Stack, Sticker } from '@/ui-kit';
@@ -44,7 +44,7 @@ export function NextMoves({ vm, explanations, onExplain, loading = false }: Next
         <h2 id="moves-heading" className="text-4xl font-extrabold leading-tight">
           {m.heading}
         </h2>
-        <p className="mt-xs text-text-muted">{m.intro}</p>
+        <p className="mt-xs text-text-muted">{m.intro(vm.horizonYears)}</p>
         {!loading && vm.doneCount > 0 && <p className="mt-xs text-sm text-positive">{m.doneCount(vm.doneCount)}</p>}
       </div>
       {body}
@@ -99,7 +99,7 @@ function MoveItem({
             <p className="font-display text-5xl font-extrabold leading-tight text-positive tabular-nums">
               {formatMoney(move.effect, { signed: true })}
             </p>
-            <p className="text-xs text-text-muted">{m.effectLabel}</p>
+            <p className="text-xs text-text-muted">{m.effectLabel(move.horizonYears)}</p>
             <SourceTag source={move.source} className="mt-xs" />
           </div>
           {detail && <p className="text-sm text-text-muted">{detail}</p>}

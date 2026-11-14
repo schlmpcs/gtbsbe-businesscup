@@ -1,6 +1,8 @@
 // Strings for the mock screens: S13 Decision (keep the car or lease) and S14 Monthly check-in.
 // Owner: Aibek (T11). S15 (Pro) keeps its title here; its strings are in ./pro. Functions take
 // numbers already formatted by the UI (formatMoney / formatRate), never raw values.
+import { yearsPhrase } from './ai';
+
 const months = (n: number) => (n === 1 ? '1 month' : `${n} months`);
 
 const monthNameFormat = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' });
@@ -142,7 +144,8 @@ export const mocks = {
       progressLabel: 'Card paid off this month',
       pace: (withMove: string, without: string) => `Card gone in ${withMove}, not ${without}.`,
       notWithin10y: 'more than 10 years',
-      effect: (amount: string) => `${amount} in 10 years`,
+      /** `years` is the year this move's gain is measured at (its own, not the screen's). */
+      effect: (amount: string, years: number) => `${amount} in ${yearsPhrase(years)}`,
       spendingTarget: (category: string, target: string, planned: string) =>
         `Target: ${category.toLowerCase()} at ${target} a month (now ${planned}).`,
       actual: (amount: string) => `This month: ${amount}.`,
