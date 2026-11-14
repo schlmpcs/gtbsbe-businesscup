@@ -98,7 +98,7 @@ export type NextMovesVM = {
   actionsDisabled: boolean;
   /** Highest unlocked level (engine movesLevel): 2 once a level 1 move is done or committed. */
   level: 1 | 2;
-  /** Move kinds of level 2 (engine MOVE_LEVELS), for the locked / coming-soon preview. */
+  /** Move kinds of level 2 that apply to this person (engine level2KindsFor), for the locked / coming-soon preview. */
   level2Kinds: MoveKind[];
   doneCount: number;
   commit: (moveId: string) => void;

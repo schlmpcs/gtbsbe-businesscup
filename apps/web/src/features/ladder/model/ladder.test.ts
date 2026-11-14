@@ -293,6 +293,8 @@ describe('useBalanceSheet (S8)', () => {
     expect(s.costs.total).toBeCloseTo(2049.924, 2); // see profileOps.test (setHome)
     expect(useAppStore.getState().profile.spending.rentUtilities.value).toBeCloseTo(2049.924, 2);
     expect(result.current.home.needsMortgage).toBe(true);
+    // The engine counts the home in today's net worth (jf4/engine simulate).
+    expect(result.current.netWorth).toBeCloseTo(3800 + 14500 - 6400 - 17800 + 615_400, 6);
 
     act(() => result.current.home.setHoaMonthly(150));
     expect(result.current.home.summary!.costs.total).toBeCloseTo(2199.924, 2);
