@@ -1,0 +1,62 @@
+[
+  {
+    "month": "2026-07",
+    "totals": {
+      "rentUtilities": 1959.36,
+      "car": 274.99,
+      "childcare": 0,
+      "groceries": 530.96,
+      "eatingOut": 280.3,
+      "subscriptions": 57.96,
+      "debtPayments": 662,
+      "other": 240.83
+    },
+    "oneOffs": [],
+    "detectedPay": 7200
+  },
+  {
+    "month": "2026-08",
+    "totals": {
+      "rentUtilities": 1962.04,
+      "car": 298.84,
+      "childcare": 0,
+      "groceries": 467.63,
+      "eatingOut": 282.99,
+      "subscriptions": 57.96,
+      "debtPayments": 662,
+      "other": 121.26
+    },
+    "oneOffs": [],
+    "detectedPay": 4800
+  },
+  {
+    "month": "2026-09",
+    "totals": {
+      "rentUtilities": 1981.08,
+      "car": 269.13,
+      "childcare": 0,
+      "groceries": 569.56,
+      "eatingOut": 251.96,
+      "subscriptions": 57.96,
+      "debtPayments": 662,
+      "other": 196.39
+    },
+    "oneOffs": [],
+    "detectedPay": 4800
+  },
+  {
+    "month": "2026-10",
+    "totals": {
+      "rentUtilities": 1955.37,
+      "car": 287.18,
+      "childcare": 0,
+      "groceries": 509.26,
+      "eatingOut": 227.67,
+      "subscriptions": 57.96,
+      "debtPayments": 662,
+      "other": 248.57
+    },
+    "oneOffs": [],
+    "detectedPay": 4800
+  }
+]

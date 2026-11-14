@@ -118,9 +118,20 @@ export type StatementItem = { label: string; amount: Money; month: string; day: 
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
   oneOffs: { label: string; amount: Money }[]; detectedPay?: Money;
   lastDay?: number };
+// `totals` exclude `oneOffs`; `detectedPay` = take-home pay deposits that month (money in).
 // `lastDay` = day of month of the latest statement line in that month (any line: spending, pay or
 // a transfer), i.e. how far into the month the statement goes. Month-end projects the month in
 // progress from it. Absent on data saved before it existed: the app then falls back to today.
+
+// How the server sorted one statement line (labels only; every sum is done in code). A CostCategory
+// is spending in that category when money goes out, or a refund from that kind of merchant when it
+// comes in. 'pay' = take-home pay coming in. 'transfer' = money moved between the user's own
+// accounts, or received from a person: neither spending nor pay, so it is left out.
+export type StatementClass = CostCategory | 'pay' | 'transfer';
+// POST /api/statement/categorize. `categorizedBy`: who sorted the labels: the AI, the keyword
+// rules (no API key, provider failure or invalid output), or both (the AI skipped some labels).
+export type StatementCategorizeRequest = { items: StatementItem[] };
+export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed' };
 
 // ----- Pro (S15): the paywall demo -----------------------------------------------------------
 // No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo` = the promo code

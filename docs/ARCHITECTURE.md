@@ -235,7 +235,7 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `GET /api/leaderboard` | Aibek | query `date` (+ own `anonId` in a header) → `{ rank, todayStats }`, summed from stored guesses. The client never sends a score. |
 | `GET /api/share` | Aibek | query `resultId, format` → PNG (9:16 or 1:1) from a stored result, so share cards can't be faked |
 | `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → `{ ok: true, ...SessionState }`. `anonId` = `crypto.randomUUID()` (a UUID, required). `{ anonId }` alone loads; each field sent replaces the saved one whole. 402 `not_paid` when the save would add to the wishlist without Pro; 503 `unavailable` when the store is down or not configured. `GET /api/session` with the `x-anon-id` header loads too. |
-| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` → `CategoryTotals[]` (one per month) |
+| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed' }`; keyword rules without an API key; nothing stored |
 | `POST /api/events` | Aibek | `{ anonId, name, props? }` → ok |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
 | `POST /api/ai/explain` | Amir | `ExplainRequest { move?, loanResult? }` → `{ text, source }` (2 sentences, no new numbers; a debt load with no take-home pay is `null`) |
@@ -284,7 +284,7 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 
 - CSVs are parsed client-side. Account numbers, the account holder's name and personal names in labels (e.g. Zelle/Venmo/transfer lines) are masked before any request.
 - The server receives only `StatementItem`s: merchant label, amount, month and day of month. The day lets the server detect subscriptions and yearly charges. It returns totals; raw items are not stored.
-- Labels pass through the LLM provider for categorizing. Use the provider's no-training / zero-retention option, and say so in the "What we keep" panel.
+- Labels pass through the LLM provider for categorizing: only the distinct masked labels, each marked money in or out, never amounts or dates. Use the provider's no-training / zero-retention option, and say so in the "What we keep" panel. Without an API key, keyword rules on the server sort them instead.
 - Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The store keeps only its SHA-256 hash, so a leaked row cannot be turned back into an ID that loads the profile. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
 - Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.

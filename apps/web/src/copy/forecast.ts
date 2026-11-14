@@ -131,6 +131,8 @@ export const forecast = {
       title: 'Plan a decision',
       afford: { title: 'Can I Afford It?', body: 'Check a purchase against this month and the next 10 years.' },
       loan: { title: 'Loan Lab', body: 'Compare loans side by side and see the debt load.' },
+      decide: { title: 'Decision: the car', body: 'Two ways to get a car, side by side, against keeping yours.' },
+      checkin: { title: 'Monthly check-in', body: 'How your month went and how your move is going.' },
       profile: { title: 'Build your profile', body: 'Guess your own month, then make the numbers yours.' },
       profileEdit: { title: 'Update your profile', body: 'Change your numbers or upload a statement.' },
     },
