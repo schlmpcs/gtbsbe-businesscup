@@ -1,8 +1,8 @@
 // The frame of every ladder rung (S5–S9), Design v3: the step pills with "← Back" on the right, a
 // huge display headline and its sub line on the left, the screen's content (with an optional right
 // column: art, an ink summary card), then the footer: one text action on the left and the one
-// orange CTA on the right. Each step has one task, so there is no 10-year strip on S5–S8; the last
-// step (S9) shows one short "You in 10 years" line above its CTA, which leads to the forecast.
+// orange CTA on the right. Steps: S5 guess → S6 closest life → S9 your spending, imported from a
+// statement (S7 is its by-hand alternative) → S8 pay & savings. Only the last step (S8) shows one short "You in 10 years" line above its CTA, which leads to the forecast.
 import type { ReactNode } from 'react';
 import { ladder, screenTitles } from '@/copy';
 import { buttonClassName, cx, EstimateTag, formatMoney } from '@/ui-kit';
@@ -65,6 +65,15 @@ export function LadderTextButton({
   );
 }
 
+/** The step pill a screen sits under: S7 (spending by hand) is the S9 step. */
+export function rungOf(screen: LadderScreen): LadderScreen {
+  return screen === 'S7' ? 'S9' : screen;
+}
+
+function rungHref(progress: LadderProgressVM, screen: LadderScreen): string {
+  return progress.rungs.find((r) => r.screen === screen)?.href ?? progress.futureHref;
+}
+
 export function LadderShell({
   screen,
   progress,
@@ -74,23 +83,29 @@ export function LadderShell({
   secondary,
   children,
 }: LadderShellProps) {
-  const index = progress.rungs.findIndex((r) => r.screen === screen);
+  // S7 (spending by hand) is the by-hand side of the S9 step: same place in the steps.
+  const step = rungOf(screen);
+  const index = progress.rungs.findIndex((r) => r.screen === step);
   const prev = index > 0 ? progress.rungs[index - 1] : undefined;
   const next = index >= 0 ? progress.rungs[index + 1] : undefined;
+  const isLast = !next;
 
-  const defaultPrimary =
-    screen === 'S9' || !next ? (
-      <a href={progress.futureHref} className={buttonClassName({ size: 'lg' })}>
-        {t.cta.S9}
-      </a>
-    ) : (
-      <a href={next.href} className={buttonClassName({ size: 'lg' })}>
-        {t.cta[screen]}
-      </a>
-    );
+  const defaultPrimary = isLast ? (
+    <a href={progress.futureHref} className={buttonClassName({ size: 'lg' })}>
+      {t.cta.last}
+    </a>
+  ) : (
+    <a href={next.href} className={buttonClassName({ size: 'lg' })}>
+      {t.cta[screen]}
+    </a>
+  );
   const defaultSecondary =
-    screen === 'S8' || screen === 'S9' || !next ? (
-      <LadderTextLink href={progress.futureHref} label={t.skip[screen === 'S9' ? 'S9' : 'S8']} />
+    screen === 'S9' ? (
+      <LadderTextLink href={progress.byHandHref} label={t.skip.byHand} />
+    ) : screen === 'S7' ? (
+      <LadderTextLink href={rungHref(progress, 'S9')} label={t.skip.statement} />
+    ) : isLast ? (
+      <LadderTextLink href={progress.futureHref} label={t.skip.last} />
     ) : (
       <LadderTextLink href={next.href} label={t.skip.step} />
     );
@@ -99,9 +114,6 @@ export function LadderShell({
 
   const header = (
     <header className="flex flex-col gap-md">
-      {screen === 'S9' && (
-        <p className="text-sm font-bold uppercase tracking-wide text-text-muted">{t.optional}</p>
-      )}
       <h1 className="font-display text-4xl font-extrabold leading-display tracking-tight sm:text-display lg:text-[length:calc(var(--text-display)*1.3)]">
         {screenTitles[screen]}
       </h1>
@@ -133,7 +145,7 @@ export function LadderShell({
         )}
 
         <footer className="flex flex-col gap-md">
-          {screen === 'S9' && progress.status === 'ready' && (
+          {isLast && progress.status === 'ready' && (
             <p
               data-testid="ladder-in10y"
               className="flex flex-wrap items-center gap-sm text-base text-text-muted sm:justify-end"

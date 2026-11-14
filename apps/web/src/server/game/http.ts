@@ -18,6 +18,8 @@ export const GAME_RATE_LIMITS = {
   guess: { perAnonId: perMinute(20), perIp: perMinute(120) },
   /** A duel day has 5 hints (one per round), at most: the same budget as a clue. */
   hint: { perAnonId: perMinute(40), perIp: perMinute(240) },
+  /** A duel day has 5 picks, one per round (a replay still costs a request): the same as a guess. */
+  pick: { perAnonId: perMinute(20), perIp: perMinute(120) },
   share: { perIp: perMinute(30) },
   read: { perIp: perMinute(120) },
 } as const;

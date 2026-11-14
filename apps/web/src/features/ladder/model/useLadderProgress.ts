@@ -13,7 +13,16 @@ import { useAppReady, useAppStore, useProfile, useGameStore, type AppData } from
 import { SPENDING_SLIDERS } from './constants';
 import type { LadderProgressVM, LadderRungVM, LadderScreen } from './types';
 
-const LADDER: readonly LadderScreen[] = ['S5', 'S6', 'S7', 'S8', 'S9'];
+/**
+ * The steps in order. Spending comes from a bank statement (S9), not from typing: S7's sliders are
+ * the by-hand alternative of that same step, so they have no pill of their own (see `rungFor`).
+ */
+const LADDER: readonly LadderScreen[] = ['S5', 'S6', 'S9', 'S8'];
+
+/** The step pill a screen belongs to: S7 (spending by hand) is the S9 step. */
+export function rungFor(screen: LadderScreen): LadderScreen {
+  return screen === 'S7' ? 'S9' : screen;
+}
 const SCALAR_INPUTS = ['age', 'takeHomePay', 'cash', 'retirement', 'retirementShare'] as const;
 const BALANCE_INPUTS = ['age', 'takeHomePay', 'cash', 'retirement'] as const;
 
@@ -72,16 +81,18 @@ export function debtsChanged(start: readonly Debt[] | null, debts: readonly Debt
 export function rungsDone(s: ProgressData): Record<LadderScreen, boolean> {
   const own = s.profileOrigin !== 'demo';
   const p = s.profile;
+  const byHand = own && (SPENDING_SLIDERS.some(({ category }) => measured(p.spending[category])) || measured(p.retirementShare));
   return {
     S5: s.selfGuess !== null,
     S6: s.closestCardId !== null,
-    S7: own && (SPENDING_SLIDERS.some(({ category }) => measured(p.spending[category])) || measured(p.retirementShare)),
+    S7: byHand,
     S8:
       own &&
       (BALANCE_INPUTS.some((f) => measured(p[f])) ||
         p.debts.some((d) => measured(d.minPayment)) ||
         debtsChanged(s.startDebts, p.debts)),
-    S9: s.statementMonths.length > 0,
+    // Your spending: from a statement, or set by hand on S7.
+    S9: s.statementMonths.length > 0 || byHand,
   };
 }
 
@@ -105,6 +116,7 @@ export function buildLadderProgress(s: ProgressData): Omit<LadderProgressVM, 'st
     bandNarrowed,
     estimates: { left, total: forecastInputCount(s.profile) },
     futureHref: SCREEN_ROUTES.S10,
+    byHandHref: SCREEN_ROUTES.S7,
   };
 }
 
