@@ -11,7 +11,8 @@
     "./fixtures/cards": "./fixtures/cards.ts",
     "./fixtures/node": "./fixtures/node.ts",
     "./fixtures/*.json": "./fixtures/*.json",
-    "./fixtures/*.csv": "./fixtures/*.csv"
+    "./fixtures/*.csv": "./fixtures/*.csv",
+    "./subscriptions": "./subscriptions.ts"
   },
   "scripts": {
     "refresh": "node ../../scripts/python.mjs scripts/refresh.py",

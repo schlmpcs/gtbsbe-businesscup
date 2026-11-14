@@ -9,7 +9,7 @@ import {
   forecastOutputFormat, forecastPrompt, forecastWithModel, promptFingerprint,
 } from './forecast';
 import { type ForecastRequest } from './schemas';
-import { DEMO_SCENARIOS, goodAnswer, goodReply, forecastReply, reply, type WireForecast } from './testUtils';
+import { DEMO_SCENARIOS, goodAnswer, goodReply, forecastReply, reply, toWire, type WireForecast } from './testUtils';
 
 const { create, checks } = vi.hoisted(() => ({ create: vi.fn(), checks: { throws: false } }));
 const client = { messages: { create } } as unknown as LlmClient;
@@ -211,17 +211,18 @@ describe('forecastWithModel', () => {
 
   it('retries a cut-off answer (max_tokens) and tells the model', async () => {
     const req = request();
-    create.mockResolvedValueOnce(reply('{"forecasts":[{"id":"base","anch', 'max_tokens')).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(reply('{"forecasts":[{"id":"base","yea', 'max_tokens')).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
     expect(create).toHaveBeenCalledTimes(2);
     expect(sent(1)).toContain('cut off');
-    expect(sent(1)).not.toContain('"anch'); // the truncated text is not echoed back
+    expect(sent(1)).not.toContain('"yea'); // the truncated text is not echoed back
   });
 
   it.each([
     ['text that is not JSON', () => reply('Sure! Here is the forecast.')],
     ['JSON that is not the wire shape', () => reply('{"forecast": []}')],
-    ['a forecast whose anchors are strings', () => reply('{"forecasts":[{"id":"base","anchors":"lots"}]}')],
+    ['a forecast whose years are strings', () => reply('{"forecasts":[{"id":"base","years":"lots"}]}')],
+    ['the old keyed-anchor shape', () => reply('{"forecasts":[{"id":"base","anchors":[{"year":1,"low":1,"mid":2,"high":3}]}]}')],
   ])('retries %s', async (_name, first) => {
     const req = request();
     create.mockResolvedValueOnce(first()).mockResolvedValueOnce(goodReply(req));
@@ -254,13 +255,20 @@ describe('forecastWithModel', () => {
     expect(sent(1)).toContain('unknown id "pay_card"');
   });
 
-  it('retries on structurally bad anchors: wrong years, low above mid', async () => {
+  it('retries on structurally bad years: too few, an entry that is not three numbers, low above mid', async () => {
     const req = request();
     const answer = goodAnswer(req);
-    const wrongYears = answer.map((f) => (f.id === 'base' ? { ...f, anchors: f.anchors.map((a) => ({ ...a, year: a.year - 1 })) } : f));
-    create.mockResolvedValueOnce(forecastReply(wrongYears)).mockResolvedValueOnce(goodReply(req));
+    const nineYears = answer.map((f) => (f.id === 'base' ? { ...f, anchors: f.anchors.slice(0, 9) } : f));
+    create.mockResolvedValueOnce(forecastReply(nineYears)).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
-    expect(sent(1)).toContain('base forecast: anchor 1 has year 0');
+    expect(sent(1)).toContain('base forecast: expected 10 anchors, one for each of years 1 to 10, got 9');
+
+    create.mockReset();
+    const wire = toWire(answer);
+    wire.forecasts[1]!.years[2] = [wire.forecasts[1]!.years[2]![1]!, wire.forecasts[1]!.years[2]![2]!]; // [mid, high]
+    create.mockResolvedValueOnce(reply(JSON.stringify(wire))).mockResolvedValueOnce(goodReply(req));
+    expect((await forecastWithModel(req, client)).source).toBe('ai');
+    expect(sent(1)).toContain('scenario "pay-card": year 3: give exactly three numbers [low, mid, high], not 2');
 
     create.mockReset();
     const inverted = answer.map((f) => (f.id === 'base'
@@ -504,10 +512,24 @@ describe('forecastWithModel deadline', () => {
     expect(options(1).signal.aborted).toBe(true);
   });
 
-  it('keeps the documented budgets', () => {
-    expect(FORECAST_CALL_TIMEOUT_MS).toBe(12_000);
-    expect(FORECAST_DEADLINE_MS).toBe(20_000);
-    expect(FORECAST_MIN_RETRY_MS).toBe(8_000);
+  it('keeps the documented budgets, sized for Claude Opus 5.5 at effort low (15–20 s per answer, measured)', () => {
+    expect(FORECAST_CALL_TIMEOUT_MS).toBe(30_000);
+    expect(FORECAST_DEADLINE_MS).toBe(40_000);
+    expect(FORECAST_MIN_RETRY_MS).toBe(15_000);
+  });
+
+  it('sends the first call with the 30 s timeout and a retry with what is left of the 40 s deadline', async () => {
+    vi.useFakeTimers();
+    const req = request();
+    create.mockImplementationOnce(async () => {
+      await new Promise((r) => setTimeout(r, 18_000)); // a slow first answer that fails the checks
+      return forecastReply(scaled(goodAnswer(req), 1 / 1000));
+    }).mockResolvedValueOnce(goodReply(req));
+    const done = forecastWithModel(req, client);
+    await vi.advanceTimersByTimeAsync(18_000);
+    expect((await done).source).toBe('ai');
+    expect(options(0).timeout).toBe(30_000);
+    expect(options(1).timeout).toBe(22_000);
   });
 });
 
@@ -573,7 +595,7 @@ describe('forecastPrompt', () => {
   });
 
   it('is versioned so cache keys can follow it', () => {
-    expect(PROMPT_VERSION).toBe(2);
+    expect(PROMPT_VERSION).toBe(3); // 3: compact [low, mid, high] answer shape
   });
 });
 
@@ -606,7 +628,7 @@ describe('prompt fingerprint', () => {
     renamed.schema.description = 'a new description';
     expect(promptFingerprint(system, renamed)).not.toBe(PROMPT_FINGERPRINT);
     const text = JSON.stringify(forecastOutputFormat());
-    const edited = JSON.parse(text.replace('Low end of the range', 'Lowest value of the range')) as typeof renamed;
+    const edited = JSON.parse(text.replace('written exactly as listed', 'spelled exactly as listed')) as typeof renamed;
     expect(text).not.toBe(JSON.stringify(edited)); // the description really is in the format
     expect(promptFingerprint(system, edited)).not.toBe(PROMPT_FINGERPRINT);
   });
@@ -637,7 +659,11 @@ describe('forecast output format', () => {
         shapes.push(Object.keys(o.properties).sort());
       }
     });
-    expect(shapes).toEqual([['forecasts'], ['anchors', 'id'], ['high', 'low', 'mid', 'year']]);
+    expect(shapes).toEqual([['forecasts'], ['id', 'years']]);
+    // years: an array of arrays of numbers (the triples)
+    const years = (schema as { properties: { forecasts: { items: { properties: { years: unknown } } } } })
+      .properties.forecasts.items.properties.years;
+    expect(years).toMatchObject({ type: 'array', items: { type: 'array', items: { type: 'number' } } });
   });
 });
 
