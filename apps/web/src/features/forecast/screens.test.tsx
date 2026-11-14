@@ -729,10 +729,11 @@ describe('S10 “Coming up” (life events)', () => {
     for (const name of Object.values(le.shortcuts)) expect(within(card).getByRole('button', { name })).toBeEnabled();
     expect(within(card).getByRole('button', { name: le.custom })).toBeEnabled();
     expect(within(card).getByText(le.todaysDollars)).toBeInTheDocument();
-    // Under the forecast chart, above the moves.
+    // JF16: behind its own disclosure, under the moves and the chart.
     const chart = screen.getByRole('figure', { name: t.future.chartTitle(10) });
     expect(chart.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(card.compareDocumentPosition(screen.getByTestId('moves')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.compareDocumentPosition(screen.getByTestId('moves')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(card.closest('details')).toBe(screen.getByTestId('events-disclosure'));
   });
 
   it('adding a kid from the shortcut lists it as an estimate and lowers the headline', async () => {

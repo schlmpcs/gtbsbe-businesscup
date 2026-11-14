@@ -65,6 +65,8 @@ export const ladder = {
     },
     done: 'done',
     notYet: 'not yet',
+    /** A step before this one that was passed without being done. */
+    skipped: 'skipped',
     current: 'this step',
     stepsDone: (done: number, total: number) => `${done} of ${total} steps done`,
     /** The last step only: one short line above the CTA (net worth in 10 years, today's dollars). */

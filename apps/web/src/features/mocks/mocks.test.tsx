@@ -54,7 +54,8 @@ describe('S13 decision', () => {
     expect(screen.queryByText(/\bPRO\b/i)).toBeNull();
     const r = evaluateDecision(cloneProfileDemo(), leaseScenarioSample, true);
     const score = screen.getByLabelText(d.scoreLabel);
-    expect(within(score).getByText(formatMoney(r.betterBy10y, { signed: true }))).toBeTruthy();
+    // JF14: one sentence with the gap, no ± on the cards.
+    expect(within(score).getByTestId('decide-sentence').textContent).toContain(formatMoney(r.betterBy10y, { compact: true }));
     // The two 10-year numbers come from the rules engine, whatever S10 shows: labeled so.
     expect(screen.getByTestId('decide-forecast-source').textContent).toBe(forecast.source.rules);
     // No "coming soon" chips for decisions that aren't built.
@@ -72,7 +73,8 @@ describe('S13 decision', () => {
     await user.type(monthly, '250');
     const r = evaluateDecision(cloneProfileDemo(), { ...leaseScenarioSample, monthly: 250 }, true);
     const score = await screen.findByLabelText(d.scoreLabel);
-    expect(within(score).getByText(formatMoney(r.betterBy10y, { signed: true }))).toBeTruthy();
+    // JF14: one sentence with the gap, no ± on the cards.
+    expect(within(score).getByTestId('decide-sentence').textContent).toContain(formatMoney(r.betterBy10y, { compact: true }));
     await user.click(screen.getByRole('button', { name: d.edit.reset }));
     expect((monthly as HTMLInputElement).value).toBe(String(leaseScenarioSample.monthly));
   });
