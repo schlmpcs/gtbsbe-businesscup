@@ -31,6 +31,9 @@ async function savedProfile(page: Page) {
 }
 
 test('closest life → sliders → balance sheet with a new debt → /future', async ({ page }) => {
+  // Against a deployment with a model key the last step may wait up to 25 s for the forecast on top of the
+  // steps before it: three times the default timeout.
+  test.slow();
   // S6: start from the first life.
   await page.goto('/me/closest');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(ladder.screens.S6);
