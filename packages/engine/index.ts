@@ -27,7 +27,7 @@ export {
   rankMoves, moveCandidates, rankCandidates, movesLevel, isLevelUnlocked, moveKindOf, MOVE_LEVELS, MOVES_SHOWN,
   DISCRETIONARY_CATEGORIES, type MoveCandidate, type RankMovesOptions,
 } from './moves';
-export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordOptions } from './afford';
+export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordCheck, type AffordOptions } from './afford';
 export { monthEnd, usualMonthSpend, type CurrentMonth, type UsualMonth } from './month';
 export { statementTotals, merchantKey, type ClassifiedStatementItem } from './statement';
 export { detectSubscriptions, auditTotals, type DetectSubscriptionsOptions } from './subscriptions';
@@ -40,7 +40,7 @@ export {
   loan, compareLoans, payoffOrder, payoffPlan, comparePayoff, extraToFinishBy, amortize, amortizedPayment, MAX_SIMULATION_MONTHS,
   type Amortization, type LoanOptions,
 } from './loan/index';
-export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
+export { goalStatus, extraSavingToReach, movesTowardGoal, goalReachMonth, GOAL_REACH_SLACK_YEARS, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';
 export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';
 export { workTime, roundWorkAmount, type WorkTime, type WorkTimeUnit, type WorkTimeOptions } from './workTime';

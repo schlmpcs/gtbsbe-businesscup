@@ -157,7 +157,8 @@ function Headline({ vm }: { vm: FutureVM }) {
     <div data-testid="at-horizon">
       <div className="flex flex-wrap items-center gap-sm">
         <span className={EYEBROW}>{f.headline(vm.horizonYears)}</span>
-        {!vm.band.isZero && <EstimateTag />}
+        {/* "Estimate" only when an input behind the number is one (the source tag below says who made it). */}
+        {vm.band.estimatedFields.length > 0 && <EstimateTag />}
       </div>
       <p className="mt-sm font-display text-7xl font-extrabold leading-display tracking-tight tabular-nums break-words sm:text-8xl lg:text-9xl">
         <Money value={vm.atHorizon.mid} />

@@ -145,7 +145,7 @@ export function ForecastChart({
       );
     return (
       <div className="flex flex-col gap-xs rounded-md border border-border bg-bg p-sm text-xs shadow-md">
-        <span className="font-semibold">{t.yearLabel(Math.round(r.year * 10) / 10)}</span>
+        <span className="font-semibold">{t.monthLabel(r.month)}</span>
         {line(series.label, r.mid, showBand ? r.band : undefined)}
         {compare && line(compare.label, r.cMid, showBand ? r.cBand : undefined)}
       </div>

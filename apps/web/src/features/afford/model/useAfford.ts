@@ -1,7 +1,7 @@
 // S11 Can I Afford It?: purchase form → engine canAfford (verdict, wait, rule, with / without
 // forecasts), free text via /api/ai/parse (confirmed first), and the wishlist.
-import { canAfford, debtLoadThresholds, loanTermsTypical, safetyCushionMonths, workTime } from '@lifeguessr/engine';
-import { LoanInputSchema, PurchaseSchema, type ForecastPoint, type Purchase } from '@lifeguessr/types';
+import { canAfford, debtLoadThresholds, goalReachMonth, loanTermsTypical, safetyCushionMonths, workTime } from '@lifeguessr/engine';
+import { LoanInputSchema, PurchaseSchema, type ForecastPoint, type Goal, type Profile, type Purchase } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { afford as affordCopy } from '@/copy';
 import { useTrackOnce } from '@/lib/events';
@@ -13,7 +13,7 @@ import { SCREEN_ROUTES } from '@/lib/screens';
 import { useAppReady, useAppStore, useProfile, usePro } from '@/state';
 import { loanKindOf, withTypicalLoan } from './loanDefaults';
 import type {
-  AffordFormVM, AffordHorizonVM, AffordResultVM, AffordRulesVM, AffordVM, AffordWorkTimeVM, LoanEstimateVM,
+  AffordFormVM, AffordGoalEffectVM, AffordHorizonVM, AffordResultVM, AffordRulesVM, AffordVM, AffordWorkTimeVM, LoanEstimateVM,
 } from './types';
 
 const HORIZONS = [1, 12, 60, 120] as const;
@@ -81,10 +81,32 @@ export function formFromPurchase(p: Purchase): AffordFormVM {
 
 const at = (points: ForecastPoint[], month: number) => points[Math.min(month, points.length - 1)]!;
 
+/**
+ * When the plan reaches the goal with the purchase made now vs without (engine goalReachMonth, the
+ * same payoff plan canAfford uses). `now` = today, for the calendar year.
+ */
+export function affordGoalEffect(
+  profile: Profile,
+  goal: Goal,
+  purchase: Purchase,
+  rates: ReturnType<typeof areaRates>,
+  now: Date,
+): AffordGoalEffectVM {
+  const without = goalReachMonth(profile, goal, { rates });
+  const withIt = goalReachMonth(profile, goal, { rates, extra: [{ ...purchase, startMonth: 0, payOffFromSurplus: true }] });
+  return {
+    target: goal.target,
+    reachYear: withIt === null ? null : now.getFullYear() + Math.floor((now.getMonth() + withIt) / 12),
+    delayMonths: withIt === null || without === null ? null : Math.max(0, withIt - without),
+    onTime: withIt !== null && withIt <= goal.years * 12,
+  };
+}
+
 export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
   const ready = useAppReady();
   const profile = useProfile();
   const wishlist = useAppStore((s) => s.wishlist);
+  const goal = useAppStore((s) => s.goal);
   const addPurchase = useAppStore((s) => s.addToWishlist);
   const removeFromWishlist = useAppStore((s) => s.removeFromWishlist);
   const wishlistLocked = !usePro().isPro;
@@ -100,9 +122,13 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
 
   const result: Loadable<AffordResultVM> | null = useMemo(() => {
     if (!purchase) return null;
-    const r = runEngine(() => canAfford(profile, purchase, { rates: areaRates(profile) }));
+    const rates = areaRates(profile);
+    const r = runEngine(() => ({
+      check: canAfford(profile, purchase, { rates }),
+      goalEffect: goal ? affordGoalEffect(profile, goal, purchase, rates, new Date()) : null,
+    }));
     if (r.status !== 'ready') return r;
-    const a = r.data;
+    const { check: a, goalEffect } = r.data;
     const horizons: AffordHorizonVM[] = HORIZONS.map((month) => {
       const w = at(a.with.points, month);
       const wo = at(a.without.points, month);
@@ -121,6 +147,8 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
         failsOn: a.failsOn ?? null,
         baselineFails: a.baselineFails,
         cheapestWay: a.cheapestWay,
+        cheapestWayFits: a.cheapestWayFits,
+        goalEffect,
         todaysDollars: false,
         forecastSource: 'rules',
         withPoints: a.with.points,
@@ -129,7 +157,7 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
         workTime: work,
       },
     };
-  }, [profile, purchase]);
+  }, [profile, purchase, goal]);
 
   // The first verdict this page load: someone priced a purchase.
   const verdict = result?.status === 'ready' ? result.data.verdict : null;

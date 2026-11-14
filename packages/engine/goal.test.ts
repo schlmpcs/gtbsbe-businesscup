@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { cloneProfileDemo } from '@lifeguessr/data/fixtures';
-import { GoalSchema, type Profile } from '@lifeguessr/types';
-import { extraSavingToReach, goalStatus, movesTowardGoal } from './goal';
+import { COST_CATEGORIES, GoalSchema, type CostCategory, type Profile } from '@lifeguessr/types';
+import { extraSavingToReach, goalReachMonth, goalStatus, movesTowardGoal } from './goal';
 import { applyPatch, forecast } from './forecast';
 import { rankMoves } from './moves';
 const real = { todaysDollars: true };
@@ -106,4 +106,29 @@ it('rejects malformed goal contracts and saving options', () => {
   expect(() => forecast(measured(), 10, { extraMonthly: -1 })).toThrow(
     RangeError,
   );
+});
+
+it('goalReachMonth: the first month the plan reaches the target, with and without a purchase', () => {
+  // No growth: net worth = 5,000 + 1,000·m. $10,000 is reached in month 5; after a $2,500 cash
+  // purchase, 2,500 + 1,000·m ≥ 10,000 needs m = 7.5, so month 8 (3 months later).
+  const spending = Object.fromEntries(
+    COST_CATEGORIES.map((c) => [c, { value: c === 'other' ? 4000 : 0, isEstimate: false }]),
+  ) as Record<CostCategory, { value: number; isEstimate: boolean }>;
+  const p: Profile = {
+    age: { value: 30, isEstimate: false },
+    takeHomePay: { value: 5000, isEstimate: false },
+    spending,
+    cash: { value: 5000, isEstimate: false },
+    retirement: { value: 0, isEstimate: false },
+    retirementShare: { value: 0, isEstimate: false },
+    debts: [],
+    doneMoveIds: [],
+  };
+  const rates = { inflationAnnual: 0, cashYieldAnnual: 0, returnAnnualNominal: 0 };
+  const goal = { target: 10_000, years: 1 };
+  expect(goalReachMonth(p, goal, { rates })).toBe(5);
+  const car = { label: 'Car', amount: 2500, recurring: false as const, payWith: 'cash' as const, startMonth: 0 };
+  expect(goalReachMonth(p, goal, { rates, extra: [car] })).toBe(8);
+  // 1 + 10 slack years = 132 months: 5,000 + 1,000·132 = 137,000 < 200,000.
+  expect(goalReachMonth(p, { target: 200_000, years: 1 }, { rates })).toBeNull();
 });

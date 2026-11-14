@@ -140,6 +140,8 @@ describe('AffordResultPanel', () => {
     failsOn: 'debtLoad',
     baselineFails: false,
     cheapestWay: 'cash',
+    cheapestWayFits: true,
+    goalEffect: null,
     todaysDollars: false,
     forecastSource: 'rules',
     withPoints: points,
