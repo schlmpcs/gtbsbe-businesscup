@@ -94,6 +94,30 @@ Always simulate at least 120 months so `in10y` exists. The band shows **uncertai
 
 The golden test: `profile.demo.json` + `areaData.sample.json` (fixtures, never the live `areas.json`, so a data refresh can't break it) produces a snapshot that must not change unless an assumption changes on purpose.
 
+The simulation above is now the **rules provider**: the fallback when the AI forecaster is unavailable or fails its checks, and the yardstick any AI or ML forecaster is compared with. The headline forecast comes from the AI forecaster below.
+
+### AI forecast (Amir, Y15–Y20)
+
+Design: `docs/superpowers/specs/2026-11-14-llm-forecast-design.md`. Plan: `docs/superpowers/plans/2026-11-14-llm-forecast.md`.
+
+```
+client ──► POST /api/ai/forecast { profile, rates?, scenarios: [{ id, patch }] }
+              │  cache hit (key = hash of the facts the model sees + scenarios + rates + model + prompt version)? return it
+              │  else one LLM call: base + every scenario, yearly anchors (years 1–10: low, mid, high), nominal dollars
+              │  code: validate → interpolate to 121 monthly points → month 0 = today's balance sheet, exact
+              │  fails twice, no key, or provider error → rules provider (`forecast()`), source 'rules'
+              ◄── { source: 'ai' | 'rules', base: Forecast, scenarios: { [id]: Forecast } }   (nominal; todaysDollars: false)
+client: today's dollars = deflateForecast(f, area inflation); move effect10y = scenario − base at month 120 (today's $)
+```
+
+- **What the model returns:** per forecast, 10 yearly anchors. Code interpolates linearly to monthly points. Month 0 is not asked of the model: it is today's `cash + retirement − debts`, exact, with low = mid = high.
+- **Checks (all in code, `packages/engine/anchors.ts`):** exactly years 1–10; finite numbers; low ≤ mid ≤ high; every scenario id present. Then a sanity envelope against the rules forecast of the same profile: each anchor's mid within `[rules.low − tol, rules.high + tol]` with `tol = max(relative × |rules.mid|, floorMonths × takeHomePay)`, and band width ≤ `bandMaxRatio` × the rules band width (or `tol`, if larger). The envelope is too loose to see a bad move, so each scenario also gets an effect check: the year-10 difference (scenario − base) must have the rules difference's sign and be within `effectRatioMin`–`effectRatioMax` of it, or within `effectFloor` of it (under $1 of rules effect, within `effectFloor` of zero). The values are `aiForecastSanity` in `assumptions.ts` (`relative` 0.5, `floorMonths` 12, `bandMaxRatio` 3, `effectRatioMin` 0.25, `effectRatioMax` 4, `effectFloor` $1,000; guards, tune on the fixtures). A failure goes back to the model once with the issues listed; a second failure falls back to the rules provider.
+- **Stability:** one call returns the base forecast and every candidate move's forecast, so `effect10y` differences come from one response. The model and every cache key use `forecastFacts(profile)` (no `zip`, `committedMoveId`, `doneMoveIds`). Only `source: 'ai'` results are cached (in memory, per process, 1 hour); the client keeps one answer per profile for the session and ranks moves from the (profile, candidates) pair each bundle answered, never from a bundle that answered other patches.
+- **Time:** each model call has a timeout and no SDK retry; the request has a deadline (starting values 12 s per call, 20 s total); the client falls back to the local rules bundle after 25 s.
+- **Labeling:** every forecast carries `source`. The UI shows "AI estimate" or "Rules-based estimate", and the "How we calculate" panel says which. The AI range band is the model's own uncertainty (it is told which inputs are estimates). It is not guaranteed to shrink when the user uploads a statement, so check that in rehearsal (Y19).
+- **Scope:** the headline forecast and the moves' `effect10y` only. `canAfford`, Loan Lab, `monthEnd`, `costOfLife` and `scoreGuess` stay on the rules engine (affordability rules need per-month cash and card balances that `Forecast` does not carry). S5 keeps the rules preview, labeled as such. The explain route words a move's sentence by its `source`.
+- **Replacing the model later:** a trained model answers the same request and response with a new `ForecastSource` value. The sanity envelope and the rules provider stay as guards and as the baseline it has to beat.
+
 ### Cost of a life card (Amir, Y1)
 
 ```
@@ -204,11 +228,11 @@ With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Witho
 
 ## AI usage rules
 
-- Allowed: parse free text into typed JSON (`life`, `purchase`, `loan`), categorize merchant labels, tag one-off or yearly charges, write card captions, and give 2-sentence explanations of an engine result.
-- Not allowed: computing or inventing any number that is shown as a result, or giving advice about specific lenders, securities or tax.
+- Allowed: parse free text into typed JSON (`life`, `purchase`, `loan`), categorize merchant labels, tag one-off or yearly charges, write card captions, give 2-sentence explanations of an engine result, and produce the 10-year forecast under the checks in **AI forecast** above.
+- Not allowed: computing or inventing a number for loans, costs, guess scores, affordability or month-end; any forecast number that has not passed the AI forecast checks; or giving advice about specific lenders, securities or tax.
 - Numbers parsed from user text are inputs, not results. Show them to the user to confirm before they enter the profile.
 - Labels sent for categorizing have personal names masked. Use the provider's no-training / zero-retention option.
-- Always: a zod schema on the output, one retry on validation failure, then a manual-form fallback. Log prompts and responses in development only.
+- Always: a zod schema on the output, one retry on validation failure, then a fallback (the manual form for parsing, a template for explanations, the rules-based forecast for the forecast). Log prompts and responses in development only.
 
 ## Testing
 
@@ -219,6 +243,7 @@ With fewer than 3 months of history, `vsAverage = null` and `drifts = []`. Witho
   - `low ≤ mid ≤ high` holds for every fixture card;
   - the clue multiplier applies and floors at `clueFloor`.
 - Playwright (T8): one spec for the full demo path (play 3 homes, opening at least one clue → guess own → sliders → forecast → upload sample CSV → Loan Lab compare).
+- AI forecast: tests replace the Anthropic SDK module (`server/ai/testUtils.ts`). CI and Playwright never call a live model, and Playwright runs with no key, so S1 and S10 show the rules-based forecast. The eval script (Y19) is the only thing that calls the live model, and it is not part of CI.
 - Run `pnpm lint && pnpm test && pnpm e2e` before merging anything that touches the demo path.
 
 ## Figma handoff procedure

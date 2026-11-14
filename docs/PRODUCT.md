@@ -44,8 +44,8 @@ US adults aged 25–45 with a job, bills and at least one big decision ahead. Ty
 | F4 | **Closest Life**: pick one of today's cards as your starting point | Real |
 | F5 | **Quick Sliders**: rent, car, food, subscriptions and savings (~30 s) | Real |
 | F6 | **Balance Sheet in 6 taps**: age, take-home pay, cash, retirement, card balance and APR, other loans; skipped fields become estimates | Real |
-| F7 | **Make It Exact**: CSV statement upload (parsed in the browser) that tightens the range | Real (CSV); PDF if time allows |
-| F8 | **You in 10 Years**: forecast line with a range band, in today's dollars by default | Real |
+| F7 | **Make It Exact**: CSV statement upload (parsed in the browser) that tightens the range (on the AI forecast, checked by the Y19 eval) | Real (CSV); PDF if time allows |
+| F8 | **You in 10 Years**: forecast line with a range band, in today's dollars by default | Real (AI-generated and code-checked, labeled; rules-based fallback) |
 | F9 | **Next Moves**: top 3 moves ranked by 10-year dollar effect; levels; an "I'm doing this" commitment | Real (level 1) |
 | F10 | **Decisions**: car, moving city, having a kid, job offer, wedding (Path A vs B) | Mock (car example) |
 | F11 | **This Life vs Yours**: each game card compared with your own numbers | Real if time allows |
@@ -120,7 +120,7 @@ Each day everyone gets the same 5 homes. Each home is an illustrated dollhouse c
 
 **Beat line:** unlike planners people open a few times a year, we give a 25–45 adult a 30-second forecast with no bank link, rank their next decisions in dollars, and earn a daily visit with a game.
 
-**Why not ChatGPT?** The same inputs always give the same numbers; the app saves your life and tracks forecast against reality; and the daily game. Demo: ask a chatbot the same 10-year question twice and show its numbers change.
+**Why not ChatGPT?** A chatbot has no memory of your life; the app saves your profile, tracks forecast against reality, ranks your next moves in dollars, and comes with the daily game. Be straight about the forecast: a model produces it, code checks it (shape, today's balance exact, a sanity envelope), and it is labeled "AI estimate". Loans, costs, scoring and affordability are computed by tested code. Do not claim the forecast is deterministic.
 
 Avoid saying "budget apps only look at the past". Monarch and PocketSmith do forecast. Say: "they forecast your accounts; we forecast your decisions."
 
@@ -129,9 +129,9 @@ Avoid saying "budget apps only look at the past". Monarch and PocketSmith do for
 1. Judges scan the QR code and play 3 homes (tap the garage and kitchen, guess); the reveal shows that most guess low.
 2. Guess your own cost → closest life → sliders.
 3. You in 10 years appears with a range, plus the top 3 moves.
-4. Upload the sample statement and the monthly spending range tightens (estimated fields become measured). Quote the before/after numbers the engine produces for `profile.demo.json` + `statement.sample.csv`; never hand-type them into the deck.
+4. Upload the sample statement and estimated fields become measured; the AI forecast is told which inputs are estimates, so its range should tighten. Check that in rehearsal with the eval script (Y19) and quote the before/after numbers the app produces for `profile.demo.json` + `statement.sample.csv`; never hand-type them into the deck. If the range does not tighten, say what changed instead of claiming it did.
 5. Loan Lab: car 36 vs 60 months vs waiting; the debt-load gauge and the 10-year effect.
-6. The ChatGPT twice vs us twice proof (pre-record the chatbot half; a live chatbot may happen to repeat itself), then show the engine tests in the repo.
+6. Show the guardrails: the "AI estimate" label and the "How we calculate" panel, the rules-based fallback (with no key the forecast still renders, labeled), and the engine tests for loans, scoring and affordability. Do not run a "ChatGPT twice" comparison: our forecast comes from a model too, so it proves nothing.
 
 ## Metrics to show
 
