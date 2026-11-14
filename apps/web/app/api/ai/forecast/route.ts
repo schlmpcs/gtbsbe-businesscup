@@ -5,11 +5,15 @@
 //       worth. 'ai' = a model answer that passed the checks in code; 'rules' = the rules engine,
 //       which is also the answer with no API key, a provider error, a refusal, a timeout or two
 //       failed answers. Always 200 for a valid request: the screen never goes blank.
+//       An identical request (same profile numbers, scenarios, rates, model and prompt version) is
+//       answered from an in-memory cache for an hour, and requests in flight together share one
+//       model call. Only 'ai' answers are kept, never the rules fallback (forecastCache.ts).
 //   400 bad_request · 413 too_large · 429 rate_limited   ({ ok: false, error: { code, ... } })
 //       Has its own rate limit (checkForecastRateLimit), apart from parse and explain.
 // Spec: docs/ARCHITECTURE.md → Server routes; docs/ENGINEERING.md → AI forecast.
-import { getLlmClient } from '@/server/ai/client';
+import { forecastModel, getLlmClient } from '@/server/ai/client';
 import { forecastWithModel } from '@/server/ai/forecast';
+import { forecastCache, forecastKey } from '@/server/ai/forecastCache';
 import { checkForecastRateLimit, json, readJsonBody } from '@/server/ai/http';
 import { ForecastRequestSchema, MAX_FORECAST_BODY_BYTES } from '@/server/ai/schemas';
 
@@ -23,5 +27,10 @@ export async function POST(req: Request): Promise<Response> {
   const body = await readJsonBody(req, ForecastRequestSchema, MAX_FORECAST_BODY_BYTES);
   if ('response' in body) return body.response;
 
-  return json(await forecastWithModel(body.data, getLlmClient()));
+  // An identical request is answered from memory (AI answers only) or joins the call in flight.
+  const bundle = await forecastCache.getOrCompute(
+    forecastKey(body.data, forecastModel()),
+    () => forecastWithModel(body.data, getLlmClient()),
+  );
+  return json(bundle);
 }
