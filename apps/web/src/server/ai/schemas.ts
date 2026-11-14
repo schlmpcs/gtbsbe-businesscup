@@ -86,14 +86,21 @@ export const MoveInputSchema = z.object({
   patch: ProfilePatchSchema,
 });
 
-/** LoanResult without the schedule, which the explanation doesn't use (and isn't forwarded). */
+/** Debt payments / take-home pay; null = there is no take-home pay to measure them against. */
+const debtLoad = z.number().nonnegative().nullable();
+
+/**
+ * ExplainLoanResult (packages/types): a LoanResult without the schedule, which the explanation
+ * doesn't use (accepted for older clients, not forwarded), and with null for a debt load the
+ * engine reports as Infinity (no take-home pay).
+ */
 export const LoanResultInputSchema = z.object({
   monthly: finite,
   totalInterest: finite,
   totalCost: finite,
   payoffMonth: z.number().int().min(0).max(1_200).nullable(),
-  debtLoadBefore: finite,
-  debtLoadAfter: finite,
+  debtLoadBefore: debtLoad,
+  debtLoadAfter: debtLoad,
   effect10y: finite,
   schedule: z.array(z.unknown()).max(1_200).optional(),
 });

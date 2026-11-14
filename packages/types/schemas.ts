@@ -161,20 +161,24 @@ export const StatementItemSchema = z.object({
   day: z.number().int().min(1).max(31),
 });
 
-export const CategoryTotalsSchema = z.object({
-  month: MonthSchema,
-  totals: z.record(CostCategorySchema, MoneySchema),
-  oneOffs: z.array(z.object({ label: z.string().min(1), amount: MoneySchema })),
-  detectedPay: NonNegativeMoneySchema.optional(),  // monthly
-});
-
-export const StatementClassSchema = z.enum(STATEMENT_CLASSES);
-
 /** Days in a 'YYYY-MM' month (UTC calendar). */
 const daysInMonth = (month: string) => {
   const [y, m] = month.split('-').map(Number) as [number, number];
   return new Date(Date.UTC(y, m, 0)).getUTCDate();
 };
+
+export const CategoryTotalsSchema = z.object({
+  month: MonthSchema,
+  totals: z.record(CostCategorySchema, MoneySchema),
+  oneOffs: z.array(z.object({ label: z.string().min(1), amount: MoneySchema })),
+  detectedPay: NonNegativeMoneySchema.optional(),  // monthly
+  lastDay: z.number().int().min(1).max(31).optional(),  // day of the month's latest statement line
+}).refine((m) => m.lastDay === undefined || m.lastDay <= daysInMonth(m.month), {
+  message: 'lastDay is past the end of the month',
+  path: ['lastDay'],
+});
+
+export const StatementClassSchema = z.enum(STATEMENT_CLASSES);
 
 export const StatementCategorizeRequestSchema = z.object({
   items: z.array(StatementItemSchema).min(1).max(MAX_STATEMENT_ITEMS)

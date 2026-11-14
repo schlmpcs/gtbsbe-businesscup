@@ -56,6 +56,18 @@ describe('statementTotals', () => {
     expect(m).not.toHaveProperty('detectedPay');
   });
 
+  it('records how far into each month the statement goes: the day of its latest line, of any kind', () => {
+    const out = statementTotals([
+      line('2026-10', 'KROGER #', 40, 'groceries', false, 31),
+      line('2026-11', 'KROGER #', 40, 'groceries', false, 3),
+      line('2026-11', 'ACME PAYROLL PPD ID: #', -2400, 'pay', false, 7),
+      line('2026-11', 'Transfer to savings', 200, 'transfer', false, 9), // left out of totals, still a dated line
+      line('2026-11', 'ALDI #', 25, 'groceries', false, 2),
+    ]);
+    expect(out.map((m) => [m.month, m.lastDay])).toEqual([['2026-10', 31], ['2026-11', 9]]);
+    for (const m of out) expect(CategoryTotalsSchema.safeParse(m).success).toBe(true);
+  });
+
   describe('one-offs', () => {
     const months = ['2026-08', '2026-09', '2026-10'];
     const everyMonth = months.flatMap((mo) => [
