@@ -4,6 +4,7 @@ import type { LoanInput } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo, loanOffersSample } from '@/fixtures';
+import { areaRates } from '@/lib/model/profile';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { DEBT_LOAD_GAUGE_MAX, MAX_OFFERS, NEW_LOAN_DEBT_ID, useLoanLab } from './useLoanLab';
@@ -14,7 +15,7 @@ describe('useLoanLab (S12)', () => {
   it('compares the 3 fixture offers with the engine and flags the cheapest', async () => {
     const { result } = renderHook(() => useLoanLab());
     await waitForReady(result);
-    const expected = compareLoans(cloneProfileDemo(), [...loanOffersSample]);
+    const expected = compareLoans(cloneProfileDemo(), [...loanOffersSample], { rates: areaRates(cloneProfileDemo()) });
     expect(result.current.offers.map((o) => o.result)).toEqual(expected);
     expect(result.current.offers[0]!.result!.monthly).toBeCloseTo(863.28, 2); // ENGINEERING.md known value
     const minCost = Math.min(...expected.map((r) => r.totalCost));
@@ -39,7 +40,7 @@ describe('useLoanLab (S12)', () => {
     act(() => result.current.setExtraPayment(210)); // snaps to $25 steps
     const e = result.current.extra!;
     expect(e.value).toBe(200);
-    const withExtra = loan(cloneProfileDemo(), { ...loanOffersSample[0]!, extraPayment: 200 });
+    const withExtra = loan(cloneProfileDemo(), { ...loanOffersSample[0]!, extraPayment: 200 }, { rates: areaRates(cloneProfileDemo()) });
     expect(e.payoffMonth).toBe(withExtra.payoffMonth);
     expect(e.basePayoffMonth).toBe(36);
     expect(e.monthsSaved).toBe(36 - withExtra.payoffMonth!);
