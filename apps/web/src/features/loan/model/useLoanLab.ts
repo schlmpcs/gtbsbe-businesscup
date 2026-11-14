@@ -10,7 +10,10 @@ import { areaRates, debtLoadGauge } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { useAppReady, useAppStore } from '@/state';
+import { NEW_LOAN_DEBT_ID, payoffDebts } from './payoffDebts';
 import type { LoanLabVM, LoanOfferVM, PayoffPlanVM } from './types';
+
+export { NEW_LOAN_DEBT_ID };
 
 export const MAX_OFFERS = 3;
 /** Extra-payment slider: $0 to max(EXTRA_MAX_FLOOR, the selected offer's monthly payment), $25 steps. */
@@ -18,8 +21,6 @@ export const EXTRA_MAX_FLOOR: Money = 500;
 export const EXTRA_STEP: Money = 25;
 /** End of the debt-load dial: well past the red threshold (0.36) so both zones read clearly. */
 export const DEBT_LOAD_GAUGE_MAX = 0.6;
-/** Id of the selected offer when it is added to the payoff order as a new debt. */
-export const NEW_LOAN_DEBT_ID = 'new-loan';
 
 type Offer = { id: string; input: LoanInput };
 
@@ -98,17 +99,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
   }, [selected, extraPayment, profile]);
 
   const payoffPlan = useMemo((): PayoffPlanVM | null => {
-    const debts: Debt[] = profile.debts.map((d) => ({ ...d, minPayment: { ...d.minPayment } }));
-    if (selected?.result) {
-      const { amount, apr, downPayment = 0, fees = 0 } = selected.input;
-      debts.push({
-        id: NEW_LOAN_DEBT_ID,
-        kind: 'personal',
-        balance: Math.max(0, amount - downPayment + fees), // financed principal (LoanInput contract)
-        apr,
-        minPayment: { value: selected.result.monthly, isEstimate: false },
-      });
-    }
+    const debts: Debt[] = payoffDebts(profile.debts, selected?.result ? { input: selected.input, monthly: selected.result.monthly } : null);
     if (debts.length === 0) return null;
     const plan = runEngine(() => payoffOrder(debts, 0, 'avalanche'));
     if (plan.status !== 'ready') return null;
