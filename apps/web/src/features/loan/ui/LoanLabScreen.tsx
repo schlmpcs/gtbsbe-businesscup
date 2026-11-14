@@ -1,16 +1,17 @@
 'use client';
 
 // S12 Loan Lab (Figma S12). All numbers come from useLoanLab(), which calls the engine's loan /
-// compareLoans / payoffOrder. Nothing is computed here.
+// compareLoans / payoffOrder (and, for the planner section, comparePayoff). Nothing is computed here.
 import { loan as t } from '@/copy';
 import { Art, formatMoney, Stack } from '@/ui-kit';
-import type { LoanLabVM } from '../model/types';
+import type { LinkComponent, LoanLabVM, PayoffPlannerVM } from '../model/types';
 import { DebtLoadGauges } from './DebtLoadGauges';
 import { ExtraPayment } from './ExtraPayment';
 import { LoanParse } from './LoanParse';
 import { OfferCompare } from './OfferCompare';
 import { OfferEditor } from './OfferEditor';
 import { PayoffOrder } from './PayoffOrder';
+import { PayoffPlanner } from './PayoffPlanner';
 
 function Loading() {
   return (
@@ -25,7 +26,12 @@ function Loading() {
 
 const chip = 'rounded-full border-2 border-border bg-surface px-lg py-sm text-base font-medium tabular-nums';
 
-export function LoanLabScreen({ vm }: { vm: LoanLabVM }) {
+/**
+ * `payoff` is the debt payoff planner (usePayoffPlanner). While it is null (not wired yet) the screen is exactly as
+ * it was, with the single-method payoff order card; once supplied, the planner takes that card's place.
+ * `Link` (next/link in the app) is what the planner uses to point at the balance sheet.
+ */
+export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payoff?: PayoffPlannerVM | null; Link?: LinkComponent }) {
   const selectedIndex = vm.offers.findIndex((o) => o.id === vm.selectedOfferId);
   const selected = selectedIndex >= 0 ? vm.offers[selectedIndex]! : null;
   const selectedName = selected ? t.offerName(selectedIndex + 1) : null;
@@ -73,8 +79,9 @@ export function LoanLabScreen({ vm }: { vm: LoanLabVM }) {
                 setExtraPayment={vm.setExtraPayment}
                 selectedName={selectedName}
               />
-              <PayoffOrder plan={vm.payoffPlan} selectedName={selectedName} />
+              {payoff ? null : <PayoffOrder plan={vm.payoffPlan} selectedName={selectedName} />}
             </div>
+            {payoff && <PayoffPlanner vm={payoff} selectedName={selectedName} Link={Link} />}
             <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-2">
               <OfferEditor
                 offers={vm.offers}
