@@ -45,11 +45,12 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
 
-  // The life-card catalog holds the game's answers: only server routes (app/api) and tests may
-  // load it, so it can never end up in a browser bundle. (features/*/ui below is stricter still.)
+  // The life-card catalog holds the game's answers: only server routes (app/api), server-only
+  // modules (src/server, which the browser never imports) and tests may load it, so it can never
+  // end up in a browser bundle. (features/*/ui below is stricter still.)
   {
     files: ['apps/web/**/*.{ts,tsx}'],
-    ignores: ['apps/web/app/api/**', 'apps/web/**/*.test.{ts,tsx}', 'apps/web/e2e/**'],
+    ignores: ['apps/web/app/api/**', 'apps/web/src/server/**', 'apps/web/**/*.test.{ts,tsx}', 'apps/web/e2e/**'],
     rules: {
       'no-restricted-imports': [
         'error',
