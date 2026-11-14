@@ -1,5 +1,8 @@
 // S7 Quick sliders: rent, car, childcare, food, subscriptions, other and savings (~30 s), with the
-// month and the 10-year number updating live. Free text can fill them via /api/ai/parse.
+// month and the 10-year number updating live. Free text can fill them via /api/ai/parse. After a
+// statement import (S9) they hold its averages, measured: then they are there to confirm, and the
+// screen says which months the numbers came from.
+import { statementAverages } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type Money, type Profile, type ProfilePatch, type Rate } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { track } from '@/lib/events';
@@ -63,6 +66,8 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
   const setSpendingAction = useAppStore((s) => s.setSpending);
   const setField = useAppStore((s) => s.setField);
   const applyUserPatch = useAppStore((s) => s.applyUserPatch);
+  const savedMonths = useAppStore((s) => s.statementMonths);
+  const statementMonths = useMemo(() => statementAverages(savedMonths).months, [savedMonths]);
 
   const sliders: SpendingSliderVM[] = useMemo(
     () =>
@@ -117,6 +122,7 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
   return {
     status: ready ? 'ready' : 'loading',
     sliders,
+    statementMonths,
     savings: {
       ...linearSliderVM(profile.retirementShare.value, 0, Math.max(SAVINGS_SHARE_MAX, profile.retirementShare.value), SAVINGS_SHARE_STEP),
       isEstimate: profile.retirementShare.isEstimate,

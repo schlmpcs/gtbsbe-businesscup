@@ -1,5 +1,6 @@
 // Ladder S5–S9 (Y9, T6/T7): build a profile end to end in a real browser, on phone and desktop.
-// closest life → sliders → balance sheet (add a debt) → make it exact → /future, through each step's CTA.
+// closest life → your spending (a statement first; by hand as the fallback) → balance sheet → /future,
+// through each step's CTA.
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { common } from '../src/copy/common';
@@ -56,7 +57,7 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   await expect(page).toHaveURL(/\/me\/upload$/);
   await expect(rung(page, 'S9')).toHaveAttribute('aria-current', 'step');
   await expect(page.getByTestId('ladder-in10y')).toHaveCount(0);
-  await page.getByRole('link', { name: ladder.shell.skip.byHand }).click();
+  await page.getByRole('link', { name: ladder.upload.fork.byHandLink }).click();
   await expect(page).toHaveURL(/\/me\/sliders$/);
   await expect(rung(page, 'S9')).toHaveAttribute('aria-current', 'step');
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
@@ -123,6 +124,74 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   await expect(page.getByRole('figure', { name: forecast.future.chartTitle(10) }).locator('.recharts-line-curve').first()).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);
+});
+
+test('statement first: import the sample, answer one follow-up, skip one, and reach /future without a slider', async ({ page }) => {
+  test.slow(); // the last step may wait for the model's forecast on a deployment with a key
+  await page.goto('/me/closest');
+  await loaded(page);
+  await page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first().click();
+  await page.getByRole('link', { name: ladder.shell.cta.S6 }).click();
+  await expect(page).toHaveURL(/\/me\/upload$/);
+
+  // The step opens with the fork: a bank CSV (most accurate), or no statement → by hand.
+  const csv = page.getByRole('region', { name: ladder.upload.fork.statementTitle });
+  await expect(csv).toContainText(ladder.upload.fork.statementBadge);
+  await expect(page.getByRole('region', { name: ladder.upload.fork.byHandTitle }).getByRole('link', { name: ladder.upload.fork.byHandLink }))
+    .toHaveAttribute('href', '/me/sliders');
+
+  const sent = page.waitForRequest((r) => r.url().endsWith('/api/statement/categorize') && r.method() === 'POST');
+  await csv.getByRole('button', { name: ladder.upload.trySample }).click();
+  await sent;
+
+  // A few follow-ups for what the statement can't settle (with the keyword rules, as in CI: the
+  // cash withdrawal, CVS and Target); the amounts are the engine's.
+  const questions = page.getByRole('region', { name: ladder.upload.questions.title });
+  await expect(questions).toBeVisible();
+  const groups = questions.getByRole('listitem'); // one per question (its answer choices are a group inside it)
+  const count = await groups.count();
+  expect(count).toBeGreaterThan(0);
+  expect(count).toBeLessThanOrEqual(3);
+  // Skip them all, then change your mind about the first store (each sample store has October charges).
+  for (let i = 0; i < count; i++) await groups.nth(i).getByRole('button', { name: ladder.upload.questions.skip }).click();
+  await expect(groups.filter({ hasText: ladder.upload.questions.skipped })).toHaveCount(count);
+  const store = groups.filter({ hasNotText: /cash/i }).first();
+  await expect(store).toContainText(/About \$[\d,]+ a month/);
+  // November stops on the 12th: shown, but not averaged in.
+  await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-11') })).toContainText(ladder.upload.partialMonth);
+  const october = page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') });
+  await expect(october).not.toContainText(ladder.upload.partialMonth);
+  const groceries = october.getByRole('listitem').filter({ hasText: common.categories.groceries });
+  const groceriesBefore = await groceries.textContent();
+  await store.getByText(common.categories.groceries, { exact: true }).click();
+  await expect(store).toContainText(ladder.upload.questions.answeredCategory(common.categories.groceries));
+  // The months follow the answer: the store's October charges now count as groceries.
+  await expect(groceries).not.toHaveText(groceriesBefore ?? '');
+  await expect(groups.filter({ hasText: ladder.upload.questions.skipped })).toHaveCount(count - 1);
+
+  await page.getByRole('button', { name: ladder.upload.apply }).click();
+  await expect(page.getByText(ladder.upload.applied)).toBeVisible();
+  await expect(rung(page, 'S9')).toHaveAttribute('data-done', 'true');
+
+  // Spending is measured from the statement: no slider was touched to get here.
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('lifeguessr.app') ?? 'null') as {
+    state: { profile: { spending: Record<string, { value: number; isEstimate: boolean }> }; statementMonths: unknown[] };
+  } | null);
+  for (const c of ['rentUtilities', 'car', 'groceries', 'eatingOut', 'subscriptions', 'other']) {
+    expect(saved?.state.profile.spending[c]?.isEstimate, c).toBe(false);
+  }
+  expect(JSON.stringify(saved?.state)).not.toMatch(/TARGET|ATM WITHDRAWAL|Zelle/i); // only totals are kept
+
+  await page.getByRole('link', { name: ladder.shell.cta.S9 }).click();
+  await expect(page).toHaveURL(/\/me\/balance$/);
+  await page.getByRole('link', { name: ladder.shell.cta.last }).click();
+  await expect(page).toHaveURL(/\/future$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.future.title(10));
+  await expect(page.getByTestId('at-horizon').getByTestId('forecast-source')).toBeVisible({ timeout: 30_000 });
+
+  // The sliders, if opened, show the imported numbers for confirmation, not entry.
+  await page.goto('/me/sliders');
+  await expect(page.getByTestId('sliders-from-statement')).toContainText('Jul 2026 to Oct 2026');
 });
 
 test('S5: guess your own month, then see it next to our estimate', async ({ page }) => {

@@ -202,11 +202,13 @@ export type Transaction = { date: string; description: string; amount: Money };
 export type StatementItem = { label: string; amount: Money; month: string; day: number };
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
   oneOffs: { label: string; amount: Money }[]; detectedPay?: Money;
-  lastDay?: number };
+  firstDay?: number; lastDay?: number };
 // `totals` exclude `oneOffs`; `detectedPay` = take-home pay deposits that month (money in).
 // `lastDay` = day of month of the latest statement line in that month (any line: spending, pay or
 // a transfer), i.e. how far into the month the statement goes. Month-end projects the month in
 // progress from it. Absent on data saved before it existed: the app then falls back to today.
+// `firstDay` = the same for the earliest line: a statement that starts on the 17th covers only half
+// of its first month, so that month is left out of the monthly averages (statementAverages).
 
 // How the server sorted one statement line (labels only; every sum is done in code). A CostCategory
 // is spending in that category when money goes out, or a refund from that kind of merchant when it
@@ -216,7 +218,36 @@ export type StatementClass = CostCategory | 'pay' | 'transfer';
 // POST /api/statement/categorize. `categorizedBy`: who sorted the labels: the AI, the keyword
 // rules (no API key, provider failure or invalid output), or both (the AI skipped some labels).
 export type StatementCategorizeRequest = { items: StatementItem[] };
-export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed'; classes?: { label: string; class: StatementClass }[] };
+export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed'; classes?: { label: string; class: StatementClass }[];
+  /** How each request item was sorted, in request order (same length as `items`). */
+  lines?: StatementLineClass[];
+  /** What the statement could not settle by itself, worst first; at most a few. */
+  followUps?: StatementFollowUp[] };
+/** One sorted statement line: its class and the categorizer's "typically one-off or yearly" flag. */
+export type StatementLineClass = { cls: StatementClass; oneOffHint: boolean };
+
+// A question the statement can't settle on its own (S9, JF6). Code finds it and computes `monthly`;
+// the LLM may only word `question` (no numbers allowed in it), else the UI's template is used.
+// - 'merchant': money out sorted as 'other' at one merchant (a store that sells everything, a
+//   payment to a person): which category is it mostly? The answer re-sorts that merchant's lines.
+// - 'cash': cash withdrawals; we can't see where the cash goes. The answer re-sorts them.
+// - 'missing': a category every household pays (housing, groceries) with nothing in any full month
+//   of the statement, so it is likely paid from another account: the user may type a monthly amount.
+export type StatementFollowUpKind = 'merchant' | 'cash' | 'missing';
+export type StatementFollowUp = {
+  id: string;                    // `${kind}:${key}`, unique within one response
+  kind: StatementFollowUpKind;
+  /** merchant/cash: the group the answer re-sorts (`followUpKey` of its lines); missing: the category. */
+  key: string;
+  /** merchant/cash: the masked label of the group's latest line. */
+  label?: string;
+  /** missing: the category the statement shows none of. */
+  category?: CostCategory;
+  /** merchant/cash: average money out per month at this merchant (0 for missing). */
+  monthly: Money;
+  /** The question as the LLM worded it; absent without a model (the UI then uses its template). */
+  question?: string;
+};
 
 // ----- Pro (S15): the paywall demo -----------------------------------------------------------
 // No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo_checkout` = the

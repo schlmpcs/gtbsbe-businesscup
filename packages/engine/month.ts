@@ -38,7 +38,7 @@ export type CurrentMonth = { month: string; day: number; totals: Record<CostCate
 const SPEND_CATEGORIES: readonly CostCategory[] = COST_CATEGORIES.filter((c) => c !== 'debtPayments');
 
 /** Days in a 'YYYY-MM' month; throws a RangeError for anything else. */
-function daysInMonth(month: string): number {
+export function daysInMonth(month: string): number {
   const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month);
   if (!m) throw new RangeError(`Invalid month: ${month} (expected YYYY-MM)`);
   const year = Number(m[1]);

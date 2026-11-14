@@ -79,13 +79,12 @@ export const ladder = {
       last: 'See me in 10 years →',
     },
     /**
-     * The text link on the left of the CTA. `step`: go to the next step. `byHand` (S9): set the
-     * month by hand instead (S7); `statement` (S7): back to importing one. `last`: straight to
-     * the forecast, keeping the estimates.
+     * The text link on the left of the CTA. `step`: go to the next step. `statement` (S7): back to
+     * importing one (S9 has no text link: its "No statement?" card leads here). `last`: straight
+     * to the forecast, keeping the estimates.
      */
     skip: {
       step: 'Skip this step',
-      byHand: 'No statement? Set it by hand',
       statement: '← Import a statement instead',
       last: 'Skip, use estimates',
     },
@@ -164,6 +163,9 @@ export const ladder = {
     shortfall: 'Short',
     slidersTitle: 'Monthly spending',
     slidersLabel: 'Spending by category',
+    /** Shown when the values come from an imported statement: the sliders are there to confirm them. */
+    fromStatement: (months: readonly string[]) =>
+      `From your statement (${months.length === 1 ? monthName(months[0]!) : `${monthName(months[0]!)} to ${monthName(months.at(-1)!)}`}). Untagged amounts are measured; drag only what looks off.`,
     savingsLabel: 'Retirement: share of what’s left',
     moreOptions: 'More options',
     describe: {
@@ -252,6 +254,39 @@ export const ladder = {
   },
 
   upload: {
+    /**
+     * The step opens with a fork (JF6): a statement is the main path, setting the month by hand
+     * the fallback. Both options are on screen before anything else.
+     */
+    fork: {
+      statementTitle: 'Have a bank CSV?',
+      statementBadge: 'Most accurate · about a minute',
+      byHandTitle: 'No statement?',
+      byHandText: 'Set your month with a few sliders, or just type your expenses in your own words.',
+      byHandLink: 'Set it by hand →',
+    },
+    /**
+     * Follow-up questions on the review: what the statement can't settle by itself. The amounts
+     * are computed in code; `template` words a question when the AI did not.
+     */
+    questions: {
+      title: 'A few quick questions',
+      note: 'Your statement can’t tell us these. Answer what you know and skip the rest; the months below follow your answers.',
+      template: {
+        merchant: (merchant: string) => `What is “${merchant}” mostly for?`,
+        cash: 'What does your cash mostly pay for?',
+        missing: (category: string) => `We found no ${category.toLowerCase()} in a full month. Do you pay for it from another account or card?`,
+      },
+      monthly: (amount: string) => `About ${amount} a month`,
+      optionsLegend: 'It’s mostly',
+      amountLabel: 'About how much a month?',
+      amountSave: 'Add it',
+      skip: 'Skip',
+      change: 'Change',
+      answeredCategory: (category: string) => `Counted as ${category.toLowerCase()}.`,
+      answeredAmount: (amount: string) => `Added: ${amount} a month.`,
+      skipped: 'Skipped: left as it is.',
+    },
     pickerTitle: 'Drop a bank CSV here',
     pickerLabel: 'Bank statement (CSV)',
     pickerHint: 'We read the columns in your browser. The file itself never leaves it.',
@@ -277,7 +312,8 @@ export const ladder = {
     },
     dismiss: 'Dismiss',
     reviewTitle: 'Check your months',
-    reviewNote: 'Each category becomes your monthly average. Nothing changes until you confirm.',
+    reviewNote: 'Each category becomes your monthly average over the months the statement covers in full. Nothing changes until you confirm.',
+    partialMonth: 'Part of a month: shown, but not in your averages.',
     readSummary: (transactions: number, from: string, to: string) =>
       `Read ${plural(transactions, 'transaction', 'transactions')} from ${dayName(from)} to ${dayName(to)}.`,
     skipped: (pending: number, other: number) =>
@@ -297,7 +333,7 @@ export const ladder = {
     oneOffsTitle: 'One-offs left out (not kept)',
     apply: 'Use these numbers',
     discard: 'Discard',
-    applied: 'Done. Spending now uses your statement averages.',
+    applied: 'Done. Spending now uses your statement averages: the months it covers in full.',
     history: (months: readonly string[]) => `Months in your profile: ${months.map(monthName).join(', ')}.`,
     driftReady: 'Today can now flag categories drifting from your average.',
     driftNotYet: 'Drift alerts on Today start at 3 months.',

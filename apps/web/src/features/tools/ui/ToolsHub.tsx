@@ -11,7 +11,8 @@ export type ToolsHubProps = {
   Link: ComponentType<{ href: string; className?: string; children?: ReactNode }>;
 };
 
-const ORDER: ToolKey[] = ['afford', 'loan', 'decide', 'checkin', 'subscriptions', 'overpaying', 'exact'];
+// Your own numbers first (JF6): every other tool answers better once a statement replaced the estimates.
+const ORDER: ToolKey[] = ['exact', 'afford', 'loan', 'decide', 'checkin', 'subscriptions', 'overpaying'];
 const ART: Record<ToolKey, ArtName> = {
   afford: 'afford-crane',
   loan: 'coins',

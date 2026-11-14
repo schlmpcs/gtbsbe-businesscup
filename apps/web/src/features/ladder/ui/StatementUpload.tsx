@@ -1,18 +1,25 @@
-// S9 Statement upload (Design v3, Figma 194:1627): "Optional" over the headline; a white card with a
-// dashed orange border (drop a CSV on it, or pick one: read and categorized by the T6/T7 pipeline
-// behind the view-model's readFile, or "Try with sample statement" through the same path), "What we keep" on the right, then the review of categorized
-// months before they enter the profile. Connecting a bank app is not built, so it is not offered
-// here (decision D-7: no dead buttons in the main flow).
+// S9 Statement upload (Design v3, Figma 194:1627), statement first (JF6): the step opens with a fork.
+// "Have a bank CSV?" (most accurate, about a minute) is a white card with a dashed orange border:
+// drop a CSV on it, or pick one (read and categorized by the T6/T7 pipeline behind the view-model's
+// readFile), or "Try with sample statement" through the same path. "No statement?" sits under it and
+// leads to the sliders (S7), where the month can also be typed in words. "What we keep" is on the
+// right. The review lists a few follow-up questions (what the statement can't settle, each one
+// skippable) above the categorized months, which follow the answers before they enter the profile.
+// Connecting a bank app is not built, so it is not offered here (decision D-7: no dead buttons).
 import { useId, useState } from 'react';
 import { common, ladder } from '@/copy';
-import { Art, BarBreakdown, Button, Card, cx, formatMoney, Row, Stack } from '@/ui-kit';
+import {
+  Art, BarBreakdown, Button, Card, Choice, cx, Field, formatMoney, NumberInput, Row, Stack, Tag,
+} from '@/ui-kit';
 import type {
-  LadderProgressVM, StatementMonthVM, StatementReadVM, StatementUploadError, StatementUploadVM,
+  LadderProgressVM, StatementMonthVM, StatementQuestionVM, StatementReadVM, StatementUploadError, StatementUploadVM,
 } from '../model/types';
 import { LadderShell } from './LadderShell';
 import { WhatWeKeep } from './WhatWeKeep';
 
 const t = ladder.upload;
+const f = ladder.upload.fork;
+const q = ladder.upload.questions;
 
 function errorText(error: StatementUploadError | null): string {
   switch (error?.kind) {
@@ -39,8 +46,11 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
   const canRead = readFile !== null && vm.status !== 'reading';
   const [dragging, setDragging] = useState(false);
 
+  const busy = vm.status === 'reading' || vm.status === 'review';
+
   return (
-    <LadderShell screen="S9" progress={progress} loading={vm.status === 'loading'}>
+    // The "No statement?" card below is this step's way out by hand, so the footer has only the CTA.
+    <LadderShell screen="S9" progress={progress} loading={vm.status === 'loading'} secondary={null}>
       <div className="grid items-start gap-xl lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Stack gap="xl">
           <section
@@ -66,9 +76,13 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
             <div className="flex flex-col items-center gap-xl sm:flex-row">
               <Art name="upload" className="w-full max-w-(--container-3xs) shrink-0" imgClassName="aspect-square" />
               <div className="flex w-full min-w-0 flex-col gap-md">
-                <h2 id={titleId} className="font-display text-3xl font-extrabold leading-tight">
-                  {t.pickerTitle}
-                </h2>
+                <div className="flex flex-col gap-xs">
+                  <Tag className="border-primary font-bold text-primary">{f.statementBadge}</Tag>
+                  <h2 id={titleId} className="font-display text-3xl font-extrabold leading-tight">
+                    {f.statementTitle}
+                  </h2>
+                  <p className="text-lg font-semibold">{t.pickerTitle}</p>
+                </div>
                 <p id={noteId} className="text-sm text-text-muted">
                   {readFile === null ? t.pickerUnavailable : t.pickerHint}
                 </p>
@@ -106,6 +120,8 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
             </div>
           </section>
 
+          {!busy && <ByHand href={progress.byHandHref} />}
+
           {vm.status === 'reading' && (
             <p role="status" className="rounded-xl bg-surface p-lg text-sm shadow-md">
               {t.reading}
@@ -126,6 +142,7 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
           {vm.status === 'review' && (
             <Card title={t.reviewTitle}>
               <Stack gap="lg">
+                {vm.questions.length > 0 && <FollowUps vm={vm} />}
                 <p className="text-sm text-text-muted">{t.reviewNote}</p>
                 {vm.lastRead && <ReadSummary read={vm.lastRead} />}
                 {vm.pending.map((m) => (
@@ -163,6 +180,119 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
   );
 }
 
+/** The other side of the fork: no statement at hand, so set the month by hand (S7). */
+function ByHand({ href }: { href: string }) {
+  const titleId = useId();
+  return (
+    <section aria-labelledby={titleId} className="flex flex-col gap-sm rounded-xl bg-surface p-lg shadow-md sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-xs">
+        <h2 id={titleId} className="text-lg font-bold">
+          {f.byHandTitle}
+        </h2>
+        <p className="text-sm text-text-muted">{f.byHandText}</p>
+      </div>
+      <a href={href} className="min-h-11 shrink-0 content-center text-base font-semibold text-text hover:text-primary">
+        {f.byHandLink}
+      </a>
+    </section>
+  );
+}
+
+/** "A few quick questions": each one answered with a category or an amount, or skipped. */
+function FollowUps({ vm }: { vm: StatementUploadVM }) {
+  const titleId = useId();
+  return (
+    <section aria-labelledby={titleId} className="flex flex-col gap-md rounded-xl border-2 border-primary bg-primary-soft p-lg">
+      <div className="flex flex-col gap-xs">
+        <h3 id={titleId} className="text-lg font-bold">
+          {q.title}
+        </h3>
+        <p className="text-sm text-text-muted">{q.note}</p>
+      </div>
+      <ul className="flex flex-col gap-md">
+        {vm.questions.map((question) => (
+          <li key={question.id}>
+            <Question question={question} vm={vm} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function questionText(question: StatementQuestionVM): string {
+  if (question.question) return question.question;
+  if (question.kind === 'missing' && question.category) return q.template.missing(common.categories[question.category]);
+  if (question.kind === 'merchant' && question.merchant) return q.template.merchant(question.merchant);
+  return q.template.cash;
+}
+
+function answerText(question: StatementQuestionVM): string | null {
+  const a = question.answer;
+  if (!a) return null;
+  if (a.kind === 'skipped') return q.skipped;
+  if (a.kind === 'amount') return q.answeredAmount(formatMoney(a.monthly));
+  return q.answeredCategory(common.categories[a.category]);
+}
+
+function Question({ question, vm }: { question: StatementQuestionVM; vm: StatementUploadVM }) {
+  const textId = useId();
+  const name = useId();
+  // The typed amount stays here until "Add it": a half-typed number never reaches the profile.
+  const [draft, setDraft] = useState<number | null>(question.answer?.kind === 'amount' ? question.answer.monthly : null);
+  const answered = answerText(question);
+  const chosen = question.answer?.kind === 'category' ? question.answer.category : '';
+  return (
+    <div role="group" aria-labelledby={textId} className="flex flex-col gap-sm rounded-lg bg-surface p-md">
+      <p id={textId} className="text-base font-semibold">
+        {questionText(question)}
+      </p>
+      {question.monthly > 0 && (
+        <p className="text-sm text-text-muted tabular-nums">{q.monthly(formatMoney(question.monthly))}</p>
+      )}
+      {question.kind === 'missing' ? (
+        <Row gap="sm" className="items-end">
+          <Field label={q.amountLabel} className="min-w-0 flex-1">
+            <NumberInput
+              value={draft}
+              onValueChange={setDraft}
+              min={vm.amountBounds.min}
+              max={vm.amountBounds.max}
+              maxFractionDigits={0}
+              prefix="$"
+              suffix="/mo"
+            />
+          </Field>
+          <Button variant="dark" disabled={draft === null} onClick={() => draft !== null && vm.answerAmount(question.id, draft)}>
+            {q.amountSave}
+          </Button>
+        </Row>
+      ) : (
+        <Choice<string>
+          legend={q.optionsLegend}
+          name={name}
+          value={chosen}
+          options={question.options.map((c) => ({ value: c, label: common.categories[c] }))}
+          onChange={(c) => {
+            const category = question.options.find((o) => o === c);
+            if (category) vm.answerCategory(question.id, category);
+          }}
+        />
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-sm">
+        <p role="status" className="text-sm text-text-muted">
+          {answered}
+        </p>
+        {question.answer?.kind !== 'skipped' && (
+          <Button size="sm" variant="ghost" onClick={() => vm.skipQuestion(question.id)}>
+            {q.skip}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ReadSummary({ read }: { read: StatementReadVM }) {
   return (
     <div className="flex flex-col gap-xs text-xs text-text-muted" data-testid="statement-read">
@@ -189,6 +319,7 @@ function PendingMonth({ month: m }: { month: StatementMonthVM }) {
   return (
     <section aria-label={label} className="flex flex-col gap-sm">
       <h3 className="text-base font-semibold">{label}</h3>
+      {!m.averaged && <p className="text-xs text-text-muted">{t.partialMonth}</p>}
       <BarBreakdown label={label} items={items} total={m.total} />
       {m.detectedPay !== null && <p className="text-sm">{t.detectedPay(formatMoney(m.detectedPay))}</p>}
       {m.oneOffs.length > 0 && (

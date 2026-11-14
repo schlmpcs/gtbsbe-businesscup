@@ -14,7 +14,8 @@ import { z } from 'zod';
 import {
   AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, DUEL_LETTERS, DUEL_ROUNDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
   FUNNEL_EVENT_NAMES, KID_AGES, LIFE_EVENT_ID_MAX_LENGTH, LIFE_EVENT_KINDS, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
-  SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
+  SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES, STATEMENT_FOLLOW_UP_KINDS, MAX_STATEMENT_FOLLOW_UPS,
+  MAX_FOLLOW_UP_QUESTION_LENGTH,
 } from './constants';
 
 // ----- primitives ----------------------------------------------------------------------------
@@ -241,10 +242,14 @@ export const CategoryTotalsSchema = z.object({
   totals: z.record(CostCategorySchema, MoneySchema),
   oneOffs: z.array(z.object({ label: z.string().min(1), amount: MoneySchema })),
   detectedPay: NonNegativeMoneySchema.optional(),  // monthly
+  firstDay: z.number().int().min(1).max(31).optional(), // day of the month's earliest statement line
   lastDay: z.number().int().min(1).max(31).optional(),  // day of the month's latest statement line
 }).refine((m) => m.lastDay === undefined || m.lastDay <= daysInMonth(m.month), {
   message: 'lastDay is past the end of the month',
   path: ['lastDay'],
+}).refine((m) => m.firstDay === undefined || m.firstDay <= (m.lastDay ?? daysInMonth(m.month)), {
+  message: 'firstDay is after lastDay or past the end of the month',
+  path: ['firstDay'],
 });
 
 /** A day inside a statement: 'YYYY-MM' and a day that month has. */
@@ -264,12 +269,30 @@ export const StatementCategorizeRequestSchema = z.object({
     }),
 });
 
+export const StatementLineClassSchema = z.object({ cls: StatementClassSchema, oneOffHint: z.boolean() });
+
+export const StatementFollowUpSchema = z.object({
+  id: z.string().min(1).max(220),
+  kind: z.enum(STATEMENT_FOLLOW_UP_KINDS),
+  key: z.string().min(1).max(200),
+  label: z.string().min(1).max(200).optional(),
+  category: CostCategorySchema.optional(),
+  monthly: NonNegativeMoneySchema,
+  question: z.string().min(1).max(MAX_FOLLOW_UP_QUESTION_LENGTH).optional(),
+}).refine((f) => (f.kind === 'missing') === (f.category !== undefined), {
+  message: 'a missing-category follow-up names its category, and only it does',
+  path: ['category'],
+});
+
 export const StatementCategorizeResponseSchema = z.object({
   ok: z.literal(true),
   months: z.array(CategoryTotalsSchema),
   categorizedBy: z.enum(CATEGORIZED_BY),
   classes: z.array(z.object({ label: z.string().min(1).max(200), class: z.enum(STATEMENT_CLASSES) })).optional(),
+  lines: z.array(StatementLineClassSchema).max(MAX_STATEMENT_ITEMS).optional(),
+  followUps: z.array(StatementFollowUpSchema).max(MAX_STATEMENT_FOLLOW_UPS).optional(),
 });
+
 
 // ----- Pro (S15): requests and responses of /api/pro/* ---------------------------------------
 // Shared by the routes and the browser client so the two cannot drift. Failures are

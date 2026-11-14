@@ -3,6 +3,8 @@
 //   2. Each line becomes a StatementItem: masked label, amount, month, day. Nothing else is sent:
 //      no file, no full dates, no balances, no account numbers or names.
 //   3. /api/statement/categorize sorts the labels and sums the totals; nothing is stored there.
+//      It also says how it sorted each line and what it could not settle (follow-up questions),
+//      kept here in memory so an answer can re-sort a merchant without asking the server again.
 // Privacy: CLAUDE.md rule 6, docs/ARCHITECTURE.md → Privacy design.
 import { MAX_STATEMENT_ITEMS } from '@lifeguessr/types';
 import { categorizeStatement, type CategorizeOptions } from '@/lib/api/statement';
@@ -45,9 +47,16 @@ export async function readStatementFile(file: File, deps: ReadStatementDeps = {}
   if (items.length === 0) throw new StatementFileError('noTransactions', 'Every line has a zero amount');
   if (items.length > MAX_STATEMENT_ITEMS) throw new StatementFileError('tooMany', `${items.length} lines`);
 
-  const { months, categorizedBy } = await categorize(items, opts);
+  const { months, categorizedBy, lines, followUps } = await categorize(items, opts);
+  // The server answers one class per line sent, in order; anything else can't be lined up, so the
+  // follow-ups are dropped with it rather than re-sorting the wrong lines.
+  const classified = lines && lines.length === items.length
+    ? items.map((item, i) => ({ ...item, cls: lines[i]!.cls, oneOffHint: lines[i]!.oneOffHint }))
+    : null;
   return {
     months,
+    classified,
+    followUps: classified ? (followUps ?? []) : [],
     summary: {
       transactions: read.transactions.length,
       skippedPending: read.skipped.filter((s) => s.reason === 'pending').length,

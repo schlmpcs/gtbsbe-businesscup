@@ -3,7 +3,7 @@
 import type {
   AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, HorizonYears,
   KidAge, LifeEventKind, LifeEventPreset, MoveKind,
-  ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
+  ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass, StatementFollowUpKind,
   MissBucket, SubscriptionFinding, SubscriptionFlag,
 } from './index';
 import type { Cadence } from './subscriptions';
@@ -48,6 +48,11 @@ export const STATEMENT_CLASSES = [
   'pay', 'transfer',
 ] as const satisfies readonly StatementClass[];
 export const CATEGORIZED_BY = ['ai', 'rules', 'mixed'] as const satisfies readonly StatementCategorizeResponse['categorizedBy'][];
+export const STATEMENT_FOLLOW_UP_KINDS = ['merchant', 'cash', 'missing'] as const satisfies readonly StatementFollowUpKind[];
+/** Most follow-up questions one statement gets: a few, never a questionnaire. */
+export const MAX_STATEMENT_FOLLOW_UPS = 3;
+/** Longest follow-up question text the server passes on (the LLM's wording is cut off past it). */
+export const MAX_FOLLOW_UP_QUESTION_LENGTH = 160;
 /** Most lines one /api/statement/categorize request may carry (years of a busy checking account). */
 export const MAX_STATEMENT_ITEMS = 5_000;
 

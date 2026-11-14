@@ -21,4 +21,10 @@ describe('ToolsHub (What if?)', () => {
       expect(screen.getByRole('link', { name: new RegExp(q.replace('?', '\\?')) })).toHaveAttribute('href', href);
     }
   });
+
+  it('lists the statement import first: the other tools answer better with your own numbers', () => {
+    const hrefs = { afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin', subscriptions: '/tools/subscriptions', overpaying: '/tools/overpaying', exact: '/me/upload' };
+    render(<ToolsHub hrefs={hrefs} Link={A} />);
+    expect(screen.getAllByRole('link')[0]).toHaveAttribute('href', '/me/upload');
+  });
 });

@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readStatementCsv, toStatementItems } from '@/lib/statement/read';
 import { aiRateLimiter, AI_RATE_LIMITS } from '@/server/ai/http';
 import { postRequest, reply } from '@/server/ai/testUtils';
-import { AI_CHUNK_LABELS } from '@/server/statement/categorize';
+import { AI_CHUNK_LABELS, SYSTEM } from '@/server/statement/categorize';
+import { FOLLOW_UP_SYSTEM } from '@/server/statement/followUps';
 import { POST } from './route';
 
 const { create } = vi.hoisted(() => ({ create: vi.fn() }));
@@ -16,7 +17,11 @@ vi.mock('@anthropic-ai/sdk', () => ({
 
 const post = (body: unknown, headers?: Record<string, string>) => POST(postRequest('/api/statement/categorize', body, headers));
 const sampleItems = (): StatementItem[] => toStatementItems(readStatementCsv(readStatementSampleCsv()).transactions);
-const sentContent = (call: number) => create.mock.calls[call]![0].messages[0].content as string;
+type CreateParams = { system: string; messages: { content: string }[] };
+/** The calls that sorted labels (the follow-up wording is a separate call, after them). */
+const labelCalls = () => (create.mock.calls as [CreateParams][]).filter(([p]) => p.system === SYSTEM);
+const wordingCalls = () => (create.mock.calls as [CreateParams][]).filter(([p]) => p.system === FOLLOW_UP_SYSTEM);
+const sentContent = (call: number) => labelCalls()[call]![0].messages[0].content;
 
 /** The labels of one LLM call: `id \t direction \t label` lines inside <labels>. */
 function sentLabels(call: number) {
@@ -92,16 +97,29 @@ describe('POST /api/statement/categorize without an API key (keyword rules)', ()
   });
 });
 
+/** The items of a follow-up wording call: `id \t kind \t subject` lines inside <items>. */
+function sentItems(params: CreateParams) {
+  const block = /<items>\n([\s\S]*?)\n<\/items>/.exec(params.messages[0]!.content)![1]!;
+  return block.split('\n').map((line) => {
+    const [id, kind, subject] = line.split('\t');
+    return { id: Number(id), kind: kind!, subject: subject! };
+  });
+}
+
 describe('POST /api/statement/categorize with the AI', () => {
   beforeEach(() => {
     vi.stubEnv('ANTHROPIC_API_KEY', 'test-key');
+    // Unless a test says otherwise, the wording call gets an answer that words nothing (the
+    // questions then keep the template), so the label tests below count only label calls.
+    create.mockImplementation(async (params: CreateParams) =>
+      reply(JSON.stringify(params.system === FOLLOW_UP_SYSTEM ? { questions: [] } : { labels: [] })));
   });
 
   it('sends only distinct masked labels with their direction: no amounts, dates or names', async () => {
     create.mockImplementationOnce(async () => answerAll(0, (l) => (l.direction === 'in' ? { class: 'transfer' } : { class: 'other' })));
     const items = sampleItems();
     await post({ items });
-    expect(create).toHaveBeenCalledTimes(1);
+    expect(labelCalls()).toHaveLength(1);
     const params = create.mock.calls[0]![0];
     expect(params.model).toBe('claude-haiku-5-5');
     expect(params.output_config.format.type).toBe('json_schema');
@@ -136,7 +154,7 @@ describe('POST /api/statement/categorize with the AI', () => {
       { label: 'CORNER STORE', amount: 20, month: '2026-10', day: 1 },
       { label: 'KROGER', amount: 30, month: '2026-10', day: 2 },
     ] })).json();
-    expect(create).toHaveBeenCalledTimes(2);
+    expect(labelCalls()).toHaveLength(2);
     expect(sentContent(1)).toContain('id 2: "pay" is only for "in" lines');
     expect(body.categorizedBy).toBe('mixed');
     // CORNER STORE from the AI (groceries); KROGER by the rules (groceries): the AI never gave it a valid class.
@@ -146,8 +164,11 @@ describe('POST /api/statement/categorize with the AI', () => {
   it('falls back to the rules when the answer is never valid JSON', async () => {
     create.mockResolvedValue(reply('not json'));
     const body = await (await post({ items: sampleItems() })).json();
-    expect(create).toHaveBeenCalledTimes(2);
+    expect(labelCalls()).toHaveLength(2);
     expect(body.categorizedBy).toBe('rules');
+    // The wording got the same broken answer: the questions are still asked, in the template's words.
+    expect(body.followUps.length).toBeGreaterThan(0);
+    for (const f of body.followUps) expect(f).not.toHaveProperty('question');
     expect(body.months[3].totals.rentUtilities).toBe(1955.37);
   });
 
@@ -159,19 +180,74 @@ describe('POST /api/statement/categorize with the AI', () => {
   });
 
   it(`splits more than ${AI_CHUNK_LABELS} distinct labels over several calls`, async () => {
-    create.mockImplementation(async () => {
-      const call = create.mock.calls.length - 1;
-      return answerAll(call, () => ({ class: 'other' }));
+    create.mockImplementation(async (params: CreateParams) => {
+      if (params.system === FOLLOW_UP_SYSTEM) return reply(JSON.stringify({ questions: [] }));
+      return answerAll(labelCalls().length - 1, () => ({ class: 'other' }));
     });
     const items = Array.from({ length: AI_CHUNK_LABELS + 5 }, (_, i) => ({
       label: `SHOP ${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + Math.floor(i / 26))}`, amount: 1, month: '2026-10', day: 1,
     }));
     const body = await (await post({ items })).json();
-    expect(create).toHaveBeenCalledTimes(2);
+    expect(labelCalls()).toHaveLength(2);
     expect(sentLabels(0)).toHaveLength(AI_CHUNK_LABELS);
     expect(sentLabels(1)).toHaveLength(5);
     expect(body.categorizedBy).toBe('ai');
     expect(body.months[0].totals.other).toBe(AI_CHUNK_LABELS + 5);
+  });
+});
+
+describe('POST /api/statement/categorize follow-up questions (JF6)', () => {
+  it('without an API key: finds them in code, with amounts, and leaves the wording to the screen', async () => {
+    const items = sampleItems();
+    const body = await (await post({ items })).json();
+    expect(create).not.toHaveBeenCalled();
+    // The sample, sorted by the keyword rules: one $100 cash withdrawal, and CVS and Target in 'other'.
+    // Amounts are per month over July to October (November stops on the 12th, so it isn't a full month).
+    expect(body.followUps).toEqual([
+      { id: 'cash:cash', kind: 'cash', key: 'cash', label: 'ATM WITHDRAWAL #/# GREENVILLE AVE', monthly: 25 },
+      expect.objectContaining({ id: 'merchant:CVS PHARMACY DALLAS TX', kind: 'merchant', label: 'CVS/PHARMACY # DALLAS TX' }),
+      expect.objectContaining({ id: 'merchant:TARGET DALLAS TX', kind: 'merchant', label: 'TARGET # DALLAS TX' }),
+    ]);
+    // And how each line was sorted, in request order, so the browser can re-sort an answered merchant.
+    expect(body.lines).toHaveLength(items.length);
+    const at = (re: RegExp) => body.lines[items.findIndex((i) => re.test(i.label))];
+    expect(at(/^SPOTIFY/)).toEqual({ cls: 'subscriptions', oneOffHint: false });
+    expect(at(/PAYROLL/)).toEqual({ cls: 'pay', oneOffHint: false });
+    expect(at(/ANIMAL HOSPITAL/)).toEqual({ cls: 'other', oneOffHint: true });
+  });
+
+  it('with the AI: sends only the kind and the masked label, and keeps a question only if it has no number', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'test-key');
+    create.mockImplementation(async (params: CreateParams) => {
+      if (params.system !== FOLLOW_UP_SYSTEM) return reply(JSON.stringify({ labels: [] })); // labels: the rules sort them
+      const [cash, cvs, target] = sentItems(params);
+      return reply(JSON.stringify({ questions: [
+        { id: cash!.id, text: 'What do you usually spend your cash on?' },
+        { id: cvs!.id, text: 'You spend $54 at CVS. What is it for?' },       // a number: dropped
+        { id: target!.id, text: 'What do you mostly buy at Target?' },
+      ] }));
+    });
+    const body = await (await post({ items: sampleItems() })).json();
+    const [first, retry] = wordingCalls();
+    expect(sentItems(first![0])).toEqual([
+      { id: 1, kind: 'cash', subject: 'ATM WITHDRAWAL #/# GREENVILLE AVE' },
+      { id: 2, kind: 'merchant', subject: 'CVS/PHARMACY # DALLAS TX' },
+      { id: 3, kind: 'merchant', subject: 'TARGET # DALLAS TX' },
+    ]);
+    expect(first![0].messages[0]!.content).not.toMatch(/\d+\.\d\d|\$|2026|per month/);
+    // One retry with the problem listed; it gave the same answer, so CVS keeps the template.
+    expect(retry![0].messages[0]!.content).toContain('id 2: the question contains a number');
+    expect(body.followUps.map((f: { question?: string }) => f.question)).toEqual([
+      'What do you usually spend your cash on?', undefined, 'What do you mostly buy at Target?',
+    ]);
+  });
+
+  it('asks nothing when every line has a clear category', async () => {
+    const body = await (await post({ items: [
+      { label: 'OAKWOOD APTS', amount: 1720, month: '2026-10', day: 1 },
+      { label: 'KROGER #', amount: 400, month: '2026-10', day: 30 },
+    ] })).json();
+    expect(body.followUps).toEqual([]);
   });
 });
 

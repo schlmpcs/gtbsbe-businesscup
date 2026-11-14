@@ -61,6 +61,22 @@ describe('profileOps', () => {
     expect(next.takeHomePay).toEqual({ value: 5000, isEstimate: false });
   });
 
+  it('mergeStatementTotals leaves out a month the statement covers only in part, and keeps rent it never saw', () => {
+    const p = cloneProfileDemo();
+    const months: CategoryTotals[] = [
+      { month: '2026-09', totals: totals({ groceries: 500 }), oneOffs: [], detectedPay: 4800, firstDay: 1, lastDay: 30 },
+      { month: '2026-10', totals: totals({ groceries: 600 }), oneOffs: [], detectedPay: 4800, firstDay: 2, lastDay: 31 },
+      // The export stops on Nov 12: two weeks of groceries and one paycheck are not a month.
+      { month: '2026-11', totals: totals({ groceries: 150 }), oneOffs: [], detectedPay: 2400, firstDay: 1, lastDay: 12 },
+    ];
+    const next = mergeStatementTotals(p, months);
+    expect(next.spending.groceries).toEqual({ value: 550, isEstimate: false });
+    expect(next.takeHomePay).toEqual({ value: 4800, isEstimate: false });
+    // A statement with no rent at all says it is paid from elsewhere, not that it is $0.
+    expect(next.spending.rentUtilities).toEqual(p.spending.rentUtilities);
+    expect(next.spending.childcare).toEqual({ value: 0, isEstimate: false });
+  });
+
   it('mergeStatementHistory keeps one entry per month, newest upload wins, sorted', () => {
     const a = { month: '2026-10', totals: totals({ other: 1 }), oneOffs: [] };
     const b = { month: '2026-09', totals: totals({ other: 2 }), oneOffs: [] };
