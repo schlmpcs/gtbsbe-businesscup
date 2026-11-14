@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-14T13:33:49+00:00",
+  "generatedAt": "2026-11-14T21:08:48+00:00",
   "areas": 60,
   "metros": 15,
   "complete": false,
@@ -11,6 +11,12 @@
     "gas": "EIA weekly by city / state / PADD",
     "cpi": "BLS CPI-U by metro (South region for Austin and Nashville)",
     "carInsurance": "60/60 ZIPs, isEstimate: true (NAIC state average)",
+    "homeValueMedian": "60/60 ZIPs (2 top-coded floors, isEstimate: 10013, 85253)",
+    "ownerCostsWithMortgageMonthly": "60/60 ZIPs (7 top-coded floors, isEstimate: 10013, 90024, 91301, 85253, 75205, 78703, 02116)",
+    "ownerCostsWithoutMortgageMonthly": "60/60 ZIPs (12 top-coded floors, isEstimate: 10013, 10801, 90024, 60611, 77019, 85253, 75205, 78704, 78703, 30305, 33131, 02116)",
+    "propertyTaxRate": "60/60 ZIPs (ACS aggregate taxes / aggregate value)",
+    "homeInsuranceMonthly": "60/60 ZIPs, isEstimate: true (NAIC 2023 state HO-3 average)",
+    "homeAppreciationAnnual": "60/60 ZIPs (FHFA purchase-only, 30-year, isEstimate: true)",
     "acsMedianCrossCheck": "interpolated vs published B25064 median: max 0.05% apart over 60 ZCTAs"
   },
   "knownLimits": [
@@ -20,6 +26,11 @@
     "NDCP 2022 has no center-based prices for ZIPs 19132, 19125, 19103, 19020; they use the county's latest complete survey year (2020), inflated the same way and labeled with that year.",
     "Groceries are a national USDA plan (no regional plan exists); gas and CPI are regional.",
     "Car insurance is a state average premium (NAIC 2023, CPI-inflated), not a quote for a driver: isEstimate is true in every area.",
+    "Home value and owner costs are ACS 5-year medians over all owner-occupied homes of the ZCTA, not current listing prices: they lag the market and mix long-held homes (old mortgages, low payments) with recent purchases. A median ACS top-codes (\"$2,000,000 or more\", \"$4,000 or more\", \"$1,500 or more\") is stored as its floor with isEstimate: true.",
+    "Owner costs (ACS \"selected monthly owner costs\") already include real estate taxes, insurance, utilities and fuels and HOA fees, so they compare with gross rent; do not add utilities on top.",
+    "The property tax rate is aggregate taxes / aggregate value of the ZCTA's owner-occupied homes (ACS B25090 / B25082), a value-weighted effective rate; median taxes are top-coded at \"$10,000 or more\" in many of our ZIPs, aggregates never are.",
+    "Home insurance is the state average HO-3 premium (NAIC 2023, inflated with the BLS PPI for homeowner's insurance), for any home value and not a quote: isEstimate is true in every area. Texas data come from the Texas Department of Insurance, whose forms are similar but not identical to HO-3; condo (HO-6) policies are not used.",
+    "Home appreciation is the FHFA purchase-only index's compound yearly change over 30 years for the metropolitan division (split metros) or metro of the ZIP's county, nominal. A past average used as a default, so isEstimate is true; it is metro-wide, not per ZIP.",
     "Engine constants (meal price, gallons per month, kid grocery factor) are assumptions in packages/engine/assumptions.ts, not data from this pipeline."
   ],
   "failures": [],
@@ -42,7 +53,19 @@
       "childcare": "NDCP 2022 Bronx County, NY",
       "gas": "EIA New York City",
       "cpi": "BLS CUURS12ASA0 (New York-Newark-Jersey City)",
-      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated",
+      "ownerUnits": 5462.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 22741600.0,
+        "aggregateValue": 2434824700.0,
+        "taxesRelativeMoe": 0.134
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 New York HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 35614 New York-Jersey City-White Plains, NY-NJ (MSAD)"
     },
     {
       "zip": "11385",
@@ -62,7 +85,19 @@
       "childcare": "NDCP 2022 Queens County, NY",
       "gas": "EIA New York City",
       "cpi": "BLS CUURS12ASA0 (New York-Newark-Jersey City)",
-      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated",
+      "ownerUnits": 11585.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 76070600.0,
+        "aggregateValue": 10308376000.0,
+        "taxesRelativeMoe": 0.076
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 New York HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 35614 New York-Jersey City-White Plains, NY-NJ (MSAD)"
     },
     {
       "zip": "10013",
@@ -82,7 +117,19 @@
       "childcare": "NDCP 2022 New York County, NY",
       "gas": "EIA New York City",
       "cpi": "BLS CUURS12ASA0 (New York-Newark-Jersey City)",
-      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated",
+      "ownerUnits": 3682.0,
+      "homeValueMedian": "estimate: top-coded: ACS publishes this median as \"$2,000,000 or more\"",
+      "ownerCostsWithMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$4,000 or more\"",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 107566000.0,
+        "aggregateValue": 15592106000.0,
+        "taxesRelativeMoe": 0.231
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 New York HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 35614 New York-Jersey City-White Plains, NY-NJ (MSAD)"
     },
     {
       "zip": "10801",
@@ -102,7 +149,19 @@
       "childcare": "NDCP 2022 Westchester County, NY",
       "gas": "EIA New York City",
       "cpi": "BLS CUURS12ASA0 (New York-Newark-Jersey City)",
-      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 New York average, CPI-inflated",
+      "ownerUnits": 6779.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 78216704.0,
+        "aggregateValue": 4217587700.0,
+        "taxesRelativeMoe": 0.135
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 New York HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 35614 New York-Jersey City-White Plains, NY-NJ (MSAD)"
     },
     {
       "zip": "90011",
@@ -122,7 +181,19 @@
       "childcare": "NDCP 2022 Los Angeles County, CA",
       "gas": "EIA Los Angeles",
       "cpi": "BLS CUURS49ASA0 (Los Angeles-Long Beach-Anaheim)",
-      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated",
+      "ownerUnits": 6162.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 24000500.0,
+        "aggregateValue": 3818813700.0,
+        "taxesRelativeMoe": 0.152
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 California HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 31084 Los Angeles-Long Beach-Glendale, CA (MSAD)"
     },
     {
       "zip": "90042",
@@ -142,7 +213,19 @@
       "childcare": "NDCP 2022 Los Angeles County, CA",
       "gas": "EIA Los Angeles",
       "cpi": "BLS CUURS49ASA0 (Los Angeles-Long Beach-Anaheim)",
-      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated",
+      "ownerUnits": 10182.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 60756200.0,
+        "aggregateValue": 10772247000.0,
+        "taxesRelativeMoe": 0.084
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 California HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 31084 Los Angeles-Long Beach-Glendale, CA (MSAD)"
     },
     {
       "zip": "90024",
@@ -162,7 +245,19 @@
       "childcare": "NDCP 2022 Los Angeles County, CA",
       "gas": "EIA Los Angeles",
       "cpi": "BLS CUURS49ASA0 (Los Angeles-Long Beach-Anaheim)",
-      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated",
+      "ownerUnits": 5457.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$4,000 or more\"",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 77862896.0,
+        "aggregateValue": 11711141000.0,
+        "taxesRelativeMoe": 0.093
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 California HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 31084 Los Angeles-Long Beach-Glendale, CA (MSAD)"
     },
     {
       "zip": "91301",
@@ -182,7 +277,19 @@
       "childcare": "NDCP 2022 Los Angeles County, CA",
       "gas": "EIA Los Angeles",
       "cpi": "BLS CUURS49ASA0 (Los Angeles-Long Beach-Anaheim)",
-      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 California average, CPI-inflated",
+      "ownerUnits": 7281.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$4,000 or more\"",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 66171500.0,
+        "aggregateValue": 9721217000.0,
+        "taxesRelativeMoe": 0.08
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 California HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 31084 Los Angeles-Long Beach-Glendale, CA (MSAD)"
     },
     {
       "zip": "60621",
@@ -202,7 +309,19 @@
       "childcare": "NDCP 2022 Cook County, IL",
       "gas": "EIA Chicago",
       "cpi": "BLS CUURS23ASA0 (Chicago-Naperville-Elgin)",
-      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated",
+      "ownerUnits": 3354.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 5958400.0,
+        "aggregateValue": 577610800.0,
+        "taxesRelativeMoe": 0.202
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Illinois HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 16984 Chicago-Naperville-Schaumburg, IL (MSAD)"
     },
     {
       "zip": "60618",
@@ -222,7 +341,19 @@
       "childcare": "NDCP 2022 Cook County, IL",
       "gas": "EIA Chicago",
       "cpi": "BLS CUURS23ASA0 (Chicago-Naperville-Elgin)",
-      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated",
+      "ownerUnits": 19162.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 193959100.0,
+        "aggregateValue": 12549792000.0,
+        "taxesRelativeMoe": 0.055
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Illinois HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 16984 Chicago-Naperville-Schaumburg, IL (MSAD)"
     },
     {
       "zip": "60611",
@@ -242,7 +373,19 @@
       "childcare": "NDCP 2022 Cook County, IL",
       "gas": "EIA Chicago",
       "cpi": "BLS CUURS23ASA0 (Chicago-Naperville-Elgin)",
-      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated",
+      "ownerUnits": 9891.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 148884500.0,
+        "aggregateValue": 9439711000.0,
+        "taxesRelativeMoe": 0.167
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Illinois HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 16984 Chicago-Naperville-Schaumburg, IL (MSAD)"
     },
     {
       "zip": "60007",
@@ -262,7 +405,19 @@
       "childcare": "NDCP 2022 Cook County, IL",
       "gas": "EIA Chicago",
       "cpi": "BLS CUURS23ASA0 (Chicago-Naperville-Elgin)",
-      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Illinois average, CPI-inflated",
+      "ownerUnits": 9876.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 67083400.0,
+        "aggregateValue": 3737161200.0,
+        "taxesRelativeMoe": 0.06
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Illinois HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 16984 Chicago-Naperville-Schaumburg, IL (MSAD)"
     },
     {
       "zip": "77033",
@@ -282,7 +437,19 @@
       "childcare": "NDCP 2022 Harris County, TX",
       "gas": "EIA Houston",
       "cpi": "BLS CUURS37BSA0 (Houston-The Woodlands-Sugar Land)",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 5641.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 9269800.0,
+        "aggregateValue": 957071700.0,
+        "taxesRelativeMoe": 0.18
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 26420 Houston-Pasadena-The Woodlands, TX"
     },
     {
       "zip": "77008",
@@ -302,7 +469,19 @@
       "childcare": "NDCP 2022 Harris County, TX",
       "gas": "EIA Houston",
       "cpi": "BLS CUURS37BSA0 (Houston-The Woodlands-Sugar Land)",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 12024.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 144238400.0,
+        "aggregateValue": 8988063000.0,
+        "taxesRelativeMoe": 0.12
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 26420 Houston-Pasadena-The Woodlands, TX"
     },
     {
       "zip": "77019",
@@ -322,7 +501,19 @@
       "childcare": "NDCP 2022 Harris County, TX",
       "gas": "EIA Houston",
       "cpi": "BLS CUURS37BSA0 (Houston-The Woodlands-Sugar Land)",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 5018.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 110606600.0,
+        "aggregateValue": 7509449000.0,
+        "taxesRelativeMoe": 0.103
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 26420 Houston-Pasadena-The Woodlands, TX"
     },
     {
       "zip": "77449",
@@ -342,7 +533,19 @@
       "childcare": "NDCP 2022 Harris County, TX",
       "gas": "EIA Houston",
       "cpi": "BLS CUURS37BSA0 (Houston-The Woodlands-Sugar Land)",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 27942.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 116832400.0,
+        "aggregateValue": 7703138300.0,
+        "taxesRelativeMoe": 0.076
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 26420 Houston-Pasadena-The Woodlands, TX"
     },
     {
       "zip": "85009",
@@ -362,7 +565,19 @@
       "childcare": "NDCP 2022 Maricopa County, AZ",
       "gas": "EIA West Coast less California",
       "cpi": "BLS CUURS48ASA0 (Phoenix-Mesa-Scottsdale)",
-      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated",
+      "ownerUnits": 7141.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 7524600.0,
+        "aggregateValue": 1953649700.0,
+        "taxesRelativeMoe": 0.145
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Arizona HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 38060 Phoenix-Mesa-Chandler, AZ"
     },
     {
       "zip": "85018",
@@ -382,7 +597,19 @@
       "childcare": "NDCP 2022 Maricopa County, AZ",
       "gas": "EIA West Coast less California",
       "cpi": "BLS CUURS48ASA0 (Phoenix-Mesa-Scottsdale)",
-      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated",
+      "ownerUnits": 9918.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 45312300.0,
+        "aggregateValue": 13274105000.0,
+        "taxesRelativeMoe": 0.076
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Arizona HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 38060 Phoenix-Mesa-Chandler, AZ"
     },
     {
       "zip": "85253",
@@ -402,7 +629,19 @@
       "childcare": "NDCP 2022 Maricopa County, AZ",
       "gas": "EIA West Coast less California",
       "cpi": "BLS CUURS48ASA0 (Phoenix-Mesa-Scottsdale)",
-      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated",
+      "ownerUnits": 6462.0,
+      "homeValueMedian": "estimate: top-coded: ACS publishes this median as \"$2,000,000 or more\"",
+      "ownerCostsWithMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$4,000 or more\"",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 67061500.0,
+        "aggregateValue": 18169108000.0,
+        "taxesRelativeMoe": 0.105
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Arizona HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 38060 Phoenix-Mesa-Chandler, AZ"
     },
     {
       "zip": "85225",
@@ -422,7 +661,19 @@
       "childcare": "NDCP 2022 Maricopa County, AZ",
       "gas": "EIA West Coast less California",
       "cpi": "BLS CUURS48ASA0 (Phoenix-Mesa-Scottsdale)",
-      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Arizona average, CPI-inflated",
+      "ownerUnits": 17264.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 28880000.0,
+        "aggregateValue": 7546413000.0,
+        "taxesRelativeMoe": 0.058
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Arizona HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 38060 Phoenix-Mesa-Chandler, AZ"
     },
     {
       "zip": "19132",
@@ -442,7 +693,19 @@
       "childcare": "NDCP 2020 Philadelphia County, PA (2022 lacks MCINFANT, MCTODDLER, MCPRESCHOOL, MCSA; latest complete year is 2020)",
       "gas": "EIA Central Atlantic (PADD 1B)",
       "cpi": "BLS CUURS12BSA0 (Philadelphia-Camden-Wilmington)",
-      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated",
+      "ownerUnits": 7077.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 7800400.0,
+        "aggregateValue": 969648600.0,
+        "taxesRelativeMoe": 0.547
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Pennsylvania HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 37964 Philadelphia, PA (MSAD)"
     },
     {
       "zip": "19125",
@@ -462,7 +725,19 @@
       "childcare": "NDCP 2020 Philadelphia County, PA (2022 lacks MCINFANT, MCTODDLER, MCPRESCHOOL, MCSA; latest complete year is 2020)",
       "gas": "EIA Central Atlantic (PADD 1B)",
       "cpi": "BLS CUURS12BSA0 (Philadelphia-Camden-Wilmington)",
-      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated",
+      "ownerUnits": 7274.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 22377600.0,
+        "aggregateValue": 3123253000.0,
+        "taxesRelativeMoe": 0.13
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Pennsylvania HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 37964 Philadelphia, PA (MSAD)"
     },
     {
       "zip": "19103",
@@ -482,7 +757,19 @@
       "childcare": "NDCP 2020 Philadelphia County, PA (2022 lacks MCINFANT, MCTODDLER, MCPRESCHOOL, MCSA; latest complete year is 2020)",
       "gas": "EIA Central Atlantic (PADD 1B)",
       "cpi": "BLS CUURS12BSA0 (Philadelphia-Camden-Wilmington)",
-      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated",
+      "ownerUnits": 5393.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 43497600.0,
+        "aggregateValue": 4723976700.0,
+        "taxesRelativeMoe": 0.189
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Pennsylvania HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 37964 Philadelphia, PA (MSAD)"
     },
     {
       "zip": "19020",
@@ -502,7 +789,19 @@
       "childcare": "NDCP 2020 Bucks County, PA (2022 lacks MCINFANT, MCTODDLER, MCPRESCHOOL, MCSA; latest complete year is 2020)",
       "gas": "EIA Central Atlantic (PADD 1B)",
       "cpi": "BLS CUURS12BSA0 (Philadelphia-Camden-Wilmington)",
-      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Pennsylvania average, CPI-inflated",
+      "ownerUnits": 13553.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 68988800.0,
+        "aggregateValue": 5350761500.0,
+        "taxesRelativeMoe": 0.076
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Pennsylvania HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33874 Montgomery County-Bucks County-Chester County, PA (MSAD)"
     },
     {
       "zip": "75216",
@@ -522,7 +821,19 @@
       "childcare": "NDCP 2022 Dallas County, TX",
       "gas": "EIA Texas",
       "cpi": "BLS CUURS37ASA0 (Dallas-Fort Worth-Arlington)",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 10579.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 16361400.0,
+        "aggregateValue": 2000231900.0,
+        "taxesRelativeMoe": 0.14
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 19124 Dallas-Plano-Irving, TX (MSAD)"
     },
     {
       "zip": "75206",
@@ -542,7 +853,19 @@
       "childcare": "NDCP 2022 Dallas County, TX",
       "gas": "EIA Texas",
       "cpi": "BLS CUURS37ASA0 (Dallas-Fort Worth-Arlington)",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 6093.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 67734000.0,
+        "aggregateValue": 4167521800.0,
+        "taxesRelativeMoe": 0.101
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 19124 Dallas-Plano-Irving, TX (MSAD)"
     },
     {
       "zip": "75205",
@@ -562,7 +885,19 @@
       "childcare": "NDCP 2022 Dallas County, TX",
       "gas": "EIA Texas",
       "cpi": "BLS CUURS37ASA0 (Dallas-Fort Worth-Arlington)",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 5325.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$4,000 or more\"",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 136759900.0,
+        "aggregateValue": 12140659000.0,
+        "taxesRelativeMoe": 0.096
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 19124 Dallas-Plano-Irving, TX (MSAD)"
     },
     {
       "zip": "75024",
@@ -582,7 +917,19 @@
       "childcare": "NDCP 2022 Collin County, TX",
       "gas": "EIA Texas",
       "cpi": "BLS CUURS37ASA0 (Dallas-Fort Worth-Arlington)",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 7223.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 66774200.0,
+        "aggregateValue": 4911585000.0,
+        "taxesRelativeMoe": 0.068
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 19124 Dallas-Plano-Irving, TX (MSAD)"
     },
     {
       "zip": "78744",
@@ -602,7 +949,19 @@
       "childcare": "NDCP 2022 Travis County, TX",
       "gas": "EIA Texas",
       "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Austin index))",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 10696.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 54517400.0,
+        "aggregateValue": 3849065200.0,
+        "taxesRelativeMoe": 0.124
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 12420 Austin-Round Rock-San Marcos, TX"
     },
     {
       "zip": "78704",
@@ -622,7 +981,19 @@
       "childcare": "NDCP 2022 Travis County, TX",
       "gas": "EIA Texas",
       "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Austin index))",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 9214.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 132229296.0,
+        "aggregateValue": 9808495000.0,
+        "taxesRelativeMoe": 0.089
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 12420 Austin-Round Rock-San Marcos, TX"
     },
     {
       "zip": "78703",
@@ -642,7 +1013,19 @@
       "childcare": "NDCP 2022 Travis County, TX",
       "gas": "EIA Texas",
       "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Austin index))",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 6088.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$4,000 or more\"",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 144814210.0,
+        "aggregateValue": 11074553000.0,
+        "taxesRelativeMoe": 0.111
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 12420 Austin-Round Rock-San Marcos, TX"
     },
     {
       "zip": "78660",
@@ -662,7 +1045,19 @@
       "childcare": "NDCP 2022 Travis County, TX",
       "gas": "EIA Texas",
       "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Austin index))",
-      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Texas average, CPI-inflated",
+      "ownerUnits": 30168.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 204145790.0,
+        "aggregateValue": 12627783000.0,
+        "taxesRelativeMoe": 0.073
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Texas HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 12420 Austin-Round Rock-San Marcos, TX"
     },
     {
       "zip": "30315",
@@ -682,7 +1077,19 @@
       "childcare": "NDCP 2022 Fulton County, GA",
       "gas": "EIA Lower Atlantic (PADD 1C)",
       "cpi": "BLS CUURS35CSA0 (Atlanta-Sandy Springs-Roswell)",
-      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated",
+      "ownerUnits": 5834.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 18104700.0,
+        "aggregateValue": 2063536600.0,
+        "taxesRelativeMoe": 0.165
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Georgia HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 12054 Atlanta-Sandy Springs-Roswell, GA (MSAD)"
     },
     {
       "zip": "30316",
@@ -702,7 +1109,19 @@
       "childcare": "NDCP 2022 DeKalb County, GA",
       "gas": "EIA Lower Atlantic (PADD 1C)",
       "cpi": "BLS CUURS35CSA0 (Atlanta-Sandy Springs-Roswell)",
-      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated",
+      "ownerUnits": 9766.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 45335300.0,
+        "aggregateValue": 4606638000.0,
+        "taxesRelativeMoe": 0.112
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Georgia HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 12054 Atlanta-Sandy Springs-Roswell, GA (MSAD)"
     },
     {
       "zip": "30305",
@@ -722,7 +1141,19 @@
       "childcare": "NDCP 2022 Fulton County, GA",
       "gas": "EIA Lower Atlantic (PADD 1C)",
       "cpi": "BLS CUURS35CSA0 (Atlanta-Sandy Springs-Roswell)",
-      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated",
+      "ownerUnits": 7950.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 84645200.0,
+        "aggregateValue": 8133458400.0,
+        "taxesRelativeMoe": 0.108
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Georgia HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 12054 Atlanta-Sandy Springs-Roswell, GA (MSAD)"
     },
     {
       "zip": "30350",
@@ -742,7 +1173,19 @@
       "childcare": "NDCP 2022 Fulton County, GA",
       "gas": "EIA Lower Atlantic (PADD 1C)",
       "cpi": "BLS CUURS35CSA0 (Atlanta-Sandy Springs-Roswell)",
-      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Georgia average, CPI-inflated",
+      "ownerUnits": 8211.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 42906700.0,
+        "aggregateValue": 5348461000.0,
+        "taxesRelativeMoe": 0.133
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Georgia HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 12054 Atlanta-Sandy Springs-Roswell, GA (MSAD)"
     },
     {
       "zip": "33142",
@@ -762,7 +1205,19 @@
       "childcare": "NDCP 2022 Miami-Dade County, FL",
       "gas": "EIA Miami",
       "cpi": "BLS CUURS35BSA0 (Miami-Fort Lauderdale-West Palm Beach)",
-      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated",
+      "ownerUnits": 6019.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 16933600.0,
+        "aggregateValue": 2289578200.0,
+        "taxesRelativeMoe": 0.162
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Florida HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33124 Miami-Miami Beach-Kendall, FL (MSAD)"
     },
     {
       "zip": "33125",
@@ -782,7 +1237,19 @@
       "childcare": "NDCP 2022 Miami-Dade County, FL",
       "gas": "EIA Miami",
       "cpi": "BLS CUURS35BSA0 (Miami-Fort Lauderdale-West Palm Beach)",
-      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated",
+      "ownerUnits": 5623.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 21837300.0,
+        "aggregateValue": 2806039300.0,
+        "taxesRelativeMoe": 0.142
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Florida HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33124 Miami-Miami Beach-Kendall, FL (MSAD)"
     },
     {
       "zip": "33131",
@@ -802,7 +1269,19 @@
       "childcare": "NDCP 2022 Miami-Dade County, FL",
       "gas": "EIA Miami",
       "cpi": "BLS CUURS35BSA0 (Miami-Fort Lauderdale-West Palm Beach)",
-      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated",
+      "ownerUnits": 4872.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 48763400.0,
+        "aggregateValue": 4142549000.0,
+        "taxesRelativeMoe": 0.133
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Florida HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33124 Miami-Miami Beach-Kendall, FL (MSAD)"
     },
     {
       "zip": "33186",
@@ -822,7 +1301,19 @@
       "childcare": "NDCP 2022 Miami-Dade County, FL",
       "gas": "EIA Miami",
       "cpi": "BLS CUURS35BSA0 (Miami-Fort Lauderdale-West Palm Beach)",
-      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Florida average, CPI-inflated",
+      "ownerUnits": 16222.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 61194900.0,
+        "aggregateValue": 8021151700.0,
+        "taxesRelativeMoe": 0.067
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Florida HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33124 Miami-Miami Beach-Kendall, FL (MSAD)"
     },
     {
       "zip": "98118",
@@ -842,7 +1333,19 @@
       "childcare": "NDCP 2022 King County, WA",
       "gas": "EIA Seattle",
       "cpi": "BLS CUURS49DSA0 (Seattle-Tacoma-Bellevue)",
-      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated",
+      "ownerUnits": 10949.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 74411104.0,
+        "aggregateValue": 10315020000.0,
+        "taxesRelativeMoe": 0.091
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Washington HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 42644 Seattle-Bellevue-Kent, WA (MSAD)"
     },
     {
       "zip": "98103",
@@ -862,7 +1365,19 @@
       "childcare": "NDCP 2022 King County, WA",
       "gas": "EIA Seattle",
       "cpi": "BLS CUURS49DSA0 (Seattle-Tacoma-Bellevue)",
-      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated",
+      "ownerUnits": 11942.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 94597296.0,
+        "aggregateValue": 13864038000.0,
+        "taxesRelativeMoe": 0.046
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Washington HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 42644 Seattle-Bellevue-Kent, WA (MSAD)"
     },
     {
       "zip": "98101",
@@ -882,7 +1397,19 @@
       "childcare": "NDCP 2022 King County, WA",
       "gas": "EIA Seattle",
       "cpi": "BLS CUURS49DSA0 (Seattle-Tacoma-Bellevue)",
-      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated",
+      "ownerUnits": 1588.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 13303600.0,
+        "aggregateValue": 1478459000.0,
+        "taxesRelativeMoe": 0.212
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Washington HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 42644 Seattle-Bellevue-Kent, WA (MSAD)"
     },
     {
       "zip": "98052",
@@ -902,7 +1429,19 @@
       "childcare": "NDCP 2022 King County, WA",
       "gas": "EIA Seattle",
       "cpi": "BLS CUURS49DSA0 (Seattle-Tacoma-Bellevue)",
-      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Washington average, CPI-inflated",
+      "ownerUnits": 15312.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 137378500.0,
+        "aggregateValue": 20048828000.0,
+        "taxesRelativeMoe": 0.058
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Washington HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 42644 Seattle-Bellevue-Kent, WA (MSAD)"
     },
     {
       "zip": "80219",
@@ -922,7 +1461,19 @@
       "childcare": "NDCP 2022 Denver County, CO",
       "gas": "EIA Denver",
       "cpi": "BLS CUURS48BSA0 (Denver-Aurora-Lakewood)",
-      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated",
+      "ownerUnits": 12552.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 28744100.0,
+        "aggregateValue": 5822387700.0,
+        "taxesRelativeMoe": 0.148
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Colorado HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 19740 Denver-Aurora-Centennial, CO"
     },
     {
       "zip": "80205",
@@ -942,7 +1493,19 @@
       "childcare": "NDCP 2022 Denver County, CO",
       "gas": "EIA Denver",
       "cpi": "BLS CUURS48BSA0 (Denver-Aurora-Lakewood)",
-      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated",
+      "ownerUnits": 6764.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 25007700.0,
+        "aggregateValue": 4719413000.0,
+        "taxesRelativeMoe": 0.228
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Colorado HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 19740 Denver-Aurora-Centennial, CO"
     },
     {
       "zip": "80202",
@@ -962,7 +1525,19 @@
       "childcare": "NDCP 2022 Denver County, CO",
       "gas": "EIA Denver",
       "cpi": "BLS CUURS48BSA0 (Denver-Aurora-Lakewood)",
-      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated",
+      "ownerUnits": 2790.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 14518100.0,
+        "aggregateValue": 2651665700.0,
+        "taxesRelativeMoe": 0.175
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Colorado HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 19740 Denver-Aurora-Centennial, CO"
     },
     {
       "zip": "80013",
@@ -982,7 +1557,19 @@
       "childcare": "NDCP 2022 Arapahoe County, CO",
       "gas": "EIA Denver",
       "cpi": "BLS CUURS48BSA0 (Denver-Aurora-Lakewood)",
-      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Colorado average, CPI-inflated",
+      "ownerUnits": 19267.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 53648700.0,
+        "aggregateValue": 9279671000.0,
+        "taxesRelativeMoe": 0.084
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Colorado HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 19740 Denver-Aurora-Centennial, CO"
     },
     {
       "zip": "02124",
@@ -1002,7 +1589,19 @@
       "childcare": "NDCP 2022 Suffolk County, MA",
       "gas": "EIA Boston",
       "cpi": "BLS CUURS11ASA0 (Boston-Cambridge-Newton)",
-      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated",
+      "ownerUnits": 8397.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 34262400.0,
+        "aggregateValue": 5549575700.0,
+        "taxesRelativeMoe": 0.125
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Massachusetts HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 14454 Boston, MA (MSAD)"
     },
     {
       "zip": "02130",
@@ -1022,7 +1621,19 @@
       "childcare": "NDCP 2022 Suffolk County, MA",
       "gas": "EIA Boston",
       "cpi": "BLS CUURS11ASA0 (Boston-Cambridge-Newton)",
-      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated",
+      "ownerUnits": 8109.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 49552800.0,
+        "aggregateValue": 7717777000.0,
+        "taxesRelativeMoe": 0.088
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Massachusetts HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 14454 Boston, MA (MSAD)"
     },
     {
       "zip": "02116",
@@ -1042,7 +1653,19 @@
       "childcare": "NDCP 2022 Suffolk County, MA",
       "gas": "EIA Boston",
       "cpi": "BLS CUURS11ASA0 (Boston-Cambridge-Newton)",
-      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated",
+      "ownerUnits": 4035.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$4,000 or more\"",
+      "ownerCostsWithoutMortgageMonthly": "estimate: top-coded: ACS publishes this median as \"$1,500 or more\"",
+      "propertyTax": {
+        "aggregateTaxes": 71446304.0,
+        "aggregateValue": 9028102000.0,
+        "taxesRelativeMoe": 0.154
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Massachusetts HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 14454 Boston, MA (MSAD)"
     },
     {
       "zip": "02184",
@@ -1062,7 +1685,19 @@
       "childcare": "NDCP 2022 Norfolk County, MA",
       "gas": "EIA Boston",
       "cpi": "BLS CUURS11ASA0 (Boston-Cambridge-Newton)",
-      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Massachusetts average, CPI-inflated",
+      "ownerUnits": 11199.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 60375500.0,
+        "aggregateValue": 7742599700.0,
+        "taxesRelativeMoe": 0.049
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Massachusetts HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 14454 Boston, MA (MSAD)"
     },
     {
       "zip": "37207",
@@ -1082,7 +1717,19 @@
       "childcare": "NDCP 2022 Davidson County, TN",
       "gas": "EIA Midwest (PADD 2)",
       "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Nashville index))",
-      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated",
+      "ownerUnits": 10067.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 21846300.0,
+        "aggregateValue": 3754562800.0,
+        "taxesRelativeMoe": 0.123
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Tennessee HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 34980 Nashville-Davidson--Murfreesboro--Franklin, TN"
     },
     {
       "zip": "37206",
@@ -1102,7 +1749,19 @@
       "childcare": "NDCP 2022 Davidson County, TN",
       "gas": "EIA Midwest (PADD 2)",
       "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Nashville index))",
-      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated",
+      "ownerUnits": 6572.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 24881000.0,
+        "aggregateValue": 4640376300.0,
+        "taxesRelativeMoe": 0.08
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Tennessee HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 34980 Nashville-Davidson--Murfreesboro--Franklin, TN"
     },
     {
       "zip": "37215",
@@ -1122,7 +1781,19 @@
       "childcare": "NDCP 2022 Davidson County, TN",
       "gas": "EIA Midwest (PADD 2)",
       "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Nashville index))",
-      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated",
+      "ownerUnits": 7836.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 58873700.0,
+        "aggregateValue": 11515443000.0,
+        "taxesRelativeMoe": 0.083
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Tennessee HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 34980 Nashville-Davidson--Murfreesboro--Franklin, TN"
     },
     {
       "zip": "37075",
@@ -1142,7 +1813,19 @@
       "childcare": "NDCP 2022 Sumner County, TN",
       "gas": "EIA Midwest (PADD 2)",
       "cpi": "BLS CUUR0300SA0 (South region (BLS publishes no Nashville index))",
-      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Tennessee average, CPI-inflated",
+      "ownerUnits": 20786.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 54961700.0,
+        "aggregateValue": 11042055000.0,
+        "taxesRelativeMoe": 0.064
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Tennessee HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 34980 Nashville-Davidson--Murfreesboro--Franklin, TN"
     },
     {
       "zip": "55411",
@@ -1162,7 +1845,19 @@
       "childcare": "NDCP 2022 Hennepin County, MN",
       "gas": "EIA Minnesota",
       "cpi": "BLS CUURS24ASA0 (Minneapolis-St. Paul-Bloomington)",
-      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated",
+      "ownerUnits": 5229.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 13461300.0,
+        "aggregateValue": 1449891100.0,
+        "taxesRelativeMoe": 0.119
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Minnesota HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33460 Minneapolis-St. Paul-Bloomington, MN-WI"
     },
     {
       "zip": "55408",
@@ -1182,7 +1877,19 @@
       "childcare": "NDCP 2022 Hennepin County, MN",
       "gas": "EIA Minnesota",
       "cpi": "BLS CUURS24ASA0 (Minneapolis-St. Paul-Bloomington)",
-      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated",
+      "ownerUnits": 4087.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 25196200.0,
+        "aggregateValue": 1937806500.0,
+        "taxesRelativeMoe": 0.142
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Minnesota HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33460 Minneapolis-St. Paul-Bloomington, MN-WI"
     },
     {
       "zip": "55401",
@@ -1202,7 +1909,19 @@
       "childcare": "NDCP 2022 Hennepin County, MN",
       "gas": "EIA Minnesota",
       "cpi": "BLS CUURS24ASA0 (Minneapolis-St. Paul-Bloomington)",
-      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated",
+      "ownerUnits": 2443.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 14341900.0,
+        "aggregateValue": 1059768900.0,
+        "taxesRelativeMoe": 0.219
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Minnesota HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33460 Minneapolis-St. Paul-Bloomington, MN-WI"
     },
     {
       "zip": "55420",
@@ -1222,7 +1941,19 @@
       "childcare": "NDCP 2022 Hennepin County, MN",
       "gas": "EIA Minnesota",
       "cpi": "BLS CUURS24ASA0 (Minneapolis-St. Paul-Bloomington)",
-      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated"
+      "carInsurance": "estimate: NAIC 2023 Minnesota average, CPI-inflated",
+      "ownerUnits": 6206.0,
+      "homeValueMedian": "ACS B25077",
+      "ownerCostsWithMortgageMonthly": "ACS B25088",
+      "ownerCostsWithoutMortgageMonthly": "ACS B25088",
+      "propertyTax": {
+        "aggregateTaxes": 21281500.0,
+        "aggregateValue": 1986443100.0,
+        "taxesRelativeMoe": 0.108
+      },
+      "propertyTaxRate": "ACS B25090 / B25082",
+      "homeInsurance": "estimate: NAIC 2023 Minnesota HO-3 average, PPI-inflated",
+      "homeAppreciation": "FHFA PO 33460 Minneapolis-St. Paul-Bloomington, MN-WI"
     }
   ]
 }

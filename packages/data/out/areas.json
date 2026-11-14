@@ -99,6 +99,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS12ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 415200.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 10467 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US10467"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2794.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 10467 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US10467"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 950.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 10467 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US10467"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00934,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 10467: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US10467"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 184.14,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, New York average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0529,
+      "source": {
+        "name": "FHFA purchase-only house price index, New York-Jersey City-White Plains, NY-NJ (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -201,6 +251,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS12ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 861500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 11385 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US11385"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3429.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 11385 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US11385"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1137.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 11385 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US11385"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00738,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 11385: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US11385"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 184.14,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, New York average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0529,
+      "source": {
+        "name": "FHFA purchase-only house price index, New York-Jersey City-White Plains, NY-NJ (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -294,6 +394,59 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS12ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 2000000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 10013 (via Census Reporter); top-coded: ACS publishes this median as \"$2,000,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US10013"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 4000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 10013 (via Census Reporter); top-coded: ACS publishes this median as \"$4,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US10013"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 10013 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US10013"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.0069,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 10013: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US10013"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 184.14,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, New York average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0529,
+      "source": {
+        "name": "FHFA purchase-only house price index, New York-Jersey City-White Plains, NY-NJ (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -396,6 +549,57 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS12ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 575300.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 10801 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US10801"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3425.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 10801 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US10801"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 10801 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US10801"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01855,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 10801: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US10801"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 184.14,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, New York average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0529,
+      "source": {
+        "name": "FHFA purchase-only house price index, New York-Jersey City-White Plains, NY-NJ (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -498,6 +702,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS49ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 595400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 90011 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US90011"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2602.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 90011 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US90011"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 705.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 90011 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US90011"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00628,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 90011: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US90011"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 169.21,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, California average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0613,
+      "source": {
+        "name": "FHFA purchase-only house price index, Los Angeles-Long Beach-Glendale, CA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -600,6 +854,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS49ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 976400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 90042 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US90042"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3401.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 90042 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US90042"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 780.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 90042 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US90042"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00564,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 90042: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US90042"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 169.21,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, California average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0613,
+      "source": {
+        "name": "FHFA purchase-only house price index, Los Angeles-Long Beach-Glendale, CA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -693,6 +997,58 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS49ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 1478500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 90024 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US90024"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 4000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 90024 (via Census Reporter); top-coded: ACS publishes this median as \"$4,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US90024"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 90024 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US90024"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.00665,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 90024: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US90024"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 169.21,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, California average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0613,
+      "source": {
+        "name": "FHFA purchase-only house price index, Los Angeles-Long Beach-Glendale, CA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -786,6 +1142,57 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS49ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 1116200.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 91301 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US91301"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 4000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 91301 (via Census Reporter); top-coded: ACS publishes this median as \"$4,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US91301"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1137.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 91301 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US91301"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00681,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 91301: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US91301"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 169.21,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, California average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0613,
+      "source": {
+        "name": "FHFA purchase-only house price index, Los Angeles-Long Beach-Glendale, CA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -888,6 +1295,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS23ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 153500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 60621 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US60621"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1527.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 60621 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US60621"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 599.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 60621 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US60621"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01032,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 60621: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US60621"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 151.32,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Illinois average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0371,
+      "source": {
+        "name": "FHFA purchase-only house price index, Chicago-Naperville-Schaumburg, IL (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -990,6 +1447,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS23ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 562700.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 60618 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US60618"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3130.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 60618 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US60618"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1159.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 60618 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US60618"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01546,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 60618: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US60618"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 151.32,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Illinois average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0371,
+      "source": {
+        "name": "FHFA purchase-only house price index, Chicago-Naperville-Schaumburg, IL (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1092,6 +1599,57 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS23ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 650800.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 60611 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US60611"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3984.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 60611 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US60611"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 60611 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US60611"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01577,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 60611: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US60611"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 151.32,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Illinois average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0371,
+      "source": {
+        "name": "FHFA purchase-only house price index, Chicago-Naperville-Schaumburg, IL (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1194,6 +1752,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS23ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 347000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 60007 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US60007"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2172.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 60007 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US60007"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 868.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 60007 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US60007"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01795,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 60007: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US60007"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 151.32,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Illinois average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0371,
+      "source": {
+        "name": "FHFA purchase-only house price index, Chicago-Naperville-Schaumburg, IL (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1296,6 +1904,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS37BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 128900.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 77033 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US77033"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1342.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 77033 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US77033"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 459.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 77033 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US77033"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00969,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 77033: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US77033"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0475,
+      "source": {
+        "name": "FHFA purchase-only house price index, Houston-Pasadena-The Woodlands, TX, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1398,6 +2056,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS37BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 642600.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 77008 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US77008"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3519.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 77008 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US77008"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1169.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 77008 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US77008"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01605,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 77008: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US77008"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0475,
+      "source": {
+        "name": "FHFA purchase-only house price index, Houston-Pasadena-The Woodlands, TX, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1500,6 +2208,57 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS37BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 816500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 77019 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US77019"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3854.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 77019 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US77019"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 77019 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US77019"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01473,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 77019: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US77019"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0475,
+      "source": {
+        "name": "FHFA purchase-only house price index, Houston-Pasadena-The Woodlands, TX, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1602,6 +2361,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS37BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 255900.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 77449 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US77449"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1928.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 77449 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US77449"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 740.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 77449 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US77449"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01517,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 77449: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US77449"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0475,
+      "source": {
+        "name": "FHFA purchase-only house price index, Houston-Pasadena-The Woodlands, TX, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1704,6 +2513,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS48ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 236100.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 85009 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US85009"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1470.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 85009 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US85009"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 442.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 85009 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US85009"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00385,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 85009: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US85009"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 122.08,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Arizona average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.055,
+      "source": {
+        "name": "FHFA purchase-only house price index, Phoenix-Mesa-Chandler, AZ, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1806,6 +2665,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS48ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 862000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 85018 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US85018"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2767.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 85018 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US85018"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 791.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 85018 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US85018"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00341,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 85018: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US85018"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 122.08,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Arizona average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.055,
+      "source": {
+        "name": "FHFA purchase-only house price index, Phoenix-Mesa-Chandler, AZ, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -1908,6 +2817,59 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS48ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 2000000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 85253 (via Census Reporter); top-coded: ACS publishes this median as \"$2,000,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US85253"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 4000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 85253 (via Census Reporter); top-coded: ACS publishes this median as \"$4,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US85253"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 85253 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US85253"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.00369,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 85253: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US85253"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 122.08,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Arizona average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.055,
+      "source": {
+        "name": "FHFA purchase-only house price index, Phoenix-Mesa-Chandler, AZ, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2010,6 +2972,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS48ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 430400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 85225 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US85225"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1743.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 85225 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US85225"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 511.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 85225 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US85225"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00383,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 85225: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US85225"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 122.08,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Arizona average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.055,
+      "source": {
+        "name": "FHFA purchase-only house price index, Phoenix-Mesa-Chandler, AZ, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2112,6 +3124,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS12BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 81400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 19132 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US19132"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 938.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 19132 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US19132"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 396.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 19132 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US19132"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00804,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 19132: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US19132"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 124.43,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Pennsylvania average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.051,
+      "source": {
+        "name": "FHFA purchase-only house price index, Philadelphia, PA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2214,6 +3276,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS12BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 392400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 19125 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US19125"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2199.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 19125 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US19125"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 496.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 19125 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US19125"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00716,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 19125: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US19125"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 124.43,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Pennsylvania average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.051,
+      "source": {
+        "name": "FHFA purchase-only house price index, Philadelphia, PA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2316,6 +3428,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS12BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 582500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 19103 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US19103"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3335.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 19103 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US19103"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1344.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 19103 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US19103"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00921,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 19103: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US19103"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 124.43,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Pennsylvania average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.051,
+      "source": {
+        "name": "FHFA purchase-only house price index, Philadelphia, PA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2418,6 +3580,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS12BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 362800.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 19020 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US19020"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2248.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 19020 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US19020"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 822.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 19020 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US19020"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01289,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 19020: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US19020"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 124.43,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Pennsylvania average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0462,
+      "source": {
+        "name": "FHFA purchase-only house price index, Montgomery County-Bucks County-Chester County, PA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2520,6 +3732,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS37ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 159800.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 75216 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US75216"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1431.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75216 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75216"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 422.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75216 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75216"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00818,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 75216: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US75216"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0487,
+      "source": {
+        "name": "FHFA purchase-only house price index, Dallas-Plano-Irving, TX (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2622,6 +3884,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS37ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 615400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 75206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US75206"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3306.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75206"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1397.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75206"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01625,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 75206: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US75206"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0487,
+      "source": {
+        "name": "FHFA purchase-only house price index, Dallas-Plano-Irving, TX (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2724,6 +4036,58 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS37ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 1706700.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 75205 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US75205"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 4000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75205 (via Census Reporter); top-coded: ACS publishes this median as \"$4,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75205"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75205 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75205"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01126,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 75205: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US75205"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0487,
+      "source": {
+        "name": "FHFA purchase-only house price index, Dallas-Plano-Irving, TX (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2826,6 +4190,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS37ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 598600.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 75024 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US75024"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3252.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75024 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75024"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1428.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 75024 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US75024"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.0136,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 75024: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US75024"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0487,
+      "source": {
+        "name": "FHFA purchase-only house price index, Dallas-Plano-Irving, TX (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -2928,6 +4342,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUUR0300SA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 357500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 78744 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US78744"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2065.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 78744 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US78744"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 749.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 78744 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US78744"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01416,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 78744: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US78744"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.054,
+      "source": {
+        "name": "FHFA purchase-only house price index, Austin-Round Rock-San Marcos, TX, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3030,6 +4494,57 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUUR0300SA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 916100.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 78704 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US78704"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3641.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 78704 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US78704"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 78704 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US78704"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01348,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 78704: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US78704"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.054,
+      "source": {
+        "name": "FHFA purchase-only house price index, Austin-Round Rock-San Marcos, TX, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3132,6 +4647,58 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUUR0300SA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 1495800.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 78703 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US78703"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 4000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 78703 (via Census Reporter); top-coded: ACS publishes this median as \"$4,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US78703"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 78703 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US78703"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01308,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 78703: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US78703"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.054,
+      "source": {
+        "name": "FHFA purchase-only house price index, Austin-Round Rock-San Marcos, TX, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3234,6 +4801,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUUR0300SA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 411900.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 78660 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US78660"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2320.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 78660 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US78660"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 976.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 78660 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US78660"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01617,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 78660: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US78660"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 292.82,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Texas average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.054,
+      "source": {
+        "name": "FHFA purchase-only house price index, Austin-Round Rock-San Marcos, TX, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3336,6 +4953,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS35CSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 317700.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 30315 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US30315"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1797.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 30315 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US30315"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 478.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 30315 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US30315"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00877,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 30315: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US30315"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 186.9,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Georgia average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0444,
+      "source": {
+        "name": "FHFA purchase-only house price index, Atlanta-Sandy Springs-Roswell, GA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3438,6 +5105,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS35CSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 443400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 30316 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US30316"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2287.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 30316 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US30316"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 611.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 30316 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US30316"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00984,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 30316: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US30316"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 186.9,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Georgia average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0444,
+      "source": {
+        "name": "FHFA purchase-only house price index, Atlanta-Sandy Springs-Roswell, GA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3540,6 +5257,57 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS35CSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 737500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 30305 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US30305"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3519.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 30305 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US30305"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 30305 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US30305"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01041,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 30305: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US30305"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 186.9,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Georgia average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0444,
+      "source": {
+        "name": "FHFA purchase-only house price index, Atlanta-Sandy Springs-Roswell, GA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3642,6 +5410,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS35CSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 516000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 30350 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US30350"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2291.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 30350 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US30350"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1160.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 30350 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US30350"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00802,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 30350: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US30350"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 186.9,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Georgia average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0444,
+      "source": {
+        "name": "FHFA purchase-only house price index, Atlanta-Sandy Springs-Roswell, GA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3744,6 +5562,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS35BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 349000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 33142 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US33142"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1867.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 33142 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US33142"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 514.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 33142 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US33142"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.0074,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 33142: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US33142"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 284.13,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Florida average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0639,
+      "source": {
+        "name": "FHFA purchase-only house price index, Miami-Miami Beach-Kendall, FL (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3846,6 +5714,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS35BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 423100.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 33125 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US33125"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2251.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 33125 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US33125"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 669.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 33125 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US33125"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00778,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 33125: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US33125"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 284.13,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Florida average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0639,
+      "source": {
+        "name": "FHFA purchase-only house price index, Miami-Miami Beach-Kendall, FL (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -3939,6 +5857,57 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS35BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 655100.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 33131 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US33131"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3969.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 33131 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US33131"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 33131 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US33131"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.01177,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 33131: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US33131"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 284.13,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Florida average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0639,
+      "source": {
+        "name": "FHFA purchase-only house price index, Miami-Miami Beach-Kendall, FL (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4041,6 +6010,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS35BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 465400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 33186 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US33186"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2346.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 33186 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US33186"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 866.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 33186 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US33186"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00763,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 33186: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US33186"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 284.13,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Florida average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0639,
+      "source": {
+        "name": "FHFA purchase-only house price index, Miami-Miami Beach-Kendall, FL (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4143,6 +6162,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS49DSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 810500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 98118 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US98118"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3006.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 98118 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US98118"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1046.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 98118 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US98118"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00721,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 98118: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US98118"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 125.96,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Washington average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0588,
+      "source": {
+        "name": "FHFA purchase-only house price index, Seattle-Bellevue-Kent, WA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4245,6 +6314,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS49DSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 1044100.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 98103 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US98103"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3570.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 98103 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US98103"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1124.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 98103 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US98103"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00682,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 98103: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US98103"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 125.96,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Washington average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0588,
+      "source": {
+        "name": "FHFA purchase-only house price index, Seattle-Bellevue-Kent, WA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4347,6 +6466,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS49DSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 784200.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 98101 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US98101"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3950.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 98101 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US98101"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1499.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 98101 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US98101"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.009,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 98101: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US98101"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 125.96,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Washington average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0588,
+      "source": {
+        "name": "FHFA purchase-only house price index, Seattle-Bellevue-Kent, WA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4449,6 +6618,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS49DSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 1180600.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 98052 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US98052"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3799.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 98052 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US98052"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1295.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 98052 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US98052"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00685,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 98052: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US98052"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 125.96,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Washington average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0588,
+      "source": {
+        "name": "FHFA purchase-only house price index, Seattle-Bellevue-Kent, WA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4551,6 +6770,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS48BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 454600.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 80219 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US80219"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1907.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 80219 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US80219"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 519.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 80219 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US80219"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00494,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 80219: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US80219"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 254.78,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Colorado average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0542,
+      "source": {
+        "name": "FHFA purchase-only house price index, Denver-Aurora-Centennial, CO, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4653,6 +6922,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS48BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 649300.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 80205 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US80205"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2599.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 80205 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US80205"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 590.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 80205 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US80205"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.0053,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 80205: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US80205"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 254.78,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Colorado average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0542,
+      "source": {
+        "name": "FHFA purchase-only house price index, Denver-Aurora-Centennial, CO, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4755,6 +7074,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS48BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 722700.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 80202 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US80202"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3286.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 80202 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US80202"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1447.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 80202 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US80202"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00548,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 80202: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US80202"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 254.78,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Colorado average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0542,
+      "source": {
+        "name": "FHFA purchase-only house price index, Denver-Aurora-Centennial, CO, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4857,6 +7226,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS48BSA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 474000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 80013 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US80013"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2193.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 80013 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US80013"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 648.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 80013 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US80013"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00578,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 80013: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US80013"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 254.78,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Colorado average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0542,
+      "source": {
+        "name": "FHFA purchase-only house price index, Denver-Aurora-Centennial, CO, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -4959,6 +7378,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS11ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 650700.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 02124 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US02124"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3017.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 02124 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US02124"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 932.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 02124 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US02124"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00617,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 02124: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US02124"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 218.18,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Massachusetts average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0558,
+      "source": {
+        "name": "FHFA purchase-only house price index, Boston, MA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5061,6 +7530,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS11ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 822300.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 02130 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US02130"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3048.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 02130 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US02130"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1133.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 02130 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US02130"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00642,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 02130: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US02130"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 218.18,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Massachusetts average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0558,
+      "source": {
+        "name": "FHFA purchase-only house price index, Boston, MA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5154,6 +7673,58 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS11ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 1562500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 02116 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US02116"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 4000.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 02116 (via Census Reporter); top-coded: ACS publishes this median as \"$4,000 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US02116"
+      },
+      "isEstimate": true
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 02116 (via Census Reporter); top-coded: ACS publishes this median as \"$1,500 or more\", so this is its floor and the real median is higher",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US02116"
+      },
+      "isEstimate": true
+    },
+    "propertyTaxRate": {
+      "value": 0.00791,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 02116: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US02116"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 218.18,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Massachusetts average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0558,
+      "source": {
+        "name": "FHFA purchase-only house price index, Boston, MA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5256,6 +7827,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS11ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 656800.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 02184 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US02184"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2823.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 02184 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US02184"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 948.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 02184 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US02184"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.0078,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 02184: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US02184"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 218.18,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Massachusetts average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0558,
+      "source": {
+        "name": "FHFA purchase-only house price index, Boston, MA (MSAD), compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5358,6 +7979,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUUR0300SA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 365500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 37207 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US37207"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1679.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 37207 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US37207"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 490.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 37207 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US37207"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00582,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 37207: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US37207"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 168.6,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Tennessee average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0518,
+      "source": {
+        "name": "FHFA purchase-only house price index, Nashville-Davidson--Murfreesboro--Franklin, TN, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5460,6 +8131,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUUR0300SA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 600200.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 37206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US37206"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2378.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 37206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US37206"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 567.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 37206 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US37206"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00536,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 37206: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US37206"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 168.6,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Tennessee average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0518,
+      "source": {
+        "name": "FHFA purchase-only house price index, Nashville-Davidson--Murfreesboro--Franklin, TN, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5562,6 +8283,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUUR0300SA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 1046500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 37215 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US37215"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 3676.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 37215 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US37215"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1136.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 37215 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US37215"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00511,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 37215: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US37215"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 168.6,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Tennessee average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0518,
+      "source": {
+        "name": "FHFA purchase-only house price index, Nashville-Davidson--Murfreesboro--Franklin, TN, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5664,6 +8435,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUUR0300SA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 440800.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 37075 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US37075"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2027.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 37075 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US37075"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 632.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 37075 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US37075"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00498,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 37075: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US37075"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 168.6,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Tennessee average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0518,
+      "source": {
+        "name": "FHFA purchase-only house price index, Nashville-Davidson--Murfreesboro--Franklin, TN, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5766,6 +8587,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS24ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 245400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 55411 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US55411"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1631.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 55411 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US55411"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 725.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 55411 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US55411"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.00928,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 55411: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US55411"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 203.26,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Minnesota average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0436,
+      "source": {
+        "name": "FHFA purchase-only house price index, Minneapolis-St. Paul-Bloomington, MN-WI, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5868,6 +8739,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS24ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 396100.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 55408 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US55408"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2399.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 55408 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US55408"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 837.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 55408 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US55408"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.013,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 55408: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US55408"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 203.26,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Minnesota average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0436,
+      "source": {
+        "name": "FHFA purchase-only house price index, Minneapolis-St. Paul-Bloomington, MN-WI, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -5970,6 +8891,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS24ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 396500.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 55401 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US55401"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 2562.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 55401 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US55401"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 1221.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 55401 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US55401"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01353,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 55401: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US55401"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 203.26,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Minnesota average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0436,
+      "source": {
+        "name": "FHFA purchase-only house price index, Minneapolis-St. Paul-Bloomington, MN-WI, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   },
   {
@@ -6072,6 +9043,56 @@
         "year": 2026,
         "url": "https://data.bls.gov/timeseries/CUURS24ASA0"
       }
+    },
+    "homeValueMedian": {
+      "value": 328400.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25077 median value of owner-occupied homes, ZCTA 55420 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25077&geo_ids=86000US55420"
+      }
+    },
+    "ownerCostsWithMortgageMonthly": {
+      "value": 1804.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes with a mortgage (mortgage payments, real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 55420 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US55420"
+      }
+    },
+    "ownerCostsWithoutMortgageMonthly": {
+      "value": 719.0,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, table B25088 median selected monthly owner costs, homes without a mortgage (real estate taxes, insurance, utilities and fuels, condo or HOA fees and mobile home costs), ZCTA 55420 (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25088&geo_ids=86000US55420"
+      }
+    },
+    "propertyTaxRate": {
+      "value": 0.01071,
+      "source": {
+        "name": "U.S. Census Bureau ACS 2020-2024 5-year, ZCTA 55420: aggregate real estate taxes (B25090) / aggregate value (B25082) of owner-occupied homes, per year (via Census Reporter)",
+        "year": 2024,
+        "url": "https://censusreporter.org/data/table/?table=B25090&geo_ids=86000US55420"
+      }
+    },
+    "homeInsuranceMonthly": {
+      "value": 203.26,
+      "source": {
+        "name": "NAIC Homeowners Insurance Report, Minnesota average HO-3 premium 2023, per month, inflated to October 2026 with the BLS PPI for homeowner's insurance premiums; a state average for any home value, not a quote",
+        "year": 2023,
+        "url": "https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf"
+      },
+      "isEstimate": true
+    },
+    "homeAppreciationAnnual": {
+      "value": 0.0436,
+      "source": {
+        "name": "FHFA purchase-only house price index, Minneapolis-St. Paul-Bloomington, MN-WI, compound yearly change over 30 years (1996 Q2 to 2026 Q2, not seasonally adjusted, nominal); a past average used as a default, not a forecast",
+        "year": 2026,
+        "url": "https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_po_metro.txt"
+      },
+      "isEstimate": true
     }
   }
 ]

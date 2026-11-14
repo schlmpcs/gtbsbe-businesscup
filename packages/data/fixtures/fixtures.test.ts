@@ -23,6 +23,19 @@ describe('fixtures', () => {
     }
   });
 
+  it('carry the homeowner fields, every one sourced', () => {
+    for (const a of areaDataSample) {
+      const home = [
+        a.homeValueMedian, a.ownerCostsWithMortgageMonthly, a.ownerCostsWithoutMortgageMonthly,
+        a.propertyTaxRate, a.homeInsuranceMonthly, a.homeAppreciationAnnual,
+      ];
+      for (const v of home) {
+        expect(v, a.zip).toBeDefined();
+        expect(v!.source.url, `${a.zip} ${v!.source.name}`).toMatch(/^https:\/\//);
+      }
+    }
+  });
+
   it('have rent rising with bedrooms in every ZIP', () => {
     for (const a of areaDataSample) {
       const rents = ([0, 1, 2, 3, 4] as const).map((b) => a.rentByBedrooms[b].value);
