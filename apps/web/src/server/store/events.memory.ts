@@ -54,7 +54,7 @@ export function createMemoryEventStore(opts: { now?: () => Date; max?: number } 
         const mask = maskOf(names);
         counts.set(mask, (counts.get(mask) ?? 0) + 1);
       }
-      const masks: MaskCount[] = [...counts].map(([mask, users]) => ({ mask: mask.toString(), users }));
+      const masks: MaskCount[] = [...counts].map(([mask, users]) => ({ mask, users }));
 
       const guesses: GuessStats = { guesses: 0, cluesOpened: 0, blind: 0 };
       for (const r of inWindow) {

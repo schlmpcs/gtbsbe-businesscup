@@ -125,6 +125,8 @@ export type Forecast = { points: ForecastPoint[]; in10y: ForecastPoint; todaysDo
 // ('ai') or the rules engine ('rules'). `model` names the AI model and is absent for 'rules'.
 // All forecasts in a bundle share one unit: nominal dollars, `todaysDollars: false`.
 export type ForecastSource = 'ai' | 'rules';
+/** The years the forecast screen's picker offers; 10 is the default and what the AI forecaster returns. */
+export type HorizonYears = 1 | 3 | 5 | 10;
 // One year-end net worth estimate from the AI forecaster. `year` counts from today (1–10), `mid` is
 // the estimate and `low` ≤ `mid` ≤ `high` is the range around it. Nominal dollars (a balance).
 export type YearAnchor = { year: number; low: Money; mid: Money; high: Money };
@@ -152,7 +154,10 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
 export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
   debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
 // `move.source` = the forecast its `effect10y` came from; the server words the sentence by it.
-export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult };
+// `horizon` = the year the forecast screen shows (1, 3, 5 or 10) and the move's effect there, which
+// `move.effect10y` cannot say; absent, the sentence is about 10 years.
+export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult;
+  horizon?: { years: HorizonYears; effect: Money } };
 export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence
@@ -247,7 +252,8 @@ export type ClientFunnelEvent =
   | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
   | { name: 'loan_compared'; props: { offers: number } }
   | { name: 'paywall_viewed' }
-  | { name: 'sample_loaded' };
+  | { name: 'sample_loaded' }
+  | { name: 'forecast_horizon_changed'; props: { years: HorizonYears } };
 
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =

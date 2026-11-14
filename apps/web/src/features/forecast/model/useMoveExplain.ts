@@ -1,26 +1,30 @@
-// "Why?" on a Next Move: POST /api/ai/explain for one move, kept per move until the move changes.
-// The server writes the two sentences (or its template fallback); no number comes from the model.
-import type { ForecastSource } from '@lifeguessr/types';
+// "Why?" on a Next Move: POST /api/ai/explain for one move at the shown horizon, kept per move and
+// horizon until the move changes. The server writes the two sentences (or its template fallback); no
+// number comes from the model.
+import type { ForecastSource, HorizonYears, Money } from '@lifeguessr/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { explainResult, type ExplainInput, type ExplainOptions, type ExplainResult } from '@/lib/api/aiExplain';
 import { toVMError } from '@/lib/model/errors';
 import { getAnonId } from '@/state/anonId';
-import type { ExplanationVM, Loadable } from './types';
+import type { ExplanationVM, Loadable, MoveVM } from './types';
 
 /** The explain call (swappable in tests). */
 export type ExplainFn = (input: ExplainInput, opts: ExplainOptions) => Promise<ExplainResult>;
 
-type Entry = { effect10y: number; source: ForecastSource | null; state: Loadable<ExplanationVM> };
+/** What an explanation was asked for: the move's effect at that year, from that source. */
+type Entry = { effect: Money; source: ForecastSource | null; state: Loadable<ExplanationVM> };
 
-/** A move with the forecast it was measured by (the VMs of S10 carry it): the server words the sentence by it. */
-type ExplainableMove = NonNullable<ExplainInput['move']>;
+/** One entry per move and horizon: asking "Why?" at 3 years keeps the sentence asked at 10. */
+const entryKey = (moveId: string, years: HorizonYears): string => `${moveId}@${years}`;
 
 /**
- * Explanations by move id. An entry counts only while the move it was asked for is unchanged (same
- * effect10y from the same source): when the profile changes, or the model's answer replaces the
- * rules', the move's number changes and the old sentence is about another one.
+ * Explanations by move id, for the horizon each move is shown at. Entries are kept per move and
+ * horizon, so picking another year hides a sentence and picking it back shows it again, with no new
+ * request. An entry counts only while the move it was asked for is unchanged (same effect, from the
+ * same source): when the profile changes or the model's answer replaces the rules', the move's number
+ * changes and the old sentence is about another one.
  */
-export function useMoveExplain(moves: readonly ExplainableMove[], explain: ExplainFn = explainResult) {
+export function useMoveExplain(moves: readonly MoveVM[], explain: ExplainFn = explainResult) {
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const controllers = useRef(new Map<string, AbortController>());
   useEffect(() => {
@@ -32,23 +36,24 @@ export function useMoveExplain(moves: readonly ExplainableMove[], explain: Expla
     (moveId: string) => {
       const move = moves.find((m) => m.id === moveId);
       if (!move) return;
-      controllers.current.get(moveId)?.abort();
+      const id = entryKey(moveId, move.horizonYears);
+      controllers.current.get(id)?.abort();
       const controller = new AbortController();
-      controllers.current.set(moveId, controller);
-      const { effect10y } = move;
-      const source = move.source ?? null;
-      setEntries((e) => ({ ...e, [moveId]: { effect10y, source, state: { status: 'loading' } } }));
-      explain({ move }, { anonId: getAnonId(), signal: controller.signal }).then(
+      controllers.current.set(id, controller);
+      const key = { effect: move.effect, source: move.source };
+      setEntries((e) => ({ ...e, [id]: { ...key, state: { status: 'loading' } } }));
+      const input: ExplainInput = { move, horizon: { years: move.horizonYears, effect: move.effect } };
+      explain(input, { anonId: getAnonId(), signal: controller.signal }).then(
         (res) => {
           if (controller.signal.aborted) return;
           setEntries((e) => ({
             ...e,
-            [moveId]: { effect10y, source, state: { status: 'ready', data: { text: res.text, fromAi: res.source === 'ai' } } },
+            [id]: { ...key, state: { status: 'ready', data: { text: res.text, fromAi: res.source === 'ai' } } },
           }));
         },
         (err: unknown) => {
           if (controller.signal.aborted) return;
-          setEntries((e) => ({ ...e, [moveId]: { effect10y, source, state: { status: 'error', error: toVMError(err) } } }));
+          setEntries((e) => ({ ...e, [id]: { ...key, state: { status: 'error', error: toVMError(err) } } }));
         },
       );
     },
@@ -57,8 +62,10 @@ export function useMoveExplain(moves: readonly ExplainableMove[], explain: Expla
 
   const explanations: Record<string, Loadable<ExplanationVM>> = {};
   for (const m of moves) {
-    const entry = entries[m.id];
-    if (entry && entry.effect10y === m.effect10y && entry.source === (m.source ?? null)) explanations[m.id] = entry.state;
+    const entry = entries[entryKey(m.id, m.horizonYears)];
+    if (entry && entry.effect === m.effect && entry.source === m.source) {
+      explanations[m.id] = entry.state;
+    }
   }
 
   return { explanations, explain: request };

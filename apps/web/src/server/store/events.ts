@@ -9,6 +9,9 @@
 //   times reached "forecast" once. Each id is reduced to the set of event names it sent in the
 //   window, as a bit mask (bit i = FUNNEL_EVENT_NAMES[i]); the stores return how many ids sent
 //   each set, and buildFunnelReport derives every number from those counts.
+// - The mask is 64 bits: a bigint here, a Postgres bigint in the query. Bit 63 is the sign bit of a
+//   Postgres bigint, so FUNNEL_EVENT_NAMES holds at most 63 names (packages/types/schemas.test.ts).
+//   Nothing persisted holds a mask: it is built per query.
 import {
   FUNNEL_EVENT_NAMES, FUNNEL_STEPS, TOOL_IDS, type ToolId, type FunnelEvent, type FunnelEventName, type FunnelReport,
 } from '@lifeguessr/types';
@@ -19,8 +22,8 @@ export type StoredEvent = FunnelEvent & { id: string };
 /** The report window, both ends included. */
 export type FunnelWindow = { from: Date; to: Date };
 
-/** How many anonymous ids sent exactly the set of events `mask` stands for. */
-export type MaskCount = { mask: string; users: number };
+/** How many anonymous ids sent exactly the set of events `mask` (64 bits) stands for. */
+export type MaskCount = { mask: bigint; users: number };
 
 /** The `home_guessed` events in the window: how many, clues opened in total, how many with none. */
 export type GuessStats = { guesses: number; cluesOpened: number; blind: number };
@@ -59,9 +62,9 @@ const ratio = (part: number, whole: number): number | null => (whole > 0 ? part 
 /** Everything GET /api/events/funnel reports, from the per-id event sets and the guess counts. */
 export type ToolCount = { tool: ToolId; opened: number; completed: number; converted: number };
 export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCount[], guesses: GuessStats, tools: readonly ToolCount[] = []): FunnelReport {
-  const rows = masks.filter((m) => BigInt(m.mask) !== 0n && m.users > 0);
+  const rows = masks.filter((m) => m.mask !== 0n && m.users > 0);
   /** Distinct ids that sent every event in `need`. */
-  const withAll = (need: bigint) => rows.reduce((sum, m) => ((BigInt(m.mask) & need) === need ? sum + m.users : sum), 0);
+  const withAll = (need: bigint) => rows.reduce((sum, m) => ((m.mask & need) === need ? sum + m.users : sum), 0);
   const bit = (name: FunnelEventName) => eventBit(name);
 
   const events = Object.fromEntries(FUNNEL_EVENT_NAMES.map((name) => [name, withAll(bit(name))])) as Record<FunnelEventName, number>;
