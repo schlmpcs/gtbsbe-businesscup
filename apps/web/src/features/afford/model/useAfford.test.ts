@@ -47,23 +47,51 @@ describe('useAfford (S11)', () => {
       failsOn: expected.failsOn ?? null,
     });
     expect(r.data.horizons.map((h) => h.month)).toEqual([1, 12, 60, 120]);
+    // $1,200 at $5,200/month over 40-hour weeks ($30/h) = 40 h = 5 days → 1 week of work.
+    expect(r.data.workTime).toEqual({ unit: 'weeks', amount: 1, per: false, hoursPerWeek: 40, isEstimate: false });
     const ten = r.data.horizons[3]!;
     expect(ten.with).toEqual(expected.with.points[120]);
     expect(ten.deltaMid).toBeCloseTo(expected.with.points[120]!.mid - expected.without.points[120]!.mid, 6);
   });
 
-  it('a loan needs APR and term; the form reports the missing fields', async () => {
+  it('a loan starts on the typical terms for its kind, tagged estimate; typed terms replace them', async () => {
     const { result } = renderHook(() => useAfford());
     await waitForReady(result);
     act(() => {
+      result.current.setLabel('Used car');
       result.current.setAmount(28000);
       result.current.setPayWith('loan');
     });
-    expect(result.current.purchase).toBeNull();
-    expect(result.current.invalidFields).toEqual(expect.arrayContaining(['loan.apr', 'loan.termMonths']));
-    act(() => result.current.setLoan({ apr: 0.069, termMonths: 36 }));
-    expect(result.current.purchase?.payWith).toEqual({ loan: { amount: 28000, apr: 0.069, termMonths: 36 } });
+    // A car: 8% over 72 months (loanTermsTypical.auto). A verdict with nothing typed and no errors.
+    expect(result.current.purchase?.payWith).toEqual({ loan: { amount: 28000, apr: 0.08, termMonths: 72 } });
+    expect(result.current.invalidFields).toEqual([]);
     expect(result.current.result?.status).toBe('ready');
+    expect(result.current.form.loan).toMatchObject({ apr: 0.08, termMonths: 72 });
+    expect(result.current.loanEstimate).toMatchObject({ kind: 'auto', apr: true, termMonths: true, source: { year: 2025 } });
+
+    // Anything else is a personal loan: 12% over 24 months.
+    act(() => result.current.setLabel('Couch'));
+    expect(result.current.purchase?.payWith).toEqual({ loan: { amount: 28000, apr: 0.12, termMonths: 24 } });
+    expect(result.current.loanEstimate?.kind).toBe('personal');
+
+    act(() => result.current.setLoan({ apr: 0.069 }));
+    expect(result.current.purchase?.payWith).toEqual({ loan: { amount: 28000, apr: 0.069, termMonths: 24 } });
+    expect(result.current.loanEstimate).toMatchObject({ apr: false, termMonths: true });
+    act(() => result.current.setLoan({ termMonths: 36 }));
+    expect(result.current.purchase?.payWith).toEqual({ loan: { amount: 28000, apr: 0.069, termMonths: 36 } });
+    expect(result.current.loanEstimate).toBeNull();
+
+    // A typed field that is emptied stays empty and is flagged (no snapping back to the typical value).
+    act(() => result.current.setLoan({ apr: null }));
+    expect(result.current.purchase).toBeNull();
+    expect(result.current.invalidFields).toEqual(['loan.apr']);
+  });
+
+  it('a loan from a saved or parsed purchase keeps its own terms: nothing is typical', () => {
+    const { purchase } = purchaseFromForm({
+      label: 'Car', amount: 20000, recurring: false, payWith: 'loan', loan: { apr: 0.05, termMonths: 60, downPayment: 0, fees: 0 },
+    });
+    expect(purchase?.payWith).toEqual({ loan: { amount: 20000, apr: 0.05, termMonths: 60 } });
   });
 
   it('blank label falls back to the copy default', () => {

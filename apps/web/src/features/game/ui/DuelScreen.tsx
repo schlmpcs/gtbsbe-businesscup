@@ -106,6 +106,9 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
           {vm.challenged && ready && vm.phase !== 'summary' && (
             <p className="rounded-full bg-primary-soft px-lg py-xs text-sm font-semibold text-primary">{t.challenged}</p>
           )}
+          {vm.newDay && (
+            <p role="status" className="rounded-full bg-primary-soft px-lg py-xs text-sm font-semibold text-primary">{t.newDay}</p>
+          )}
         </header>
 
         <div ref={contentRef} tabIndex={-1} className="flex flex-col gap-xl focus:outline-none">

@@ -255,6 +255,28 @@ export const CategoryTotalsSchema = z.object({
   path: ['lastDay'],
 });
 
+// ----- daily spending log ---------------------------------------------------------------------
+
+/** 'YYYY-MM-DD', a real calendar day. */
+export const CalendarDaySchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'expected YYYY-MM-DD')
+  .refine((d) => Number(d.slice(8)) <= daysInMonth(d.slice(0, 7)), { message: 'day is past the end of the month' });
+/** Largest single purchase the daily log accepts (dollars): a typo guard, not a judgment. */
+export const DAILY_ENTRY_MAX_AMOUNT = 100_000;
+/** Longest label kept for a daily entry (characters). */
+export const DAILY_ENTRY_LABEL_MAX = 60;
+
+/** One purchase as a parser returns it (the local keyword parser or /api/ai/parse kind 'spend'). */
+export const SpendItemSchema = z.object({
+  category: CostCategorySchema,
+  amount: z.number().positive().max(DAILY_ENTRY_MAX_AMOUNT),   // one purchase, dollars
+  label: z.string().trim().min(1).max(DAILY_ENTRY_LABEL_MAX).optional(),
+});
+
+export const DailyEntrySchema = SpendItemSchema.extend({
+  id: z.string().min(1).max(64),
+  date: CalendarDaySchema,
+});
+
 /** A day inside a statement: 'YYYY-MM' and a day that month has. */
 export const ChargeDateSchema = z.object({ month: MonthSchema, day: z.number().int().min(1).max(31) })
   .refine((d) => d.day <= daysInMonth(d.month), { message: 'day is past the end of the month', path: ['day'] });

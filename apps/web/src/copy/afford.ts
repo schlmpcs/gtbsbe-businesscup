@@ -35,6 +35,13 @@ export const afford = {
     downPayment: 'Down payment',
     fees: 'Fees',
     feesHint: 'Added to the loan.',
+    /** Pay-with hint while some loan terms are typical values (JF9). */
+    loanTypicalHint: 'Typical terms are filled in. Type the ones from your offer to replace them.',
+    /** Under a loan field still on the typical value, by loan kind. */
+    loanTypical: {
+      auto: 'Typical for a car loan. Not an offer.',
+      personal: 'Typical for a personal loan. Not an offer.',
+    } as Record<'auto' | 'personal', string>,
     errors: {
       amount: 'Enter a price above $0.',
       label: 'Keep the name under 120 characters.',
@@ -99,6 +106,19 @@ export const afford = {
       60: 'net worth in 5 years, vs not buying',
       120: 'net worth in 10 years, vs not buying',
     } as Record<number, string>,
+    /** JF14: where you will be with vs without the purchase (amounts formatted by the UI), not a signed delta. */
+    withVsWithout: {
+      label: 'Where you’ll be, with vs without it',
+      with: 'With it',
+      without: 'Without it',
+      /** Under each amount: the horizon it is read at. */
+      at: { 1: 'after this month', 12: 'in 1 year', 60: 'in 5 years', 120: 'in 10 years' } as Record<number, string>,
+      /** The cost in words; `amount` is the positive difference, formatted. */
+      costs: (amount: string, when: string) => `It costs you about ${amount} of net worth ${when}.`,
+      gains: (amount: string, when: string) => `It leaves you about ${amount} ahead ${when}.`,
+      same: (when: string) => `It barely changes your net worth ${when}.`,
+    },
+    detailsTitle: 'Details: other years and the cheapest way to pay',
     verdicts: {
       fits: 'Yes, it fits.',
       wait: (n: number) => `Yes, in ${months(n)}.`,

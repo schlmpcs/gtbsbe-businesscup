@@ -4,7 +4,7 @@ import type { Purchase } from '@lifeguessr/types';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { afford as t, forecast, pro } from '@/copy';
+import { afford as t, common, forecast, pro, workTime as workTimeCopy } from '@/copy';
 import type { AffordResultVM } from '@/features/afford/model/types';
 import { AffordResultPanel } from '@/features/afford/ui/AffordResultPanel';
 import type * as AiParse from '@/lib/api/aiParse';
@@ -66,15 +66,21 @@ describe('/afford (S11)', () => {
     expect(screen.getByText(t.result.failsOn.cushion(t.result.cushionMonths(1)))).toBeTruthy();
   });
 
-  it('paying with a loan asks for its terms and flags the missing APR', async () => {
+  it('paying with a loan starts on typical terms, tagged estimate: a verdict with no typing and no errors', async () => {
     const user = await renderReady();
-    await user.type(screen.getByRole('textbox', { name: t.form.amount }), '2000');
+    await user.type(screen.getByRole('textbox', { name: t.form.label }), 'Car');
+    await user.type(screen.getByRole('textbox', { name: t.form.amount }), '28000');
     await user.click(screen.getByRole('radio', { name: t.form.payWithOptions.loan }));
-    expect(screen.getByText(t.form.errors['loan.apr']!)).toBeTruthy();
-    expect(screen.getByText(t.form.fixFields)).toBeTruthy();
-    await user.type(screen.getByRole('textbox', { name: t.form.apr }), '9.9');
-    await user.type(screen.getByRole('textbox', { name: t.form.termMonths }), '24');
     await waitFor(() => expect(verdict()).toBeTruthy());
+    expect(screen.queryByText(t.form.fixFields)).toBeNull();
+    expect(screen.queryByText(t.form.errors['loan.apr']!)).toBeNull();
+    expect(screen.getAllByText(t.form.loanTypical.auto)).toHaveLength(2); // the APR and the term
+    // A field the user empties is theirs: then it is flagged.
+    await user.clear(screen.getByRole('textbox', { name: t.form.apr }));
+    expect(screen.getByText(t.form.errors['loan.apr']!)).toBeTruthy();
+    await user.type(screen.getByRole('textbox', { name: t.form.apr }), '9.9');
+    await waitFor(() => expect(verdict()).toBeTruthy());
+    expect(screen.getAllByText(t.form.loanTypical.auto)).toHaveLength(1); // only the term is still typical
   });
 
   it('free text is shown for confirmation before it fills the form; Pro saves it to the wishlist', async () => {
@@ -139,6 +145,7 @@ describe('AffordResultPanel', () => {
     withPoints: points,
     withoutPoints: points,
     horizons: [],
+    workTime: null,
   };
   const rules = { cushionMonths: 1, debtLoadRed: 0.36 };
   const panel = (data: AffordResultVM) => (
@@ -173,5 +180,19 @@ describe('AffordResultPanel', () => {
     expect(screen.getByTestId('afford-verdict').textContent).toBe(t.result.verdicts.wait(3));
     expect(screen.getByText(t.result.waitBody(3))).toBeTruthy();
     expect(screen.getByText(t.result.failsOn.cushion(t.result.cushionMonths(1)))).toBeTruthy();
+  });
+
+  it('shows the price in work time next to the verdict, tagged when take-home pay is an estimate', () => {
+    const { unmount } = render(panel(base));
+    expect(screen.queryByTestId('afford-work-time')).toBeNull();
+    unmount();
+    const work = { unit: 'days', amount: 3, per: false, hoursPerWeek: 40, isEstimate: false } as const;
+    const { rerender } = render(panel({ ...base, workTime: work }));
+    const line = screen.getByTestId('afford-work-time');
+    expect(line).toHaveTextContent(workTimeCopy.ofYourWork('days', 3));
+    expect(within(line).queryByText(common.estimateTag)).toBeNull();
+    rerender(panel({ ...base, workTime: { ...work, unit: 'weeks', amount: 2.5, per: 'monthly', isEstimate: true } }));
+    expect(screen.getByTestId('afford-work-time')).toHaveTextContent('= 2.5 weeks of your work each month');
+    expect(within(screen.getByTestId('afford-work-time')).getByText(common.estimateTag)).toBeTruthy();
   });
 });

@@ -41,3 +41,8 @@ export { goal } from './goal';
 export { avatar } from './avatar';
 export { yearsPhrase } from './ai';
 export { lifeEvents } from './lifeEvents';
+export { cushion } from './cushion';
+export { workTime } from './workTime';
+export { spend, type SpendPresetId } from './spend';
+export { bills } from './bills';
+export { together } from './together';

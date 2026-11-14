@@ -102,7 +102,7 @@ export type PickResult = {
   breakdown: Record<DuelLetter, CategoryLine[]>;
   decidedBy: { category: CostCategory; A: Money; B: Money };  // biggest gap toward the costlier card (monthly)
   lesson: string;                     // fixed template filled by code, never an LLM
-  crowd: { pickedA: number; total: number } | null;           // null when total < 20
+  crowd: { pickedA: number; total: number } | null;           // live count of stored picks; null when total < DUEL_CROWD_MIN_PICKS (constants.ts)
 };
 export type DuelPickRequest = { anonId: string; date: string; round: DuelRound; choice: DuelLetter };
 export type DuelHintRequest = { anonId: string; date: string; round: DuelRound };
@@ -215,6 +215,15 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 // `lastDay` = day of month of the latest statement line in that month (any line: spending, pay or
 // a transfer), i.e. how far into the month the statement goes. Month-end projects the month in
 // progress from it. Absent on data saved before it existed: the app then falls back to today.
+
+// Daily spending log (/spend and the Home quick-add). Kept in the browser only (app store). Only a
+// line the local parser can't read goes to /api/ai/parse (kind 'spend'), and it is not stored there.
+// `label` is what the user typed ("coffee"), `amount` one purchase in dollars.
+/** One line of the daily log, without its id and date: what the parser (local or AI) returns. */
+export type SpendItem = { category: CostCategory; amount: Money; label?: string };
+export type DailyEntry = { id: string; date: string /* YYYY-MM-DD, local */; category: CostCategory;
+  amount: Money;                 // one purchase, > 0
+  label?: string };
 
 // How the server sorted one statement line (labels only; every sum is done in code). A CostCategory
 // is spending in that category when money goes out, or a refund from that kind of merchant when it
@@ -382,3 +391,4 @@ export * from './overpaying';
 export * from './subscriptions';
 export * from './subscriptionAudit';
 export * from './avatar';
+export * from './together';

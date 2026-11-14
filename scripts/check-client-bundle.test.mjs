@@ -21,6 +21,7 @@ function staticDir(files) {
 }
 
 const HTTP_CLIENT = 'postJson(`${base}/api/daily/guess`,{anonId:e})';
+const HTTP_DUEL_CLIENT = 'postJson(`${n}/api/daily/pick`,{anonId:r,date:t,round:e,choice:a})';
 
 describe('check-client-bundle', () => {
   const rules = bundleRules({ duelSource: 'fixtures' }); // the default build
@@ -32,7 +33,13 @@ describe('check-client-bundle', () => {
     expect(labels).toContain('fixture game client (FIXTURE_LOG_KEY)');
     expect(labels).toContain('fixture game client (its error message)');
     expect(labels).not.toContain('fixture duel client (its result id prefix)'); // the duel plays in the browser by default
-    expect(bundleRules({ duelSource: 'api' }).forbidden.map((r) => r.label)).toContain('fixture duel client (its result id prefix)');
+    const api = bundleRules({ duelSource: 'api' });
+    expect(api.forbidden.map((r) => r.label)).toContain('fixture duel client (its result id prefix)');
+    expect(api.forbidden.filter((r) => r.label.startsWith('duel sample card ')).length).toBeGreaterThanOrEqual(10);
+    expect(api.forbidden.map((r) => r.label)).toContain('duel sample card sample-duel-01');
+    expect(labels).not.toContain('duel sample card sample-duel-01');
+    expect(api.required.map((r) => r.label)).toEqual(['HTTP game client (/api/daily/guess)', 'HTTP duel client (/api/daily/pick)']);
+    expect(rules.required.map((r) => r.label)).toEqual(['HTTP game client (/api/daily/guess)']);
   });
 
   it('passes an API build: HTTP client present, sample lives allowed, no catalog card, no fixture client', () => {
@@ -72,9 +79,25 @@ describe('check-client-bundle', () => {
       'chunks/a.js': HTTP_CLIENT,
       'chunks/duel.js': 'const D="lifeguessr.fixtureDuel";const r=`fixture-duel-${t}-${u}`;',
     });
-    expect(scanChunks(dir, bundleRules({ duelSource: 'api' }))).toEqual(['fixture duel client (its result id prefix) is in chunks/duel.js']);
+    expect(scanChunks(dir, bundleRules({ duelSource: 'api' }))).toEqual([
+      'fixture duel client (its result id prefix) is in chunks/duel.js',
+      'HTTP duel client (/api/daily/pick) is in no chunk: is this the right build?',
+    ]);
     // By default (NEXT_PUBLIC_DUEL_SOURCE=fixtures) the duel plays in the browser on purpose.
     expect(scanChunks(dir, bundleRules({ duelSource: 'fixtures' }))).toEqual([]);
+  });
+
+  it('in a duel API build: passes with the HTTP duel client, fails on a duel sample card', () => {
+    const api = bundleRules({ duelSource: 'api' });
+    expect(scanChunks(staticDir({ 'chunks/a.js': HTTP_CLIENT, 'chunks/duel.js': HTTP_DUEL_CLIENT }), api)).toEqual([]);
+    const leaky = staticDir({
+      'chunks/a.js': HTTP_CLIENT,
+      'chunks/duel.js': HTTP_DUEL_CLIENT,
+      'chunks/ladder.js': 'JSON.parse(\'[{"id":"sample-duel-07","zip":"60629"}]\')',
+    });
+    expect(scanChunks(leaky, api)).toEqual(['duel sample card sample-duel-07 is in chunks/ladder.js']);
+    // The default build plays the duel in the browser on those cards, on purpose.
+    expect(scanChunks(leaky, bundleRules({ duelSource: 'fixtures' }))).toEqual([]);
   });
 
   it("fails a scan it can't trust: no build, no chunks, no HTTP game client", () => {

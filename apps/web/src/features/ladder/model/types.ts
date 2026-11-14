@@ -88,6 +88,17 @@ export type GuessYourselfVM = {
   submit: () => void;
 };
 
+/**
+ * S6: why this card costs what it does, at a glance (1–2 per card, largest difference first).
+ * `amount` is the card's own monthly cost line (engine costOfLife); area chips compare its rent with
+ * the other cards of the same size.
+ */
+export type DifferentiatorVM =
+  | { kind: 'car'; amount: Money }
+  | { kind: 'noCar' }
+  | { kind: 'childcare'; amount: Money }
+  | { kind: 'pricierArea' | 'cheaperArea'; amount: Money };
+
 /** S6: one life card to start from. */
 export type LifeCandidateVM = {
   cardId: string;
@@ -108,6 +119,8 @@ export type LifeCandidateVM = {
   fromToday: boolean;
   /** Closest to your own guess (S5). */
   isNearest: boolean;
+  /** 1–2 chips that explain the price (car, childcare, neighborhood tier). Empty when unavailable. */
+  differentiators: DifferentiatorVM[];
   /** False when we have no area data for its ZIP (can't build a profile). */
   available: boolean;
 };
@@ -119,6 +132,11 @@ export type ClosestLifeVM = {
   candidates: LifeCandidateVM[];
   nearestCardId: string | null;
   chosenCardId: string | null;
+  /**
+   * The card shown as selected: the chosen one, else the nearest to the guess, else the first
+   * available. The CTA starts from it, so it is never disabled while one exists.
+   */
+  selectedCardId: string | null;
   /** Build the profile from this card (engine cardToProfile; every field an estimate). */
   choose: (cardId: string) => void;
 };
@@ -196,6 +214,23 @@ export type BalanceSheetVM = {
   debtKinds: readonly Debt['kind'][];
   /** Bounds for a debt's balance, APR (decimal, 0–1) and minimum payment. */
   debtBounds: { balance: InputBounds; apr: InputBounds; minPayment: InputBounds };
+  /**
+   * Prefill for a new debt of each kind when the user only types the balance: an APR default
+   * (engine debtAprDefaults; the card one is Fed G.19). Always shown as an estimate, editable.
+   */
+  debtAprDefaults: Record<Debt['kind'], Rate>;
+  /** The engine's estimate of a skipped minimum payment (card formula: interest + 1%, floor $25). */
+  estimateMinPayment: (balance: Money, apr: Rate) => Money;
+  /**
+   * Debt payments found in the uploaded statement (mean per month over the months that have them),
+   * offered as a card to confirm or dismiss. The statement only tells us the payment, not the kind
+   * or balance: the user picks the kind and types the balance. Null when there is no statement, it
+   * has no debt payments, debts were already added, or the card was dismissed.
+   */
+  detectedDebt: { monthlyPayment: Money; months: number } | null;
+  /** Add the detected payment as one debt of this kind (APR prefilled, payment from the statement). */
+  confirmDetected: (kind: Debt['kind'], balance: Money) => string;
+  dismissDetected: () => void;
   /** Debt payments / take-home pay this month, with zone and thresholds. */
   debtLoad: DebtLoadGaugeVM;
   /** End of the debt-load gauge's dial (a display scale, not a threshold). */
