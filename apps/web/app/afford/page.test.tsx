@@ -4,7 +4,7 @@ import type { Purchase } from '@lifeguessr/types';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { afford as t, pro } from '@/copy';
+import { afford as t, forecast, pro } from '@/copy';
 import type { AffordResultVM } from '@/features/afford/model/types';
 import { AffordResultPanel } from '@/features/afford/ui/AffordResultPanel';
 import type * as AiParse from '@/lib/api/aiParse';
@@ -46,6 +46,7 @@ describe('/afford (S11)', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(5);
     expect(screen.getByText(t.result.cheapestTitle)).toBeTruthy();
     expect(screen.getByText((text) => text.startsWith(t.result.cheapestSame))).toBeTruthy();
+    for (const tag of screen.getAllByTestId('afford-forecast-source')) expect(tag).toHaveTextContent(forecast.source.rules);
   });
 
   it('a $15,000 card purchase is a no, with the reason in plain words', async () => {
@@ -116,6 +117,7 @@ describe('AffordResultPanel', () => {
     baselineFails: false,
     cheapestWay: 'cash',
     todaysDollars: false,
+    forecastSource: 'rules',
     withPoints: points,
     withoutPoints: points,
     horizons: [],
@@ -124,6 +126,14 @@ describe('AffordResultPanel', () => {
   const panel = (data: AffordResultVM) => (
     <AffordResultPanel result={{ status: 'ready', data }} rules={rules} invalidFields={[]} purchaseLabel="Car" chosenWay="loan" />
   );
+
+  it('labels the chart and the horizon numbers as the rules-based estimate (S10 may show the AI model’s number)', () => {
+    render(panel(base));
+    for (const card of [screen.getByTestId('afford-chart'), screen.getByTestId('afford-horizons')]) {
+      expect(within(card).getByTestId('afford-forecast-source')).toHaveTextContent(forecast.source.rules);
+    }
+    expect(screen.getAllByTestId('afford-forecast-source')).toHaveLength(2);
+  });
 
   it('names the rule the purchase breaks, with the threshold from the view-model', () => {
     render(panel(base));
