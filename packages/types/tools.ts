@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_ID_LENGTH, SUBSCRIPTION_FINDINGS_MAX, SUBSCRIPTION_TICKS_MAX } from './constants';
+import { MonthSchema } from './schemas';
 import { SubscriptionAuditSchema } from './subscriptionAudit';
 // Local settings only. Feature PRs extend their own slice; no tool state enters a server session.
 /** A finding id, or a ticked service as `tick:<service>`: short, never empty. */
@@ -48,7 +49,13 @@ export const OverpayingToolStateSchema = z.strictObject({
 export const PayoffToolStateSchema = z.strictObject({
   method: z.enum(['avalanche', 'snowball']).default('avalanche'),
   extra: z.number().finite().nonnegative().default(0),
-  targetMonths: z.number().int().min(1).max(1200).optional(),
+  /**
+   * The month the person wants to be debt-free by, as 'YYYY-MM'. A calendar month, not a number of
+   * months from the day it was saved: a count from the save date moves every time it is read back later.
+   */
+  targetMonth: MonthSchema.refine((m) => Number(m.slice(0, 4)) >= 2000 && Number(m.slice(0, 4)) <= 2200, {
+    message: 'year out of range (2000 to 2200)',
+  }).optional(),
 });
 export const ToolsStateSchema = z.strictObject({
   subscriptions: SubscriptionToolStateSchema.optional(),

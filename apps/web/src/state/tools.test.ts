@@ -56,3 +56,9 @@ it('restores the subscription audit slice in full, and drops a damaged one witho
     expect(restoreTools({ subscriptions: damaged, payoff: { extra: 5 } })).toEqual({ payoff: { method: 'avalanche', extra: 5 } });
   }
 });
+it('restores a payoff target as a calendar month, and drops one saved as months from the save date', () => {
+  expect(restoreTools({ payoff: { extra: 5, targetMonth: '2029-12' } })).toEqual({
+    payoff: { method: 'avalanche', extra: 5, targetMonth: '2029-12' },
+  });
+  expect(restoreTools({ payoff: { extra: 5, targetMonths: 36 } })).toEqual({});
+});

@@ -1,9 +1,10 @@
 // What each micro-tool keeps in this browser (packages/types/tools.ts, from M2): the subscription audit's slice
-// (M5's shape: guess, ticks with their plan, the choices made about findings, the last audit). Every sample is written by hand; nothing is read back from an implementation.
+// (M5's shape: guess, ticks with their plan, the choices made about findings, the last audit) and the payoff
+// planner's target month. Every sample is written by hand; nothing is read back from an implementation.
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 import {
-  MAX_ID_LENGTH, SUBSCRIPTION_FINDINGS_MAX, SUBSCRIPTION_TICKS_MAX, SubscriptionToolStateSchema,
+  MAX_ID_LENGTH, PayoffToolStateSchema, SUBSCRIPTION_FINDINGS_MAX, SUBSCRIPTION_TICKS_MAX, SubscriptionToolStateSchema,
   ToolsStateSchema, type SubscriptionAudit,
 } from './index';
 
@@ -72,4 +73,33 @@ describe('SubscriptionToolStateSchema (the subscription audit in this browser)',
     ['an audit that breaks its own rules (a finding charged after the as-of date)', { audit: { ...audit, asOf: { month: '2026-11', day: 1 } } }],
     ['a list of ids that is not a list', { confirmed: 'netflix-com-ca' }],
   ])('refuses %s', (_why, value) => bad(SubscriptionToolStateSchema, value));
+});
+
+describe('PayoffToolStateSchema (the payoff planner in this browser)', () => {
+  it('keeps the method and the extra payment, with defaults', () => {
+    expect(PayoffToolStateSchema.parse({})).toEqual({ method: 'avalanche', extra: 0 });
+    expect(PayoffToolStateSchema.parse({ method: 'snowball', extra: 150 })).toEqual({ method: 'snowball', extra: 150 });
+  });
+
+  it('keeps a target as the calendar month it names, so it does not move when the slice is restored later', () => {
+    // 'YYYY-MM': December 2029 stays December 2029, whatever day the slice is read back on.
+    expect(PayoffToolStateSchema.parse({ targetMonth: '2029-12' })).toEqual({ method: 'avalanche', extra: 0, targetMonth: '2029-12' });
+    for (const targetMonth of ['2026-01', '2026-12', '2100-06', '2126-11']) good(PayoffToolStateSchema, { targetMonth });
+  });
+
+  it.each([
+    ['months from the save date, the old field that drifts', { targetMonths: 36 }],
+    ['a month 13', { targetMonth: '2029-13' }],
+    ['a month 00', { targetMonth: '2029-00' }],
+    ['a month without its zero', { targetMonth: '2029-1' }],
+    ['a full date', { targetMonth: '2029-12-01' }],
+    ['a number', { targetMonth: 202912 }],
+    ['text', { targetMonth: 'December 2029' }],
+    ['an empty string', { targetMonth: '' }],
+    ['a year before 2000', { targetMonth: '1999-12' }],
+    ['a year after 2200', { targetMonth: '2201-01' }],
+    ['the method "minimum"', { method: 'minimum' }],
+    ['a negative extra payment', { extra: -1 }],
+    ['an extra payment of Infinity', { extra: Number.POSITIVE_INFINITY }],
+  ])('refuses %s', (_why, value) => bad(PayoffToolStateSchema, value));
 });
