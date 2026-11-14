@@ -317,7 +317,17 @@ export type BalanceSheetVM = {
   addDebt: (input: DebtInput) => string;
   updateDebt: (id: string, input: DebtInput) => void;
   removeDebt: (id: string) => void;
+  /**
+   * JF9: read a photo, screenshot or PDF of a card or loan statement (LLM transcription via
+   * /api/ai/parse-image, validated in code). The values only prefill the debt form: the user checks
+   * them and saves. Never rejects; failures come back as a VMError. The file is not stored.
+   */
+  scanStatement: (file: File) => Promise<ScanDebtOutcome>;
 };
+
+/** A debt read off a statement; null = the document didn't show it (kind: the user picks; APR/min: estimated). */
+export type ScannedDebt = { kind: Debt['kind'] | null; balance: Money; apr: Rate | null; minPayment: Money | null };
+export type ScanDebtOutcome = { ok: true; value: ScannedDebt } | { ok: false; error: VMError };
 
 /** One statement month as shown for review. */
 export type StatementMonthVM = {

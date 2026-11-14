@@ -311,13 +311,18 @@ export const loan = {
       unavailable: ai.parse.errors.unavailable,
       nothingFound: ai.parse.errors.nothing_found,
       rateLimited: ai.parse.errors.rate_limited,
-      badInput: 'We could not read that. Try different words, or use the form.',
+      badInput: 'We could not read that. Try different words or a clearer photo, or use the form.',
       invalidResponse: ai.parse.errors.invalid_output,
       network: 'We could not reach the server. Check your connection, or use the form.',
-      incomplete: 'Some details are missing from what you typed. Fill them in on the form.',
+      incomplete: 'Some details are missing (APR, term or amount). Fill them in on the form.',
       other: ai.parse.errors.upstream_error,
     },
     useForm: 'Use the form',
+    /** JF9: read a photo, screenshot or PDF of a lender or dealer offer. */
+    scan: 'Or scan an offer (photo, screenshot or PDF)',
+    scanning: 'Reading your file…',
+    privacy: 'We read it and don\'t keep it.',
+    fromImage: 'Read from your file. Check every number before you add it.',
   },
 
   errors: {

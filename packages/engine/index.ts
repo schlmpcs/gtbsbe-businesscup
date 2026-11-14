@@ -66,3 +66,7 @@ export { accountsToProfile, profileToAccounts, netWorthSummary, HOME_ACCOUNT_ID 
 export { budgetRows, budgetRowsForYear } from './budget';                                      // MP9
 export { cashFlowSummary } from './cashFlow';                                                  // MP9
 export { ownerCosts, defaultHome, tenureOf } from './home';                                   // JF4
+export {
+  baselineScenario, duplicateScenario, compareScenarios, planMoveEffects, previewEvent,
+  MAX_SCENARIOS, BASELINE_SCENARIO_ID, BASELINE_SCENARIO_NAME, COMPARE_TIE, type PlanMoveEffectsOptions,
+} from './scenarios';                                                                         // MP6

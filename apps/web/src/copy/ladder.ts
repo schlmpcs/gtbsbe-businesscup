@@ -296,6 +296,21 @@ export const ladder = {
     remove: 'Remove',
     removeLabel: (kind: string) => `Remove ${kind.toLowerCase()}`,
     addDebt: 'Add a debt',
+    /** JF9: a photo, screenshot or PDF of a card or loan statement fills the debt form. */
+    scan: {
+      button: 'Scan a statement',
+      scanning: 'Reading your statement…',
+      privacy: 'Photo, screenshot or PDF of a card or loan statement. We read it and don\'t keep it.',
+      note: 'Read from your statement. Check the numbers, then save.',
+      errors: {
+        unavailable: 'Reading statements is not available right now. Pick a debt type and type the balance.',
+        nothingFound: 'We could not find a balance on that. Try a clearer photo of the statement summary.',
+        incomplete: 'We could not find the balance on that. Try a photo that shows the summary box.',
+        rateLimited: 'Too many tries. Wait a minute and try again.',
+        badInput: 'We could not read that file. Try a JPG, PNG or PDF.',
+        other: 'Something went wrong reading it. Try again, or type the balance.',
+      },
+    },
     kindLabel: 'Type',
     save: 'Save debt',
     cancel: 'Cancel',
