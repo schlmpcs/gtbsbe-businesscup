@@ -470,6 +470,20 @@ describe('usePayoffPlanner: the target date', () => {
     });
   });
 
+  it('does not run the engine again when it only renders again with the same inputs', async () => {
+    const { options, extraToFinishBy, comparePayoff } = plannerOptions({ engineOptions: { solve: { extra: 212.2, reachable: true } } });
+    const hook = await ready(options);
+    act(() => hook.result.current.planner!.setTargetDate('2029-12'));
+    const solves = extraToFinishBy.mock.calls.length;
+    const compares = comparePayoff.mock.calls.length;
+    for (let i = 0; i < 5; i++) hook.rerender({ options });
+    expect(extraToFinishBy).toHaveBeenCalledTimes(solves);
+    expect(comparePayoff).toHaveBeenCalledTimes(compares);
+    // A changed input does run it again.
+    act(() => hook.result.current.planner!.setExtra(100));
+    expect(extraToFinishBy.mock.calls.length).toBeGreaterThan(solves);
+  });
+
   it('solves for the picked method', async () => {
     const { options, extraToFinishBy } = plannerOptions({ engineOptions: { solve: { extra: 100, reachable: true } } });
     const { result } = await ready(options);

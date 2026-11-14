@@ -108,6 +108,21 @@ function solveTarget(
   return { status: 'needs', date, months, extraNeeded, moreThanNow: Math.max(0, Math.ceil(extraNeeded - extra)) };
 }
 
+/**
+ * The target-date solver, run only when one of its inputs changes: it asks the engine up to a few dozen times (it
+ * bisects), and the screen renders far more often than that. A hook of its own so that the React Compiler can keep
+ * this memo: written inside usePayoffPlanner, the same useMemo is rejected (react-hooks/preserve-manual-memoization).
+ */
+function useTargetSolve(
+  targetDate: string | null, today: string | null, extra: Money, debts: Debt[], method: PayoffChoice,
+  engine: PayoffEngine | undefined, active: boolean, selected: PayoffPlan | null,
+): PayoffTargetVM {
+  return useMemo(
+    () => solveTarget(checkTarget(targetDate, today), extra, debts, method, engine, active, selected),
+    [targetDate, today, extra, debts, method, engine, active, selected],
+  );
+}
+
 export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferId'>, options: PayoffPlannerOptions | null): PayoffPlannerVM | null {
   const ready = useAppReady();
   const profile = useAppStore((s) => s.profile);
@@ -226,10 +241,8 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
     return { months: PAYOFF_NEVER_FIX_MONTHS, years: PAYOFF_NEVER_FIX_MONTHS / 12, extra: solved.data.reachable ? Math.ceil(solved.data.extra) : null };
   }, [engine, active, selected, debts, method]);
 
-  // Plain calls, not useMemo: a manual useMemo here makes the React Compiler skip this hook
-  // (react-hooks/preserve-manual-memoization), and the compiler memoizes plain calls itself.
   const check = checkTarget(targetDate, today);
-  const targetVM = solveTarget(check, extra, debts, method, engine, active, selected);
+  const targetVM = useTargetSolve(targetDate, today, extra, debts, method, engine, active, selected);
 
   // ----- the picks, kept after the person's own changes (what was only restored is not saved again) -----
   const touched = Object.keys(edits).length > 0;
