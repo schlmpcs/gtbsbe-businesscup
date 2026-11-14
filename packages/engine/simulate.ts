@@ -57,7 +57,12 @@ export type ForecastRates = {
  * positive surplus pays it down before anything goes to cash or retirement. Its id is in
  * `Simulation.payoffCardIds`. Without the flag a purchase follows the forecast's default rules.
  */
-export type ScheduledPurchase = Purchase & { startMonth?: number; payOffFromSurplus?: boolean };
+export type ScheduledPurchase = Purchase & {
+  startMonth?: number;
+  payOffFromSurplus?: boolean;
+  /** 0-based month index from which a recurring purchase stops (exclusive); absent = never stops. */
+  endMonth?: number;
+};
 
 /** Which inputs to use: point values (`mid`) or every estimate shifted against / in the user's favor. */
 export type Scenario = 'low' | 'mid' | 'high';
@@ -209,6 +214,7 @@ function financePurchase(amount: Money, l: LoanInput, scale: number): { cashOut:
 function occursAt(x: ScheduledPurchase, t: number): boolean {
   const start = x.startMonth ?? 0;
   if (t < start) return false;
+  if (x.endMonth !== undefined && t >= x.endMonth) return false;
   if (x.recurring === false) return t === start;
   if (x.recurring === 'monthly') return true;
   return (t - start) % 12 === 0;
@@ -233,6 +239,9 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
   for (const x of extra) {
     const start = x.startMonth ?? 0;
     if (!Number.isInteger(start) || start < 0) throw new RangeError(`Invalid purchase startMonth: ${start}`);
+    if (x.endMonth !== undefined && (!Number.isInteger(x.endMonth) || x.endMonth < start)) {
+      throw new RangeError(`Invalid purchase endMonth: ${x.endMonth}`);
+    }
   }
 
   const takeHome = shift(p.takeHomePay.value, p.takeHomePay.isEstimate, scenario, true);

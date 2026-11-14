@@ -285,3 +285,4 @@ export * from './tools';
 export * from './payoff';
 export * from './overpaying';
 export * from './subscriptions';
+export * from './whatIf';
