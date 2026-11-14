@@ -13,7 +13,7 @@ export {
   type ScheduledPurchase, type Scenario,
 } from './simulate';
 export { rankMoves } from './moves';
-export { canAfford } from './afford';
+export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordOptions } from './afford';
 export { monthEnd, type CurrentMonth } from './month';
 export { sceneOf, CAR_PRICE_BANDS, TAKEOUT_BUCKETS, SPRITE_IDS } from './scene';
 export { loan, compareLoans, payoffOrder, amortizedPayment, MAX_SIMULATION_MONTHS } from './loan/index';
