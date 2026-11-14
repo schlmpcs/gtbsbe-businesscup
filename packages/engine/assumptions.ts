@@ -1,0 +1,155 @@
+// Every constant the engine uses, in one place (docs/ENGINEERING.md → Default assumptions).
+// Each carries a `source` or `assumption: true`; the UI lists them in a "How we calculate" panel.
+// Rates are decimals per year. `note` is developer documentation, not user-facing copy.
+import type { Money, Rate, Source } from '@lifeguessr/types';
+
+export type Assumption<T> =
+  | { value: T; source: Source; assumption?: false; note?: string }
+  | { value: T; assumption: true; source?: Source; note?: string };
+
+/** Fallback inflation when an area has no CPI. Normally `AreaData.cpiYoY` (BLS CPI-U) is used. */
+export const inflationAnnualFallback = {
+  value: 0.03 as Rate,
+  assumption: true,
+  note: 'Used only when AreaData.cpiYoY is missing; the real value comes from BLS CPI-U per area.',
+} satisfies Assumption<Rate>;
+
+/** Pay keeps pace with prices: income growth = inflationAnnual (real income flat). */
+export const incomeGrowthAnnual = {
+  value: 'inflationAnnual' as const,
+  assumption: true,
+  note: 'Income grows at the same rate as inflation. Raises are a decision, not a default.',
+} satisfies Assumption<'inflationAnnual'>;
+
+/** Nominal yearly return of the savings/retirement blend. */
+export const returnAnnualNominal = {
+  value: 0.06 as Rate,
+  assumption: true,
+  note: 'Blend of savings and retirement investments, nominal, before inflation.',
+} satisfies Assumption<Rate>;
+
+/** Yearly yield on cash. */
+export const cashYieldAnnual = {
+  value: 0.03 as Rate,
+  assumption: true,
+} satisfies Assumption<Rate>;
+
+/**
+ * Default card APR when the user does not give one. Federal Reserve G.19, interest rate on credit
+ * card plans, accounts assessed interest, Q3 2026. DATA.md: prefer G.19 when it disagrees with
+ * CardRates (the 22.8% draft figure could not be verified).
+ */
+export const cardAprDefault = {
+  value: 0.2236 as Rate,
+  source: {
+    name: 'Federal Reserve G.19, credit card plans, accounts assessed interest, Q3 2026',
+    year: 2026,
+    url: 'https://www.federalreserve.gov/releases/g19/current/default.htm',
+  },
+} satisfies Assumption<Rate>;
+
+/** Card minimum payment when the user skips it: interest for the month + 1% of balance, floor $25. */
+export const cardMinPayment = {
+  value: { balanceShare: 0.01, includesInterest: true, floor: 25 as Money },
+  assumption: true,
+  note: 'Typical issuer formula.',
+} satisfies Assumption<{ balanceShare: number; includesInterest: boolean; floor: Money }>;
+
+/** Share of a positive monthly surplus saved to retirement by default. */
+export const retirementShareDefault = {
+  value: 0 as Rate,
+  assumption: true,
+  note: 'Take-home pay is already after payroll retirement contributions; the user can raise it.',
+} satisfies Assumption<Rate>;
+
+/** ± spread applied to every `isEstimate` field to build the range band (and card cost ranges). */
+export const estimateSpread = {
+  value: 0.15,
+  assumption: true,
+  note: 'The band shows uncertainty in the inputs only, not market or inflation risk.',
+} satisfies Assumption<number>;
+
+/** Debt load (monthly debt payments / take-home pay): green < 0.20, yellow 0.20–0.36, red > 0.36. */
+export const debtLoadThresholds = {
+  value: { yellow: 0.2, red: 0.36 },
+  assumption: true,
+  note: 'Common lending rule of thumb; shown as guidance.',
+} satisfies Assumption<{ yellow: number; red: number }>;
+
+/** Can I Afford It?: month-end cash must stay at or above this many months of spending. */
+export const safetyCushionMonths = {
+  value: 1,
+  assumption: true,
+} satisfies Assumption<number>;
+
+/** Game: each opened clue lowers the score multiplier by this much. Game tuning, not finance. */
+export const clueCost = {
+  value: 0.1,
+  assumption: true,
+  note: 'Tune after playtests.',
+} satisfies Assumption<number>;
+
+/** Game: the clue multiplier never goes below this. */
+export const clueFloor = {
+  value: 0.5,
+  assumption: true,
+  note: 'Tune after playtests.',
+} satisfies Assumption<number>;
+
+/** Average price of one meal or delivery order eaten out, per person-occasion. */
+export const avgMealPrice = {
+  value: 18 as Money,
+  assumption: true,
+  note: 'Placeholder until T2 sources it from BLS CE (food away from home) / national averages.',
+} satisfies Assumption<Money>;
+
+/** Gallons of gasoline per car per month. */
+export const monthlyGallons = {
+  value: 45,
+  assumption: true,
+  note: 'About 13,500 miles a year at about 25 mpg; replace with a sourced FHWA/EPA figure in T2.',
+} satisfies Assumption<number>;
+
+/** Groceries for one child as a share of one adult's groceries. */
+export const kidGroceryFactor = {
+  value: 0.7,
+  assumption: true,
+  note: 'Placeholder until sourced from the USDA food plans (child age groups vs adult 19–50).',
+} satisfies Assumption<number>;
+
+/** Weeks per month used to turn "per week" into "per month" (ENGINEERING.md: 4.33). */
+export const weeksPerMonth = {
+  value: 4.33,
+  assumption: true,
+  note: '52 weeks / 12 months, rounded as in the spec.',
+} satisfies Assumption<number>;
+
+/** The forecast always simulates at least this many months so `in10y` (month 120) exists. */
+export const minForecastMonths = {
+  value: 120,
+  assumption: true,
+  note: 'Product rule: "You in 10 years".',
+} satisfies Assumption<number>;
+
+/** All assumptions by name, for the "How we calculate" panel. */
+export const assumptions = {
+  inflationAnnualFallback,
+  incomeGrowthAnnual,
+  returnAnnualNominal,
+  cashYieldAnnual,
+  cardAprDefault,
+  cardMinPayment,
+  retirementShareDefault,
+  estimateSpread,
+  debtLoadThresholds,
+  safetyCushionMonths,
+  clueCost,
+  clueFloor,
+  avgMealPrice,
+  monthlyGallons,
+  kidGroceryFactor,
+  weeksPerMonth,
+  minForecastMonths,
+} as const;
+
+export type AssumptionId = keyof typeof assumptions;

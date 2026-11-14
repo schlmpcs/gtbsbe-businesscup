@@ -1,0 +1,22 @@
+{
+  "name": "@lifeguessr/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./index.ts",
+    "./assumptions": "./assumptions.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@lifeguessr/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@lifeguessr/data": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}
