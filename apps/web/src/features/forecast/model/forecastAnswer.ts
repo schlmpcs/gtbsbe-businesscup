@@ -7,25 +7,12 @@ import type {
 } from '@lifeguessr/types';
 import type { ScenarioPatch } from '@/lib/api/aiForecast';
 import { inflationForZip } from '@/lib/areas';
+import { canonicalJson } from '@/lib/canonicalJson';
 import { toVMError } from '@/lib/model/errors';
 import type { VMError } from '@/lib/model/types';
 import type { BandKind, ForecastAnswer, ForecastState } from './types';
 
 // ----- comparing ------------------------------------------------------------------------------
-
-/** JSON with every object's keys sorted, so the text depends on the data and not on how it was built. */
-export function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map((v) => canonicalJson(v)).join(',')}]`;
-  if (value !== null && typeof value === 'object') {
-    const object = value as Record<string, unknown>;
-    const members = Object.keys(object)
-      .sort()
-      .filter((k) => object[k] !== undefined)
-      .map((k) => `${JSON.stringify(k)}:${canonicalJson(object[k])}`);
-    return `{${members.join(',')}}`;
-  }
-  return JSON.stringify(value) ?? 'null';
-}
 
 /** Two patches that change the same things the same way, whatever order their keys were written in. */
 export function patchesEqual(a: ProfilePatch, b: ProfilePatch): boolean {

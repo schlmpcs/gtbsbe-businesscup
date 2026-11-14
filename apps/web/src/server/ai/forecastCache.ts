@@ -13,28 +13,9 @@
 import { createHash } from 'node:crypto';
 import { forecastFacts, resolveRates } from '@lifeguessr/engine';
 import type { ForecastBundle } from '@lifeguessr/types';
+import { canonicalJson } from '@/lib/canonicalJson';
 import { PROMPT_VERSION } from './forecast';
 import type { ForecastRequest } from './schemas';
-
-/**
- * JSON with the keys of every object sorted, so the text depends on the data and not on the order
- * the keys were written in. Arrays keep their order. As in `JSON.stringify`, an `undefined` member
- * is left out (so an absent field and an `undefined` one read the same) and an `undefined` array
- * item is `null`. `undefined` itself has no text.
- */
-function canonicalJson(value: unknown): string | undefined {
-  if (Array.isArray(value)) return `[${value.map((v) => canonicalJson(v) ?? 'null').join(',')}]`;
-  if (value !== null && typeof value === 'object') {
-    const object = value as Record<string, unknown>;
-    const members: string[] = [];
-    for (const key of Object.keys(object).sort()) {
-      const member = canonicalJson(object[key]);
-      if (member !== undefined) members.push(`${JSON.stringify(key)}:${member}`);
-    }
-    return `{${members.join(',')}}`;
-  }
-  return JSON.stringify(value);
-}
 
 const byId = (a: { id: string }, b: { id: string }): number => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
@@ -54,7 +35,7 @@ export function forecastKey(req: ForecastRequest, model: string): string {
     rates: resolveRates(req.rates),
     model,
     promptVersion: PROMPT_VERSION,
-  })!; // an object always has a text
+  });
   return createHash('sha256').update(canonical).digest('hex');
 }
 
