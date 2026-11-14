@@ -3,7 +3,7 @@
 import type {
   AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, KidAge, MoveKind,
   ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
-  SubscriptionFinding, SubscriptionFlag,
+  MissBucket, SubscriptionFinding, SubscriptionFlag,
 } from './index';
 import type { Cadence } from './subscriptions';
 
@@ -107,6 +107,12 @@ export const TOOL_IDS = ['subscriptions','overpaying','payoff'] as const;
 // ----- Subscription audit (M1) -----------------------------------------------------------------
 // The catalogue's own lists (cadences, categories) live with its schemas in ./subscriptions.
 
+/**
+ * The five buckets of a `subs_revealed` event, guess ÷ actual, lowest first: under 0.5, 0.5 to 0.8, 0.8 to 1.25,
+ * 1.25 to 2, over 2. Main declares the `MissBucket` union and writes the same members into the event schema; this
+ * is the list to iterate (the union is checked against it in tools.test.ts).
+ */
+export const MISS_BUCKETS = ['under0.5', '0.5to0.8', '0.8to1.25', '1.25to2', 'over2'] as const satisfies readonly MissBucket[];
 export const SUBSCRIPTION_FLAGS = ['priceUp', 'introEnded', 'overlap', 'seenOnce'] as const satisfies readonly SubscriptionFlag[];
 export const SUBSCRIPTION_CONFIDENCES = ['high', 'medium', 'low'] as const satisfies readonly SubscriptionFinding['confidence'][];
 export const SUBSCRIPTION_STATUSES = ['active', 'stopped'] as const satisfies readonly SubscriptionFinding['status'][];

@@ -9,7 +9,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
-  CADENCE_MONTHS, CLIENT_EVENT_NAMES, EVENTS_BATCH_MAX, FUNNEL_EVENT_NAMES, FUNNEL_STEPS, SERVER_EVENT_NAMES,
+  CADENCE_MONTHS, CLIENT_EVENT_NAMES, EVENTS_BATCH_MAX, FUNNEL_EVENT_NAMES, FUNNEL_STEPS, MISS_BUCKETS, SERVER_EVENT_NAMES,
   STATEMENT_CLASSES, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_FINDINGS_MAX, SUBSCRIPTION_FLAGS, SUBSCRIPTION_ORIGINS,
   SUBSCRIPTION_STATUSES, TOOL_IDS,
   BenchmarkSchema, ChargeDateSchema, ClientEventEnvelopeSchema, EventsRequestSchema, KnownServiceSchema, OverpayingResultSchema,
@@ -20,10 +20,9 @@ import {
   type StatementClass, type SubscriptionAudit, type SubscriptionFinding, type SubscriptionFlag, type ToolId,
 } from './index';
 
-// main's bounds, written out so a change to them is noticed here: subs_flagged and subs_cancel_marked count
-// up to 5000 (EventsRequestSchema); the five miss buckets (guess ÷ actual, lowest first).
+// main's bound, written out so a change to it is noticed here: subs_flagged and subs_cancel_marked count
+// up to 5000 (EventsRequestSchema).
 const EVENT_COUNT_MAX = 5_000;
-const MISS_BUCKETS = ['under0.5', '0.5to0.8', '0.8to1.25', '1.25to2', 'over2'] as const satisfies readonly MissBucket[];
 
 const bad = (schema: z.ZodType, value: unknown) => expect(schema.safeParse(value).success).toBe(false);
 const good = (schema: z.ZodType, value: unknown) => expect(schema.safeParse(value).success).toBe(true);
@@ -51,19 +50,21 @@ describe('the micro-tool schemas match their contract types', () => {
 
   it('value lists cover every union member, once', () => {
     expectTypeOf<ToolId>().toEqualTypeOf<(typeof TOOL_IDS)[number]>();
+    expectTypeOf<MissBucket>().toEqualTypeOf<(typeof MISS_BUCKETS)[number]>();
     expectTypeOf<SubscriptionFlag>().toEqualTypeOf<(typeof SUBSCRIPTION_FLAGS)[number]>();
     expectTypeOf<SubscriptionFinding['confidence']>().toEqualTypeOf<(typeof SUBSCRIPTION_CONFIDENCES)[number]>();
     expectTypeOf<SubscriptionFinding['status']>().toEqualTypeOf<(typeof SUBSCRIPTION_STATUSES)[number]>();
     expectTypeOf<SubscriptionFinding['origin']>().toEqualTypeOf<(typeof SUBSCRIPTION_ORIGINS)[number]>();
     for (const list of [
-      TOOL_IDS, SUBSCRIPTION_FLAGS, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_STATUSES, SUBSCRIPTION_ORIGINS,
+      TOOL_IDS, MISS_BUCKETS, SUBSCRIPTION_FLAGS, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_STATUSES, SUBSCRIPTION_ORIGINS,
     ] as readonly (readonly string[])[]) {
       expect(new Set(list).size).toBe(list.length);
     }
   });
 
-  it('names the three tools and the months in each cadence the issue lists', () => {
+  it('names the three tools, the five miss buckets and the months in each cadence the issue lists', () => {
     expect(TOOL_IDS).toEqual(['subscriptions', 'overpaying', 'payoff']);
+    expect(MISS_BUCKETS).toEqual(['under0.5', '0.5to0.8', '0.8to1.25', '1.25to2', 'over2']);
     expect(CADENCE_MONTHS).toEqual({ monthly: 1, quarterly: 3, yearly: 12 });
   });
 });
