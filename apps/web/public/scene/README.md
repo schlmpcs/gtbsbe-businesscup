@@ -1,4 +1,13 @@
-# House scene sprites (placeholder kit)
+# House scene sprites
+
+**3D kit (D1, in the game):** every id below also has a `<id>.webp` render made in the Figma file
+(AI-generated, the Dollhouse style). `features/game/ui/HouseScene3D` uses them and is the default clue
+panel on /play: `layout/*.webp` is the whole home with every clue room closed (kitchen left, kids' room
+back left, entry front, garage right, mailbox front right; room spots in `HouseScene3D.tsx` → `SPOTS`),
+and a room's props appear in its close-up only after the room is opened. The SVGs are kept for the 2D
+ui-kit `<HouseScene>` (T12, /kit and the `HouseSceneClues` slot).
+
+## 2D placeholder kit (SVG)
 
 Placeholder art for `<HouseScene>` (T12), drawn in the Dollhouse palette from `tokens.json` (ink outlines,
 orange roof, warm paper walls, the chart colors as accents). The final kit from Kiko (D1, #27) replaces
