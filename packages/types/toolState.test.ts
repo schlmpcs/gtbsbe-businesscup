@@ -76,14 +76,16 @@ describe('SubscriptionToolStateSchema (the subscription audit in this browser)',
 });
 
 describe('PayoffToolStateSchema (the payoff planner in this browser)', () => {
-  it('keeps the method and the extra payment, with defaults', () => {
-    expect(PayoffToolStateSchema.parse({})).toEqual({ method: 'avalanche', extra: 0 });
+  it('keeps the method and the extra payment; the method defaults, the extra stays absent until one was set', () => {
+    expect(PayoffToolStateSchema.parse({})).toEqual({ method: 'avalanche' });
     expect(PayoffToolStateSchema.parse({ method: 'snowball', extra: 150 })).toEqual({ method: 'snowball', extra: 150 });
+    // A saved $0 is the person's own pick and is kept as it is, not confused with "never set".
+    expect(PayoffToolStateSchema.parse({ method: 'snowball', extra: 0 })).toEqual({ method: 'snowball', extra: 0 });
   });
 
   it('keeps a target as the calendar month it names, so it does not move when the slice is restored later', () => {
     // 'YYYY-MM': December 2029 stays December 2029, whatever day the slice is read back on.
-    expect(PayoffToolStateSchema.parse({ targetMonth: '2029-12' })).toEqual({ method: 'avalanche', extra: 0, targetMonth: '2029-12' });
+    expect(PayoffToolStateSchema.parse({ targetMonth: '2029-12' })).toEqual({ method: 'avalanche', targetMonth: '2029-12' });
     for (const targetMonth of ['2026-01', '2026-12', '2100-06', '2126-11']) good(PayoffToolStateSchema, { targetMonth });
   });
 

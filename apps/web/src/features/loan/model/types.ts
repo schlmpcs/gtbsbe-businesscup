@@ -99,6 +99,16 @@ export type LinkComponent = ComponentType<{ href: string; className?: string; ch
 /** The two methods a person can pick; minimums only is always shown beside them as the baseline. */
 export type PayoffChoice = Exclude<PayoffMethod, 'minimum'>;
 
+/** Why the methods come out the same, when they do (payoffTie.ts explains each). */
+export type PayoffTie = 'noExtra' | 'tooSmall' | 'oneDebt' | 'sameOrder' | 'sameResult';
+
+/**
+ * Where the planner's extra starts before the person picks one: the engine's suggestedPayoffExtra for the profile and
+ * these debts. `share` of this month's `surplus` (after spending and every required payment, the new loan's included),
+ * rounded down to the slider step; `extra` is 0 when the month has no room for one step.
+ */
+export type PayoffSuggestionVM = { extra: Money; surplus: Money; share: Rate };
+
 /** How far a plan is from minimums only, as a size and a direction (never a negative "saving"). */
 export type PayoffDelta = { kind: 'saves' | 'costs' | 'same'; amount: number };
 
@@ -182,6 +192,10 @@ export type PayoffPlannerVM = {
   /** Largest extra the box accepts; the slider track is shorter. */
   extraLimit: Money;
   setExtra: (value: Money) => void;
+  /** The suggested starting extra; null when it was not worked out (loading, streamer mode, no debts, the engine failed). */
+  suggestion: PayoffSuggestionVM | null;
+  /** The extra on screen is the suggestion: the person has not set one, here or in an earlier visit. */
+  extraIsSuggested: boolean;
   /** The engine's comparePayoff for the current debts and extra; null when there is nothing to compare (no debts, streamer mode). */
   comparison: Loadable<PayoffComparison> | null;
   /** Avalanche, snowball, minimums only; empty until the comparison is ready. */
@@ -195,6 +209,8 @@ export type PayoffPlannerVM = {
   monthsSaved: number | null;
   /** The same two, as a size and a direction for the sentence under the comparison. */
   savings: { interest: PayoffDelta; months: PayoffDelta | null } | null;
+  /** Why avalanche and snowball (and with 'noExtra' or 'tooSmall', minimums only too) come out the same; null when they differ. */
+  tie: PayoffTie | null;
   /** A debt's minimum was defaulted, so the dates and interest are estimates too. */
   isEstimate: boolean;
   chart: PayoffChartVM | null;
