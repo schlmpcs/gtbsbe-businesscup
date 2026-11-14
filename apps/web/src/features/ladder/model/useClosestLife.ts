@@ -5,6 +5,7 @@ import type { CostBreakdown, LifeCard } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { cardsSample } from '@/fixtures';
 import { areaForZip } from '@/lib/areas';
+import { track } from '@/lib/events';
 import { useAppReady, useAppStore, useGameStore } from '@/state';
 import type { ClosestLifeVM, LifeCandidateVM } from './types';
 
@@ -67,6 +68,7 @@ export function useClosestLife(): ClosestLifeVM {
       const area = source ? areaForZip(source.card.zip) : null;
       if (!source || !area) return;
       chooseClosestLife(cardId, cardToProfile(source.card, area));
+      track({ name: 'closest_life_chosen', props: { fromToday: source.fromToday } }, { once: 'closest_life_chosen' });
     },
     [sources, chooseClosestLife],
   );

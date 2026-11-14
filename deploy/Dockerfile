@@ -32,8 +32,10 @@ COPY packages packages
 # .env.example. None of them is a secret.
 ARG NEXT_PUBLIC_GAME_SOURCE=fixtures
 ARG NEXT_PUBLIC_SESSION_SOURCE=local
+ARG NEXT_PUBLIC_EVENTS_SOURCE=off
 ENV NEXT_PUBLIC_GAME_SOURCE=$NEXT_PUBLIC_GAME_SOURCE \
-    NEXT_PUBLIC_SESSION_SOURCE=$NEXT_PUBLIC_SESSION_SOURCE
+    NEXT_PUBLIC_SESSION_SOURCE=$NEXT_PUBLIC_SESSION_SOURCE \
+    NEXT_PUBLIC_EVENTS_SOURCE=$NEXT_PUBLIC_EVENTS_SOURCE
 # `public/` is optional in Next; the runner stage copies it, so make sure it exists.
 RUN mkdir -p apps/web/public && pnpm --filter web build
 

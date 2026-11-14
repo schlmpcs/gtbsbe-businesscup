@@ -2,10 +2,11 @@
 # CI only (.github/workflows/ci.yml → deploy-smoke). Runs deploy/deploy.sh on the CI runner with
 # DEPLOY_HOST=local, exactly as the server's runner does, then checks what a real deploy must
 # guarantee with the app + postgres stack:
-#   1. a first deploy brings up both services; /api/health reports the store ok; a session saves
+#   1. a first deploy brings up both services; /api/health reports the store ok; a session saves;
+#      a funnel event is stored (migration 004) and GET /api/events/funnel counts it
 #   2. postgres is not published on any host port
-#   3. a redeploy keeps the same postgres container and volume, so the saved session survives,
-#      and leaves one more store backup behind
+#   3. a redeploy keeps the same postgres container and volume, so the saved session and the
+#      funnel event survive, and leaves one more store backup behind
 #   4. --rollback puts the previous image back and the session still loads
 #   5. a database outage leaves the app live (health 200, store unavailable, session 503) and the
 #      app recovers by itself when postgres is back
@@ -36,6 +37,7 @@ mkdir -p "$LIFEGUESSR_DIR"
 (umask 077 && {
   echo "STORE_PASSWORD=$(openssl rand -hex 32)"
   echo "NEXT_PUBLIC_SESSION_SOURCE=api"
+  echo "NEXT_PUBLIC_EVENTS_SOURCE=api"
 } > "$LIFEGUESSR_DIR/.env")
 
 step "1. first deploy"
@@ -46,6 +48,12 @@ health | tee /dev/stderr | jq -e '.ok == true and .store.status == "ok" and .sto
 body=$(jq -c -n --arg id "$ANON" --slurpfile p packages/data/fixtures/profile.demo.json '{anonId: $id, profile: ($p[0] | .age.value = 33)}')
 saved=$(curl -fsS --max-time 10 -X POST "$APP/api/session" -H 'content-type: application/json' -H "x-anon-id: $ANON" -d "$body")
 echo "$saved" | jq -e '.ok == true and .revision == 1 and .profile.age.value == 33' >/dev/null || fail "session save: $saved"
+
+event=$(jq -c -n --arg id "$ANON" --arg eid "$(node -e 'console.log(crypto.randomUUID())')" '{anonId: $id, events: [{id: $eid, name: "forecast_viewed"}]}')
+stored=$(curl -fsS --max-time 10 -X POST "$APP/api/events" -H 'content-type: application/json' -H "x-anon-id: $ANON" -d "$event")
+echo "$stored" | jq -e '.ok == true and .accepted == 1' >/dev/null || fail "event: $stored"
+funnel() { curl -fsS --max-time 10 "$APP/api/events/funnel?days=1"; }
+funnel | jq -e '.ok == true and .events.forecast_viewed == 1' >/dev/null || fail "the funnel does not count the event: $(funnel)"
 
 step "2. postgres is reachable only inside the compose network"
 pg_id=$(compose ps -q postgres)
@@ -61,6 +69,7 @@ deploy/deploy.sh HEAD
 [ "$(compose ps -q postgres)" = "$pg_id" ] || fail "the redeploy recreated the postgres container"
 docker volume inspect "$volume" >/dev/null || fail "the data volume is gone"
 load_session | jq -e '.revision == 1 and .profile.age.value == 33' >/dev/null || fail "the session did not survive the redeploy"
+funnel | jq -e '.events.forecast_viewed == 1' >/dev/null || fail "the funnel event did not survive the redeploy"
 backups=$(find "$LIFEGUESSR_DIR/backups" -name 'lifeguessr-*.dump' | wc -l)
 [ "$backups" -eq 2 ] || fail "expected 2 store backups, found $backups"
 [ "$(stat -c %a "$LIFEGUESSR_DIR/backups")" = 700 ] || fail "the backups folder is not private"

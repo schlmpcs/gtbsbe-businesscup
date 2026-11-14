@@ -24,3 +24,14 @@ export type SessionSource = 'local' | 'api';
 export function sessionSource(): SessionSource {
   return process.env.NEXT_PUBLIC_SESSION_SOURCE === 'api' ? 'api' : 'local';
 }
+
+/** Whether funnel events are sent. */
+export type EventsSource = 'off' | 'api';
+
+/**
+ * `NEXT_PUBLIC_EVENTS_SOURCE=api` sends funnel events to POST /api/events (task T8, needs the
+ * store). Default: off, so a build without a store never calls a route that would answer 503.
+ */
+export function eventsSource(): EventsSource {
+  return process.env.NEXT_PUBLIC_EVENTS_SOURCE === 'api' ? 'api' : 'off';
+}

@@ -9,7 +9,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Id for this tab when storage is blocked, so one visit still has a stable id. */
 let memoryId: string | null = null;
 
-function newId(): string {
+/** A random RFC 4122 v4 UUID (crypto.randomUUID where available). */
+export function newUuid(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
   // Very old browsers only: RFC 4122 v4 from getRandomValues.
   const b = crypto.getRandomValues(new Uint8Array(16));
@@ -23,7 +24,7 @@ function newId(): string {
 export function getAnonId(): string {
   const stored = readStorage(ANON_ID_KEY);
   if (stored && UUID.test(stored)) return stored;
-  const id = memoryId ?? newId();
+  const id = memoryId ?? newUuid();
   memoryId = id;
   writeStorage(ANON_ID_KEY, id);
   return id;

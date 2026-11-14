@@ -4,6 +4,7 @@ import { COST_CATEGORIES, type Money, type Profile } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { GUESS_DEFAULT, GUESS_MAX, GUESS_MIN, GUESS_STEP } from '@/features/game/model/constants';
 import { directionOf } from '@/features/game/model/derive';
+import { track } from '@/lib/events';
 import { thisMonth } from '@/lib/model/profile';
 import { logScale, logSliderVM, snap } from '@/lib/model/slider';
 import { useAppReady, useAppStore, useGameStore, type ProfileOrigin } from '@/state';
@@ -50,7 +51,10 @@ export function useGuessYourself(): GuessYourselfVM {
 
   const setGuess = useCallback((v: Money) => setDraft(clamp(v)), []);
   const setGuessPosition = useCallback((p: number) => setDraft(clamp(scale.fromPosition(p))), []);
-  const submit = useCallback(() => setSelfGuess(value), [setSelfGuess, value]);
+  const submit = useCallback(() => {
+    setSelfGuess(value);
+    track({ name: 'own_guess_submitted' }, { once: 'own_guess_submitted' });
+  }, [setSelfGuess, value]);
 
   const comparison = useMemo(
     () => (savedGuess === null ? null : compareSelfGuess(savedGuess, profile, profileOrigin)),

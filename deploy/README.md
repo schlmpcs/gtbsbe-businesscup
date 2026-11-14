@@ -41,7 +41,8 @@ comes from the new image (a bad migration), so the deploy checks it once and rol
 1. Create the app folder and its `.env` in the home of the user that runs the runner (names only
    here; values never go in the repo): `~/lifeguessr/.env` (mode 600) with `ANTHROPIC_API_KEY`,
    `ANTHROPIC_MODEL`, `STORE_PASSWORD` (required, see "The store" below),
-   `NEXT_PUBLIC_GAME_SOURCE`, `NEXT_PUBLIC_SESSION_SOURCE` (`api` saves sessions to the store), and
+   `NEXT_PUBLIC_GAME_SOURCE`, `NEXT_PUBLIC_SESSION_SOURCE` (`api` saves sessions to the store),
+   `NEXT_PUBLIC_EVENTS_SOURCE` (`api` records funnel events in the store), and
    optionally `PUBLIC_URL` (the public https URL; `deploy.sh` asks its `/api/health` after a deploy).
    `NEXT_PUBLIC_*` values are read at build time, so changing them needs a new deploy.
    For the Pro paywall demo: `STRIPE_SECRET_KEY` (a **test-mode** key, `sk_test_…`; without it

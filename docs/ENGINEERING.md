@@ -256,7 +256,7 @@ The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/st
   - a loan whose payment doesn't cover interest returns `payoffMonth: null`;
   - `low ≤ mid ≤ high` holds for every fixture card;
   - the clue multiplier applies and floors at `clueFloor`.
-- Playwright (T8): one spec for the full demo path (play 3 homes, opening at least one clue → guess own → sliders → forecast → upload sample CSV → Loan Lab compare).
+- Playwright (T8): `apps/web/e2e/demo-path.spec.ts` walks the full demo path (play 3 homes, opening a room in each → guess own → closest life → sliders → forecast → upload sample CSV → Loan Lab compare) on a phone and a desktop viewport. With funnel events on (`NEXT_PUBLIC_EVENTS_SOURCE=api` and a store, as in CI) it also checks each step's event was sent without personal data and that `GET /api/events/funnel` counts it. `pnpm e2e` runs it with every other spec.
 - Run `pnpm lint && pnpm test && pnpm e2e` before merging anything that touches the demo path.
 
 ## Figma handoff procedure

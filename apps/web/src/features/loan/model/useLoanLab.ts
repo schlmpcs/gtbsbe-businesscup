@@ -4,6 +4,7 @@ import { compareLoans, loan, payoffOrder } from '@lifeguessr/engine';
 import { LoanInputSchema, type Debt, type LoanInput, type Money } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { loanOffersSample } from '@/fixtures';
+import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates, debtLoadGauge } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
@@ -67,6 +68,10 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
   }, [offers, profile]);
 
   const selected = offerVMs.find((o) => o.id === selectedId) ?? null;
+
+  // Offers compared side by side (the screen opens on the sample offers, so a view counts).
+  const compared = offerVMs.filter((o) => o.result !== null).length;
+  useTrackOnce(ready && compared >= 2, 'loan_compared', { name: 'loan_compared', props: { offers: Math.min(compared, MAX_OFFERS) } });
 
   const before = useMemo(() => {
     // The debt load before any new loan: the engine's loan() reports it for any input.

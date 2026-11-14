@@ -5,6 +5,7 @@ import { CategoryTotalsSchema, COST_CATEGORIES, type CategoryTotals, type CostCa
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { readStatementFile as defaultReadStatementFile, StatementFileError } from '@/features/upload/model/readStatementFile';
 import { sessionSource } from '@/lib/config';
+import { track } from '@/lib/events';
 import { toVMError } from '@/lib/model/errors';
 import { useAppReady, useAppStore } from '@/state';
 import { getAnonId } from '@/state/anonId';
@@ -82,6 +83,7 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
   const apply = useCallback(() => {
     if (!pending) return;
     applyStatementTotals(pending);
+    track({ name: 'statement_applied', props: { months: pending.length } });
     setPending(null);
     setLastRead(null);
     setApplied(true);
