@@ -5,10 +5,9 @@
 // Every fixture is validated with its contract's zod schema when this module loads, so a bad edit
 // fails loudly in tests and CI instead of producing wrong numbers later.
 //
-// plan.demo.json and monteCarlo.demo.json are PLACEHOLDERS: hand-made with the right shape and
-// plausible numbers (their "$comment" key says so; the schema drops it), not engine output. They are
-// regenerated from scenario.demo.json by `pnpm fixtures:plan` once plan() (MP3) and monteCarlo()
-// (MP5) land.
+// plan.demo.json is plan() output, regenerated from scenario.demo.json by `pnpm fixtures:plan` (its
+// "$comment" says so; the schema drops it). monteCarlo.demo.json is still a PLACEHOLDER: hand-made with
+// the right shape and plausible numbers, not engine output, until monteCarlo() (MP5) lands.
 import {
   AccountSchema, LedgerTransactionSchema, MonteCarloResultSchema, PlanResultSchema, ScenarioSchema,
   type Account, type LedgerTransaction, type MonteCarloResult, type PlanResult, type Scenario,
@@ -30,15 +29,18 @@ export const accountsDemo: readonly Account[] = deepFreeze(AccountSchema.array()
 
 /**
  * The Baseline scenario of the demo profile (age 32 in 2026, ZIP 75206): Retire at 67 (2061), Social
- * Security at 67 (placeholder estimate: 40% of take-home), and Buy a home in 2029 with the ZIP's
- * defaults (ACS median value, 20% down, 30 years at the mortgage default, ACS tax rate, NAIC insurance).
+ * Security at 67 (estimate: 40% of take-home), and Buy a home in 2031: a $350,000 home with 20% ($70,000)
+ * down, 30 years at the mortgage default (Freddie Mac PMMS), the ZIP's ACS tax rate and NAIC insurance.
+ * The price is the demo person's choice, below the ZIP's ACS median ($615,400): plan() shows that on
+ * $5,200 a month of take-home the median home's $123,080 down payment in 2029 runs the plan short at
+ * 35 (about $41,500 of cash saved by then), while this home leaves no shortfall.
  */
 export const scenarioDemo: Readonly<Scenario> = deepFreeze(ScenarioSchema.parse(scenarioJson));
 
-/** `scenarioDemo` plus Have a kid in 2030 (Dallas County infant childcare, 5 years): the Compare pair. */
+/** `scenarioDemo` plus Have a kid in 2030 (Dallas County infant childcare, 5 years): the Compare pair (with the kid the plan runs short at 37). */
 export const scenarioAlt: Readonly<Scenario> = deepFreeze(ScenarioSchema.parse(scenarioAltJson));
 
-/** PLACEHOLDER plan of `scenarioDemo` (today's dollars), until MP3 regenerates it. */
+/** plan() of `scenarioDemo` on the demo profile (today's dollars), written by `pnpm fixtures:plan`. */
 export const planDemo: Readonly<PlanResult> = deepFreeze(PlanResultSchema.parse(planJson));
 
 /** PLACEHOLDER Monte Carlo result of `scenarioDemo` (1,000 paths, seed 42), until MP5 regenerates it. */

@@ -1,7 +1,9 @@
 // Strings for /plan (MP7, epic #160): the KPI cards and their tooltips, the nine plan events, the
 // assumptions and their hints, Monte Carlo, Compare and Next Moves. Owner: Amir. Hooks resolve these
 // to text; the UI may also read them directly. Functions take values already formatted by the hooks.
-import type { AccountGroup, PlanEventType } from '@lifeguessr/types';
+import type { AccountGroup, Debt, PlanEventType } from '@lifeguessr/types';
+
+type DebtKind = Debt['kind'];
 
 const events: Record<PlanEventType, { title: string; description: string }> = {
   income: { title: 'Extra income', description: 'A raise, side income or a partner’s pay, per month.' },
@@ -51,11 +53,23 @@ export const plan = {
     accounts: { year: 'Year', age: 'Age', start: 'Start', growth: 'Growth', deposits: 'Deposits', withdrawals: 'Withdrawals', end: 'End' },
     cashFlow: {
       year: 'Year', age: 'Age', income: 'Income', expenses: 'Expenses', withdrawals: 'From savings', net: 'Net',
-      lines: { takeHomePay: 'Take-home pay', spending: 'Spending' } as Record<string, string>,
+      lines: {
+        takeHomePay: 'Take-home pay', windfalls: 'One-time income', spending: 'Spending', debtPayments: 'Debt payments',
+        oneOffCosts: 'One-time costs and down payments',
+      } as Record<string, string>,
     },
     events: { year: 'Year', event: 'Event', summary: 'Details' },
   },
   groups,
+  /** Account rows of the plan that are not one of the person's accounts. */
+  accountRows: {
+    home: 'Home',
+    mortgage: (name?: string) => (name ? `${name} mortgage` : 'Mortgage'),
+    loan: (title: string) => `${title} loan`,
+  },
+  debtKinds: {
+    card: 'Credit card', auto: 'Auto loan', student: 'Student loan', personal: 'Personal loan', bnpl: 'Buy now, pay later', mortgage: 'Mortgage',
+  } satisfies Record<DebtKind, string>,
   events,
   eventSummary: {
     income: (monthly: string) => `${monthly} a month`,
@@ -158,6 +172,7 @@ export const plan = {
   chance: {
     idle: 'Run the simulation to see how often your plan works.',
     running: 'Running…',
+    error: 'The simulation could not run. Your plan above is unchanged; try again in a moment.',
     gaugeLabel: 'Chance of success',
     paths: (ok: string, total: string) => `${ok} of ${total} paths work`,
     histograms: {
@@ -187,12 +202,8 @@ export const plan = {
     effectAtRetirement: (amount: string) => `${amount} at retirement`,
     successRateDelta: (pts: string) => `${pts} chance of success`,
     added: 'Added to your plan',
-    // Stand-ins until the moves come from the engine (MP6) and /api/ai/explain writes the explanation.
-    items: {
-      'move-extra-income': { title: 'Earn $400 more a month', explanation: 'Extra monthly income adds to savings every year until you retire, and the early years grow the longest.' },
-      'move-windfall': { title: 'Invest a $10,000 windfall', explanation: 'A lump sum put to work next year has the most time to grow before retirement.' },
-      'move-side-income': { title: 'Add $250 a month of side income', explanation: 'A smaller extra income still compounds over decades and lowers the chance of running short.' },
-    } as Record<string, { title: string; explanation: string }>,
+    /** Second sentence of a move's explanation: how its effect was measured. */
+    measured: 'We measured it by running your plan with and without it.',
   },
   // The /plan screen itself (MP15/MP16): headings, buttons, view switch, empty states.
   screen: {

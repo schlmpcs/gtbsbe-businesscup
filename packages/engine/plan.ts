@@ -66,10 +66,34 @@ const GROUPS: readonly AssetGroup[] = [...ASSET_GROUPS];
 /** Same year: Retire before everything, Social Security after (see planEvents.ts → socialSecurity). */
 const sameYearRank = (e: PlanEvent) => (e.type === 'retire' ? 0 : e.type === 'socialSecurity' ? 2 : 1);
 
-/** One PlanYear per calendar year from `profile.asOf` to `scenario.assumptions.endAge`, plus the four KPIs. */
-export function plan(
-  profile: Profile, accounts: readonly Account[], scenario: Scenario, area?: AreaData, opts: PlanOptions = {},
-): PlanResult {
+/**
+ * Steps 1–3 of plan() up to the simulation: the inputs simulate() takes, prepared once. monteCarlo()
+ * (MP5) prepares a plan once and runs simulate() per path with that path's `yearlyRates`, so every
+ * path is exactly the plan() of those rates.
+ */
+export type PreparedPlan = {
+  scenario: Scenario;
+  asOfYear: number;
+  /** asOf's month of the year (0 = January). */
+  offset: number;
+  birthYear: number;
+  yearCount: number;
+  months: number;
+  /** Excluded accounts dropped. */
+  live: readonly Account[];
+  enabled: readonly PlanEvent[];
+  eventAssets: readonly { eventId: string; group: string; value: Money }[];
+  /** The profile simulate() runs (accounts folded in, the events' life events added). */
+  simProfile: Profile;
+  /** simulate()'s options without `yearlyRates`. */
+  simOptions: SimulateOptions;
+  /** KPI retireAge: the earliest enabled Retire event's age, else assumptions.retireAge. */
+  retireAge: number;
+};
+
+export function preparePlan(
+  profile: Profile, accounts: readonly Account[], scenario: Scenario, area?: AreaData,
+): PreparedPlan {
   const a = scenario.assumptions;
   const asOf = profile.asOf;
   if (asOf === undefined) throw new RangeError('plan() needs Profile.asOf');
@@ -115,8 +139,8 @@ export function plan(
     for (const asset of x.assets) eventAssets.push({ eventId: e.id, group: asset.group, value: asset.value });
   }
 
-  // 3. The monthly simulation.
-  const sim = simulate({ ...base, events: lifeEvents }, months, {
+  // 3. The monthly simulation's inputs.
+  const simOptions: SimulateOptions = {
     rates: { inflationAnnual: a.inflation },
     shortfallMode: 'separate',
     withdrawalOrder: a.withdrawalOrder,
@@ -126,23 +150,61 @@ export function plan(
     expenses: a.expenses,
     newDebts,
     newAssets,
-    ...(opts.yearlyRates && { yearlyRates: opts.yearlyRates }),
     granularity: 'year',
+  };
+
+  // 6. KPI retireAge.
+  const retireYears = enabled.filter((ev) => ev.type === 'retire').map((ev) => Math.max(ev.year, asOfYear));
+  const retireAge = retireYears.length > 0 ? Math.min(...retireYears) - birthYear : a.retireAge;
+
+  return {
+    scenario, asOfYear, offset, birthYear, yearCount, months, live, enabled, eventAssets,
+    simProfile: { ...base, events: lifeEvents }, simOptions, retireAge,
+  };
+}
+
+/**
+ * Step 5: the display deflator at the end of each plan year (index y = path[y + 1]), for 'today'
+ * (1 for 'future'). With yearly inflation draws, the compounded price level of that path.
+ */
+export function yearEndDeflators(prep: PreparedPlan, inflationDraws?: readonly Rate[]): Float64Array {
+  const { scenario: { assumptions: a }, offset, yearCount, months } = prep;
+  const out = new Float64Array(yearCount);
+  if (a.display === 'future') return out.fill(1);
+  if (!inflationDraws) {
+    for (let y = 0; y < yearCount; y++) out[y] = (1 + a.inflation) ** (Math.min(12 * (y + 1) - offset, months) / 12);
+    return out;
+  }
+  // Same product, in the same order, as simulate()'s price path P(t), read at each year's last month.
+  let price = 1;
+  let t = 0;
+  for (let y = 0; y < yearCount; y++) {
+    const end = Math.min(12 * (y + 1) - offset, months);
+    const r = 1 + monthlyRate(inflationDraws[y]!);
+    for (; t < end; t++) price *= r;
+    out[y] = price;
+  }
+  return out;
+}
+
+/** One PlanYear per calendar year from `profile.asOf` to `scenario.assumptions.endAge`, plus the four KPIs. */
+export function plan(
+  profile: Profile, accounts: readonly Account[], scenario: Scenario, area?: AreaData, opts: PlanOptions = {},
+): PlanResult {
+  const prep = preparePlan(profile, accounts, scenario, area);
+  const a = scenario.assumptions;
+  const { asOfYear, birthYear, yearCount, live, enabled, eventAssets, retireAge } = prep;
+
+  // 3. The monthly simulation.
+  const sim = simulate(prep.simProfile, prep.months, {
+    ...prep.simOptions,
+    ...(opts.yearlyRates && { yearlyRates: opts.yearlyRates }),
   });
   // path[0] = today, path[y + 1] = the end of plan year y (flows summed over that year).
   const path = sim.path;
 
-  // 5. Deflator at path index m.
-  let priceAt: number[] | null = null;
-  const inflationDraws = opts.yearlyRates?.inflation;
-  if (inflationDraws) {
-    priceAt = [1];
-    for (let t = 0; t < months; t++) {
-      priceAt.push(priceAt[t]! * (1 + monthlyRate(inflationDraws[Math.floor((offset + t) / 12)]!)));
-    }
-  }
-  const deflatorAt = (m: number) =>
-    a.display === 'future' ? 1 : priceAt ? priceAt[m]! : (1 + a.inflation) ** (m / 12);
+  // 5. Deflator at the end of each plan year.
+  const deflators = yearEndDeflators(prep, opts.yearlyRates?.inflation);
 
   // Account rows: shares of each asset group, and groups that need a row of their own.
   const groupAccounts = new Map<AssetGroup, { id: string; share: number }[]>();
@@ -201,7 +263,7 @@ export function plan(
     const year = asOfYear + y;
     const s = path[y]!;
     const e = path[y + 1]!;
-    const d = deflatorAt(e.month);
+    const d = deflators[y]!;
     const $ = (v: Money) => v / d;
     const groups = e.groups!;
     const debtFlows = e.debtFlows!;
@@ -260,8 +322,6 @@ export function plan(
   }
 
   // 6. KPIs.
-  const retireYears = enabled.filter((ev) => ev.type === 'retire').map((ev) => Math.max(ev.year, asOfYear));
-  const retireAge = retireYears.length > 0 ? Math.min(...retireYears) - birthYear : a.retireAge;
   const first = years[0]!;
   const last = years[years.length - 1]!;
   const atRetirement = years.find((py) => py.age === retireAge) ?? (retireAge < first.age ? first : last);

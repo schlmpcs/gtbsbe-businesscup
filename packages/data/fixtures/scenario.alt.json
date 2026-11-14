@@ -43,13 +43,13 @@
     {
       "id": "ev-buy-home",
       "type": "buyHome",
-      "year": 2029,
+      "year": 2031,
       "enabled": true,
-      "homeValue": 615400.0,
-      "downPayment": 123080.0,
+      "homeValue": 350000.0,
+      "downPayment": 70000.0,
       "payCash": false,
       "termYears": 30,
-      "rate": 0.065,
+      "rate": 0.0711,
       "propertyTaxRate": 0.01625,
       "insuranceMonthly": {
         "value": 292.82,
