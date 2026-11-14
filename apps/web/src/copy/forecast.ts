@@ -26,12 +26,31 @@ export const forecast = {
   sampleProfile: 'These numbers are for a sample life, not yours yet.',
   todaysDollarsNote: 'In today’s dollars: prices grow every year, so we show what the money would buy now.',
   futureDollarsNote: 'In future dollars: the amounts you would see on a statement then, before inflation.',
-  /** The range band (docs/ENGINEERING.md → Forecast: label it exactly this way). */
+  /**
+   * Who made a forecast number (docs/ENGINEERING.md → AI forecast → Labeling). `rulesPreview` labels the
+   * ladder's 10-year number (S5–S9), which always comes from the rules engine so it can move as you type.
+   */
+  source: {
+    ai: 'AI estimate',
+    rules: 'Rules-based estimate',
+    rulesPreview: 'Rules-based preview',
+  },
+  /**
+   * The range band (docs/ENGINEERING.md → Forecast: label it exactly this way). `label` / `explain` /
+   * `zero` are the rules forecast's band, made from the numbers we estimated; `model` is the AI
+   * forecast's own range.
+   */
   band: {
     label: 'Range from the numbers we estimated',
     explain:
       'The shaded band is the range from the numbers we estimated. It shows uncertainty in your inputs only, not market or inflation risk.',
     zero: 'Every number is yours, so there is no range: nothing was estimated.',
+    model: {
+      label: 'Range from the AI model’s own uncertainty',
+      explain:
+        'The shaded band is how far the AI model thinks your net worth could land from its middle number. It is the model’s own judgment, not a guarantee, and it does not always narrow when you add real numbers.',
+      zero: 'The model gave a single number, with no range.',
+    },
     estimatedTitle: 'Numbers we estimated',
     /** Names of estimated inputs (spending categories use common.categories). */
     fields: {
@@ -127,6 +146,8 @@ export const forecast = {
     withMoveIn10y: 'With this move',
     committedIn10y: 'With your committed move',
     errorTitle: 'We could not build your forecast.',
+    /** Shown while a new answer is on its way and the numbers on screen are the previous ones. */
+    refreshing: 'Updating the forecast…',
   },
 
   moves: {
@@ -162,8 +183,12 @@ export const forecast = {
   /** "How we calculate" panel (S10). */
   how: {
     title: 'How we calculate',
+    /** The rules forecast: every number is the engine's. */
     intro:
       'Every number comes from the same simulation, month by month for 10 years. Same inputs, same answer, every time. These are the rates and rules it uses.',
+    /** The AI forecast: the model writes the numbers, code checks them against the simulation. */
+    introAi:
+      'The 10-year numbers are written by an AI model from your inputs, then checked in code against our rules simulation: an answer that strays too far from it is thrown out, and you see the simulation’s numbers instead, labeled as such. Everything else, like this month’s spending, is still worked out by our own rules. These are the rates and rules the simulation uses.',
     forecastTitle: 'Forecast',
     movesTitle: 'Next moves',
     assumption: 'our assumption',

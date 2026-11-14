@@ -3,7 +3,7 @@
 import { common, forecast as t, screenTitles, type ScreenId } from '@/copy';
 import { Button, buttonClassName, Card, cx, EstimateTag, formatMoney, Money, Stack, Stat } from '@/ui-kit';
 import type { MonthEndVM, MoveVM, TodayVM } from '../model/types';
-import { ErrorNote, moveDetail, moveTitle, RangeText, Skeleton, type LinkComponent } from './shared';
+import { bandText, ErrorNote, moveDetail, moveTitle, RangeText, Skeleton, SourceTag, type LinkComponent } from './shared';
 
 export type TodayLinks = {
   play: string;
@@ -43,7 +43,11 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
         )}
 
         <Card title={t.today.future.title} data-testid="in10y">
-          {ready ? (
+          {!ready || vm.forecastStatus === 'loading' ? (
+            <Skeleton />
+          ) : vm.forecastStatus === 'error' && vm.forecastError ? (
+            <ErrorNote error={vm.forecastError} />
+          ) : (
             <Stack gap="sm">
               <Stat
                 label={t.netWorthIn10y}
@@ -53,13 +57,12 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
                 hint={t.today.future.hint}
               />
               <RangeText point={vm.in10y} isZero={vm.in10yBandIsZero} />
-              {!vm.in10yBandIsZero && <p className="text-xs text-text-muted">{t.band.label}</p>}
+              <SourceTag source={vm.source} />
+              {!vm.in10yBandIsZero && <p className="text-xs text-text-muted">{bandText(vm.in10yBandKind, false).label}</p>}
               <Link href={links.future} className={cx(buttonClassName({ variant: 'secondary' }), 'mt-sm self-start')}>
                 {t.today.future.cta}
               </Link>
             </Stack>
-          ) : (
-            <Skeleton />
           )}
         </Card>
 
@@ -202,6 +205,7 @@ function MoveSummary({ move, onDone }: { move: MoveVM; onDone?: () => void }) {
       <p className="text-lg font-semibold text-positive tabular-nums">
         {t.moves.effect(formatMoney(move.effect10y, { signed: true }))}
       </p>
+      <SourceTag source={move.source} />
       {onDone && (
         <Button variant="secondary" size="sm" className="self-start" onClick={onDone}>
           {t.today.move.markDone}

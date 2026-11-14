@@ -5,7 +5,9 @@ import { buttonClassName, Card, cx, ForecastChart, Money, Stack, Stat } from '@/
 import type { FutureVM } from '../model/types';
 import { HowWeCalculate } from './HowWeCalculate';
 import { NextMoves } from './NextMoves';
-import { ErrorNote, estimatedFieldLabel, moveTitle, RangeText, Skeleton, Toggle, type LinkComponent } from './shared';
+import {
+  bandText, ErrorNote, estimatedFieldLabel, moveTitle, RangeText, Skeleton, SourceTag, Toggle, type LinkComponent,
+} from './shared';
 
 export type FutureScreenProps = {
   vm: FutureVM;
@@ -38,7 +40,7 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
 
         <NextMoves vm={vm} explanations={vm.explanations} onExplain={vm.explain} loading={loading} />
 
-        <HowWeCalculate vm={vm.howWeCalculate} />
+        <HowWeCalculate vm={vm.howWeCalculate} source={vm.source} />
 
         <Link href={links.today} className={cx(buttonClassName({ variant: 'ghost', size: 'sm' }), 'self-start')}>
           {t.screens.S1}
@@ -52,6 +54,7 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
   const f = t.future;
   const dollarsNote = vm.todaysDollars ? t.todaysDollarsNote : t.futureDollarsNote;
   const compareTitle = vm.compareMove ? moveTitle(vm.compareMove) : '';
+  const band = bandText(vm.band.kind, vm.band.isZero);
   return (
     <Stack gap="lg">
       <Card data-testid="in10y">
@@ -62,7 +65,11 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
           isEstimate={!vm.band.isZero}
         />
         <RangeText point={vm.in10y} isZero={vm.band.isZero} className="mt-xs" />
+        <SourceTag source={vm.source} className="mt-xs" />
         <p className="mt-xs text-xs text-text-muted">{dollarsNote}</p>
+        <p aria-live="polite" className="mt-xs text-xs text-text-muted" data-testid="forecast-refreshing">
+          {vm.isRefreshing ? f.refreshing : null}
+        </p>
         <div className="mt-md flex flex-wrap gap-x-xl gap-y-sm border-t border-border pt-md text-sm">
           <span>
             <span className="text-text-muted">{f.todayLabel}: </span>
@@ -104,8 +111,8 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
           showBand={!vm.band.isZero}
         />
         <div className="mt-md rounded-md bg-surface p-md text-sm" data-testid="band-note">
-          <p className="font-semibold">{t.band.label}</p>
-          <p className="mt-xs text-text-muted">{vm.band.isZero ? t.band.zero : t.band.explain}</p>
+          <p className="font-semibold">{band.label}</p>
+          <p className="mt-xs text-text-muted">{band.text}</p>
           {!vm.band.isZero && vm.band.estimatedFields.length > 0 && (
             <>
               <h3 className="mt-md text-xs font-semibold uppercase tracking-wide text-text-muted">{t.band.estimatedTitle}</h3>

@@ -3,7 +3,7 @@
 import { forecast as t } from '@/copy';
 import { Button, Card, formatMoney, Stack } from '@/ui-kit';
 import type { ExplanationVM, Loadable, MoveVM, NextMovesVM } from '../model/types';
-import { ErrorNote, moveDetail, moveTitle, Skeleton } from './shared';
+import { ErrorNote, moveDetail, moveTitle, Skeleton, SourceTag } from './shared';
 
 export type NextMovesProps = {
   vm: NextMovesVM;
@@ -101,6 +101,7 @@ function MoveItem({
           <div>
             <p className="text-2xl font-semibold text-positive tabular-nums">{formatMoney(move.effect10y, { signed: true })}</p>
             <p className="text-xs text-text-muted">{m.effectLabel}</p>
+            <SourceTag source={move.source} className="mt-xs" />
           </div>
 
           {move.isCommitted && (

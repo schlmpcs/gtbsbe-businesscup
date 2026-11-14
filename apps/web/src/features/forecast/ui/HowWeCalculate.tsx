@@ -2,7 +2,7 @@
 // source or an "our assumption" tag. Values arrive from the view-model; here they are only formatted.
 import { forecast as t } from '@/copy';
 import { formatMoney, formatRate, SourceNote } from '@/ui-kit';
-import type { AssumptionValue, AssumptionVM, HowWeCalculateVM } from '../model/types';
+import type { AssumptionValue, AssumptionVM, ForecastSource, HowWeCalculateVM } from '../model/types';
 import { AssumptionTag } from './shared';
 
 function valueText(v: AssumptionValue): string {
@@ -45,7 +45,7 @@ function Group({ title, items }: { title: string; items: AssumptionVM[] }) {
   );
 }
 
-export function HowWeCalculate({ vm }: { vm: HowWeCalculateVM }) {
+export function HowWeCalculate({ vm, source }: { vm: HowWeCalculateVM; source: ForecastSource | null }) {
   return (
     <details className="group rounded-lg border border-border bg-bg p-lg shadow-sm" data-testid="how-we-calculate">
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md text-lg font-semibold">
@@ -54,7 +54,7 @@ export function HowWeCalculate({ vm }: { vm: HowWeCalculateVM }) {
           ▾
         </span>
       </summary>
-      <p className="mt-sm text-sm text-text-muted">{t.how.intro}</p>
+      <p className="mt-sm text-sm text-text-muted">{source === 'ai' ? t.how.introAi : t.how.intro}</p>
       <div className="mt-md flex flex-col gap-lg">
         <Group title={t.how.forecastTitle} items={vm.forecast} />
         <Group title={t.how.movesTitle} items={vm.moves} />
