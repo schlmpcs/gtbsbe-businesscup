@@ -1,6 +1,6 @@
 // "How we calculate" (S10): every engine assumption behind the forecast and the moves, with its
 // source or an "our assumption" tag. Values arrive from the view-model; here they are only formatted.
-import { forecast as t, goal } from '@/copy';
+import { forecast as t, goal, avatar } from '@/copy';
 import { cx, formatMoney, formatRate, SourceNote } from '@/ui-kit';
 import type { AssumptionValue, AssumptionVM, ForecastSource, HowWeCalculateVM } from '../model/types';
 import { AssumptionTag } from './shared';
@@ -80,6 +80,7 @@ export function HowWeCalculate({
         <Group title={t.how.forecastTitle} items={vm.forecast} />
         <Group title={t.how.movesTitle} items={vm.moves} />
         <p className="text-sm text-text-muted">{goal.rules}</p>
+        <p className="text-sm text-text-muted">{avatar.rules}</p>
       </div>
     </details>
   );

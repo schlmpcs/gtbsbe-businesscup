@@ -1,4 +1,4 @@
-// Next Moves (S10): the top 3 moves with their 10-year effect, commit / done, "Why?", and the
+// Next Moves (S10): the top 3 moves with their effect at the picked year, commit / done, "Why?", and the
 // level 2 preview. Presentational: everything comes from the view-model.
 import { forecast as t } from '@/copy';
 import { Button, cx, formatMoney, Stack, Sticker } from '@/ui-kit';
@@ -44,7 +44,7 @@ export function NextMoves({ vm, explanations, onExplain, loading = false }: Next
         <h2 id="moves-heading" className="font-display text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
           {m.heading}
         </h2>
-        <p className="text-text-muted">{m.intro}</p>
+        <p className="text-text-muted">{vm.horizonReady ? m.intro(vm.horizonYears) : m.introNeutral}</p>
         {!loading && vm.doneCount > 0 && <p className="w-full text-sm font-semibold text-positive">{m.doneCount(vm.doneCount)}</p>}
       </div>
       {body}
@@ -104,9 +104,9 @@ function MoveItem({
 
           <div>
             <p className="font-display text-5xl font-extrabold leading-display tracking-tight text-primary tabular-nums sm:text-6xl">
-              {formatMoney(move.effect10y, { signed: true })}
+              {formatMoney(move.effect, { signed: true })}
             </p>
-            <p className="mt-xs text-xs text-text-muted">{m.effectLabel}</p>
+            <p className="mt-xs text-xs text-text-muted">{m.effectLabel(move.horizonYears)}</p>
           </div>
 
           <h3 id={headingId} className="text-xl font-bold leading-tight">

@@ -59,6 +59,7 @@ export function forecast(p: Profile, years = 10, opts: ForecastOptions = {}): Fo
 export function cloneProfile(p: Profile): Profile {
   return {
     ...p,
+    ...(p.household && {household:{...p.household}}),
     age: { ...p.age },
     takeHomePay: { ...p.takeHomePay },
     spending: Object.fromEntries(

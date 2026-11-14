@@ -147,11 +147,11 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   const viewed = stored(page, 'forecast_viewed');
   await page.getByRole('link', { name: ladder.shell.futureCta }).click();
   await expect(page).toHaveURL(/\/future$/);
-  await expect(h1(page)).toHaveText(forecast.future.title);
-  const chart = page.getByRole('figure', { name: forecast.future.chartTitle });
+  await expect(h1(page)).toHaveText(forecast.future.title(10));
+  const chart = page.getByRole('figure', { name: forecast.future.chartTitle(10) });
   await expect(chart.locator('.recharts-line-curve').first()).toBeVisible();
   await expect(chart.locator('.recharts-area-area').first()).toBeVisible();
-  await expect(page.getByTestId('in10y').getByText(/^Likely between −?\$[\d,]+ and −?\$[\d,]+$/)).toBeVisible();
+  await expect(page.getByTestId('at-horizon').getByText(/^Likely between −?\$[\d,]+ and −?\$[\d,]+$/)).toBeVisible();
   await expect(page.getByTestId('moves').getByRole('article').first()).toBeVisible();
   await viewed;
 

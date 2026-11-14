@@ -149,7 +149,7 @@ mv compose.yaml.new compose.yaml
 
 # NEXT_PUBLIC_* flags are baked into the client bundle, so they are read from .env at build time.
 BUILD_ARGS=()
-for v in NEXT_PUBLIC_GAME_SOURCE NEXT_PUBLIC_SESSION_SOURCE NEXT_PUBLIC_EVENTS_SOURCE; do
+for v in NEXT_PUBLIC_GAME_SOURCE NEXT_PUBLIC_SESSION_SOURCE NEXT_PUBLIC_EVENTS_SOURCE NEXT_PUBLIC_AVATARS_ENABLED; do
   val=$(sed -n "s/^$v=//p" .env | tail -1)
   [ -z "$val" ] || BUILD_ARGS+=(--build-arg "$v=$val")
 done

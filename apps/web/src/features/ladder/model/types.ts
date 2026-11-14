@@ -255,7 +255,7 @@ export type StatementUploadVM = {
    * statement history kept in this browser; `savedProfileToServer` is true when the profile (which
    * holds the category averages and take-home pay) is also saved to /api/session.
    */
-  whatWeKeep: { months: string[]; categories: CostCategory[]; takeHomePay: boolean; savedProfileToServer: boolean };
+  whatWeKeep: { avatarPublished?: boolean; months: string[]; categories: CostCategory[]; takeHomePay: boolean; savedProfileToServer: boolean };
   /**
    * Read a CSV statement in the browser and categorize it (T6/T7), ending in `submitTotals`.
    * null when no reader is available: the screen then shows the file picker as unavailable.

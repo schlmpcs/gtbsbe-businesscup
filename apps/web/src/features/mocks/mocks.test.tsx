@@ -115,6 +115,33 @@ describe('S14 check-in', () => {
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([card.id]);
   });
 
+  it('words each suggested move’s gain with the picked year', async () => {
+    useAppStore.getState().setHorizonYears(3);
+    render(<Checkin />);
+    const section = await screen.findByTestId('checkin-move');
+    const gains = await within(section).findAllByText(/^\+\$[\d,]+ in 3 years$/);
+    expect(gains.length).toBeGreaterThan(0);
+    expect(within(section).queryByText(/in 10 years/)).toBeNull();
+  });
+
+  it('shows the committed move’s gain at the picked year while it is ranked, and at 10 years when it is not', async () => {
+    useAppStore.getState().setHorizonYears(3);
+    const ranked = rankMoves(cloneProfileDemo(), { rates })[0]!;
+    useAppStore.getState().commitMove(ranked);
+    const first = render(<Checkin />);
+    const rankedSection = await screen.findByTestId('checkin-move');
+    await waitFor(() => expect(within(rankedSection).getByTestId('forecast-source')).toBeTruthy()); // measured by the ranking now
+    expect(within(rankedSection).getByText(/^\+\$[\d,]+ in 3 years$/)).toBeTruthy();
+    first.unmount();
+
+    // Not in the ranking: its number is the 10-year one frozen at commit time, and says so.
+    useAppStore.getState().commitMove({ ...ranked, id: 'cutCategory:gone', kind: 'cutCategory', effect10y: 1234 });
+    render(<Checkin />);
+    const storedSection = await screen.findByTestId('checkin-move');
+    expect(within(storedSection).getByText('+$1,234 in 10 years')).toBeTruthy();
+    expect(within(storedSection).queryByTestId('forecast-source')).toBeNull();
+  });
+
   it('“I did it” is usable at once: the rules forecast for the current profile is on screen while the answer is on its way', async () => {
     let release: (() => void) | undefined;
     mockForecastRoute((body) => new Promise<ForecastBundle>((resolve) => (release = () => resolve(rulesAnswer(body)))));

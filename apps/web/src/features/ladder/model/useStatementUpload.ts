@@ -1,3 +1,4 @@
+import { usePublishedAvatar } from '@/features/avatar/model/usePublishedAvatar';
 // S9 Statement upload: screen state around the T6/T7 pipeline (features/upload parses the CSV in
 // the browser and calls /api/statement/categorize). Its output, CategoryTotals[], enters here via
 // `submitTotals`, is shown for review, and on `apply` becomes measured spending in the profile.
@@ -36,6 +37,7 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
   const readStatementFile = opts.readStatementFile ?? defaultReadStatementFile;
   const fetchSampleStatement = opts.fetchSampleStatement ?? defaultFetchSampleStatement;
   const ready = useAppReady();
+  const avatarPublished = usePublishedAvatar(ready);
   const statementMonths = useAppStore((s) => s.statementMonths);
   const applyStatementTotals = useAppStore((s) => s.applyStatementTotals);
 
@@ -119,9 +121,10 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
       months,
       categories: months.length > 0 ? ([...COST_CATEGORIES] as CostCategory[]) : [],
       takeHomePay: kept.some((m) => (m.detectedPay ?? 0) > 0),
+      ...(avatarPublished && {avatarPublished}),
       savedProfileToServer: sessionSource() === 'api',
     };
-  }, [history, pending, statementMonths]);
+  }, [history, pending, statementMonths, avatarPublished]);
 
   const status: StatementUploadVM['status'] = !ready
     ? 'loading'

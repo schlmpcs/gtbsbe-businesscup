@@ -6,6 +6,8 @@
 //   everything after the service is dropped, so no way of writing a name can slip through.
 // - Transfers become "Transfer to|from savings|checking|…", or "[name]" when the other side is
 //   not one of the user's own account types.
+// - Bill pay, named online payments, checks, deposits from a counterparty, and bare ACH
+//   credits/debits drop the counterparty and memo entirely, even when it looks like a business.
 // - ACH name fields (INDN:, IND NAME:, RECEIVER: …) are masked; the company name (CO NAME:) is kept.
 // - E-mail addresses, card/account numbers (4+ digits, XXXX1234), phone numbers and reference
 //   codes that mix letters and digits are replaced by "#", "[email]" or "[ref]".
@@ -63,6 +65,20 @@ const ACH_NAME_FIELD = new RegExp(
   'gi',
 );
 
+/** These payment formats can hold either a person or a business. Treat the whole
+ * counterparty as private: category keywords and company-looking suffixes cannot
+ * establish that a name is safe to send. Canonical output also drops reference IDs,
+ * dates and memo text, and stays unchanged when the server masks it again. */
+function namedPaymentLabel(text: string): string | null {
+  if (/\bbill\s*pay(?:ment)?\b/i.test(text)) return 'Bill payment to [name]';
+  if (/\bonline(?: banking)?\s+payment\b.*?\bto\b/i.test(text)) return 'Online payment to [name]';
+  if (/^check(?:\s|#|$)/i.test(text)) return 'Check to [name]';
+  if (/\bdeposit\s+from\b/i.test(text)) return 'Deposit from [name]';
+  const ach = /^ach\s+(credit|debit)\b/i.exec(text);
+  if (ach) return `ACH ${ach[1]!.toLowerCase()} [name]`;
+  return null;
+}
+
 /** Normalizes a raw description and masks personal data. Never returns an empty string. */
 export function maskLabel(raw: string): string {
   let text = raw
@@ -77,6 +93,9 @@ export function maskLabel(raw: string): string {
     return `${p2p[1]} ${dir ? `${dir} ` : ''}[name]`;
   }
   if (TRANSFER.test(text) || WIRE.test(text)) return transferLabel(text);
+
+  const namedPayment = namedPaymentLabel(text);
+  if (namedPayment) return namedPayment;
 
   text = text
     // ACH name fields: mask the value up to the next "FIELD:" or the end. CO NAME (the company) stays.

@@ -1,8 +1,8 @@
-// S10 You in 10 years + Next Moves: the headline number with its range, the forecast chart with the
-// range band, a comparison with a move, the ranked moves and "How we calculate".
+// S10 You in N years + Next Moves: the year picker, the headline number with its range, the forecast
+// chart with the range band, a comparison with a move, the ranked moves and "How we calculate".
 import type { ReactNode } from 'react';
-import { forecast as t } from '@/copy';
-import { Art, buttonClassName, cx, EstimateTag, ForecastChart, formatMoney, Money, Stack, Sticker } from '@/ui-kit';
+import { forecast as t, yearsPhrase } from '@/copy';
+import { Art, buttonClassName, Choice, cx, EstimateTag, ForecastChart, formatMoney, Money, Stack, Sticker } from '@/ui-kit';
 import type { FutureVM } from '../model/types';
 import { HOW_WE_CALCULATE_ID, HowWeCalculate } from './HowWeCalculate';
 import { NextMoves } from './NextMoves';
@@ -41,9 +41,10 @@ export function FutureScreen({ vm, links, Link, goal }: FutureScreenProps) {
           <Stack gap="xl" className="min-w-0">
             <h1>
               <Sticker tone="ink" tilt={-3} className="text-sm">
-                {f.title}
+                {vm.horizonReady ? f.title(vm.horizonYears) : f.titleNeutral}
               </Sticker>
             </h1>
+            <HorizonPicker vm={vm} />
             {loading ? (
               <div className={CARD}>
                 <Skeleton lines={5} />
@@ -64,7 +65,7 @@ export function FutureScreen({ vm, links, Link, goal }: FutureScreenProps) {
             <Art name="house-build" />
             {shown && (
               <Sticker tone="primary" tilt={6} className="absolute top-0 right-0 text-base">
-                {f.artSticker(formatMoney(vm.in10y.mid, { compact: true }))}
+                {f.artSticker(formatMoney(vm.atHorizon.mid, { compact: true }), vm.horizonYears)}
               </Sticker>
             )}
           </div>
@@ -86,20 +87,42 @@ export function FutureScreen({ vm, links, Link, goal }: FutureScreenProps) {
   );
 }
 
+/**
+ * The year the headline, chart and moves are read at, under the title and above the headline number.
+ * The kit's Choice has string values: the years go in and out as strings here.
+ */
+function HorizonPicker({ vm }: { vm: FutureVM }) {
+  const options = vm.horizons.map((years) => ({ value: String(years), label: yearsPhrase(years) }));
+  return (
+    <Choice
+      legend={t.future.horizonLabel}
+      name="horizon"
+      // Until the saved year is in, the picker keeps its place (no jump) with no year chosen.
+      value={vm.horizonReady ? String(vm.horizonYears) : ''}
+      disabled={!vm.horizonReady}
+      options={options}
+      onChange={(value) => {
+        const years = vm.horizons.find((y) => String(y) === value);
+        if (years !== undefined) vm.setHorizonYears(years);
+      }}
+    />
+  );
+}
+
 function Headline({ vm }: { vm: FutureVM }) {
   const f = t.future;
   const dollarsNote = vm.todaysDollars ? t.todaysDollarsNote : t.futureDollarsNote;
   return (
-    <div data-testid="in10y">
+    <div data-testid="at-horizon">
       <div className="flex flex-wrap items-center gap-sm">
-        <span className={EYEBROW}>{f.headline}</span>
+        <span className={EYEBROW}>{f.headline(vm.horizonYears)}</span>
         {!vm.band.isZero && <EstimateTag />}
       </div>
       <p className="mt-sm font-display text-7xl font-extrabold leading-display tracking-tight tabular-nums break-words sm:text-8xl lg:text-9xl">
-        <Money value={vm.in10y.mid} />
+        <Money value={vm.atHorizon.mid} />
       </p>
       <div className="mt-md flex flex-wrap items-baseline gap-x-sm text-xl text-text-muted">
-        <RangeText point={vm.in10y} isZero={vm.band.isZero} className="text-xl" />
+        <RangeText point={vm.atHorizon} isZero={vm.band.isZero} className="text-xl" />
         {!vm.band.isZero && <span aria-hidden="true">·</span>}
         <span className="tabular-nums">{f.todayInline(formatMoney(vm.today.mid))}</span>
       </div>
@@ -117,14 +140,14 @@ function Headline({ vm }: { vm: FutureVM }) {
         <div className="mt-md flex flex-wrap gap-x-xl gap-y-sm text-base">
           {vm.committedPreview && (
             <span data-testid="committed-preview">
-              <span className="text-text-muted">{f.committedIn10y}: </span>
-              <Money value={vm.committedPreview.in10y.mid} className="font-bold text-positive" />
+              <span className="text-text-muted">{f.committedAt}: </span>
+              <Money value={vm.committedPreview.point.mid} className="font-bold text-positive" />
             </span>
           )}
           {vm.withMove && !vm.committedPreview && (
             <span>
-              <span className="text-text-muted">{f.withMoveIn10y}: </span>
-              <Money value={vm.withMove.in10y.mid} className="font-bold text-primary" />
+              <span className="text-text-muted">{f.withMoveAt}: </span>
+              <Money value={vm.withMove.point.mid} className="font-bold text-primary" />
             </span>
           )}
         </div>
@@ -150,7 +173,7 @@ function ChartCard({ vm, links, Link }: { vm: FutureVM; links: FutureScreenProps
         )}
       </div>
       <ForecastChart
-        title={f.chartTitle}
+        title={f.chartTitle(vm.horizonYears)}
         series={{ label: f.seriesLabel, points: vm.points }}
         compare={vm.withMove ? { label: f.withMoveLabel(compareTitle), points: vm.withMove.points } : undefined}
         showBand={!vm.band.isZero}

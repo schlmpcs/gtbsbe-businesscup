@@ -2,7 +2,8 @@
 
 // S14 Monthly check-in (Figma Design v3, nodes 193:1567 / 203:2067). Presentational: every number
 // comes from useCheckin() (engine monthEnd on the user's statements or the labelled sample statement;
-// simulate / rankMoves for the move; the ranked suggestions say who made their 10-year numbers).
+// simulate / rankMoves for the move; the ranked suggestions say who made their numbers, at the year
+// picked on S10).
 import { useId, type ReactNode } from 'react';
 import { common, forecast, mocks } from '@/copy';
 import { Art, Button, buttonClassName, Card, Choice, cx, formatMoney, formatRate, Money, Sticker, Tag } from '@/ui-kit';
@@ -230,7 +231,7 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
           </div>
           <div className="flex flex-col items-end gap-xs">
             <span className="rounded-full bg-positive-soft px-md py-xs text-xs font-bold text-positive tabular-nums">
-              {m.effect(formatMoney(c.effect10y, { signed: true }))}
+              {forecast.moves.effect(formatMoney(c.effect, { signed: true }), c.horizonYears)}
             </span>
             {c.source && (
               <Tag data-testid="forecast-source" data-source={c.source}>
@@ -279,7 +280,9 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-sm rounded-lg bg-bg p-md">
                 <div className="flex min-w-0 flex-col">
                   <span className="font-semibold">{moveTitle(s)}</span>
-                  <span className="text-sm font-semibold text-positive tabular-nums">{m.effect(formatMoney(s.effect10y, { signed: true }))}</span>
+                  <span className="text-sm font-semibold text-positive tabular-nums">
+                    {forecast.moves.effect(formatMoney(s.effect, { signed: true }), s.horizonYears)}
+                  </span>
                   {s.source && (
                     <Tag data-testid="forecast-source" data-source={s.source} className="mt-xs">
                       {forecast.source[s.source]}

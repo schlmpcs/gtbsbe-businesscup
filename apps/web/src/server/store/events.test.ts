@@ -20,10 +20,28 @@ const step = (report: FunnelReport, name: string) => report.steps.find((s) => s.
 describe('masks', () => {
   it('give each known event one bit and ignore names this build does not know', () => {
     expect(new Set(FUNNEL_EVENT_NAMES.map(eventBit)).size).toBe(FUNNEL_EVENT_NAMES.length);
-    expect(eventBit('play_started')).toBe(1);
-    expect(eventBit('a_newer_event')).toBe(0);
-    expect(maskOf(['play_started', 'play_started', 'a_newer_event'])).toBe(1);
-    expect(maskOf([])).toBe(0);
+    expect(eventBit('play_started')).toBe(1n);
+    expect(eventBit('a_newer_event')).toBe(0n);
+    expect(maskOf(['play_started', 'play_started', 'a_newer_event'])).toBe(1n);
+    expect(maskOf([])).toBe(0n);
+  });
+
+  it('are 64 bits: the 32nd name (bit 31) stays positive and exact', () => {
+    expect(FUNNEL_EVENT_NAMES.length).toBeGreaterThanOrEqual(32);
+    const name32 = FUNNEL_EVENT_NAMES[31]!;
+    expect(eventBit(name32)).toBe(2n ** 31n); // a 32-bit `1 << 31` would be -2147483648
+    expect(maskOf(['play_started', name32])).toBe(2n ** 31n + 1n);
+    expect(maskOf(FUNNEL_EVENT_NAMES)).toBe(2n ** BigInt(FUNNEL_EVENT_NAMES.length) - 1n);
+  });
+
+  it('keeps forty event names distinct', () => {
+    const names = FUNNEL_EVENT_NAMES as unknown as string[];
+    const originalLength = names.length;
+    try {
+      while (names.length < 40) names.push(`future_test_event_${names.length}`);
+      expect(new Set(names.map(eventBit)).size).toBe(40);
+      expect(maskOf(names)).toBe((1n << 40n) - 1n);
+    } finally { names.length = originalLength; }
   });
 
   it('keep the first event of each id', () => {
@@ -36,6 +54,17 @@ describe('masks', () => {
 describe('buildFunnelReport', () => {
   const w = { from: new Date('2026-11-07T00:00:00Z'), to: new Date('2026-11-14T00:00:00Z') };
   const m = (...names: string[]) => maskOf(names);
+  const none = { guesses: 0, cluesOpened: 0, blind: 0 };
+
+  it('counts slider and duel players in the same funnel', () => {
+    const report = buildFunnelReport(w, [
+      { mask: m('play_started', 'home_guessed', 'game_finished'), users: 1 },
+      { mask: m('play_started', 'duel_picked', 'game_finished'), users: 1 },
+    ], none);
+    expect(step(report, 'play_started')?.users).toBe(2);
+    expect(step(report, 'game_finished')?.funnel).toBe(2);
+    expect(report.events.duel_picked).toBe(1);
+  });
 
   it('counts people per step, people through every earlier step, and the conversion between steps', () => {
     const report = buildFunnelReport(
@@ -81,7 +110,27 @@ describe('buildFunnelReport', () => {
   });
 
   it('ignores ids with only unknown events', () => {
-    expect(buildFunnelReport(w, [{ mask: 0, users: 9 }], { guesses: 0, cluesOpened: 0, blind: 0 }).users).toBe(0);
+    expect(buildFunnelReport(w, [{ mask: 0n, users: 9 }], { guesses: 0, cluesOpened: 0, blind: 0 }).users).toBe(0);
+  });
+
+  it('counts an id that sent the 32nd event (bit 31) like any other', () => {
+    const name32 = FUNNEL_EVENT_NAMES[31]!;
+    const report = buildFunnelReport(w, [{ mask: m('play_started', name32), users: 2 }, { mask: m(name32), users: 1 }], none);
+    expect(report.users).toBe(3);
+    expect(report.events[name32]).toBe(3);
+    expect(report.events.play_started).toBe(2);
+    expect(step(report, 'play_started')?.funnel).toBe(2);
+  });
+
+  it('keeps every low bit of a mask with bit 62 set (no loss of precision as a float would)', () => {
+    const high = (1n << 62n) | m('play_started', 'game_finished');
+    expect(Number(high) % 2).toBe(0); // the premise: as a JS number, the low bits are gone
+    const report = buildFunnelReport(w, [{ mask: high, users: 4 }], none);
+    expect(report.users).toBe(4);
+    expect(report.events.play_started).toBe(4);
+    expect(report.events.game_finished).toBe(4);
+    expect(report.game.finishRate).toBe(1);
+    expect(FUNNEL_EVENT_NAMES.filter((n) => report.events[n] > 0).sort()).toEqual(['game_finished', 'play_started']);
   });
 });
 
@@ -151,6 +200,17 @@ describe.each(implementations)('%s event store', (backend, make) => {
       guesses: 6, cluesPerHome: 7 / 6, blindGuessRate: 2 / 6,
       shared: 1, shareRate: 1,
     });
+  });
+
+  it('counts the 32nd event name (bit 31 of the mask)', async () => {
+    expect(FUNNEL_EVENT_NAMES.indexOf('pro_promo_redeemed')).toBeGreaterThanOrEqual(31); // the premise
+    const events = open();
+    await events.record(A, [ev({ name: 'play_started' }), ev({ name: 'pro_promo_redeemed' })]);
+    await events.record(B, [ev({ name: 'pro_promo_redeemed' })]);
+    const report = await events.funnel(window());
+    expect(report.users).toBe(2);
+    expect(report.events.pro_promo_redeemed).toBe(2);
+    expect(report.events.play_started).toBe(1);
   });
 
   it('reports only the window asked for', async () => {
