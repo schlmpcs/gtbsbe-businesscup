@@ -302,12 +302,19 @@ export type LifeEventDraft = {
   amount: Money | null;
   category: LifeEventCategory;
   direction: 'cost' | 'income';
+  /**
+   * Our estimate of the amount (the kid shortcut's childcare prefill, or an estimated event being edited).
+   * The saved value is an estimate only while `amount` is still exactly this; a typed amount is the person's.
+   */
+  estimatedAmount?: Money;
 };
 
 /** Why a draft cannot be saved, per field (absent = fine). */
 export type LifeEventErrors = {
   month?: 'missing' | 'past' | 'tooFar';
   amount?: 'missing' | 'negative' | 'zero' | 'tooLarge';
+  /** The store refused the event: the list is full (MAX_LIFE_EVENTS), or it could not be saved (e.g. it was removed meanwhile). */
+  event?: 'full' | 'refused';
 };
 
 /** One planned event as the list shows it. */
@@ -364,6 +371,8 @@ export type LifeEventsVM = {
   /** Fewer than `maxEvents` events: the shortcuts can add one. */
   canAdd: boolean;
   maxEvents: number;
+  /** Whether the draft's amount would be saved as an estimate (it is still our prefill). */
+  isEstimate: (draft: LifeEventDraft) => boolean;
   /** Errors in a draft, or null when it can be saved. */
   validate: (draft: LifeEventDraft) => LifeEventErrors | null;
   /** Add the draft as a new event; returns its errors (nothing added) or null (added). */

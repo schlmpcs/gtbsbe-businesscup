@@ -57,11 +57,16 @@ function fittingPreset(d: LifeEventDraft): LifeEventPreset | undefined {
   return category === undefined || category === d.category ? p : undefined;
 }
 
-/** The engine event for a valid draft. The kid shortcut's childcare figure is our estimate; the rest are the person's. */
+/** The draft's amount is still our estimate (the kid prefill, or an estimated event's untouched amount). */
+function draftIsEstimate(d: LifeEventDraft): boolean {
+  return d.kind !== 'oneOff' && d.estimatedAmount !== undefined && d.amount === d.estimatedAmount;
+}
+
+/** The engine event for a valid draft. Only an untouched estimate stays an estimate; an amount the person typed is theirs. */
 function toEvent(id: string, d: LifeEventDraft, month: YearMonth, amount: Money): LifeEvent {
   const preset = fittingPreset(d);
   const base = { id, month, ...(preset ? { preset } : {}) };
-  const value = { value: amount, isEstimate: preset === 'kid' };
+  const value = { value: amount, isEstimate: draftIsEstimate(d) };
   switch (d.kind) {
     case 'pay':
       return { ...base, kind: 'pay', takeHomePay: value };
@@ -104,6 +109,7 @@ function eventVM(e: LifeEvent): LifeEventVM {
       amount,
       category: category ?? 'other',
       direction: direction ?? 'cost',
+      ...(isEstimate ? { estimatedAmount: amount } : {}),
     },
   };
 }
@@ -139,7 +145,15 @@ function shortcutsFor(p: Profile, month: YearMonth): LifeEventShortcutVM[] {
   };
   return PRESETS.map((preset) => ({
     preset,
-    draft: { ...blank, kind: PRESET_KIND[preset], preset, amount: amounts[preset], category: PRESET_CATEGORY[preset] ?? 'other' },
+    draft: {
+      ...blank,
+      kind: PRESET_KIND[preset],
+      preset,
+      amount: amounts[preset],
+      category: PRESET_CATEGORY[preset] ?? 'other',
+      // The kid's childcare figure is ours (area data), so it is an estimate until the person changes it.
+      ...(preset === 'kid' ? { estimatedAmount: amounts.kid! } : {}),
+    },
     ...(preset === 'kid' ? { childcare: kid } : {}),
   }));
 }
@@ -194,9 +208,11 @@ export function useLifeEvents(): LifeEventsVM {
       const errors = validate(d);
       if (errors) return errors;
       const event = toEvent(newUuid(), d, d.month as YearMonth, d.amount!);
-      if (useAppStore.getState().addLifeEvent(event)) {
-        track({ name: 'life_event_added', props: { kind: event.kind, ...(event.preset ? { preset: event.preset } : {}) } });
+      const store = useAppStore.getState();
+      if (!store.addLifeEvent(event)) {
+        return { event: (store.profile.events?.length ?? 0) >= MAX_LIFE_EVENTS ? 'full' : 'refused' };
       }
+      track({ name: 'life_event_added', props: { kind: event.kind, ...(event.preset ? { preset: event.preset } : {}) } });
       return null;
     },
     [validate],
@@ -206,8 +222,7 @@ export function useLifeEvents(): LifeEventsVM {
     (id: string, d: LifeEventDraft): LifeEventErrors | null => {
       const errors = validate(d);
       if (errors) return errors;
-      useAppStore.getState().updateLifeEvent(id, toEvent(id, d, d.month as YearMonth, d.amount!));
-      return null;
+      return useAppStore.getState().updateLifeEvent(id, toEvent(id, d, d.month as YearMonth, d.amount!)) ? null : { event: 'refused' };
     },
     [validate],
   );
@@ -235,6 +250,7 @@ export function useLifeEvents(): LifeEventsVM {
     categories: CATEGORIES,
     canAdd: count < MAX_LIFE_EVENTS,
     maxEvents: MAX_LIFE_EVENTS,
+    isEstimate: draftIsEstimate,
     validate,
     add,
     update,

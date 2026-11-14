@@ -755,6 +755,38 @@ describe('S10 “Coming up” (life events)', () => {
     expect(useAppStore.getState().profile.events).toEqual([]);
   });
 
+  it('the month box shows its format for browsers without a month picker, and the error names it', async () => {
+    const user = userEvent.setup();
+    render(<FutureWithEvents />);
+    const card = await screen.findByRole('region', { name: le.title });
+    await user.click(within(card).getByRole('button', { name: le.shortcuts.raise }));
+    const form = within(card).getByRole('form', { name: le.form.addTitle(le.shortcuts.raise) });
+    const month = within(form).getByLabelText(le.form.month);
+    expect(month).toHaveAttribute('placeholder', 'YYYY-MM');
+    expect(month).toHaveAttribute('pattern', '\\d{4}-\\d{2}');
+    fireEvent.change(month, { target: { value: '' } });
+    await user.click(within(form).getByRole('button', { name: le.form.add }));
+    expect(within(form).getByText(le.errors.month.missing)).toBeInTheDocument();
+    expect(le.errors.month.missing).toContain('(YYYY-MM)');
+  });
+
+  it('shows why an event could not be saved when the store refuses it', async () => {
+    const user = userEvent.setup();
+    render(<FutureWithEvents />);
+    const card = await screen.findByRole('region', { name: le.title });
+    await user.click(within(card).getByRole('button', { name: le.shortcuts.raise }));
+    const form = within(card).getByRole('form', { name: le.form.addTitle(le.shortcuts.raise) });
+    // The list fills up while the form is open (another tab, or a double tap).
+    act(() => {
+      for (let i = 0; i < 12; i++) {
+        useAppStore.getState().addLifeEvent({ id: `ev-${i}`, kind: 'oneOff', month: addMonths(currentMonth(), 2), amount: 100, direction: 'cost' });
+      }
+    });
+    await user.click(within(form).getByRole('button', { name: le.form.add }));
+    expect(within(form).getByRole('alert')).toHaveTextContent(le.errors.event.full(12));
+    expect(useAppStore.getState().profile.events).toHaveLength(12);
+  });
+
   it('“Something else” picks the kind, the category or the direction', async () => {
     const user = userEvent.setup();
     render(<FutureWithEvents />);

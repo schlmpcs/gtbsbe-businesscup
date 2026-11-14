@@ -88,7 +88,7 @@ export const lifeEvents = {
   },
   errors: {
     month: {
-      missing: 'Pick a month.',
+      missing: 'Pick a month (YYYY-MM).',
       past: 'Pick a month from next month on. Changes that already started belong in your numbers.',
       tooFar: (years: number) => `Pick a month within ${years} years.`,
     },
@@ -97,6 +97,10 @@ export const lifeEvents = {
       negative: 'Enter $0 or more.',
       zero: 'Enter an amount above $0.',
       tooLarge: (max: string) => `Enter at most ${max}.`,
+    },
+    event: {
+      full: (max: number) => `You already have ${max} changes planned. Remove one to add another.`,
+      refused: 'We could not save this change. Check the month and the amount, then try again.',
     },
   },
 

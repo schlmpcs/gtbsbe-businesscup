@@ -142,6 +142,9 @@ function MonthInput({ value, min, max, onChange }: { value: string; min: YearMon
     <input
       {...control}
       type="month"
+      // Desktop Safari and Firefox show a plain text box for type="month": say the format it takes.
+      placeholder="YYYY-MM"
+      pattern="\d{4}-\d{2}"
       value={value}
       min={min}
       max={max}
@@ -188,6 +191,7 @@ function EventForm({ vm, editing, onDone }: { vm: LifeEventsVM; editing: Editing
   const titleId = useId();
   const [draft, setDraft] = useState<LifeEventDraft>(editing.draft);
   const [tried, setTried] = useState(false);
+  const [refused, setRefused] = useState<LifeEventErrors['event']>(undefined);
   const set = (patch: Partial<LifeEventDraft>) => setDraft((d) => ({ ...d, ...patch }));
   // Errors show once a save was tried, and then follow the fields as they change.
   const errors = tried ? vm.validate(draft) : null;
@@ -212,6 +216,7 @@ function EventForm({ vm, editing, onDone }: { vm: LifeEventsVM; editing: Editing
   const save = () => {
     setTried(true);
     const result = editing.mode === 'edit' ? vm.update(editing.id, draft) : vm.add(draft);
+    setRefused(result?.event);
     if (result === null) onDone();
   };
 
@@ -260,7 +265,7 @@ function EventForm({ vm, editing, onDone }: { vm: LifeEventsVM; editing: Editing
         <Field
           label={amountLabel}
           hint={amountHint}
-          isEstimate={draft.preset === 'kid'}
+          isEstimate={vm.isEstimate(draft)}
           error={amountError(vm, draft.kind, errors?.amount)}
         >
           <NumberInput
@@ -273,6 +278,11 @@ function EventForm({ vm, editing, onDone }: { vm: LifeEventsVM; editing: Editing
         </Field>
       </div>
       {childcare && draft.kind === 'spending' && <SourceNote source={childcare.source} />}
+      {refused && (
+        <p role="alert" className="text-sm font-medium text-negative">
+          {refused === 'full' ? t.errors.event.full(vm.maxEvents) : t.errors.event.refused}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-sm">
         <Button type="submit" size="sm">

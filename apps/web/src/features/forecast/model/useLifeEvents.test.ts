@@ -97,10 +97,51 @@ describe('useLifeEvents (S10 "Coming up")', () => {
     expect(result.current.events).toEqual([
       {
         id: stored!.id, kind: 'spending', preset: 'kid', label: t.label({ kind: 'spending', preset: 'kid' }), month: '2028-03',
-        amount: DALLAS_INFANT, isEstimate: true, category: 'childcare', draft: { ...kid.draft, month: '2028-03' },
+        amount: DALLAS_INFANT, isEstimate: true, category: 'childcare', draft: { ...kid.draft, month: '2028-03' }, // keeps estimatedAmount
       },
     ]);
     expect(await tracked()).toEqual([{ name: 'life_event_added', props: { kind: 'spending', preset: 'kid' } }]);
+  });
+
+  it('the kid figure is an estimate only while it is our prefill: a typed amount is exact, and an edit keeps the flag unless the amount changed', async () => {
+    const { result } = await ready();
+    const kid = result.current.shortcuts.find((s) => s.preset === 'kid')!;
+    expect(kid.draft.estimatedAmount).toBe(DALLAS_INFANT);
+    expect(result.current.isEstimate(kid.draft)).toBe(true);
+    expect(result.current.isEstimate({ ...kid.draft, amount: 1_250 })).toBe(false);
+
+    act(() => void result.current.add({ ...kid.draft, month: '2028-03', amount: 1_250 })); // a real daycare quote
+    let [stored] = useAppStore.getState().profile.events!;
+    expect(stored).toMatchObject({ preset: 'kid', monthly: { value: 1_250, isEstimate: false } });
+    expect(result.current.events[0]!.isEstimate).toBe(false);
+    act(() => result.current.remove(stored!.id));
+
+    act(() => void result.current.add({ ...kid.draft, month: '2028-03' })); // the prefill as it is
+    const id = result.current.events[0]!.id;
+    expect(result.current.events[0]!.isEstimate).toBe(true);
+    act(() => void result.current.update(id, { ...result.current.events[0]!.draft, month: '2028-05' })); // amount untouched
+    [stored] = useAppStore.getState().profile.events!;
+    expect(stored).toMatchObject({ month: '2028-05', monthly: { value: DALLAS_INFANT, isEstimate: true } });
+    act(() => void result.current.update(id, { ...result.current.events[0]!.draft, amount: 1_400 }));
+    [stored] = useAppStore.getState().profile.events!;
+    expect(stored).toMatchObject({ monthly: { value: 1_400, isEstimate: false } });
+    expect(result.current.events[0]!.draft.estimatedAmount).toBeUndefined();
+  });
+
+  it('says so when the store refuses an event, instead of reporting it saved', async () => {
+    const { result } = await ready();
+    act(() => {
+      for (let i = 0; i < MAX_LIFE_EVENTS; i++) result.current.add(draft({ amount: 100 + i }));
+    });
+    let errors: unknown;
+    act(() => void (errors = result.current.add(draft())));
+    expect(errors).toEqual({ event: 'full' });
+
+    const id = result.current.events[0]!.id;
+    act(() => result.current.remove(id));
+    act(() => void (errors = result.current.update(id, draft()))); // the event is gone
+    expect(errors).toEqual({ event: 'refused' });
+    expect(await tracked()).toHaveLength(MAX_LIFE_EVENTS); // only the ones added were counted
   });
 
   it('lists events by month (same month: in the order added), each with its label', async () => {
