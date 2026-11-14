@@ -7,7 +7,7 @@ import type {
 } from '@lifeguessr/types';
 import type { DebtLoadGaugeVM } from '@/lib/model/profile';
 import type { EstimatedMoney, ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
-import type { DebtInput, ProfileOrigin } from '@/state';
+import type { DebtInput } from '@/state';
 
 export type { DebtLoadGaugeVM, DebtLoadZone } from '@/lib/model/profile';
 export type { EstimatedMoney, ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
@@ -23,7 +23,7 @@ export type LadderRungVM = {
   screen: LadderScreen;
   href: string;
   /**
-   * S5: a guess is saved. S6: a life card was picked. S7/S8: the profile is the user's own (not the
+   * S5: a guess is saved. S6: the starting life was built or "About you" was answered. S7/S8: the profile is the user's own (not the
    * demo) and at least one of that rung's inputs is measured (S8 also: a debt was added, edited or
    * removed since the starting profile). S9: at least one statement month merged.
    */
@@ -56,21 +56,16 @@ export type LadderProgressVM = {
   byHandHref: string;
 };
 
-/** S5 after a guess is saved: the guess next to the engine's monthly cost for the current profile. */
-export type SelfGuessComparisonVM = {
+/**
+ * S5 reveal, only once the spending is the user's own (a statement or typed categories): "You guessed
+ * $X. You actually spend $Y". Never shown against a sample or estimated profile.
+ */
+export type SelfGuessRevealVM = {
   guess: Money;
-  /** This month's spending + debt payments from the engine simulation of the current profile. */
-  estimate: Money;
-  /** At least one input behind `estimate` is an estimate (a spending category or a minimum payment). */
-  isEstimate: boolean;
-  /** Which profile the estimate is for: the sample profile, a picked life card, or the user's own numbers. */
-  basis: ProfileOrigin;
-  /** guess − estimate. */
+  /** This month's spending (all categories but debtPayments) + minimum debt payments, from the profile. */
+  actual: Money;
+  /** actual − guess (positive: the month costs more than guessed). */
   difference: Money;
-  /** difference / estimate (0 when the estimate is 0). */
-  differenceShare: Rate;
-  /** 'match' when the guess is within a dollar of the estimate. */
-  direction: 'above' | 'below' | 'match';
 };
 
 /** S5 Guess yourself: one log-scale slider for your own monthly cost. */
@@ -79,8 +74,8 @@ export type GuessYourselfVM = {
   guess: SliderVM;
   /** The guess saved earlier (null until submitted). */
   savedGuess: Money | null;
-  /** The saved guess against the engine's estimate (null until a guess is saved). */
-  comparison: SelfGuessComparisonVM | null;
+  /** Guess vs reality: null until a guess is saved AND the spending is the user's own. */
+  reveal: SelfGuessRevealVM | null;
   /** Today's game results for the bridge line ("You guessed low on 4 of 5"); null if not played. */
   bridge: { played: number; guessedLow: number; guessedHigh: number } | null;
   setGuess: (value: Money) => void;
@@ -112,15 +107,57 @@ export type LifeCandidateVM = {
   available: boolean;
 };
 
+/** S6 "About you": what the person typed. Age and pay are saved as measured values as they type. */
+export type AboutYouVM = {
+  age: { value: number; isEstimate: boolean; bounds: InputBounds };
+  takeHomePay: { value: Money; isEstimate: boolean; bounds: InputBounds };
+  adults: 1 | 2;
+  /** Children per age band. */
+  kids: Record<KidAge, number>;
+  kidsPerBandMax: number;
+  bedrooms: 0 | 1 | 2 | 3 | 4;
+  hasCar: boolean;
+  zip: string;
+  /**
+   * empty / invalid: no 5-digit ZIP yet. exact: we have that ZIP's data. nearby: a covered ZIP with the
+   * same first three digits stands in (`areaZip`). none: no data for the area yet.
+   */
+  zipStatus: 'empty' | 'invalid' | 'exact' | 'nearby' | 'none';
+  /** The ZIP whose data is used (the typed one, or the nearby stand-in); null without area data. */
+  areaZip: string | null;
+};
+
 export type ClosestLifeVM = {
   status: Status;
   selfGuess: Money | null;
-  /** Nearest to the self guess first (card order when there is no guess). */
-  candidates: LifeCandidateVM[];
-  nearestCardId: string | null;
+  about: AboutYouVM;
+  setAge: (age: number) => void;
+  setTakeHomePay: (pay: Money) => void;
+  setAdults: (adults: number) => void;
+  setKidCount: (age: KidAge, count: number) => void;
+  setBedrooms: (bedrooms: number) => void;
+  setHasCar: (hasCar: boolean) => void;
+  setZip: (zip: string) => void;
+  /**
+   * The starting life built from the answers (engine lifeCardFromFacts → costOfLife), preselected as
+   * the one to start from; null until a ZIP we have data for. Its `cardId` is OWN_LIFE_CARD_ID.
+   */
+  candidate: LifeCandidateVM | null;
+  /** Spending came from a bank statement: the starting life is skipped, only "About you" is asked. */
+  spendingFromStatement: boolean;
   chosenCardId: string | null;
-  /** Build the profile from this card (engine cardToProfile; every field an estimate). */
-  choose: (cardId: string) => void;
+  /** Build the profile from `candidate` (engine cardToProfile; typed values kept). */
+  choose: () => void;
+};
+
+/** /future and /afford: typed pay next to a sample life's spending (JF1). */
+export type MixedProfileVM = {
+  /** The S5 guess (null when there is none: then only the link to set the spending is offered). */
+  guess: Money | null;
+  /** Scale the sample categories so the month costs the guess. null without a guess. */
+  useGuess: (() => void) | null;
+  /** Where to set the spending for real (the statement import). */
+  spendingHref: string;
 };
 
 export type SpendingSliderVM = SliderVM & { category: CostCategory; isEstimate: boolean };

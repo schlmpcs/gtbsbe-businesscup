@@ -79,7 +79,7 @@ describe('LadderShell (via any rung)', () => {
       status: 'ready',
       guess: { value: 3000, min: 1000, max: 15000, step: 10, position: 0.4 },
       savedGuess: null,
-      comparison: null,
+      reveal: null,
       bridge: null,
       setGuess: vi.fn(),
       setGuessPosition: vi.fn(),
@@ -325,26 +325,26 @@ describe('DebtForm (S8)', () => {
 });
 
 describe('GuessYourself (S5)', () => {
-  it('shows the comparison with the engine estimate after a guess is saved', () => {
+  it('after a guess is saved: no estimate to compare with, no update link; the CTA leads on', () => {
     const vm: GuessYourselfVM = {
       status: 'ready',
       guess: { value: 3000, min: 1000, max: 15000, step: 10, position: 0.4 },
       savedGuess: 3000,
-      comparison: {
-        guess: 3000, estimate: 4000, isEstimate: true, basis: 'closestLife',
-        difference: -1000, differenceShare: -0.25, direction: 'below',
-      },
+      reveal: null,
       bridge: null,
       setGuess: vi.fn(),
       setGuessPosition: vi.fn(),
       submit: vi.fn(),
     };
-    render(<GuessYourself vm={vm} progress={progress} />);
-    expect(screen.getByTestId('guess-verdict')).toHaveTextContent(ladder.guess.below('$1,000', '25%'));
-    expect(screen.getByText(ladder.guess.basis.closestLife)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: ladder.guess.update })).toBeDisabled();
+    const { unmount } = render(<GuessYourself vm={vm} progress={progress} />);
+    expect(screen.queryByTestId('guess-reveal')).toBeNull();
     expect(screen.queryByRole('button', { name: ladder.guess.submit })).toBeNull();
     expect(screen.getByRole('link', { name: ladder.shell.cta.S5 })).toHaveAttribute('href', '/x/S6');
+    unmount();
+    // Once the spending is the user's own: guess vs reality.
+    render(<GuessYourself vm={{ ...vm, reveal: { guess: 3000, actual: 4000, difference: 1000 } }} progress={progress} />);
+    expect(screen.getByTestId('guess-reveal')).toHaveTextContent(ladder.guess.reveal('$3,000', '$4,000'));
+    expect(screen.getByTestId('guess-reveal')).toHaveTextContent(ladder.guess.revealMore('$1,000'));
   });
 
   it('before a guess is saved: locking it is the CTA, with the game line as a sticker', async () => {
@@ -352,7 +352,7 @@ describe('GuessYourself (S5)', () => {
       status: 'ready',
       guess: { value: 3000, min: 1000, max: 15000, step: 10, position: 0.4 },
       savedGuess: null,
-      comparison: null,
+      reveal: null,
       bridge: { played: 5, guessedLow: 4, guessedHigh: 1 },
       setGuess: vi.fn(),
       setGuessPosition: vi.fn(),

@@ -1,39 +1,33 @@
-// S5 Guess yourself: the user's guess of their own monthly cost, on the same slider as the game,
-// then the guess next to the engine's monthly cost for the current profile.
-import { COST_CATEGORIES, type Money, type Profile } from '@lifeguessr/types';
+// S5 Guess yourself: only the gut guess of the user's own monthly cost, on the same slider as the
+// game. Nothing to compare it with until the spending is the user's own (a statement or typed
+// categories): only then the reveal, "You guessed $X. You actually spend $Y".
+import type { CategoryTotals, Money, Profile } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { GUESS_DEFAULT, GUESS_MAX, GUESS_MIN, GUESS_STEP } from '@/features/game/model/constants';
 import { directionOf } from '@/features/game/model/derive';
 import { gameMode, type GameMode } from '@/lib/config';
 import { track } from '@/lib/events';
-import { thisMonth } from '@/lib/model/profile';
 import { logScale, logSliderVM, snap } from '@/lib/model/slider';
-import { useAppReady, useAppStore, useProfile, useGameStore, type ProfileOrigin } from '@/state';
-import type { GuessYourselfVM, SelfGuessComparisonVM } from './types';
+import { useAppReady, useAppStore, useProfile, useGameStore } from '@/state';
+import { monthlyCost, spendingIsOwn, startingProfile } from './ownLife';
+import type { GuessYourselfVM, SelfGuessRevealVM } from './types';
 
 const scale = logScale(GUESS_MIN, GUESS_MAX);
 const clamp = (v: Money) => snap(v, GUESS_MIN, GUESS_MAX, GUESS_STEP);
-/** A guess within $1 of the estimate counts as a match (it shows as the same whole-dollar amount). */
-const MATCH_TOLERANCE = 1;
 
 /**
- * The self guess against the engine's monthly cost of `profile`: this month's spending + debt
- * payments (the same number S7 shows as "your month"). Tagged as an estimate when any spending
- * category or minimum payment behind it is one.
+ * The guess against what the month really costs (spending + minimum debt payments), only once the
+ * spending is the user's own: null while every spending category is still an estimate.
  */
-export function compareSelfGuess(guess: Money, profile: Profile, basis: ProfileOrigin): SelfGuessComparisonVM {
-  const month = thisMonth(profile);
-  const estimate = month.spending + month.debtPayments;
-  const difference = guess - estimate;
-  const isEstimate =
-    COST_CATEGORIES.some((c) => c !== 'debtPayments' && profile.spending[c].isEstimate) ||
-    profile.debts.some((d) => d.minPayment.isEstimate);
-  const direction = Math.abs(difference) < MATCH_TOLERANCE ? 'match' : difference > 0 ? 'above' : 'below';
-  return {
-    guess, estimate, isEstimate, basis, difference,
-    differenceShare: estimate > 0 ? difference / estimate : 0,
-    direction,
-  };
+export function selfGuessReveal(
+  guess: Money | null,
+  profile: Profile,
+  statementMonths: readonly CategoryTotals[],
+  closestCardId: string | null,
+): SelfGuessRevealVM | null {
+  if (guess === null || !spendingIsOwn(profile, statementMonths, startingProfile(closestCardId))) return null;
+  const actual = monthlyCost(profile);
+  return { guess, actual, difference: actual - guess };
 }
 
 export function useGuessYourself(opts: { mode?: GameMode } = {}): GuessYourselfVM {
@@ -42,25 +36,30 @@ export function useGuessYourself(opts: { mode?: GameMode } = {}): GuessYourselfV
   const savedGuess = useAppStore((s) => s.selfGuess);
   const setSelfGuess = useAppStore((s) => s.setSelfGuess);
   const profile = useProfile();
-  const profileOrigin = useAppStore((s) => s.profileOrigin);
+  const statementMonths = useAppStore((s) => s.statementMonths);
+  const closestCardId = useAppStore((s) => s.closestCardId);
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);
   const guesses = useGameStore((s) => s.guesses);
 
-  // Local slider value until submitted; starts at the saved guess (or the track's middle).
+  // Before the first save the slider is a local draft; once a guess is saved, the slider IS the
+  // guess (every move saves it), so the big number and the saved guess never disagree.
   const [draft, setDraft] = useState<Money | null>(null);
-  const value = draft ?? (savedGuess !== null ? clamp(savedGuess) : GUESS_DEFAULT);
+  const value = savedGuess !== null ? clamp(savedGuess) : (draft ?? GUESS_DEFAULT);
 
-  const setGuess = useCallback((v: Money) => setDraft(clamp(v)), []);
-  const setGuessPosition = useCallback((p: number) => setDraft(clamp(scale.fromPosition(p))), []);
+  const setGuess = useCallback(
+    (v: Money) => (savedGuess !== null ? setSelfGuess(clamp(v)) : setDraft(clamp(v))),
+    [savedGuess, setSelfGuess],
+  );
+  const setGuessPosition = useCallback((p: number) => setGuess(scale.fromPosition(p)), [setGuess]);
   const submit = useCallback(() => {
     setSelfGuess(value);
     track({ name: 'own_guess_submitted' }, { once: 'own_guess_submitted' });
   }, [setSelfGuess, value]);
 
-  const comparison = useMemo(
-    () => (savedGuess === null ? null : compareSelfGuess(savedGuess, profile, profileOrigin)),
-    [savedGuess, profile, profileOrigin],
+  const reveal = useMemo(
+    () => selfGuessReveal(savedGuess, profile, statementMonths, closestCardId),
+    [savedGuess, profile, statementMonths, closestCardId],
   );
 
   // "You guessed low on 4 of 5" compares slider guesses with the homes' costs. The duel has no
@@ -81,7 +80,7 @@ export function useGuessYourself(opts: { mode?: GameMode } = {}): GuessYourselfV
     status: ready ? 'ready' : 'loading',
     guess: logSliderVM(value, GUESS_MIN, GUESS_MAX, GUESS_STEP),
     savedGuess,
-    comparison,
+    reveal,
     bridge,
     setGuess,
     setGuessPosition,
