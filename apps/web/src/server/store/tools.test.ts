@@ -26,7 +26,8 @@ it('counts distinct opens and completions, including their intersection', async 
     ev({ name: 'subs_revealed', props: { miss: 'under0.5' } }),
     ev({ name: 'tool_opened', props: { tool: 'payoff' } }),
   ]);
-  const report = await store.funnel(lastDays(1));
+  // Postgres records microseconds; include the last insert beyond JS's millisecond truncation.
+  const report = await store.funnel(lastDays(1, new Date(Date.now() + 1000)));
   expect(report.tools).toEqual({
     opened: { subscriptions: 2, overpaying: 0, payoff: 1 },
     completed: { subscriptions: 2, overpaying: 0, payoff: 0 },
@@ -93,7 +94,10 @@ it.skipIf(!TEST_STORE_URL)(
       await store.record(b, [
         ev({ name: 'tool_opened', props: { tool: 'overpaying' } }),
       ]);
-      const report = await store.funnel(lastDays(1));
+      // Postgres records microseconds; include the last insert beyond JS's millisecond truncation.
+      const report = await store.funnel(
+        lastDays(1, new Date(Date.now() + 1000)),
+      );
       expect(report.tools.opened.overpaying).toBe(2);
       expect(report.tools.completed.overpaying).toBe(1);
       expect(report.tools.rates.overpaying).toBe(0.5);
