@@ -8,9 +8,11 @@ import type {
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 import type { FoldedNote, LifeEventCategory, ProfileOrigin } from '@/state';
+import type { SpendSummaryVM } from '@/features/spend/model/types';
 
 export type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 export type { FoldedNote, LifeEventCategory, ProfileOrigin } from '@/state';
+export type { SpendSummaryVM } from '@/features/spend/model/types';
 export type {
   CostCategory, ForecastPoint, ForecastSource, HorizonYears, LifeEventKind, LifeEventPreset, Money, MoveKind, Source, YearMonth,
 } from '@lifeguessr/types';
@@ -202,6 +204,8 @@ export type TodayVM = {
      */
     homes: TodayHomeVM[];
   };
+  /** The daily log's month so far (spent, usual, projected month end, safe to spend today). */
+  daily?: Loadable<SpendSummaryVM>;
 };
 
 /**
