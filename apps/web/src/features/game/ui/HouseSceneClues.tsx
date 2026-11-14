@@ -37,26 +37,29 @@ function roomOf(clue: ClueVM, card: ClueBoardProps['card'], disabled: boolean): 
 export function HouseSceneClues({ card, onOpenClue, disabled = false, large = false }: ClueBoardProps) {
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-md">
-      <div className="flex flex-col gap-xs">
-        <h2 id={headingId} className={cx('font-semibold leading-tight', large ? 'text-2xl' : 'text-lg')}>
-          {t.clues.heading}
-        </h2>
-        <p className="text-sm text-text-muted">{t.clues.intro}</p>
+    // The same framed tile as the static ClueBoard (Figma), with the house inside.
+    <section aria-labelledby={headingId} className="min-w-0 rounded-xl bg-surface p-xs text-text shadow-lg sm:p-md">
+      <div className="flex flex-col gap-lg rounded-lg bg-surface-strong p-sm sm:p-xl">
+        <div className="flex flex-col gap-xs">
+          <h2 id={headingId} className={cx('font-display font-extrabold leading-tight', large ? 'text-4xl' : 'text-2xl')}>
+            {t.clues.heading}
+          </h2>
+          <p className="text-sm text-text-muted">{t.clues.intro}</p>
+        </div>
+        <HouseScene
+          // A new home starts with the whole house in view.
+          key={card.id}
+          layout={card.layout}
+          layoutLabel={t.home.layouts[card.layout]}
+          decor={card.decor}
+          rooms={card.clues.map((clue) => roomOf(clue, card, disabled))}
+          onOpenRoom={onOpenClue}
+          spriteLabel={t.scene.sprite}
+          disabled={disabled}
+          large={large}
+          note={t.scene.placeholderArt}
+        />
       </div>
-      <HouseScene
-        // A new home starts with the whole house in view.
-        key={card.id}
-        layout={card.layout}
-        layoutLabel={t.home.layouts[card.layout]}
-        decor={card.decor}
-        rooms={card.clues.map((clue) => roomOf(clue, card, disabled))}
-        onOpenRoom={onOpenClue}
-        spriteLabel={t.scene.sprite}
-        disabled={disabled}
-        large={large}
-        note={t.scene.placeholderArt}
-      />
     </section>
   );
 }

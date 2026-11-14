@@ -40,6 +40,8 @@ describe('PlayScreen', () => {
     expect(within(closeUp).getByText(t.clues.opened)).toBeInTheDocument();
     expect(closeUp.querySelector('img')).toHaveAttribute('src', expect.stringMatching(/^\/scene\/kitchen\/takeout-/));
     expect(kitchen).toHaveAttribute('data-status', 'open');
+    // The house draws the decor, so the home card does not list it again.
+    expect(screen.getByRole('list', { name: t.home.about })).not.toHaveTextContent(t.scene.sprite('decor/lamp'));
     expect(screen.getByText('90%')).toBeInTheDocument(); // multiplier after one clue
     fireEvent.click(within(closeUp).getByRole('button', { name: common.kit.houseScene.back }));
     expect(screen.queryByRole('region', { name: common.kit.houseScene.closeUp(t.clues.rooms.kitchen) })).toBeNull();
@@ -72,7 +74,8 @@ describe('PlayScreen', () => {
     fireEvent.click(kitchen);
     await screen.findByText(/Takeout and restaurants/);
     expect(screen.queryByRole('button', { name: new RegExp(t.clues.rooms.kitchen) })).toBeNull();
-    expect(screen.getByText(t.home.decor)).toBeInTheDocument(); // the board lists the decor as words
+    // The board can't draw the decor, so the home card lists it as words.
+    expect(screen.getByRole('list', { name: t.home.about })).toHaveTextContent(t.scene.sprite('decor/lamp'));
   });
 
   it('plays all five homes into the summary with the share grid and the bridge', async () => {

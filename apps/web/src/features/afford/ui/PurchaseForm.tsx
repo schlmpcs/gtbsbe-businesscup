@@ -1,7 +1,7 @@
 'use client';
 
 import { afford as t } from '@/copy';
-import { Card, Field, NumberInput, Stack } from '@/ui-kit';
+import { Field, formatMoney, NumberInput, Stack } from '@/ui-kit';
 import type { AffordVM, PayWithChoice, Purchase } from '../model/types';
 import { Choice, TextInput } from './controls';
 
@@ -15,86 +15,110 @@ export type PurchaseFormProps = Pick<
   'form' | 'invalidFields' | 'setLabel' | 'setAmount' | 'setRecurring' | 'setPayWith' | 'setLoan'
 >;
 
+/** Example chips ("Or try one"): each fills the name and the price. Inputs, never results. */
+export function PurchaseExamples({ setLabel, setAmount }: Pick<AffordVM, 'setLabel' | 'setAmount'>) {
+  return (
+    <div className="flex flex-col gap-sm">
+      <p className="text-sm text-text-muted">{t.form.examplesTitle}</p>
+      <div className="flex flex-wrap gap-sm">
+        {t.form.examples.map((ex) => (
+          <button
+            key={ex.label}
+            type="button"
+            onClick={() => {
+              setLabel(ex.label);
+              setAmount(ex.amount);
+            }}
+            className="rounded-full border-2 border-border bg-surface px-lg py-sm text-base font-medium leading-normal transition-colors hover:border-text"
+          >
+            {t.form.example(ex.label, formatMoney(ex.amount))}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The purchase: what, how much, how often and how it's paid (with loan terms for a loan). */
 export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecurring, setPayWith, setLoan }: PurchaseFormProps) {
   const error = (path: string) => (invalidFields.includes(path) ? (t.form.errors[path] ?? t.form.errors.payWith) : undefined);
 
   return (
-    <Card title={t.form.title}>
-      <form onSubmit={(e) => e.preventDefault()} noValidate>
-        <Stack gap="lg">
+    <form onSubmit={(e) => e.preventDefault()} noValidate>
+      <Stack gap="lg">
+        <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
           <Field label={t.form.label} error={error('label')}>
             <TextInput name="label" value={form.label} onValueChange={setLabel} placeholder={t.form.labelPlaceholder} maxLength={120} />
           </Field>
           <Field label={t.form.amount} hint={t.form.amountHint} error={error('amount')}>
             <NumberInput name="amount" value={form.amount} onValueChange={setAmount} prefix="$" />
           </Field>
-          <Choice<RecurringChoice>
-            legend={t.form.recurring}
-            name="recurring"
-            value={toChoice(form.recurring)}
-            onChange={(c) => setRecurring(fromChoice(c))}
-            options={[
-              { value: 'once', label: t.form.recurringOptions.once },
-              { value: 'monthly', label: t.form.recurringOptions.monthly },
-              { value: 'yearly', label: t.form.recurringOptions.yearly },
-            ]}
-          />
-          <Choice<PayWithChoice>
-            legend={t.form.payWith}
-            name="payWith"
-            value={form.payWith}
-            onChange={setPayWith}
-            hint={t.form.payWithHints[form.payWith]}
-            options={[
-              { value: 'cash', label: t.form.payWithOptions.cash },
-              { value: 'card', label: t.form.payWithOptions.card },
-              { value: 'loan', label: t.form.payWithOptions.loan },
-            ]}
-          />
-          {form.payWith === 'loan' && (
-            <fieldset className="flex min-w-0 flex-col gap-md rounded-md bg-surface p-lg">
-              <legend className="sr-only">{t.form.loanTitle}</legend>
-              <p aria-hidden="true" className="text-sm font-semibold">
-                {t.form.loanTitle}
-              </p>
-              <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
-                <Field label={t.form.apr} hint={t.form.aprHint} error={error('loan.apr')}>
-                  <NumberInput
-                    name="apr"
-                    percent
-                    max={1}
-                    suffix="%"
-                    value={form.loan.apr}
-                    onValueChange={(apr) => setLoan({ apr })}
-                  />
-                </Field>
-                <Field label={t.form.termMonths} error={error('loan.termMonths')}>
-                  <NumberInput
-                    name="termMonths"
-                    maxFractionDigits={0}
-                    max={600}
-                    suffix={t.form.termSuffix}
-                    value={form.loan.termMonths}
-                    onValueChange={(termMonths) => setLoan({ termMonths })}
-                  />
-                </Field>
-                <Field label={t.form.downPayment} error={error('loan.downPayment')}>
-                  <NumberInput
-                    name="downPayment"
-                    prefix="$"
-                    value={form.loan.downPayment}
-                    onValueChange={(downPayment) => setLoan({ downPayment: downPayment ?? 0 })}
-                  />
-                </Field>
-                <Field label={t.form.fees} hint={t.form.feesHint} error={error('loan.fees')}>
-                  <NumberInput name="fees" prefix="$" value={form.loan.fees} onValueChange={(fees) => setLoan({ fees: fees ?? 0 })} />
-                </Field>
-              </div>
-            </fieldset>
-          )}
-        </Stack>
-      </form>
-    </Card>
+        </div>
+        <Choice<RecurringChoice>
+          legend={t.form.recurring}
+          name="recurring"
+          value={toChoice(form.recurring)}
+          onChange={(c) => setRecurring(fromChoice(c))}
+          options={[
+            { value: 'once', label: t.form.recurringOptions.once },
+            { value: 'monthly', label: t.form.recurringOptions.monthly },
+            { value: 'yearly', label: t.form.recurringOptions.yearly },
+          ]}
+        />
+        <Choice<PayWithChoice>
+          legend={t.form.payWith}
+          name="payWith"
+          value={form.payWith}
+          onChange={setPayWith}
+          hint={t.form.payWithHints[form.payWith]}
+          options={[
+            { value: 'cash', label: t.form.payWithOptions.cash },
+            { value: 'card', label: t.form.payWithOptions.card },
+            { value: 'loan', label: t.form.payWithOptions.loan },
+          ]}
+        />
+        {form.payWith === 'loan' && (
+          <fieldset className="flex min-w-0 flex-col gap-md rounded-lg bg-surface-strong p-lg">
+            <legend className="sr-only">{t.form.loanTitle}</legend>
+            <p aria-hidden="true" className="text-sm font-semibold">
+              {t.form.loanTitle}
+            </p>
+            <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
+              <Field label={t.form.apr} hint={t.form.aprHint} error={error('loan.apr')}>
+                <NumberInput
+                  name="apr"
+                  percent
+                  max={1}
+                  suffix="%"
+                  value={form.loan.apr}
+                  onValueChange={(apr) => setLoan({ apr })}
+                />
+              </Field>
+              <Field label={t.form.termMonths} error={error('loan.termMonths')}>
+                <NumberInput
+                  name="termMonths"
+                  maxFractionDigits={0}
+                  max={600}
+                  suffix={t.form.termSuffix}
+                  value={form.loan.termMonths}
+                  onValueChange={(termMonths) => setLoan({ termMonths })}
+                />
+              </Field>
+              <Field label={t.form.downPayment} error={error('loan.downPayment')}>
+                <NumberInput
+                  name="downPayment"
+                  prefix="$"
+                  value={form.loan.downPayment}
+                  onValueChange={(downPayment) => setLoan({ downPayment: downPayment ?? 0 })}
+                />
+              </Field>
+              <Field label={t.form.fees} hint={t.form.feesHint} error={error('loan.fees')}>
+                <NumberInput name="fees" prefix="$" value={form.loan.fees} onValueChange={(fees) => setLoan({ fees: fees ?? 0 })} />
+              </Field>
+            </div>
+          </fieldset>
+        )}
+      </Stack>
+    </form>
   );
 }

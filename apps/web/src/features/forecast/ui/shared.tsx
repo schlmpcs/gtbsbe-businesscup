@@ -16,6 +16,21 @@ export type LinkComponent = ComponentType<{
   'data-screen'?: string;
 }>;
 
+/**
+ * Paints the element's background out to both screen edges (a full-width band) without widening the
+ * page: border-image outset is ink overflow, so it never adds sideways scroll.
+ */
+export const FULL_BLEED_PRIMARY = 'bg-primary [border-image:conic-gradient(var(--color-primary)_0_0)_fill_0//0_100vmax]';
+
+/** On orange: every text color class inside switches to white (same rule as Card tone="arena"). */
+export const ON_ARENA =
+  'text-on-primary [&_.text-text]:text-on-primary [&_.text-text-muted]:text-on-primary/80 [&_.text-positive]:text-on-primary [&_.text-negative]:text-on-primary';
+
+/** Decorative tilt (degrees) for tiles, like the Figma screens. */
+export function tilt(deg: number) {
+  return { transform: `rotate(${deg}deg)` } as const;
+}
+
 /** Title of a move from its kind (and category). */
 export function moveTitle(move: Pick<MoveVM, 'kind' | 'category'>): string {
   return t.moves.title(move.kind, move.category ? common.categories[move.category] : undefined);
@@ -87,7 +102,7 @@ export function AssumptionTag() {
   );
 }
 
-/** A labelled checkbox used as an on/off switch. */
+/** A labelled checkbox drawn as an on/off switch (still a native checkbox for keyboards and screen readers). */
 export function Toggle({
   checked,
   onChange,
@@ -105,7 +120,10 @@ export function Toggle({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.currentTarget.checked)}
-        className="size-lg shrink-0 accent-primary"
+        className={cx(
+          'relative h-7 w-12 shrink-0 cursor-pointer appearance-none rounded-full bg-surface-strong transition-colors checked:bg-positive',
+          'before:absolute before:top-1 before:left-1 before:size-5 before:rounded-full before:bg-surface before:shadow-sm before:transition-transform checked:before:translate-x-5',
+        )}
       />
       <span>{children}</span>
     </label>

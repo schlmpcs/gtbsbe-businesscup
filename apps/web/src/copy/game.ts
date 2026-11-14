@@ -94,12 +94,30 @@ export const game = {
     metro: 'Metro',
     layout: 'Layout',
     decor: 'Around the house',
+    /** Accessible name of the chips under the caption (layout and decor). */
+    about: 'About this home',
   },
   multiplier: {
     label: 'Score multiplier',
     /** "Opening a room costs 10% of your points." */
     cost: (pct: string) => `Opening a room costs ${pct} of your points.`,
     floor: 'Your multiplier is at its floor: more rooms are free now.',
+  },
+
+  // ----- S2/S3: today's strip and score bar -----
+  day: {
+    label: 'Today’s homes',
+    now: 'Now',
+    points: (points: string) => `+${points}`,
+    homeDone: (n: number, points: string) => `Home ${n}: ${points} points`,
+    homeNow: (n: number) => `Home ${n}: playing now`,
+    homeLater: (n: number) => `Home ${n}: not played yet`,
+  },
+  score: {
+    label: 'Your score',
+    maxPerHome: 'max for this home',
+    multiplier: (opened: number) => `multiplier, ${plural(opened, 'room', 'rooms')} peeked`,
+    total: 'your total today',
   },
   clues: {
     heading: 'Look around',
@@ -153,13 +171,20 @@ export const game = {
     hint: 'Rent, car, childcare, food and the rest, per month.',
     input: 'Or type it',
     inputSuffix: '/mo',
+    perMonth: 'a month',
     lockIn: (amount: string) => `Lock in ${amount}`,
     locking: 'Locking in…',
   },
 
   // ----- S4: streamer -----
   streamer: {
-    countdown: 'Time left',
+    countdown: 'Lock in before the timer',
+    live: 'Live',
+    guessLabel: 'Streamer’s guess',
+    realCost: 'Real cost',
+    /** Placeholder shown instead of the answer until the guess is locked in (not a number). */
+    hiddenCost: '$?,???',
+    hiddenCostLabel: 'Hidden until the guess is locked in',
     seconds: (n: number) => `${n}s`,
     secondsLabel: (n: number) => plural(n, 'second', 'seconds') + ' left',
     start: 'Start countdown',
@@ -172,6 +197,13 @@ export const game = {
   // ----- S3: the reveal -----
   reveal: {
     actualLabel: 'Their month',
+    costsHeading: 'This life costs',
+    perMonth: 'a month',
+    eyebrow: (progress: string, metro: string) => `${progress} · ${metro}`,
+    pointsSticker: (points: string) => `+${points} points`,
+    missedBy: (amount: string) => `Missed by ${amount}`,
+    inRangeSticker: 'In range',
+    sourceShort: (name: string, year: number) => `${name} · ${year}`,
     actualHint: 'Most likely, per month',
     range: (low: string, high: string) => `Typical range ${low} to ${high}`,
     yourGuess: 'Your guess',

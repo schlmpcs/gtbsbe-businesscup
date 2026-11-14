@@ -24,15 +24,15 @@ export function Choice<T extends string>({
   hint?: string;
 }) {
   return (
-    <fieldset className="flex min-w-0 flex-col gap-xs">
-      <legend className="mb-xs text-sm font-medium">{legend}</legend>
-      <div className="flex flex-wrap gap-xs">
+    <fieldset className="flex min-w-0 flex-col gap-sm">
+      <legend className="mb-sm text-sm text-text-muted">{legend}</legend>
+      <div className="flex flex-wrap gap-sm">
         {options.map((o) => (
           <label
             key={o.value}
             className={cx(
-              'cursor-pointer rounded-md border border-border bg-bg px-md py-md text-sm font-medium leading-normal transition-colors',
-              'hover:bg-surface has-checked:border-primary has-checked:bg-primary has-checked:text-on-primary',
+              'cursor-pointer rounded-full border-2 border-border bg-surface px-lg py-sm text-base font-medium leading-normal transition-colors',
+              'hover:border-text has-checked:border-ink has-checked:bg-ink has-checked:text-on-primary',
               'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus',
             )}
           >
@@ -72,7 +72,7 @@ export function TextInput({
       value={value}
       onChange={(e) => onValueChange(e.target.value)}
       className={cx(
-        'w-full rounded-md border bg-bg px-md py-md text-base',
+        'w-full rounded-lg border-2 bg-surface px-md py-sm text-base',
         field['aria-invalid'] ? 'border-negative' : 'border-border',
         className,
       )}

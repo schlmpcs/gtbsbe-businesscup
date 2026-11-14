@@ -4,6 +4,7 @@ import type { ProPlan, ProSource } from '@lifeguessr/types';
 
 export const pro = {
   demoBadge: 'Demo · Stripe test mode, no real charge',
+  headline: 'Keep playing your future.',
   intro: 'Pro keeps your plans working for you. This build is a demo: checkout runs in Stripe test mode and no money ever moves.',
   loading: 'Checking your Pro status…',
 
@@ -11,7 +12,7 @@ export const pro = {
     legend: 'Choose a plan',
     names: { yearly: 'Yearly', monthly: 'Monthly' } satisfies Record<ProPlan, string>,
     /** Suffix after the price: "$39.99 / year". */
-    per: { year: '/ year', month: '/ month' },
+    per: { year: 'a year', month: 'a month' },
     yearlyBadge: 'Best value',
     priceNote: 'Prices are a pricing assumption for this demo.',
   },

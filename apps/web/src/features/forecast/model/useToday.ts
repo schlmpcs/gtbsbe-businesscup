@@ -64,6 +64,12 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
       if (committedMove) markMoveDone(committedMove);
     },
     topMove,
-    game: { date: gameDate, played, total: cards.length, finished: cards.length > 0 && played === cards.length },
+    game: {
+      date: gameDate,
+      played,
+      total: cards.length,
+      finished: cards.length > 0 && played === cards.length,
+      homes: cards.map((c) => ({ id: c.id, metro: c.metro, played: Boolean(reveals[c.id]) })),
+    },
   };
 }

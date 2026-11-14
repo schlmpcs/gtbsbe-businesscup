@@ -7,6 +7,19 @@ export const common = {
   appName: 'LifeGuessr',
   tagline: 'Money apps forecast your accounts. We forecast your decisions, and rank which one to make next.',
   disclaimer: 'Educational simulation, not financial advice.',
+  /** The site header (Figma: logo, five links, Go Pro). */
+  siteNav: {
+    label: 'Main',
+    home: 'LifeGuessr home',
+    links: [
+      { href: '/', label: 'Today' },
+      { href: '/play', label: 'Play' },
+      { href: '/future', label: 'My future' },
+      { href: '/afford', label: 'Can I afford it?' },
+      { href: '/loan', label: 'Loan Lab' },
+    ],
+    pro: 'Go Pro',
+  },
   nav: {
     title: 'Screens',
     placeholderNote: 'Placeholder screen. The real UI lands with its task.',

@@ -23,4 +23,7 @@ export {
   LAYOUTS, LAYOUT_BEDROOMS, KID_SPRITES, DECOR_SPRITE_IDS, DECOR_ROOMS, SPRITE_IDS,
   type DecorRoom, type SpriteId,
 } from './scene';
-export { loan, compareLoans, payoffOrder, amortizedPayment, MAX_SIMULATION_MONTHS } from './loan/index';
+export {
+  loan, compareLoans, payoffOrder, amortize, amortizedPayment, MAX_SIMULATION_MONTHS,
+  type Amortization, type LoanOptions,
+} from './loan/index';

@@ -11,7 +11,7 @@ export const afford = {
   /** Label used when the user leaves the purchase name blank. */
   defaultPurchaseLabel: 'Purchase',
 
-  intro: 'Check a purchase against your plan before you buy. We test the next 12 months with and without it.',
+  intro: 'Say it like you’d say it. We run it through your next 10 years.',
   loading: 'Loading your plan…',
 
   form: {
@@ -23,7 +23,7 @@ export const afford = {
     recurring: 'How often?',
     recurringOptions: { once: 'One-time', monthly: 'Every month', yearly: 'Every year' },
     payWith: 'Pay with',
-    payWithOptions: { cash: 'Cash', card: 'Credit card', loan: 'A loan' },
+    payWithOptions: { cash: 'Cash', card: 'Card', loan: 'Loan' },
     payWithHints: {
       cash: 'From your savings.',
       card: 'Charged to a card, then paid down from what you have left each month.',
@@ -47,6 +47,16 @@ export const afford = {
       'loan.amount': 'Enter a price above $0.',
       payWith: 'Check the payment details.',
     } as Record<string, string>,
+    /** Example chips: tapping one fills the form (name + price). Inputs, not results. */
+    examplesTitle: 'Or try one',
+    examples: [
+      { label: 'New phone', amount: 999 },
+      { label: 'Trip', amount: 1200 },
+      { label: 'Couch', amount: 2400 },
+      { label: 'Car', amount: 28000 },
+    ],
+    /** `amount` is already formatted. */
+    example: (label: string, amount: string) => `${label} ${amount}`,
     fixFields: 'Fix the highlighted fields to see the result.',
     empty: 'Enter a price to see if it fits.',
   },
@@ -54,9 +64,9 @@ export const afford = {
   parse: {
     title: 'Or just type it',
     label: 'Describe the purchase',
-    placeholder: 'A $1,200 laptop on my card',
-    submit: 'Read it',
-    parsing: 'Reading…',
+    placeholder: 'A $1,800 laptop, on my card',
+    submit: 'Check',
+    parsing: 'Checking…',
     confirmTitle: 'Is this right?',
     confirmNote: ai.parse.confirmNote,
     inferredNote: 'We guessed the highlighted values. Check them.',
@@ -81,6 +91,11 @@ export const afford = {
   result: {
     title: 'The verdict',
     loading: 'Checking…',
+    /** The sticker on the verdict tile. */
+    sticker: { fits: 'Verdict: yes', wait: 'Verdict: wait', no: 'Verdict: not now' },
+    effectsLabel: 'What it does to your net worth',
+    effects: { 1: 'this month', 12: 'next 12 months', 60: 'in 5 years', 120: 'in 10 years' } as Record<number, string>,
+    effectsNote: 'Change in net worth vs not buying it, in future (nominal) dollars.',
     verdicts: {
       fits: 'Yes, it fits',
       wait: (n: number) => `Wait ${months(n)}`,
@@ -124,6 +139,7 @@ export const afford = {
 
   wishlist: {
     title: 'Wishlist',
+    count: (n: number) => `Wishlist: ${n === 1 ? '1 thing' : `${n} things`}`,
     add: 'Save to wishlist',
     added: 'Saved to your wishlist.',
     empty: 'Nothing saved yet. Save a purchase to check it again later.',
