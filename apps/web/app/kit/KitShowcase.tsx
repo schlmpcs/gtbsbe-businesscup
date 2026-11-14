@@ -23,6 +23,7 @@ import {
   Stack,
   Stat,
   Tabs,
+  Tag,
 } from '@/ui-kit';
 import {
   areaItems,
@@ -94,6 +95,8 @@ export function KitShowcase() {
           />
         </div>
         <Row className="mt-lg">
+          <Tag>{t.tags.solid}</Tag>
+          <Tag variant="dashed">{t.tags.dashed}</Tag>
           <EstimateTag />
           <SourceNote source={demoArea.groceriesPerAdult.source} />
         </Row>

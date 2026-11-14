@@ -1,7 +1,7 @@
 // Pieces S1 and S10 share. Presentational only: props in, events out.
 import type { ComponentType, ReactNode } from 'react';
 import { common, forecast as t } from '@/copy';
-import { cx, formatMoney } from '@/ui-kit';
+import { cx, formatMoney, Tag } from '@/ui-kit';
 import type { BandKind, EstimatedField, ForecastPoint, ForecastSource, MoveVM, VMError } from '../model/types';
 
 /**
@@ -33,16 +33,9 @@ export function moveDetail(move: Pick<MoveVM, 'target'>): string | null {
 export function SourceTag({ source, className }: { source: ForecastSource | null; className?: string }) {
   if (!source) return null;
   return (
-    <span
-      data-testid="forecast-source"
-      data-source={source}
-      className={cx(
-        'inline-flex w-fit items-center rounded-full border border-border px-sm text-xs font-medium leading-normal text-text-muted',
-        className,
-      )}
-    >
+    <Tag data-testid="forecast-source" data-source={source} className={className}>
       {t.source[source]}
-    </span>
+    </Tag>
   );
 }
 
@@ -100,13 +93,10 @@ export function Skeleton({ lines = 3, className }: { lines?: number; className?:
 /** A small "our assumption" tag (a default we chose, not a published figure). */
 export function AssumptionTag() {
   return (
-    <span
-      title={t.how.assumptionHint}
-      className="inline-flex items-center rounded-full border border-dashed border-text-muted px-sm text-xs font-medium leading-normal text-text-muted"
-    >
+    <Tag variant="dashed" title={t.how.assumptionHint}>
       {t.how.assumption}
       <span className="sr-only">: {t.how.assumptionHint}</span>
-    </span>
+    </Tag>
   );
 }
 

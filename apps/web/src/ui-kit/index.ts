@@ -26,6 +26,7 @@ export { LOG_SLIDER_POSITIONS, Slider, sliderScale, type SliderProps } from './S
 export { SourceNote, type SourceNoteProps } from './SourceNote';
 export { Stat, type StatProps, type StatTone } from './Stat';
 export { Tabs, type TabItem, type TabsProps } from './Tabs';
+export { Tag, type TagProps, type TagVariant } from './Tag';
 
 /** Where a number comes from ({ name, year, url? }); re-exported so ui/ files can type props. */
 export type { Source } from '@lifeguessr/types';

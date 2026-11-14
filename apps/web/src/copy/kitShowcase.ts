@@ -5,7 +5,7 @@ export const kitShowcase = {
   sampleNote: 'Numbers come from the fixtures in packages/data/fixtures and the engine; slider starting points are demo state.',
   sections: {
     buttons: 'Button',
-    stats: 'Stat, EstimateTag, SourceNote, Money',
+    stats: 'Stat, Tag, EstimateTag, SourceNote, Money',
     sliders: 'Slider',
     inputs: 'Field + NumberInput',
     gauge: 'Gauge',
@@ -16,6 +16,7 @@ export const kitShowcase = {
     layout: 'Stack / Row',
   },
   buttons: { primary: 'Primary', secondary: 'Secondary', ghost: 'Ghost', small: 'Small', large: 'Large', disabled: 'Disabled', full: 'Full width' },
+  tags: { solid: 'AI estimate', dashed: 'our assumption' },
   stats: {
     takeHome: 'Take-home pay',
     retirement: 'Retirement savings',
