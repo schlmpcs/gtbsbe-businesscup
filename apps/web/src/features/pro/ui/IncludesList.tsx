@@ -12,18 +12,19 @@ function Check() {
   );
 }
 
-/** What Pro unlocks in this build, and nothing more (no "coming soon" list, so nothing is oversold). */
+/** What the Pro plan includes (the Plan on /plan and the wishlist), with a note on what the demo gates. */
 export function IncludesList() {
   return (
     <Card title={copy.includes.title} className="w-full text-left">
       <ul className="flex flex-col gap-sm">
         {copy.includes.now.map((item) => (
-          <li key={item} className="flex items-center gap-md">
+          <li key={item} className="flex items-start gap-md">
             <Check />
             {item}
           </li>
         ))}
       </ul>
+      <p className="mt-md text-xs text-text-muted">{copy.includes.demoNote}</p>
     </Card>
   );
 }

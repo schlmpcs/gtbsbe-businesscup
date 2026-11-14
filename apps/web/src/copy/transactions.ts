@@ -18,4 +18,48 @@ export const transactions = {
   empty: 'No transactions match.',
   applyAll: 'Apply to every transaction from this merchant',
   localOnly: 'Your transactions stay in this browser.',
+
+  /** The Transactions screen (MP17). Amounts come from the view-model; these are only the words around them. */
+  screen: {
+    intro: 'Every line from your statements and the ones you add by hand.',
+    loading: 'Loading your transactions…',
+    filtersLabel: 'Filters',
+    category: 'Category',
+    account: 'Account',
+    month: 'Month',
+    allMonths: 'All months',
+    direction: 'Money in or out',
+    clearSearch: 'Clear',
+    columns: { date: 'Date', label: 'Merchant', category: 'Category', account: 'Account', amount: 'Amount' },
+    noAccount: 'No account',
+    overridden: 'You picked this category',
+    changeCategory: (label: string) => `Category for ${label}`,
+    /** The import link to the guided statement flow (S9). */
+    importGuided: 'Import a CSV',
+    importFile: 'Choose a CSV file',
+    importDone: (added: number, skipped: number) =>
+      `Imported ${added} ${added === 1 ? 'line' : 'lines'}${skipped > 0 ? `, skipped ${skipped} already here` : ''}.`,
+    emptyAllTitle: 'No transactions yet',
+    emptyAllBody: 'Import a bank statement (it is read in this browser) or add a line by hand.',
+    page: (page: number, count: number) => `Page ${page} of ${count}`,
+    prev: 'Previous',
+    next: 'Next',
+    exportFailed: 'Your browser blocked the download.',
+  },
+
+  /** The manual add line (on Transactions and Account detail). */
+  addForm: {
+    title: 'Add a transaction',
+    date: 'Date',
+    label: 'Merchant or note',
+    amount: 'Amount',
+    direction: 'Type',
+    directions: { out: 'Money out', in: 'Money in' },
+    category: 'Category',
+    account: 'Account',
+    noAccount: 'No account',
+    submit: 'Add',
+    cancel: 'Cancel',
+    invalid: 'Check the date, the amount (not 0) and the merchant.',
+  },
 } as const;
