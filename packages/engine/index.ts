@@ -56,3 +56,11 @@ export {
   combineProfiles, householdMonth, sharedBills, fairSplit, partnerOfProfile, profileOfPartner, SHARED_BILL_CATEGORIES,
   type FairSplit, type HouseholdMonth,
 } from './together';
+// Planner (MP2, epic #160): stubs until their tasks land. Every planner export is listed here now, so
+// nobody edits this barrel later.
+export { plan } from './plan';                                                                 // MP3
+export { monteCarlo } from './monteCarlo';                                                     // MP5
+export { defaultEvent, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown } from './planEvents'; // MP4
+export { accountsToProfile, profileToAccounts, netWorthSummary } from './accounts';            // MP8
+export { budgetRows, budgetRowsForYear } from './budget';                                      // MP9
+export { cashFlowSummary } from './cashFlow';                                                  // MP9

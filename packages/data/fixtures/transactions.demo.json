@@ -1,0 +1,1532 @@
+[
+  {
+    "id": "tx-001",
+    "date": "2026-07-01",
+    "label": "OAKWOOD APTS WEB PMTS # WEB ID: #",
+    "amount": -1720,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-002",
+    "date": "2026-07-01",
+    "label": "PLANET FITNESS CLUB FEES",
+    "amount": -24.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-003",
+    "date": "2026-07-02",
+    "label": "TOM THUMB # DALLAS TX",
+    "amount": -104.76,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-004",
+    "date": "2026-07-03",
+    "label": "APPLE.COM/BILL # CA",
+    "amount": -2.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-005",
+    "date": "2026-07-03",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-006",
+    "date": "2026-07-04",
+    "label": "EXXON 7-ELEVEN # DALLAS TX",
+    "amount": -49.87,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-007",
+    "date": "2026-07-05",
+    "label": "PROGRESSIVE *INSURANCE # OH",
+    "amount": -142,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-008",
+    "date": "2026-07-05",
+    "label": "DOORDASH*TORCHYS TACOS SAN FRANCISCO CA",
+    "amount": -37.49,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-009",
+    "date": "2026-07-06",
+    "label": "CVS/PHARMACY # DALLAS TX",
+    "amount": -67.02,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-010",
+    "date": "2026-07-07",
+    "label": "NETFLIX.COM # CA",
+    "amount": -17.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-011",
+    "date": "2026-07-07",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -12.75,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-012",
+    "date": "2026-07-09",
+    "label": "TXU ENERGY WEB PMT # WEB ID: #",
+    "amount": -131.97,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-013",
+    "date": "2026-07-09",
+    "label": "ALDI # DALLAS TX",
+    "amount": -129.36,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-014",
+    "date": "2026-07-11",
+    "label": "ATMOS ENERGY PAYMENT PPD ID: #",
+    "amount": -37.39,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-015",
+    "date": "2026-07-12",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -45.38,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-016",
+    "date": "2026-07-12",
+    "label": "SPOTIFY USA # NY",
+    "amount": -11.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-017",
+    "date": "2026-07-13",
+    "label": "SHELL OIL # DALLAS TX",
+    "amount": -43.15,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-018",
+    "date": "2026-07-13",
+    "label": "DOORDASH*TORCHYS TACOS SAN FRANCISCO CA",
+    "amount": -39.28,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-019",
+    "date": "2026-07-14",
+    "label": "SPECTRUM # TX",
+    "amount": -70,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-020",
+    "date": "2026-07-15",
+    "label": "TOYOTA FINANCIAL ONLINE PMT PPD ID: #",
+    "amount": -412,
+    "accountId": "checking-1",
+    "cls": "debtPayments",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-021",
+    "date": "2026-07-15",
+    "label": "UBER *EATS HELP.UBER.COM CA",
+    "amount": -32.39,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-022",
+    "date": "2026-07-16",
+    "label": "TOM THUMB # DALLAS TX",
+    "amount": -98.97,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-023",
+    "date": "2026-07-16",
+    "label": "UBER *EATS HELP.UBER.COM CA",
+    "amount": -32.11,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-024",
+    "date": "2026-07-17",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -13.36,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-025",
+    "date": "2026-07-17",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-026",
+    "date": "2026-07-18",
+    "label": "AMAZON MKTPL*[ref] Amzn.com/bill WA",
+    "amount": -77.84,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-027",
+    "date": "2026-07-19",
+    "label": "Zelle to [name]",
+    "amount": -60,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-028",
+    "date": "2026-07-19",
+    "label": "CHIPOTLE # DALLAS TX",
+    "amount": -40.46,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-029",
+    "date": "2026-07-20",
+    "label": "CAPITAL ONE MOBILE PMT # WEB ID: #",
+    "amount": -250,
+    "accountId": "checking-1",
+    "cls": "debtPayments",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-030",
+    "date": "2026-07-21",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -12.29,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-031",
+    "date": "2026-07-23",
+    "label": "TOM THUMB # DALLAS TX",
+    "amount": -64.28,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-032",
+    "date": "2026-07-23",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -14.79,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-033",
+    "date": "2026-07-24",
+    "label": "SHELL OIL # DALLAS TX",
+    "amount": -39.97,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-034",
+    "date": "2026-07-25",
+    "label": "Transfer to savings",
+    "amount": -200,
+    "accountId": "checking-1",
+    "cls": "transfer",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-035",
+    "date": "2026-07-27",
+    "label": "THE HOME DEPOT # DALLAS TX",
+    "amount": -35.97,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-036",
+    "date": "2026-07-29",
+    "label": "ALDI # DALLAS TX",
+    "amount": -133.59,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-037",
+    "date": "2026-07-31",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-038",
+    "date": "2026-08-01",
+    "label": "OAKWOOD APTS WEB PMTS # WEB ID: #",
+    "amount": -1720,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-039",
+    "date": "2026-08-01",
+    "label": "PLANET FITNESS CLUB FEES",
+    "amount": -24.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-040",
+    "date": "2026-08-02",
+    "label": "TOM THUMB # DALLAS TX",
+    "amount": -67.23,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-041",
+    "date": "2026-08-03",
+    "label": "APPLE.COM/BILL # CA",
+    "amount": -2.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-042",
+    "date": "2026-08-04",
+    "label": "SHELL OIL # DALLAS TX",
+    "amount": -50.13,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-043",
+    "date": "2026-08-04",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -22.07,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-044",
+    "date": "2026-08-05",
+    "label": "PROGRESSIVE *INSURANCE # OH",
+    "amount": -142,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-045",
+    "date": "2026-08-06",
+    "label": "CVS/PHARMACY # DALLAS TX",
+    "amount": -55.74,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-046",
+    "date": "2026-08-07",
+    "label": "NETFLIX.COM # CA",
+    "amount": -17.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-047",
+    "date": "2026-08-08",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -31.09,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-048",
+    "date": "2026-08-09",
+    "label": "TXU ENERGY WEB PMT # WEB ID: #",
+    "amount": -139.8,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-049",
+    "date": "2026-08-09",
+    "label": "AMAZON PRIME*[ref] Amzn.com/bill WA",
+    "amount": -139,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-050",
+    "date": "2026-08-09",
+    "label": "ALDI # DALLAS TX",
+    "amount": -103.05,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-051",
+    "date": "2026-08-11",
+    "label": "ATMOS ENERGY PAYMENT PPD ID: #",
+    "amount": -32.24,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-052",
+    "date": "2026-08-11",
+    "label": "UBER *EATS HELP.UBER.COM CA",
+    "amount": -25.28,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-053",
+    "date": "2026-08-12",
+    "label": "SPOTIFY USA # NY",
+    "amount": -11.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-054",
+    "date": "2026-08-13",
+    "label": "QT 873 DALLAS TX",
+    "amount": -53.98,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-055",
+    "date": "2026-08-14",
+    "label": "SPECTRUM # TX",
+    "amount": -70,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-056",
+    "date": "2026-08-14",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-057",
+    "date": "2026-08-15",
+    "label": "TOYOTA FINANCIAL ONLINE PMT PPD ID: #",
+    "amount": -412,
+    "accountId": "checking-1",
+    "cls": "debtPayments",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-058",
+    "date": "2026-08-15",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -43.77,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-059",
+    "date": "2026-08-16",
+    "label": "ALDI # DALLAS TX",
+    "amount": -92.67,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-060",
+    "date": "2026-08-16",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -9.07,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-061",
+    "date": "2026-08-17",
+    "label": "HOPDODDY BURGER BAR DALLAS TX",
+    "amount": -34.58,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-062",
+    "date": "2026-08-18",
+    "label": "CVS/PHARMACY # DALLAS TX",
+    "amount": -42.97,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-063",
+    "date": "2026-08-20",
+    "label": "CAPITAL ONE MOBILE PMT # WEB ID: #",
+    "amount": -250,
+    "accountId": "checking-1",
+    "cls": "debtPayments",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-064",
+    "date": "2026-08-21",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -22.59,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-065",
+    "date": "2026-08-22",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -41.72,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-066",
+    "date": "2026-08-22",
+    "label": "Zelle from [name]",
+    "amount": 45,
+    "accountId": "checking-1",
+    "cls": "transfer",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-067",
+    "date": "2026-08-23",
+    "label": "TOM THUMB # DALLAS TX",
+    "amount": -90.6,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-068",
+    "date": "2026-08-23",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -38.95,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-069",
+    "date": "2026-08-24",
+    "label": "SHELL OIL # DALLAS TX",
+    "amount": -52.73,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-070",
+    "date": "2026-08-25",
+    "label": "Transfer to savings",
+    "amount": -200,
+    "accountId": "checking-1",
+    "cls": "transfer",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-071",
+    "date": "2026-08-26",
+    "label": "UBER *EATS HELP.UBER.COM CA",
+    "amount": -13.87,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-072",
+    "date": "2026-08-27",
+    "label": "TARGET # DALLAS TX",
+    "amount": -22.55,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-073",
+    "date": "2026-08-28",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-074",
+    "date": "2026-08-29",
+    "label": "WALMART SUPERCENTER # DALLAS TX",
+    "amount": -114.08,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-075",
+    "date": "2026-09-01",
+    "label": "OAKWOOD APTS WEB PMTS # WEB ID: #",
+    "amount": -1720,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-076",
+    "date": "2026-09-01",
+    "label": "PLANET FITNESS CLUB FEES",
+    "amount": -24.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-077",
+    "date": "2026-09-02",
+    "label": "TOM THUMB # DALLAS TX",
+    "amount": -106.61,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-078",
+    "date": "2026-09-02",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -19.12,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-079",
+    "date": "2026-09-03",
+    "label": "APPLE.COM/BILL # CA",
+    "amount": -2.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-080",
+    "date": "2026-09-04",
+    "label": "QT 873 DALLAS TX",
+    "amount": -36.51,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-081",
+    "date": "2026-09-04",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -11.37,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-082",
+    "date": "2026-09-05",
+    "label": "PROGRESSIVE *INSURANCE # OH",
+    "amount": -142,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-083",
+    "date": "2026-09-05",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -21.84,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-084",
+    "date": "2026-09-06",
+    "label": "CVS/PHARMACY # DALLAS TX",
+    "amount": -32.4,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-085",
+    "date": "2026-09-06",
+    "label": "Venmo [name]",
+    "amount": -25,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-086",
+    "date": "2026-09-07",
+    "label": "NETFLIX.COM # CA",
+    "amount": -17.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-087",
+    "date": "2026-09-09",
+    "label": "TXU ENERGY WEB PMT # WEB ID: #",
+    "amount": -156.16,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-088",
+    "date": "2026-09-09",
+    "label": "TOM THUMB # DALLAS TX",
+    "amount": -105.68,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-089",
+    "date": "2026-09-09",
+    "label": "DOORDASH*TORCHYS TACOS SAN FRANCISCO CA",
+    "amount": -34.75,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-090",
+    "date": "2026-09-10",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -19.51,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-091",
+    "date": "2026-09-11",
+    "label": "ATMOS ENERGY PAYMENT PPD ID: #",
+    "amount": -34.92,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-092",
+    "date": "2026-09-11",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-093",
+    "date": "2026-09-12",
+    "label": "SPOTIFY USA # NY",
+    "amount": -11.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-094",
+    "date": "2026-09-13",
+    "label": "SHELL OIL # DALLAS TX",
+    "amount": -37.93,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-095",
+    "date": "2026-09-14",
+    "label": "DFW ANIMAL HOSPITAL DALLAS TX",
+    "amount": -642.8,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-096",
+    "date": "2026-09-14",
+    "label": "SPECTRUM # TX",
+    "amount": -70,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-097",
+    "date": "2026-09-15",
+    "label": "TOYOTA FINANCIAL ONLINE PMT PPD ID: #",
+    "amount": -412,
+    "accountId": "checking-1",
+    "cls": "debtPayments",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-098",
+    "date": "2026-09-15",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -32.81,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-099",
+    "date": "2026-09-16",
+    "label": "WALMART SUPERCENTER # DALLAS TX",
+    "amount": -139.45,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-100",
+    "date": "2026-09-16",
+    "label": "CHIPOTLE # DALLAS TX",
+    "amount": -34.96,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-101",
+    "date": "2026-09-18",
+    "label": "TARGET # DALLAS TX",
+    "amount": -75.46,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-102",
+    "date": "2026-09-20",
+    "label": "CAPITAL ONE MOBILE PMT # WEB ID: #",
+    "amount": -250,
+    "accountId": "checking-1",
+    "cls": "debtPayments",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-103",
+    "date": "2026-09-22",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -18.25,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-104",
+    "date": "2026-09-23",
+    "label": "WALMART SUPERCENTER # DALLAS TX",
+    "amount": -100.68,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-105",
+    "date": "2026-09-24",
+    "label": "SHELL OIL # DALLAS TX",
+    "amount": -52.69,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-106",
+    "date": "2026-09-25",
+    "label": "Transfer to savings",
+    "amount": -200,
+    "accountId": "checking-1",
+    "cls": "transfer",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-107",
+    "date": "2026-09-25",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-108",
+    "date": "2026-09-27",
+    "label": "TARGET # DALLAS TX",
+    "amount": -63.53,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-109",
+    "date": "2026-09-27",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -37.02,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-110",
+    "date": "2026-09-28",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -22.33,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-111",
+    "date": "2026-09-29",
+    "label": "KROGER # DALLAS TX",
+    "amount": -117.14,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-112",
+    "date": "2026-10-01",
+    "label": "OAKWOOD APTS WEB PMTS # WEB ID: #",
+    "amount": -1720,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-113",
+    "date": "2026-10-01",
+    "label": "PLANET FITNESS CLUB FEES",
+    "amount": -24.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-114",
+    "date": "2026-10-02",
+    "label": "ALDI # DALLAS TX",
+    "amount": -107.51,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-115",
+    "date": "2026-10-03",
+    "label": "ATM WITHDRAWAL #/# GREENVILLE AVE",
+    "amount": -100,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-116",
+    "date": "2026-10-03",
+    "label": "APPLE.COM/BILL # CA",
+    "amount": -2.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-117",
+    "date": "2026-10-04",
+    "label": "EXXON 7-ELEVEN # DALLAS TX",
+    "amount": -49.55,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-118",
+    "date": "2026-10-05",
+    "label": "PROGRESSIVE *INSURANCE # OH",
+    "amount": -142,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-119",
+    "date": "2026-10-06",
+    "label": "UBER *EATS HELP.UBER.COM CA",
+    "amount": -24.1,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-120",
+    "date": "2026-10-06",
+    "label": "CVS/PHARMACY # DALLAS TX",
+    "amount": -16.06,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-121",
+    "date": "2026-10-07",
+    "label": "NETFLIX.COM # CA",
+    "amount": -17.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-122",
+    "date": "2026-10-09",
+    "label": "TXU ENERGY WEB PMT # WEB ID: #",
+    "amount": -132.57,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-123",
+    "date": "2026-10-09",
+    "label": "KROGER # DALLAS TX",
+    "amount": -126.52,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-124",
+    "date": "2026-10-09",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-125",
+    "date": "2026-10-10",
+    "label": "UBER *EATS HELP.UBER.COM CA",
+    "amount": -11.9,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-126",
+    "date": "2026-10-11",
+    "label": "ATMOS ENERGY PAYMENT PPD ID: #",
+    "amount": -32.8,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-127",
+    "date": "2026-10-12",
+    "label": "SPOTIFY USA # NY",
+    "amount": -11.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-128",
+    "date": "2026-10-13",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -45.05,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-129",
+    "date": "2026-10-13",
+    "label": "EXXON 7-ELEVEN # DALLAS TX",
+    "amount": -43.06,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-130",
+    "date": "2026-10-14",
+    "label": "SPECTRUM # TX",
+    "amount": -70,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-131",
+    "date": "2026-10-15",
+    "label": "TOYOTA FINANCIAL ONLINE PMT PPD ID: #",
+    "amount": -412,
+    "accountId": "checking-1",
+    "cls": "debtPayments",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-132",
+    "date": "2026-10-15",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -31.79,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-133",
+    "date": "2026-10-16",
+    "label": "KROGER # DALLAS TX",
+    "amount": -94.08,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-134",
+    "date": "2026-10-16",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -14.06,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-135",
+    "date": "2026-10-17",
+    "label": "UBER *EATS HELP.UBER.COM CA",
+    "amount": -34.44,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-136",
+    "date": "2026-10-18",
+    "label": "Zelle to [name]",
+    "amount": -80,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-137",
+    "date": "2026-10-18",
+    "label": "AMAZON MKTPL*[ref] Amzn.com/bill WA",
+    "amount": -21.77,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-138",
+    "date": "2026-10-19",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -9.73,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-139",
+    "date": "2026-10-20",
+    "label": "CAPITAL ONE MOBILE PMT # WEB ID: #",
+    "amount": -250,
+    "accountId": "checking-1",
+    "cls": "debtPayments",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-140",
+    "date": "2026-10-21",
+    "label": "CHIPOTLE # DALLAS TX",
+    "amount": -24.97,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-141",
+    "date": "2026-10-23",
+    "label": "WALMART SUPERCENTER # DALLAS TX",
+    "amount": -97.32,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-142",
+    "date": "2026-10-23",
+    "label": "UBER *EATS HELP.UBER.COM CA",
+    "amount": -10.73,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-143",
+    "date": "2026-10-23",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-144",
+    "date": "2026-10-24",
+    "label": "SHELL OIL # DALLAS TX",
+    "amount": -52.57,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-145",
+    "date": "2026-10-25",
+    "label": "Transfer to savings",
+    "amount": -200,
+    "accountId": "checking-1",
+    "cls": "transfer",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-146",
+    "date": "2026-10-26",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -20.9,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-147",
+    "date": "2026-10-27",
+    "label": "TARGET # DALLAS TX",
+    "amount": -30.74,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-148",
+    "date": "2026-10-29",
+    "label": "WALMART SUPERCENTER # DALLAS TX",
+    "amount": -83.83,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-149",
+    "date": "2026-10-30",
+    "label": "Venmo from [name]",
+    "amount": 32.5,
+    "accountId": "checking-1",
+    "cls": "transfer",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-150",
+    "date": "2026-11-01",
+    "label": "OAKWOOD APTS WEB PMTS # WEB ID: #",
+    "amount": -1720,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-151",
+    "date": "2026-11-01",
+    "label": "PLANET FITNESS CLUB FEES",
+    "amount": -24.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-152",
+    "date": "2026-11-01",
+    "label": "WHATABURGER # DALLAS TX",
+    "amount": -10.74,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-153",
+    "date": "2026-11-02",
+    "label": "ALDI # DALLAS TX",
+    "amount": -67.77,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-154",
+    "date": "2026-11-03",
+    "label": "HOPDODDY BURGER BAR DALLAS TX",
+    "amount": -22.69,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-155",
+    "date": "2026-11-03",
+    "label": "APPLE.COM/BILL # CA",
+    "amount": -2.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-156",
+    "date": "2026-11-04",
+    "label": "EXXON 7-ELEVEN # DALLAS TX",
+    "amount": -42.98,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-157",
+    "date": "2026-11-04",
+    "label": "TACO BELL # DALLAS TX",
+    "amount": -41.6,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-158",
+    "date": "2026-11-05",
+    "label": "PROGRESSIVE *INSURANCE # OH",
+    "amount": -142,
+    "accountId": "checking-1",
+    "cls": "car",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-159",
+    "date": "2026-11-05",
+    "label": "CHIPOTLE # DALLAS TX",
+    "amount": -15.57,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-160",
+    "date": "2026-11-06",
+    "label": "TARGET # DALLAS TX",
+    "amount": -48.84,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-161",
+    "date": "2026-11-06",
+    "label": "DOORDASH*TORCHYS TACOS SAN FRANCISCO CA",
+    "amount": -11.46,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-162",
+    "date": "2026-11-06",
+    "label": "ACME LOGISTICS INC PAYROLL PPD ID: #",
+    "amount": 2400,
+    "accountId": "checking-1",
+    "cls": "pay",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-163",
+    "date": "2026-11-07",
+    "label": "Zelle to [name]",
+    "amount": -40,
+    "accountId": "checking-1",
+    "cls": "other",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-164",
+    "date": "2026-11-07",
+    "label": "NETFLIX.COM # CA",
+    "amount": -17.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-165",
+    "date": "2026-11-08",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -31.48,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-166",
+    "date": "2026-11-09",
+    "label": "TXU ENERGY WEB PMT # WEB ID: #",
+    "amount": -125.06,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-167",
+    "date": "2026-11-09",
+    "label": "ALDI # DALLAS TX",
+    "amount": -101.7,
+    "accountId": "checking-1",
+    "cls": "groceries",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-168",
+    "date": "2026-11-09",
+    "label": "STARBUCKS STORE # DALLAS TX",
+    "amount": -27.02,
+    "accountId": "checking-1",
+    "cls": "eatingOut",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-169",
+    "date": "2026-11-11",
+    "label": "ATMOS ENERGY PAYMENT PPD ID: #",
+    "amount": -38.09,
+    "accountId": "checking-1",
+    "cls": "rentUtilities",
+    "categoryOverridden": false
+  },
+  {
+    "id": "tx-170",
+    "date": "2026-11-12",
+    "label": "SPOTIFY USA # NY",
+    "amount": -11.99,
+    "accountId": "checking-1",
+    "cls": "subscriptions",
+    "categoryOverridden": false
+  }
+]

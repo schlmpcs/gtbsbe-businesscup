@@ -584,3 +584,215 @@ export const FunnelReportSchema = z.object({
 export const FunnelResponseSchema = FunnelReportSchema.extend({ ok: z.literal(true) });
 
 export { AvatarPublicSchema,AvatarPreviewSchema,AvatarStatusSchema,AvatarStampSchema,AgeBandSchema } from './avatar';
+
+// ----- Planner (MP2, epic #160): contracts in ./plan.ts ----------------------------------------
+// Accounts, scenarios and transactions stay in the browser (names are personal, rule 6); these
+// schemas check what is read back from local storage and the fixtures. Plan and Monte Carlo results
+// are engine output: their schemas pin the shape of the fixtures and of anything cached.
+import { ACCOUNT_GROUPS, ASSET_GROUPS, LIABILITY_GROUPS, PLAN_EVENT_TYPES } from './plan';
+
+/** A calendar year a plan can reach (a 16-year-old to age 120 is well inside). */
+const PlanYearNumberSchema = z.number().int().min(1900).max(2200);
+/** A growth rate per year; negative for depreciation (a car). */
+const GrowthRateSchema = ChangeRateSchema;
+/** A per-year share of a home's value (property tax, upkeep): rejects percents like 1.6. */
+const HomeRateSchema = z.number().min(0).max(0.1);
+const AgeSchema = z.number().int().min(16).max(120);
+
+export const AccountGroupSchema = z.enum(ACCOUNT_GROUPS);
+export const AssetGroupSchema = z.enum(ASSET_GROUPS);
+export const LiabilityGroupSchema = z.enum(LIABILITY_GROUPS);
+
+export const AccountSchema = z.object({
+  id: z.string().min(1).max(64),
+  group: AccountGroupSchema,
+  name: z.string().min(1).max(120),                  // browser only
+  balance: estimate(NonNegativeMoneySchema),         // balance; the sign comes from the group
+  apr: AprSchema.optional(),                         // liabilities only
+  minPayment: estimate(NonNegativeMoneySchema).optional(),   // monthly, liabilities only
+  debtKind: DebtKindSchema.optional(),               // loan only
+  growth: GrowthRateSchema.optional(),               // per year
+  excluded: z.boolean().optional(),
+  history: z.array(z.object({ month: YearMonthSchema, balance: NonNegativeMoneySchema })),
+}).superRefine((a, ctx) => {
+  const liability = (LIABILITY_GROUPS as readonly string[]).includes(a.group);
+  if (!liability && (a.apr !== undefined || a.minPayment !== undefined)) {
+    ctx.addIssue({ code: 'custom', path: ['apr'], message: 'apr and minPayment are for liabilities only' });
+  }
+  if (a.debtKind !== undefined && a.group !== 'loan') {
+    ctx.addIssue({ code: 'custom', path: ['debtKind'], message: 'debtKind is for loan accounts only' });
+  }
+});
+
+export const PlanEventTypeSchema = z.enum(PLAN_EVENT_TYPES);
+const planEventBase = {
+  id: z.string().min(1).max(64),
+  year: PlanYearNumberSchema,
+  enabled: z.boolean(),
+  name: z.string().min(1).max(120).optional(),       // browser only
+};
+export const PlanEventSchema = z.discriminatedUnion('type', [
+  z.object({ ...planEventBase, type: z.literal('income'), monthly: NonNegativeMoneySchema, endYear: PlanYearNumberSchema.optional() }),
+  z.object({
+    ...planEventBase,
+    type: z.literal('expense'),
+    amount: NonNegativeMoneySchema,
+    cadence: z.enum(['once', 'monthly']),
+    endYear: PlanYearNumberSchema.optional(),
+    financing: z.object({
+      downPayment: NonNegativeMoneySchema,
+      apr: AprSchema,
+      termMonths: z.number().int().positive().max(600),
+    }).optional(),
+  }),
+  z.object({
+    ...planEventBase,
+    type: z.literal('buyHome'),
+    homeValue: NonNegativeMoneySchema,
+    downPayment: NonNegativeMoneySchema,
+    payCash: z.boolean(),
+    termYears: z.union([z.literal(15), z.literal(30)]),
+    rate: AprSchema,
+    propertyTaxRate: HomeRateSchema,
+    insuranceMonthly: estimate(NonNegativeMoneySchema),
+    upkeepRate: HomeRateSchema,
+    replaceHousing: z.boolean(),
+  }),
+  z.object({
+    ...planEventBase,
+    type: z.literal('haveKid'),
+    childcareMonthly: estimate(NonNegativeMoneySchema),
+    childcareYears: z.number().int().min(0).max(18),
+    otherMonthly: estimate(NonNegativeMoneySchema),
+  }),
+  z.object({ ...planEventBase, type: z.literal('newJob'), takeHomePay: NonNegativeMoneySchema }),
+  z.object({ ...planEventBase, type: z.literal('careerBreak'), endYear: PlanYearNumberSchema }),
+  z.object({ ...planEventBase, type: z.literal('windfall'), amount: NonNegativeMoneySchema }),
+  z.object({ ...planEventBase, type: z.literal('retire') }),
+  z.object({ ...planEventBase, type: z.literal('socialSecurity'), monthly: estimate(NonNegativeMoneySchema) }),
+]);
+
+export const PlanAssumptionsSchema = z.object({
+  retireAge: AgeSchema,
+  endAge: AgeSchema,
+  inflation: ChangeRateSchema,
+  display: z.enum(['today', 'future']),
+  expenses: z.discriminatedUnion('mode', [
+    z.object({ mode: z.literal('budget') }),
+    z.object({ mode: z.literal('manual'), monthly: NonNegativeMoneySchema }),
+  ]),
+  growth: z.partialRecord(AccountGroupSchema, GrowthRateSchema),
+  withdrawalOrder: z.array(AccountGroupSchema),
+  savingsSplit: z.array(z.object({ group: AccountGroupSchema, share: ShareSchema })).min(1)
+    .refine((s) => Math.abs(s.reduce((sum, x) => sum + x.share, 0) - 1) < 1e-9, { message: 'shares must sum to 1' }),
+});
+
+export const ScenarioSchema = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().min(1).max(120),
+  icon: z.string().min(1).max(32).optional(),
+  assumptions: PlanAssumptionsSchema,
+  events: z.array(PlanEventSchema),
+});
+
+export const PlanAccountRowSchema = z.object({
+  accountId: z.string().min(1),
+  start: MoneySchema, growth: MoneySchema, deposits: MoneySchema, withdrawals: MoneySchema, end: MoneySchema,
+});
+
+const keyedAmount = z.object({ key: z.string().min(1), amount: MoneySchema });
+
+export const PlanYearSchema = z.object({
+  year: PlanYearNumberSchema,
+  age: AgeSchema,
+  netWorth: MoneySchema,
+  assets: NonNegativeMoneySchema,
+  liabilities: NonNegativeMoneySchema,
+  shortfall: NonNegativeMoneySchema,
+  accounts: z.array(PlanAccountRowSchema),
+  cashFlow: z.object({
+    income: z.array(keyedAmount),
+    expenses: z.array(keyedAmount),
+    withdrawals: MoneySchema,
+    net: MoneySchema,
+  }),
+  events: z.array(z.string().min(1)),
+});
+
+export const PlanKpisSchema = z.object({
+  netWorthEndOfYear: MoneySchema,
+  netWorthAtRetirement: MoneySchema,
+  retireAge: AgeSchema,
+  netWorthAtEnd: MoneySchema,
+  shortfallAge: AgeSchema.nullable(),
+});
+
+export const PlanResultSchema = z.object({
+  years: z.array(PlanYearSchema).min(1),
+  kpis: PlanKpisSchema,
+  display: z.enum(['today', 'future']),
+  source: z.literal('rules'),
+});
+
+/** Most Monte Carlo paths a run takes, and most sample paths a result carries for drawing. */
+export const MONTE_CARLO_MAX_PATHS = 5000;
+export const MONTE_CARLO_MAX_SAMPLE_PATHS = 200;
+const meanSd = z.object({ mean: ChangeRateSchema, sd: z.number().min(0).max(1) });
+/** A mulberry32 seed: an unsigned 32-bit integer. */
+const SeedSchema = z.number().int().min(0).max(0xffffffff);
+
+export const MonteCarloSettingsSchema = z.object({
+  paths: z.number().int().min(1).max(MONTE_CARLO_MAX_PATHS),
+  seed: SeedSchema.nullable(),
+  inflation: meanSd,
+  growth: z.partialRecord(AccountGroupSchema, meanSd),
+  endThreshold: MoneySchema,
+});
+
+export const HistogramBinSchema = z.object({
+  from: z.number(), to: z.number(), count: z.number().int().min(0),
+}).refine((b) => b.from <= b.to, { message: 'from must not exceed to', path: ['to'] });
+
+export const MonteCarloResultSchema = z.object({
+  paths: z.number().int().min(1).max(MONTE_CARLO_MAX_PATHS),
+  seed: SeedSchema,
+  successRate: ShareSchema,
+  bands: z.array(z.object({ year: PlanYearNumberSchema, p10: MoneySchema, p50: MoneySchema, p90: MoneySchema })),
+  samplePaths: z.array(z.object({ success: z.boolean(), netWorth: z.array(MoneySchema) })).max(MONTE_CARLO_MAX_SAMPLE_PATHS),
+  histograms: z.object({
+    atRetirement: z.array(HistogramBinSchema),
+    atEnd: z.array(HistogramBinSchema),
+    shortfallAge: z.array(HistogramBinSchema),
+  }),
+});
+
+const budgetRowFields = {
+  planned: MoneySchema, actual: MoneySchema, remaining: MoneySchema, expectedByToday: MoneySchema,
+  status: z.enum(['under', 'onPace', 'over']),
+};
+export const BudgetRowSchema = z.object({ category: CostCategorySchema, ...budgetRowFields });
+export const BudgetIncomeRowSchema = z.object(budgetRowFields);
+
+export const CashFlowSummarySchema = z.object({
+  period: z.object({ from: YearMonthSchema, to: YearMonthSchema }),
+  income: MoneySchema,
+  expenses: MoneySchema,
+  savings: MoneySchema,
+  savingsRate: z.number().nullable(),
+  byCategory: z.array(z.object({ category: CostCategorySchema, amount: MoneySchema })),
+  sankey: z.object({
+    nodes: z.array(z.object({ id: z.string().min(1), kind: z.enum(['income', 'total', 'category', 'savings']) })),
+    links: z.array(z.object({ source: z.string().min(1), target: z.string().min(1), value: NonNegativeMoneySchema })),
+  }),
+});
+
+export const LedgerTransactionSchema = z.object({
+  id: z.string().min(1).max(64),
+  date: CalendarDaySchema,
+  label: z.string().min(1).max(200),
+  amount: MoneySchema,                               // > 0 = money in, < 0 = money out
+  accountId: z.string().min(1).max(64).optional(),
+  cls: StatementClassSchema,
+  categoryOverridden: z.boolean(),
+  goalId: z.string().min(1).max(64).optional(),
+});

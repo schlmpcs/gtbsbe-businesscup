@@ -11,6 +11,7 @@
     "./fixtures/cards": "./fixtures/cards.ts",
     "./fixtures/duelCards": "./fixtures/duelCards.ts",
     "./fixtures/node": "./fixtures/node.ts",
+    "./fixtures/plan": "./fixtures/plan.ts",
     "./fixtures/tools": "./fixtures/tools.ts",
     "./fixtures/*.json": "./fixtures/*.json",
     "./fixtures/*.csv": "./fixtures/*.csv",
