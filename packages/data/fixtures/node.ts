@@ -1,5 +1,5 @@
 // Node-only fixture helpers (fs). Do not import from client components.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 /** Absolute path of the sample bank statement CSV (Chase-style checking export, Jul–Nov 2026). */
@@ -25,4 +25,22 @@ export type StatementFixture = (typeof STATEMENT_FIXTURES)[number];
 /** A statement fixture's raw text (BOM and line endings untouched). */
 export function readStatementFixtureCsv(name: StatementFixture): string {
   return readFileSync(fileURLToPath(new URL(`./statement.${name}.csv`, import.meta.url)), 'utf8');
+}
+
+/** Folder of the 50 synthetic household statements (see synthetic-statements/README.md). */
+export const syntheticStatementsDir: string = fileURLToPath(new URL('./synthetic-statements/', import.meta.url));
+
+/** File names of the synthetic statements, `hh01-…csv` to `hh50-…csv`, sorted. */
+export function listSyntheticStatements(): string[] {
+  return readdirSync(syntheticStatementsDir).filter((f) => f.endsWith('.csv')).sort();
+}
+
+/** One synthetic statement's raw text (BOM and line endings untouched). */
+export function readSyntheticStatement(file: string): string {
+  return readFileSync(syntheticStatementsDir + file, 'utf8');
+}
+
+/** `labels/answer-key.csv`: one row per statement row with its true category, kind and label basis. */
+export function readSyntheticAnswerKey(): string {
+  return readFileSync(syntheticStatementsDir + 'labels/answer-key.csv', 'utf8');
 }
