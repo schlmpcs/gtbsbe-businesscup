@@ -1,7 +1,8 @@
 // S9 Statement upload (Figma S09): the dashed orange drop tile with the file picker (read and
-// categorized by the T6/T7 pipeline behind the view-model's readFile), "What we keep", the black "connect your bank app"
-// card (not built yet, shown as coming soon), the review of categorized months before they enter the
-// profile, and what the statements have added so far in the black score bar.
+// categorized by the T6/T7 pipeline behind the view-model's readFile) and "Try with sample
+// statement" (the same pipeline on the sample file), "What we keep", the review of categorized
+// months before they enter the profile, and what the statements have added so far in the black
+// score bar. "Connect your bank app" is not built, so it is not shown (dead buttons are hidden).
 import { useId } from 'react';
 import { common, ladder } from '@/copy';
 import { Art, BarBreakdown, Button, Card, formatMoney, Row, Scoreboard, Stack } from '@/ui-kit';
@@ -34,8 +35,6 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
   const inputId = useId();
   const noteId = useId();
   const titleId = useId();
-  const bankTitleId = useId();
-  const bankNoteId = useId();
   const { readFile } = vm;
 
   return (
@@ -74,6 +73,14 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
                   {readFile === null ? t.pickerUnavailable : t.pickerHint}
                 </p>
               </div>
+              {readFile !== null && (
+                <div className="flex flex-col items-center gap-xs">
+                  <Button variant="secondary" onClick={vm.trySample} disabled={vm.status === 'reading'}>
+                    {t.trySample}
+                  </Button>
+                  <p className="text-xs text-text-muted">{t.trySampleHint}</p>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -130,22 +137,6 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
 
         <Stack gap="xl">
           <WhatWeKeep keep={vm.whatWeKeep} sendsLabels={readFile !== null} />
-
-          <section
-            aria-labelledby={bankTitleId}
-            className="flex flex-col gap-sm rounded-xl bg-ink p-lg text-on-primary shadow-md"
-          >
-            <h2 id={bankTitleId} className="flex items-baseline gap-sm font-display text-xl font-extrabold leading-tight">
-              <span className="text-sm font-normal text-on-primary/60">{t.bank.or}</span>
-              {t.bank.title}
-            </h2>
-            <p id={bankNoteId} className="text-xs text-on-primary/70">
-              {t.bank.note}
-            </p>
-            <Button variant="ghost" fullWidth disabled aria-describedby={bankNoteId}>
-              {t.bank.button} · {t.bank.soon}
-            </Button>
-          </section>
         </Stack>
       </div>
 
