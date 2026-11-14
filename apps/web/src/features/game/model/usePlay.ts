@@ -10,8 +10,9 @@ import type { VMError } from '@/lib/model/types';
 import { useAppReady, useGameStore } from '@/state';
 import { createGameClient, type GameClient } from './client';
 import { GUESS_DEFAULT, GUESS_MAX, GUESS_MIN, GUESS_STEP, STREAMER_COUNTDOWN_SECONDS } from './constants';
-import { buildReveal, buildSummary, clueMultiplier } from './derive';
-import type { ClueVM, ExploreCardVM, PlayVM, StreamerVM } from './types';
+import { buildReveal, buildSummary, clueCostOf, clueFacts, clueMultiplier } from './derive';
+import { shareOrCopy, type ShareOutcome } from './share';
+import type { ClueVM, ExploreCardVM, PlayVM, ShareStatus, StreamerVM } from './types';
 
 export type UsePlayOptions = {
   /** S4: big type, countdown, answer hidden until the guess is locked in (`/play?stream=1`). */
@@ -20,6 +21,8 @@ export type UsePlayOptions = {
   client?: GameClient;
   /** Streamer countdown length in seconds. */
   countdownSeconds?: number;
+  /** Share implementation override (tests). Default: Web Share API, else clipboard. */
+  share?: (text: string) => Promise<ShareOutcome>;
 };
 
 const guessScale = logScale(GUESS_MIN, GUESS_MAX);
@@ -188,8 +191,10 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
       const reveal = opened.find((c) => c.clue === id) ?? null;
       const error = clueErrors[key] ?? null;
       const status = reveal ? 'open' : opening[key] ? 'opening' : error ? 'error' : 'closed';
-      return { id, status, reveal, error };
+      return { id, status, reveal, facts: reveal ? clueFacts(id, reveal.facts) : [], error };
     });
+    const multiplier = clueMultiplier(opened.length);
+    const nextMultiplier = clueMultiplier(opened.length + 1);
     return {
       id: current.id,
       metro: current.metro,
@@ -198,8 +203,9 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
       decor: current.decor,
       clues: clueVMs,
       openedCount: opened.length,
-      multiplier: clueMultiplier(opened.length),
-      nextMultiplier: clueMultiplier(opened.length + 1),
+      multiplier,
+      nextMultiplier,
+      clueCost: clueCostOf(multiplier, nextMultiplier),
       guess: logSliderVM(guessValue, GUESS_MIN, GUESS_MAX, GUESS_STEP),
       submitting: submitting === current.id,
       guessError: guessErrors[current.id] ?? null,
@@ -216,6 +222,25 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     () => (phase === 'summary' ? buildSummary(date, cards, reveals, guesses, client.source) : null),
     [phase, date, cards, reveals, guesses, client.source],
   );
+
+  // ----- share (summary) -----
+
+  const shareImpl = opts.share ?? shareOrCopy;
+  const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
+  const shareText = summary?.shareText ?? null;
+  const sharing = shareStatus === 'sharing';
+  const share = useCallback(() => {
+    if (shareText === null || sharing) return;
+    setShareStatus('sharing');
+    shareImpl(shareText).then(
+      (outcome) => {
+        if (mounted.current) setShareStatus(outcome === 'cancelled' ? 'idle' : outcome);
+      },
+      () => {
+        if (mounted.current) setShareStatus('failed');
+      },
+    );
+  }, [shareImpl, shareText, sharing]);
 
   const streamer: StreamerVM | null = streamerOn
     ? {
@@ -248,5 +273,7 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     setGuessPosition,
     submitGuess,
     next,
+    share,
+    shareStatus: phase === 'summary' ? shareStatus : 'idle',
   };
 }
