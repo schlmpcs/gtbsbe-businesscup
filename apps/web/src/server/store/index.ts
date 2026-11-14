@@ -14,6 +14,9 @@
 // Adding a domain (e.g. T5 guesses): write `<domain>.ts` (interface + pure rules), then
 // `<domain>.postgres.ts` and `<domain>.memory.ts`, add the field to Store and to both factories
 // below, and add a migration (./migrations/index.ts explains the rules).
+import type { DuelStore } from './duel';
+import { createMemoryDuelStore } from './duel.memory';
+import { createPostgresDuelStore } from './duel.postgres';
 import { storeConfig } from './config';
 import { StoreUnavailableError, type StoreUnavailableReason } from './errors';
 import type { GameStore } from './game';
@@ -38,6 +41,7 @@ export interface Store {
   readonly backend: 'postgres' | 'memory';
   readonly sessions: SessionStore;
   readonly game: GameStore;
+  readonly duel: DuelStore;
   readonly events: EventStore;
   /** The Postgres connection, or null for the memory store. */
   readonly db: Db | null;
@@ -52,6 +56,7 @@ export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
     backend: 'postgres',
     sessions: createPostgresSessionStore(db),
     game: createPostgresGameStore(db),
+    duel: createPostgresDuelStore(db),
     events: createPostgresEventStore(db),
     db,
     check: () => db.check(),
@@ -64,6 +69,7 @@ export function createMemoryStore(): Store {
     backend: 'memory',
     sessions: createMemorySessionStore(),
     game: createMemoryGameStore(),
+    duel: createMemoryDuelStore(),
     events: createMemoryEventStore(),
     db: null,
     check: async () => {},
