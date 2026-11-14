@@ -24,23 +24,49 @@ function start(a: SessionAdapter): () => void {
   if (!a.enabled) return () => {};
   const anonId = getAnonId();
 
-  if (useAppStore.getState().profileOrigin === 'demo') {
+  let goalChanged = false;
+  const restoreWishlist = useAppStore.getState().profileOrigin === 'demo';
+  {
+    const initialGoal = useAppStore.getState().goal;
     void a.load(anonId).then((saved) => {
       const s = useAppStore.getState();
-      if (saved?.profile && s.profileOrigin === 'demo') s.setProfile(saved.profile, 'user');
-      if (saved?.wishlist && useAppStore.getState().wishlist.length === 0) {
-        for (const purchase of saved.wishlist) useAppStore.getState().addToWishlist(purchase);
+      if (saved?.profile && s.profileOrigin === 'demo')
+        s.setProfile(saved.profile, 'user');
+      if (
+        saved?.goal &&
+        !goalChanged &&
+        initialGoal === null &&
+        useAppStore.getState().goal === initialGoal
+      )
+        useAppStore.getState().setGoal(saved.goal);
+      if (
+        restoreWishlist &&
+        saved?.wishlist &&
+        useAppStore.getState().wishlist.length === 0
+      ) {
+        for (const purchase of saved.wishlist)
+          useAppStore.getState().addToWishlist(purchase);
       }
     });
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   const unsubscribe = useAppStore.subscribe((s, prev) => {
-    if (s.profile === prev.profile && s.wishlist === prev.wishlist) return;
+    if (s.goal !== prev.goal) goalChanged = true;
+    if (
+      s.profile === prev.profile &&
+      s.wishlist === prev.wishlist &&
+      s.goal === prev.goal
+    )
+      return;
     clearTimeout(timer);
     timer = setTimeout(() => {
       const now = useAppStore.getState();
-      void a.save(anonId, { profile: now.profile, wishlist: now.wishlist.map((w) => w.purchase) });
+      void a.save(anonId, {
+        profile: now.profile,
+        wishlist: now.wishlist.map((w) => w.purchase),
+        goal: now.goal,
+      });
     }, SESSION_SAVE_DEBOUNCE_MS);
   });
   return () => {

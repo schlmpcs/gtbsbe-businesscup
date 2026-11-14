@@ -11,6 +11,7 @@ import {
   type CategoryTotals, type CostCategory, type Money, type Move, type Profile, type ProfilePatch, type Purchase,
 } from '@lifeguessr/types';
 import { z } from 'zod';
+import { GoalSchema, type Goal } from '@lifeguessr/types';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { cloneProfileDemo } from '@/fixtures';
@@ -26,6 +27,7 @@ export type ProfileOrigin = 'demo' | 'closestLife' | 'user';
 export type WishlistItem = { id: string; purchase: Purchase; addedAt: string /* ISO timestamp */ };
 
 export type AppData = {
+  goal: Goal | null;
   profile: Profile;
   profileOrigin: ProfileOrigin;
   /** S5: the user's guess of their own monthly cost (null until they guess). */
@@ -42,6 +44,8 @@ export type AppData = {
 };
 
 export type AppActions = {
+  setGoal: (goal:Goal) => void;
+  clearGoal: () => void;
   /** Replace the whole profile (e.g. restored from the server session). */
   setProfile: (profile: Profile, origin: ProfileOrigin) => void;
   setSelfGuess: (guess: Money) => void;
@@ -73,6 +77,7 @@ export const APP_STORE_KEY = 'lifeguessr.app';
 
 export function initialAppData(): AppData {
   return {
+    goal: null,
     profile: cloneProfileDemo(),
     profileOrigin: 'demo',
     selfGuess: null,
@@ -103,6 +108,7 @@ const WishlistItemSchema = z.object({ id: z.string().min(1), purchase: PurchaseS
 
 /** Saved state is validated field by field; a field that fails keeps its default. */
 const persistedFields = {
+  goal: GoalSchema.nullable(),
   profile: ProfileSchema,
   profileOrigin: z.enum(['demo', 'closestLife', 'user']),
   selfGuess: z.number().positive().nullable(),
@@ -187,6 +193,8 @@ export const useAppStore = create<AppState>()(
           delete profile.committedMoveId;
           return { profile, committedMove: null };
         }),
+      setGoal: goal => set({goal:GoalSchema.parse(goal)}),
+      clearGoal: () => set({goal:null}),
       reset: () => set(initialAppData()),
     }),
     {
@@ -195,6 +203,7 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => safeStateStorage),
       skipHydration: true,
       partialize: (s): AppData => ({
+        goal: s.goal,
         profile: s.profile,
         profileOrigin: s.profileOrigin,
         selfGuess: s.selfGuess,

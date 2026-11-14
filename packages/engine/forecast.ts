@@ -12,6 +12,8 @@ import {
 } from './simulate';
 
 export type ForecastOptions = {
+  /** Additional monthly saving in today's dollars; default zero. */
+  extraMonthly?: number;
   /** Divide each point by (1 + inflation)^(month/12). Default false (nominal dollars). */
   todaysDollars?: boolean;
   /** Extra purchases (Can I Afford It?). Each starts at its `startMonth` (default 0 = this month). */
@@ -31,7 +33,7 @@ export function forecast(p: Profile, years = 10, opts: ForecastOptions = {}): Fo
   const months = forecastMonths(years);
   const rates = resolveRates(opts.rates);
   const run = (scenario: 'low' | 'mid' | 'high') =>
-    simulate(p, months, { extra: opts.extra, rates, scenario }).path.map((s) => s.netWorth);
+    simulate(p, months, { extra: opts.extra, extraMonthly: opts.extraMonthly, rates, scenario }).path.map((s) => s.netWorth);
 
   const mid = run('mid');
   const banded = hasEstimates(p);

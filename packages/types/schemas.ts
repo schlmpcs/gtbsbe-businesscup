@@ -1,3 +1,5 @@
+import { GoalSchema } from './goal';
+export { GoalSchema } from './goal';
 // Zod schemas for the contracts in ./index.ts. Use them to validate every API input and every
 // LLM output (docs/ENGINEERING.md → AI usage rules), and to load fixtures and data files.
 //
@@ -303,12 +305,14 @@ export const AnonIdSchema = z.uuid().transform((id) => id.toLowerCase());
  * so nothing is silently dropped.
  */
 export const SessionRequestSchema = z.strictObject({
+  goal: GoalSchema.nullable().optional(),
   anonId: AnonIdSchema,
   profile: ProfileSchema.optional(),
   wishlist: z.array(PurchaseSchema).max(SESSION_WISHLIST_MAX).optional(),
 });
 
 export const SessionStateSchema = z.object({
+  goal: GoalSchema.nullable().optional(),
   profile: ProfileSchema.optional(),
   wishlist: z.array(PurchaseSchema),
   revision: z.number().int().min(0),
@@ -356,6 +360,9 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   withProps('afford_checked', { verdict: z.enum(['fits', 'wait', 'no']) }),
   withProps('loan_compared', { offers: z.number().int().min(1).max(3) }),
   bare('paywall_viewed'),
+  withProps('goal_set', {years:z.number().int().min(1).max(30)}),
+  withProps('goal_verdict_shown', {verdict:z.enum(['onTrack','withinRange','behind'])}),
+  bare('goal_cleared'),
 ]);
 
 /** POST /api/events: 1–EVENTS_BATCH_MAX events for one anonymous id. */

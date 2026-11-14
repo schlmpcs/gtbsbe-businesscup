@@ -63,7 +63,7 @@ export const CLIENT_EVENT_NAMES = [
   'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared',
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
-  'paywall_viewed',
+  'paywall_viewed', 'goal_set', 'goal_verdict_shown', 'goal_cleared',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 /** Events only the server records (the Pro routes). */
 export const SERVER_EVENT_NAMES = [
@@ -87,3 +87,6 @@ export const EVENTS_BATCH_MAX = 25;
 export const FUNNEL_MAX_DAYS = 90;
 /** Most homes in one day's set: the bound on `home` in event props. */
 export const EVENT_HOMES_MAX = 10;
+
+export const GOAL_MIN_YEARS=1;
+export const GOAL_MAX_YEARS=30;

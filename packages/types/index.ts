@@ -1,3 +1,4 @@
+import type { Goal } from './goal';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
 // Change only together (Amir + Aibek): update this file, the zod schemas in ./schemas.ts,
 // the fixtures in packages/data/fixtures and both consumers in the same PR.
@@ -163,7 +164,7 @@ export type ProErrorCode =
 // ----- Sessions (T4): POST /api/session ----------------------------------------------------
 // The profile and wishlist saved under the anonymous id, so a reload restores them without an
 // account. `revision` counts saves (0 = nothing saved yet); `updatedAt` is ISO 8601 UTC.
-export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
+export type SessionState = { goal?: Goal | null; profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
 export type SessionErrorCode =
   | 'bad_request' | 'too_large' | 'rate_limited'
   | 'unavailable'         // the store is not configured or cannot be reached (503)
@@ -175,6 +176,9 @@ export type SessionErrorCode =
 // a person typed, so an event cannot carry personal data. Stored under the hash of the anonymous id.
 // `home` is the 1-based position of a home in today's set.
 export type ClientFunnelEvent =
+  | {name:'goal_set';props:{years:number}}
+  | {name:'goal_verdict_shown';props:{verdict:'onTrack'|'withinRange'|'behind'}}
+  | {name:'goal_cleared'}
   | { name: 'play_started' }
   | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
   | { name: 'home_guessed'; props: { home: number; cluesOpened: number } }
@@ -224,3 +228,4 @@ export type FunnelReport = {
 
 export * from './constants';
 export * from './schemas';
+export * from './goal';

@@ -34,3 +34,4 @@ export {
   loan, compareLoans, payoffOrder, amortize, amortizedPayment, MAX_SIMULATION_MONTHS,
   type Amortization, type LoanOptions,
 } from './loan/index';
+export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
