@@ -7,6 +7,7 @@ import type { WishlistItem } from '@/state';
 
 export type { Loadable, ParseConfirmVM, VMError } from '@/lib/model/types';
 export type { WishlistItem } from '@/state';
+export type { Purchase } from '@lifeguessr/types';
 
 export type PayWithChoice = 'cash' | 'card' | 'loan';
 
@@ -40,8 +41,17 @@ export type AffordResultVM = {
   horizons: AffordHorizonVM[];
 };
 
+/** The thresholds canAfford checks (engine assumptions), so the UI can name them in its copy. */
+export type AffordRulesVM = {
+  /** Month-end cash must stay at or above this many months of outflow. */
+  cushionMonths: number;
+  /** Debt payments / take-home pay must stay at or below this (red threshold). */
+  debtLoadRed: Rate;
+};
+
 export type AffordVM = {
   status: 'loading' | 'ready';
+  rules: AffordRulesVM;
   form: AffordFormVM;
   setLabel: (label: string) => void;
   setAmount: (amount: Money | null) => void;

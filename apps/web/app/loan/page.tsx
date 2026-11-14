@@ -1,6 +1,9 @@
-import { ScreenPage } from '../_components/ScreenPage';
+'use client';
 
-// S12: feature loan (Y11). Placeholder until its task lands.
+// S12 Loan Lab (Y11): the view-model hook feeds the presentational screen.
+import { useLoanLab } from '@/features/loan/model/useLoanLab';
+import { LoanLabScreen } from '@/features/loan/ui/LoanLabScreen';
+
 export default function LoanLabPage() {
-  return <ScreenPage id="S12" />;
+  return <LoanLabScreen vm={useLoanLab()} />;
 }

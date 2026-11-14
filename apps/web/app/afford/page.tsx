@@ -1,6 +1,9 @@
-import { ScreenPage } from '../_components/ScreenPage';
+'use client';
 
-// S11: feature afford (Y11). Placeholder until its task lands.
+// S11 Can I Afford It? (Y11): the view-model hook feeds the presentational screen.
+import { useAfford } from '@/features/afford/model/useAfford';
+import { AffordScreen } from '@/features/afford/ui/AffordScreen';
+
 export default function AffordPage() {
-  return <ScreenPage id="S11" />;
+  return <AffordScreen vm={useAfford()} />;
 }
