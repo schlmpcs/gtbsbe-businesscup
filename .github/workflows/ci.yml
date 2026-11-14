@@ -46,8 +46,12 @@ jobs:
       - uses: actions/checkout@v7
 
       # pnpm version comes from "packageManager" in package.json (pnpm@10.34.9). No `cache: pnpm`
-      # below: the runner's pnpm store stays on the server between jobs.
+      # below: the runner's pnpm store stays on the server between jobs. `dest` is per job: the
+      # default (~/setup-pnpm) is shared by the three runners, which share one home, and parallel
+      # installs into it break each other.
       - uses: pnpm/action-setup@v6
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
 
       - uses: actions/setup-node@v7
         with:
@@ -106,6 +110,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -166,6 +172,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -218,6 +226,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
       - uses: actions/setup-node@v7
         with:
           node-version: 22
