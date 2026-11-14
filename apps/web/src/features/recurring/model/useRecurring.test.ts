@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 // Recurring on the fixtures: the engine's detectSubscriptions over the ledger, plus profile and account items.
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FIXTURE_NOW, resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
 import { useRecurring } from './useRecurring';
 
 const TODAY = '2026-11-15';
-beforeEach(resetFixtureStores);
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(FIXTURE_NOW);
+  await resetFixtureStores();
+});
+afterEach(() => vi.useRealTimers());
 
 describe('useRecurring', () => {
   it('lists income, expenses and credit cards for the month', () => {

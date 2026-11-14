@@ -1,5 +1,7 @@
-// Input check for a hand-added transaction, shared by Transactions and Account detail.
-import type { LedgerTransaction } from '@lifeguessr/types';
+// Input check for a hand-added transaction, shared by Transactions and Account detail. The line itself is
+// validated by the store's `manualTransaction` (contract schema); the real-calendar-day check is kept
+// here because the schema only reads the shape.
+import { manualTransaction, TransactionInputError, type ManualTransactionInput } from '@/lib/model/transactions';
 import type { NewTransactionInput } from './types';
 
 /** A real calendar day written 'YYYY-MM-DD'. */
@@ -11,16 +13,22 @@ export function validDate(iso: string): boolean {
   return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
 }
 
-/** The line to store (without its id), or null when the date, amount or label is not usable. */
-export function validNewTransaction(input: NewTransactionInput): Omit<LedgerTransaction, 'id'> | null {
-  const label = input.label.trim();
-  if (!validDate(input.date) || !Number.isFinite(input.amount) || input.amount === 0 || label === '') return null;
-  return {
+/** The form input the store takes (direction and a positive amount), or null when the date, amount or label is not usable. */
+export function toManualInput(input: NewTransactionInput): ManualTransactionInput | null {
+  if (!validDate(input.date) || !Number.isFinite(input.amount) || input.amount === 0 || input.label.trim() === '') return null;
+  const manual: ManualTransactionInput = {
+    direction: input.amount < 0 ? 'debit' : 'credit',
+    amount: Math.abs(input.amount),
+    merchant: input.label,
     date: input.date,
-    label,
-    amount: input.amount,
-    ...(input.accountId === undefined ? {} : { accountId: input.accountId }),
     cls: input.category,
-    categoryOverridden: true,
+    ...(input.accountId === undefined ? {} : { accountId: input.accountId }),
   };
+  try {
+    manualTransaction(manual, 'check'); // the contract's own validation
+  } catch (err) {
+    if (err instanceof TransactionInputError) return null;
+    throw err;
+  }
+  return manual;
 }

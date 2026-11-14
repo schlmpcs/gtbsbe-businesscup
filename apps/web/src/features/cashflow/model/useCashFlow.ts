@@ -1,24 +1,25 @@
-// View-model of the Cash Flow screen (MP11, #171). Fixture-backed: sums the in-memory ledger with
-// features/transactions/model/ledger.ts. No network.
-// MP11b: wire `ledgerSummary` to the engine's `cashFlowSummary` (MP9) and the ledger to the real store.
+// View-model of the Cash Flow screen (MP11, #171). The ledger (MP10) goes through `transactionTotals`
+// and each period through the engine's `cashFlowSummary` (MP9). No network.
+import { cashFlowSummary } from '@lifeguessr/engine';
 import { useMemo, useState } from 'react';
 import { usEasternDate } from '@/lib/dates';
+import { transactionTotals } from '@/lib/model/transactions';
 import { BUDGET_GROUPS } from '@/features/budget/model/groups';
-import { inPeriod, ledgerSummary } from '@/features/transactions/model/ledger';
-import { useTransactionsStore } from '@/features/transactions/model/transactionsStore';
+import { useLedger } from '@/features/transactions/model/transactionsStore';
 import { periodsFor, quarterOf } from './periods';
 import type {
   CashFlowBarVM, CashFlowBreakdown, CashFlowBreakdownRowVM, CashFlowKpiVM, CashFlowPeriodKind, CashFlowView, CashFlowVM,
 } from './types';
 
 export function useCashFlow({ today }: { today?: string } = {}): CashFlowVM {
-  const transactions = useTransactionsStore((s) => s.transactions);
+  const { lines, ready } = useLedger();
   const [period, setPeriod] = useState<CashFlowPeriodKind>('monthly');
   const [view, setView] = useState<CashFlowView>('bars');
   const [breakdown, setBreakdown] = useState<CashFlowBreakdown>('category');
   const month = (today ?? usEasternDate()).slice(0, 7);
 
-  const summaries = useMemo(() => periodsFor(period, month).map((p) => ledgerSummary(transactions, p)), [transactions, period, month]);
+  const totals = useMemo(() => transactionTotals(lines), [lines]);
+  const summaries = useMemo(() => periodsFor(period, month).map((p) => cashFlowSummary(totals, p)), [totals, period, month]);
   const current = summaries[summaries.length - 1]!;
   const previous = summaries[summaries.length - 2] ?? null;
 
@@ -60,12 +61,12 @@ export function useCashFlow({ today }: { today?: string } = {}): CashFlowVM {
   }, [current, breakdown]);
 
   const empty = useMemo(() => {
-    const first = summaries[0]!.period.from;
-    return !transactions.some((t) => inPeriod(t, { from: first, to: current.period.to }));
-  }, [transactions, summaries, current]);
+    const [from, to] = [summaries[0]!.period.from, current.period.to];
+    return !totals.some((m) => m.month >= from && m.month <= to);
+  }, [totals, summaries, current]);
 
   return {
-    ready: true,
+    ready,
     empty,
     period,
     setPeriod,

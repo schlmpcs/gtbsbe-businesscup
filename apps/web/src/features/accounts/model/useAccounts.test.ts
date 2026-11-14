@@ -1,16 +1,23 @@
 // @vitest-environment jsdom
 // Accounts, Account detail and Add account on the fixtures (accounts.demo.json). No network.
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { cardMinPaymentFor } from '@lifeguessr/engine';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
-import { useAccountsStore } from './accountsStore';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FIXTURE_NOW, resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
+import { useAccountsStore } from '@/lib/model/accounts';
+import { liabilityEstimates } from '@/lib/model/addAccount';
+import { useAccountsUiStore } from './accountsStore';
 import { useAccount } from './useAccount';
 import { useAccounts } from './useAccounts';
 import { useAddAccount } from './useAddAccount';
 
 const TODAY = '2026-11-15';
-beforeEach(resetFixtureStores);
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(FIXTURE_NOW);
+  await resetFixtureStores();
+});
+afterEach(() => vi.useRealTimers());
 
 describe('useAccounts', () => {
   it('renders the demo balance sheet', () => {
@@ -79,7 +86,7 @@ describe('useAccount', () => {
     expect(renderHook(() => useAccount('nope', { today: TODAY })).result.current.found).toBe(false);
   });
 
-  it('edits the balance, renames, excludes, adds a line and deletes', () => {
+  it('edits the balance, renames, excludes, adds a line and deletes', async () => {
     const { result } = renderHook(() => useAccount('card-1', { today: TODAY }));
     expect(result.current.editBalance(-1)).toBe(false);
     act(() => void result.current.editBalance(6000));
@@ -93,11 +100,11 @@ describe('useAccount', () => {
     act(() => result.current.exclude(false));
     expect(result.current.account!.excluded).toBe(false);
     let id: string | null = null;
-    act(() => {
+    await act(async () => {
       id = result.current.addTransaction({ date: '2026-11-14', label: 'Flights', amount: -300, category: 'other' });
     });
     expect(id).not.toBeNull();
-    expect(result.current.account!.transactions).toHaveLength(1);
+    await waitFor(() => expect(result.current.account!.transactions).toHaveLength(1)); // the store saves the line a moment later
     expect(result.current.addTransaction({ date: '2026-02-30', label: 'x', amount: -1, category: 'other' })).toBeNull();
     act(() => result.current.delete());
     expect(result.current.found).toBe(false);
@@ -127,14 +134,17 @@ describe('useAddAccount', () => {
     act(() => {
       id = result.current.submit();
     });
-    expect(id).toBe('account-1');
+    expect(id).toBe('creditCard-1'); // the store's id: the group and the first free number
     expect(result.current.step).toBe('pick-type');
     const added = useAccountsStore.getState().accounts.find((a) => a.id === id)!;
-    // 1000 at 20% a year: interest 1000 * 0.2 / 12 = 16.67 plus 1% of the balance (10) = 26.67, above the $25 floor.
     expect(added).toMatchObject({ group: 'creditCard', name: 'Visa', apr: 0.2, balance: { value: 1000, isEstimate: false }, history: [{ month: '2026-11', balance: 1000 }] });
-    expect(added.minPayment!.value).toBeCloseTo(cardMinPaymentFor(1000, 0.2), 10);
-    expect(added.minPayment!.value).toBeCloseTo(26.6667, 3);
-    expect(added.minPayment!.isEstimate).toBe(true);
+    // The store does not keep a minimum we filled in: the engine gives the same default each time (an estimate that follows the balance).
+    expect(added.minPayment).toBeUndefined();
+    // 1000 at 20% a year: interest 1000 * 0.2 / 12 = 16.67 plus 1% of the balance (10) = 26.67, above the $25 floor.
+    const { minPayment } = liabilityEstimates('creditCard', 1000, { apr: 0.2 });
+    expect(minPayment.value).toBeCloseTo(cardMinPaymentFor(1000, 0.2), 10);
+    expect(minPayment.value).toBeCloseTo(26.6667, 3);
+    expect(minPayment.isEstimate).toBe(true);
   });
 
   it('goes back and closes', () => {
@@ -143,8 +153,8 @@ describe('useAddAccount', () => {
     expect(result.current.fields.map((f) => f.id)).toEqual(['name', 'balance', 'debtKind', 'apr', 'minPayment']);
     act(() => result.current.back());
     expect(result.current.step).toBe('pick-type');
-    act(() => useAccountsStore.getState().setAdding(true));
+    act(() => useAccountsUiStore.getState().setAdding(true));
     act(() => result.current.close());
-    expect(useAccountsStore.getState().adding).toBe(false);
+    expect(useAccountsUiStore.getState().adding).toBe(false);
   });
 });

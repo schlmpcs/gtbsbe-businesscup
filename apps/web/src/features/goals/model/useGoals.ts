@@ -1,27 +1,29 @@
-// View-model of the Goals screen, "Save up" side (MP11, #171). Fixture-backed: goals in ./goalsStore.ts,
-// the status and the monthly saving from the engine's `goalStatus` and `extraSavingToReach` on the demo
-// profile. The lines counted toward a goal are the ledger's (`LedgerTransaction.goalId`).
-// MP11b: the real goals store, and the person's profile (accountsToProfile) instead of the demo one.
+// View-model of the Goals screen, "Save up" side (MP11, #171). Goals are the person's own, kept in this
+// browser (./goalsStore.ts); the status and the monthly saving are the engine's `goalStatus` and
+// `extraSavingToReach` on the person's profile (kept in line with their accounts). The lines counted
+// toward a goal are the ledger's (a line made with a goal, or one allocated later: ../../transactions/model/goalLinks.ts).
 import { useCallback, useMemo, useState } from 'react';
 import { extraSavingToReach, goalStatus } from '@lifeguessr/engine';
 import { GoalSchema } from '@lifeguessr/types';
-import { profileDemo } from '@/fixtures';
+import type { Profile } from '@lifeguessr/types';
+import { useAccountsReady, useAccountsStore } from '@/lib/model/accounts';
 import { runEngine } from '@/lib/model/errors';
 import type { Loadable } from '@/lib/model/types';
-import { useAccountsStore } from '@/features/accounts/model/accountsStore';
-import { newestFirst } from '@/features/transactions/model/ledger';
-import { toRow } from '@/features/transactions/model/rows';
-import { useTransactionsStore } from '@/features/transactions/model/transactionsStore';
+import { useProfile } from '@/state/profile';
+import { usePersistedReady } from '@/features/dashboard/model/persisted';
+import { useGoalLinks } from '@/features/transactions/model/goalLinks';
+import { newestFirst, toRow } from '@/features/transactions/model/rows';
+import { ledger, useLedger } from '@/features/transactions/model/transactionsStore';
 import { useGoalsStore, type StoredGoal } from './goalsStore';
 import type { GoalProjectionVM, GoalsVM, NewGoalInput, SaveUpGoalStatus } from './types';
 
 const NAME_MAX = 60;
 
-function project(goal: StoredGoal): Loadable<GoalProjectionVM> {
+function project(goal: StoredGoal, profile: Profile): Loadable<GoalProjectionVM> {
   return runEngine(() => {
     const target = { target: goal.target, years: goal.years };
-    const status = goalStatus(profileDemo, target);
-    const saving = extraSavingToReach(profileDemo, target);
+    const status = goalStatus(profile, target);
+    const saving = extraSavingToReach(profile, target);
     return {
       verdict: status.verdict,
       projected: status.projected,
@@ -35,17 +37,22 @@ function project(goal: StoredGoal): Loadable<GoalProjectionVM> {
 
 export function useGoals(): GoalsVM {
   const goals = useGoalsStore((s) => s.goals);
-  const transactions = useTransactionsStore((s) => s.transactions);
+  const goalsReady = usePersistedReady(useGoalsStore);
+  const goalLinks = useGoalLinks((s) => s.links);
+  const linksReady = usePersistedReady(useGoalLinks);
+  const { lines, ready: ledgerReady } = useLedger();
+  const accountsReady = useAccountsReady();
   const accounts = useAccountsStore((s) => s.accounts);
+  const profile = useProfile();
   const [inputError, setInputError] = useState(false);
 
   const goalVMs = useMemo(
     () =>
       goals.map((g) => {
-        const counted = transactions.filter((t) => t.goalId === g.id);
+        const counted = lines.filter((t) => (t.goalId ?? goalLinks[t.id]) === g.id);
         const saved = counted.reduce((sum, t) => sum + Math.abs(t.amount), 0);
         const completed = saved >= g.target;
-        const projection: GoalsVM['goals'][number]['projection'] = completed ? { status: 'ready', data: null } : project(g);
+        const projection: GoalsVM['goals'][number]['projection'] = completed ? { status: 'ready', data: null } : project(g, profile);
         const status: SaveUpGoalStatus | null = completed
           ? 'completed'
           : projection.status === 'ready' && projection.data !== null
@@ -60,10 +67,10 @@ export function useGoals(): GoalsVM {
           savedShare: saved / g.target,
           status,
           projection,
-          transactions: counted.sort(newestFirst).map((t) => toRow(t, accounts)),
+          transactions: counted.sort(newestFirst).map((t) => toRow(t, accounts, goalLinks)),
         };
       }),
-    [goals, transactions, accounts],
+    [goals, lines, goalLinks, accounts, profile],
   );
 
   const addGoal = useCallback((input: NewGoalInput): string | null => {
@@ -79,16 +86,16 @@ export function useGoals(): GoalsVM {
 
   const allocate = useCallback((goalId: string, transactionId: string): boolean => {
     const known = useGoalsStore.getState().goals.some((g) => g.id === goalId);
-    const line = useTransactionsStore.getState().transactions.some((t) => t.id === transactionId);
+    const line = ledger().list().some((t) => t.id === transactionId);
     if (!known || !line) return false;
-    useTransactionsStore.getState().setGoal(transactionId, goalId);
+    useGoalLinks.getState().link(transactionId, goalId);
     return true;
   }, []);
 
   const remove = useCallback((goalId: string) => {
     useGoalsStore.getState().removeGoal(goalId);
-    useTransactionsStore.getState().clearGoal(goalId);
+    useGoalLinks.getState().unlinkGoal(goalId);
   }, []);
 
-  return { ready: true, goals: goalVMs, inputError, addGoal, allocate, remove };
+  return { ready: goalsReady && linksReady && ledgerReady && accountsReady, goals: goalVMs, inputError, addGoal, allocate, remove };
 }

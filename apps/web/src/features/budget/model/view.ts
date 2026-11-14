@@ -1,5 +1,6 @@
-// Pure view shaping of the budget table: bars and groups. No new money math beyond ratios and group sums.
-import type { BudgetIncomeRow, BudgetRow, BudgetTable, BudgetTotals } from '@lifeguessr/types';
+// Pure view shaping of the budget table: bars and groups. The numbers are the engine's; this adds the
+// bar ratios and the group sums the engine does not give.
+import type { BudgetIncomeRow, BudgetRow, BudgetTable, BudgetTotals, Money } from '@lifeguessr/types';
 import { BUDGET_GROUPS } from './groups';
 import type { BudgetGroupVM, BudgetIncomeRowVM, BudgetRowVM } from './types';
 
@@ -7,7 +8,15 @@ import type { BudgetGroupVM, BudgetIncomeRowVM, BudgetRowVM } from './types';
 export const progressOf = (planned: number, actual: number): number => (planned > 0 ? actual / planned : actual > 0 ? 1 : 0);
 
 export const toRowVM = (row: BudgetRow, todayMarker: number): BudgetRowVM => ({ ...row, progress: progressOf(row.planned, row.actual), todayMarker });
-export const toIncomeVM = (row: BudgetIncomeRow, todayMarker: number): BudgetIncomeRowVM => ({ ...row, progress: progressOf(row.planned, row.actual), todayMarker });
+
+/**
+ * The income line. The engine has no planned income (its line is planned = actual = the detected pay),
+ * so the planned take-home pay, for `months` months, replaces `planned` and `remaining` follows it.
+ */
+export function toIncomeVM(row: BudgetIncomeRow, incomePlanned: Money, months: number, todayMarker: number): BudgetIncomeRowVM {
+  const planned = incomePlanned * months;
+  return { ...row, planned, remaining: planned - row.actual, progress: progressOf(planned, row.actual), todayMarker };
+}
 
 export function sumRows(rows: readonly BudgetRow[]): BudgetTotals {
   const sum = (key: keyof BudgetTotals) => rows.reduce((total, r) => total + r[key], 0);

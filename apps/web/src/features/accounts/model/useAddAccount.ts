@@ -1,20 +1,20 @@
-// View-model of the add-account flow (MP11, #171): pick a type, then fill the form. Fixture-backed:
-// the new account goes to the in-memory store (./accountsStore.ts). MP11b: the real accounts store (MP8).
+// View-model of the add-account flow (MP11, #171): pick a type, then fill the form. The account goes to
+// the Accounts store (MP8, lib/model/accounts.ts), which makes its id and its first history point.
 import { useCallback, useMemo, useState } from 'react';
 import { ACCOUNT_GROUPS, type AccountGroup } from '@lifeguessr/types';
-import { usEasternDate } from '@/lib/dates';
-import { useAccountsStore } from './accountsStore';
-import { buildAccount, emptyForm, toFields, type FormState } from './addForm';
+import { useAccountsStore } from '@/lib/model/accounts';
+import { useAccountsUiStore } from './accountsStore';
+import { buildForm, emptyForm, toFields, type FormState } from './addForm';
 import { kindOf } from './series';
 import type { AddAccountFieldId, AddAccountVM } from './types';
 
 const GROUPS = ACCOUNT_GROUPS.map((group) => ({ group, kind: kindOf(group) }));
 
-export function useAddAccount({ today }: { today?: string } = {}): AddAccountVM {
+/** `today` is accepted for symmetry with the other hooks; the store dates the first balance by the clock. */
+export function useAddAccount(_options: { today?: string } = {}): AddAccountVM {
   const [group, setGroup] = useState<AccountGroup | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [showErrors, setShowErrors] = useState(false);
-  const month = (today ?? usEasternDate()).slice(0, 7);
 
   const fields = useMemo(() => (group === null ? [] : toFields(group, form, showErrors)), [group, form, showErrors]);
 
@@ -30,23 +30,25 @@ export function useAddAccount({ today }: { today?: string } = {}): AddAccountVM 
     setShowErrors(false);
   }, []);
   const setField = useCallback((id: AddAccountFieldId, value: string) => setForm((f) => ({ ...f, values: { ...f.values, [id]: value } })), []);
+  // The store keeps a typed balance and minimum as measured: the "not sure" tag is not stored (MP11b blocked).
   const setEstimate = useCallback((id: AddAccountFieldId, isEstimate: boolean) => setForm((f) => ({ ...f, estimates: { ...f.estimates, [id]: isEstimate } })), []);
 
   const submit = useCallback((): string | null => {
     if (group === null) return null;
-    const account = buildAccount(group, form, month);
-    if (account === null) {
+    const built = buildForm(group, form);
+    const id = built === null ? null : useAccountsStore.getState().addAccount(built.form);
+    if (built === null || id === null) {
       setShowErrors(true);
       return null;
     }
-    const id = useAccountsStore.getState().addAccount(account);
-    useAccountsStore.getState().setAdding(false);
+    if (built.growth !== null) useAccountsStore.getState().updateAccount(id, { growth: built.growth });
+    useAccountsUiStore.getState().setAdding(false);
     reset();
     return id;
-  }, [group, form, month, reset]);
+  }, [group, form, reset]);
 
   const close = useCallback(() => {
-    useAccountsStore.getState().setAdding(false);
+    useAccountsUiStore.getState().setAdding(false);
     reset();
   }, [reset]);
 

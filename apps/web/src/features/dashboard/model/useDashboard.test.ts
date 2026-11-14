@@ -1,18 +1,33 @@
 // @vitest-environment jsdom
 // The Dashboard on the fixtures (accounts.demo.json, transactions.demo.json, profile.demo.json). No network.
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { monteCarloDemo } from '@/fixtures';
-import { useAccountsStore } from '@/features/accounts/model/accountsStore';
+import { useAccountsStore } from '@/lib/model/accounts';
+import { useAppStore } from '@/state/store';
+import { usePlanStore } from '@/features/plan/model/planStore';
+import { ledger } from '@/features/transactions/model/transactionsStore';
 import { useBudgetStore } from '@/features/budget/model/budgetStore';
 import { useDashboardStore } from './dashboardStore';
-import { resetFixtureStores } from './resetFixtureStores';
+import { FIXTURE_NOW, resetFixtureStores } from './resetFixtureStores';
 import { useDashboard } from './useDashboard';
 
 const TODAY = '2026-11-15';
 const NOW = new Date(2026, 10, 15, 9, 0); // local time: 09:00
+const addPlanEvent = () => {
+  const { activeId } = usePlanStore.getState();
+  usePlanStore.getState().edit(activeId, (s) => ({ ...s, events: [{ id: 'ev-1', type: 'windfall', year: 2027, enabled: true, amount: 5000 }] }));
+};
+const removePlanEvents = () => {
+  for (const s of usePlanStore.getState().scenarios) usePlanStore.getState().edit(s.id, (x) => ({ ...x, events: [] }));
+};
 const dash = () => renderHook(() => useDashboard({ today: TODAY, now: NOW }));
-beforeEach(resetFixtureStores);
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(FIXTURE_NOW);
+  await resetFixtureStores();
+});
+afterEach(() => vi.useRealTimers());
 
 describe('useDashboard', () => {
   it('renders every card from the fixtures', () => {
@@ -56,20 +71,45 @@ describe('useDashboard', () => {
     expect(result.current.checklist).toMatchObject({ done: 3, total: 5, visible: true });
     expect(result.current.checklist.items.map((i) => i.labelKey)).toEqual(['playedDuel', 'guessedOwnMonth', 'addedAccounts', 'importedCsv', 'createdPlanEvent']);
 
-    act(() => useDashboardStore.getState().update({ guessedOwnMonth: true }));
+    act(() => useAppStore.getState().setSelfGuess(3500)); // the own-month guess lives in the app store
     expect(result.current.checklist.done).toBe(4);
     act(() => useAccountsStore.setState({ accounts: [] }));
     expect(state().accounts).toBe(false);
     expect(result.current.netWorth).toMatchObject({ value: 0, hasAccounts: false, sparkline: [] });
-    act(() => useAccountsStore.getState().addAccount({ group: 'cash', name: 'Cash', balance: { value: 10, isEstimate: false }, history: [] }));
+    act(() => void useAccountsStore.getState().addAccount({ group: 'cash', name: 'Cash', balance: 10 }));
     expect(state().accounts).toBe(true);
-    act(() => useDashboardStore.getState().update({ createdPlanEvent: true }));
+    act(() => addPlanEvent());
     expect(result.current.checklist).toMatchObject({ done: 5, total: 5, visible: false }); // all done: the card goes away
 
-    act(() => useDashboardStore.getState().update({ createdPlanEvent: false }));
+    act(() => removePlanEvents());
     expect(result.current.checklist.visible).toBe(true);
     act(() => result.current.dismissChecklist());
     expect(result.current.checklist).toMatchObject({ dismissed: true, visible: false });
+  });
+
+  it('turns the accounts and ledger items done and undone as the stores change', async () => {
+    const { result } = dash();
+    const state = () => Object.fromEntries(result.current.checklist.items.map((i) => [i.id, i.done]));
+    expect(state()).toMatchObject({ accounts: true, csv: true });
+
+    // Accounts: removing every one through the store's own action empties the item; adding one fills it.
+    act(() => {
+      for (const a of useAccountsStore.getState().accounts) useAccountsStore.getState().removeAccount(a.id);
+    });
+    expect(state().accounts).toBe(false);
+    act(() => void useAccountsStore.getState().addAccount({ group: 'cash', name: 'Savings', balance: 250 }));
+    expect(state().accounts).toBe(true);
+    expect(result.current.netWorth).toMatchObject({ value: 250, hasAccounts: true });
+
+    // Ledger: an empty store is "not imported"; one saved line is.
+    await act(async () => ledger().clear());
+    expect(state().csv).toBe(false);
+    expect(result.current.recentTransactions).toEqual([]);
+    await act(async () => {
+      await ledger().addManual({ direction: 'debit', amount: 12, merchant: 'Coffee', date: '2026-11-14', cls: 'eatingOut' });
+    });
+    expect(state().csv).toBe(true);
+    expect(result.current.recentTransactions).toMatchObject([{ label: 'Coffee', amount: -12 }]);
   });
 
   it('shows "Run" until a Chance run exists', () => {

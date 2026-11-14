@@ -1,12 +1,26 @@
 // @vitest-environment jsdom
 // Goals (Save up) on the fixtures; the engine's goalStatus / extraSavingToReach run on the demo profile.
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
-import { useTransactionsStore } from '@/features/transactions/model/transactionsStore';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FIXTURE_NOW, resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
+import { useGoalLinks } from '@/features/transactions/model/goalLinks';
+import { useGoalsStore } from './goalsStore';
 import { useGoals } from './useGoals';
 
-beforeEach(resetFixtureStores);
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(FIXTURE_NOW);
+  await resetFixtureStores();
+  // Two goals a person might have typed (the store starts empty).
+  useGoalsStore.setState({
+    goals: [
+      { id: 'goal-1', name: 'Emergency fund', target: 15_000, years: 3 },
+      { id: 'goal-2', name: 'House deposit', target: 60_000, years: 10 },
+    ],
+    nextId: 3,
+  });
+});
+afterEach(() => vi.useRealTimers());
 
 describe('useGoals', () => {
   it('renders the demo goals with an engine status and a monthly saving', () => {
@@ -52,6 +66,6 @@ describe('useGoals', () => {
 
     act(() => result.current.remove(id!));
     expect(result.current.goals.map((g) => g.id)).toEqual(['goal-1', 'goal-2']);
-    expect(useTransactionsStore.getState().transactions.find((t) => t.id === 'tx-005')!.goalId).toBeUndefined();
+    expect(useGoalLinks.getState().links['tx-005']).toBeUndefined();
   });
 });

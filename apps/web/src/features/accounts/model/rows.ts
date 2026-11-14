@@ -1,12 +1,22 @@
 // Pure parts of the Accounts view-models: rows, groups, summary bars and the CSV text.
-import type { Account, AccountGroup, Money, NetWorthSummary, YearMonth } from '@lifeguessr/types';
+import { netWorthSummary } from '@lifeguessr/engine';
+import type { Account, AccountGroup, Money, NetWorthSummary } from '@lifeguessr/types';
 import { csvLine } from '@/features/transactions/model/rows';
-import { accountChange, counted, GROUP_ORDER, isLiabilityGroup, kindOf } from './series';
+import { counted, GROUP_ORDER, isLiabilityGroup, kindOf } from './series';
 import type { AccountGroupVM, AccountRowVM, SummaryBarVM } from './types';
 
 export const ACCOUNTS_CSV_FILE = 'lifeguessr-accounts.csv';
 
-export function toAccountRow(a: Account, month: YearMonth): AccountRowVM {
+/**
+ * The change in `accounts`' balances over the last month, by the engine's `netWorthSummary` (net worth
+ * moves the other way for a liability, so a liability group's change is turned back into a balance change).
+ */
+function balanceChange(accounts: readonly Account[], kind: 'asset' | 'liability'): Money | null {
+  const change = netWorthSummary(accounts).change1m;
+  return change !== null && kind === 'liability' ? 0 - change : change;
+}
+
+export function toAccountRow(a: Account): AccountRowVM {
   return {
     id: a.id,
     name: a.name,
@@ -15,25 +25,27 @@ export function toAccountRow(a: Account, month: YearMonth): AccountRowVM {
     balance: a.balance.value,
     isEstimate: a.balance.isEstimate,
     excluded: a.excluded === true,
-    change1m: accountChange(a, month),
+    change1m: balanceChange([a], kindOf(a.group)),
     href: `/accounts/${a.id}`,
   };
 }
 
 /** Groups in display order (assets, then liabilities); a group with no account is left out. */
-export function toGroups(accounts: readonly Account[], month: YearMonth): AccountGroupVM[] {
+export function toGroups(accounts: readonly Account[]): AccountGroupVM[] {
   return GROUP_ORDER.flatMap((group): AccountGroupVM[] => {
     const inGroup = accounts.filter((a) => a.group === group);
     if (inGroup.length === 0) return [];
     const live = counted(inGroup);
-    const changes = live.map((a) => accountChange(a, month)).filter((c): c is Money => c !== null);
+    const kind = kindOf(group);
+    const summary = netWorthSummary(live);
+    const sums = (kind === 'asset' ? summary.assets.byGroup : summary.liabilities.byGroup) as Partial<Record<AccountGroup, Money>>;
     return [
       {
         group,
-        kind: kindOf(group),
-        total: live.reduce((sum, a) => sum + a.balance.value, 0),
-        change1m: changes.length === 0 ? null : changes.reduce((sum, c) => sum + c, 0),
-        accounts: inGroup.map((a) => toAccountRow(a, month)),
+        kind,
+        total: sums[group] ?? 0,
+        change1m: balanceChange(live, kind),
+        accounts: inGroup.map(toAccountRow),
       },
     ];
   });

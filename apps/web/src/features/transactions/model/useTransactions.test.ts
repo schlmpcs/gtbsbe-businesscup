@@ -1,13 +1,31 @@
 // @vitest-environment jsdom
-// Transactions on the fixture ledger (transactions.demo.json, 170 lines, 2026-07-01 to 2026-11-12). No network.
-import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
-import { useTransactionsStore } from './transactionsStore';
-import { useTransactions } from './useTransactions';
+// Transactions on the fixture ledger (transactions.demo.json, 170 lines, 2026-07-01 to 2026-11-12),
+// held by the real Transactions store on a memory record store. No network: the categorizer is faked.
+import { transactionsDemo } from '@lifeguessr/data/fixtures/plan';
+import type { StatementItem } from '@lifeguessr/types';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FIXTURE_NOW, resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
+import { ledger } from './transactionsStore';
+import { useTransactions, type CsvImporter } from './useTransactions';
 
-beforeEach(resetFixtureStores);
-const file = () => new File(['date,amount\n'], 'statement.csv', { type: 'text/csv' });
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(FIXTURE_NOW);
+  await resetFixtureStores();
+});
+afterEach(() => vi.useRealTimers());
+/** The demo ledger as a bank CSV (Date, Description, Amount; money out negative, as in the ledger). */
+const csv = () => ['Date,Description,Amount', ...transactionsDemo.map((t) => `${t.date},"${t.label.replaceAll('"', '""')}",${t.amount.toFixed(2)}`)].join('\n');
+const file = () => new File([csv()], 'statement.csv', { type: 'text/csv' });
+
+/** A categorizer stand-in: one class per line sent, in order, as the real route answers. No model, no network. */
+const fakeCategorize = async (items: readonly StatementItem[]) => ({
+  months: [],
+  categorizedBy: 'rules' as const,
+  lines: items.map((i) => ({ cls: i.amount < 0 ? ('pay' as const) : ('other' as const), oneOffHint: false })),
+});
+const importer: CsvImporter = (f) => ledger().importFile(f, { categorize: fakeCategorize as never, remember: false });
 
 describe('useTransactions', () => {
   it('renders the first page, newest first, with the summary of all lines', () => {
@@ -46,33 +64,34 @@ describe('useTransactions', () => {
     expect(result.current.total).toBe(0);
   });
 
-  it('changes a category for one line or every line of the merchant', () => {
+  it('changes a category for one line or every line of the merchant', async () => {
     const { result } = renderHook(() => useTransactions());
     act(() => result.current.search('planet fitness'));
     const [first] = result.current.rows;
-    act(() => result.current.setCategory(first!.id, 'other', false));
-    expect(result.current.rows.filter((r) => r.category === 'other')).toHaveLength(1);
+    await act(async () => result.current.setCategory(first!.id, 'other', false));
+    await waitFor(() => expect(result.current.rows.filter((r) => r.category === 'other')).toHaveLength(1)); // the store saves the change a moment later
     expect(result.current.rows.find((r) => r.id === first!.id)).toMatchObject({ category: 'other', categoryOverridden: true });
-    act(() => result.current.setCategory(first!.id, 'other', true));
-    expect(result.current.rows.every((r) => r.category === 'other' && r.categoryOverridden)).toBe(true);
+    await act(async () => result.current.setCategory(first!.id, 'other', true));
+    await waitFor(() => expect(result.current.rows.every((r) => r.category === 'other' && r.categoryOverridden)).toBe(true));
   });
 
-  it('adds a line and refuses an invalid one', () => {
+  it('adds a line and refuses an invalid one', async () => {
     const { result } = renderHook(() => useTransactions());
     let id: string | null = null;
-    act(() => {
+    await act(async () => {
       id = result.current.add({ date: '2026-11-14', label: 'Coffee', amount: -4.5, category: 'eatingOut' });
     });
-    expect(id).toBe('tx-new-1');
-    expect(result.current.total).toBe(171);
+    expect(id).toEqual(expect.any(String)); // a request id: the store makes the line's own id
+    await waitFor(() => expect(result.current.total).toBe(171));
+    expect(result.current.rows[0]).toMatchObject({ label: 'Coffee', amount: -4.5, tone: 'spending' });
     expect(result.current.add({ date: '2026-11-14', label: 'Coffee', amount: 0, category: 'eatingOut' })).toBeNull();
     expect(result.current.add({ date: 'yesterday', label: 'Coffee', amount: -1, category: 'eatingOut' })).toBeNull();
     expect(result.current.add({ date: '2026-11-14', label: '  ', amount: -1, category: 'eatingOut' })).toBeNull();
   });
 
   it('imports a file with progress, and skips lines it already has', async () => {
-    useTransactionsStore.setState({ transactions: [] });
-    const { result } = renderHook(() => useTransactions());
+    await ledger().clear();
+    const { result } = renderHook(() => useTransactions({ importer }));
     expect(result.current.total).toBe(0);
     await act(async () => result.current.importCsv(file()));
     expect(result.current.importState).toEqual({ status: 'done', added: 170, skipped: 0 });
