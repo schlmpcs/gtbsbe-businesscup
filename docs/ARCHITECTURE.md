@@ -175,6 +175,13 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
   payoffMonth: number | null;    // null = the payment never covers the interest
   debtLoadBefore: Rate; debtLoadAfter: Rate; effect10y: Money;
   schedule: { month: number; interest: Money; principal: Money; balance: Money }[] };
+  // debtLoad = required debt payments / take-home pay; Infinity when there are payments but no pay.
+
+// POST /api/ai/explain. JSON has no Infinity: a debt load with no take-home pay is sent as null.
+export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
+  debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
+export type ExplainRequest = { move?: Move; loanResult?: ExplainLoanResult };
+export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence
   recurring: false | 'monthly' | 'yearly';
@@ -189,7 +196,8 @@ export type Transaction = { date: string; description: string; amount: Money };
 // The only statement data that leaves the browser. month = 'YYYY-MM'; label has names masked.
 export type StatementItem = { label: string; amount: Money; month: string; day: number };
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
-  oneOffs: { label: string; amount: Money }[]; detectedPay?: Money };
+  oneOffs: { label: string; amount: Money }[]; detectedPay?: Money;
+  lastDay?: number };            // day of the month's latest statement line (how far the statement goes)
 
 // POST /api/session (T4). revision counts saves (0 = nothing saved); updatedAt is ISO 8601 UTC.
 export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
@@ -231,7 +239,7 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `POST /api/events` | Aibek | `{ anonId, events: [{ id, name, props? }] }` (1–25) → `{ ok: true, accepted }`. Names from `CLIENT_EVENT_NAMES`; props are small enums and counts only (`EventsRequestSchema`), so no personal data; `id` = the browser's UUID per event, so a resent batch is stored once. The browser batches them (`src/lib/events.ts`, on with `NEXT_PUBLIC_EVENTS_SOURCE=api`, off under GPC / Do Not Track); the Pro routes record `checkout_started`, `pro_purchased` and `pro_promo_redeemed` themselves. 503 when the store is down. |
 | `GET /api/events/funnel` | Aibek | query `days` (1–90, default 7) → `FunnelReport`: distinct anonymous ids per event and per `FUNNEL_STEPS` step (with how many went through every earlier step, and the conversion), plus clues per home, blind-guess, finish and share rates. Aggregates only. |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
-| `POST /api/ai/explain` | Amir | `{ move? , loanResult? }` → `{ text }` (2 sentences, no new numbers) |
+| `POST /api/ai/explain` | Amir | `ExplainRequest { move?, loanResult? }` → `{ text, source }` (2 sentences, no new numbers; a debt load with no take-home pay is `null`) |
 | `GET /api/pro/status` | Amir | header `x-anon-id` → `{ status: ProStatus, checkoutAvailable, demo: { enabled, code? } }` |
 | `POST /api/pro/checkout` | Amir | `{ plan }` → `{ url }`, a Stripe Checkout Session in test mode to redirect to |
 | `POST /api/pro/confirm` | Amir | `{ sessionId }` → `{ status }`; the server retrieves the session from Stripe and checks it is test-mode, complete, paid and this anonymous ID's |

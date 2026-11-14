@@ -42,10 +42,20 @@ export type MonthEndVM = {
   /** Projection − 3-month average; null until ≥ 3 months of statements. */
   vsAverage: Money | null;
   drifts: { category: CostCategory; delta: Money }[];
-  /** Uploaded statement months available. */
+  /** Uploaded statement months before this one (the history the 3-month average needs). */
   historyMonths: number;
+  /**
+   * Why there is no comparison with the 3-month average (vsAverage is null), or null when there is:
+   * 'history' = fewer than 3 statement months before this one; 'thisMonth' = the history is there,
+   * but no uploaded statement has lines for this month yet.
+   */
+  noAverage: 'history' | 'thisMonth' | null;
   /** False = no current-month statement data: the card shows the profile's implied spend only. */
   fromStatement: boolean;
+  /** This calendar month, 'YYYY-MM'. */
+  month: string;
+  /** Day of this month the projection runs to (the statement's latest line); null without one. */
+  asOfDay: number | null;
   takeHome: EstimatedMoney;
 };
 

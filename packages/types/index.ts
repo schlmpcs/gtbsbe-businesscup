@@ -93,6 +93,15 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
   payoffMonth: number | null;    // null = the payment never covers the interest
   debtLoadBefore: Rate; debtLoadAfter: Rate; effect10y: Money;
   schedule: { month: number; interest: Money; principal: Money; balance: Money }[] };
+  // debtLoad = required debt payments / take-home pay; Infinity when there are payments but no pay.
+
+// POST /api/ai/explain (at least one of the two). The loan result travels without its schedule,
+// and with a debt load JSON can carry: JSON has no Infinity, so a debt load with no take-home pay
+// to measure it against (the engine's Infinity) is sent as null and said in words, never as a number.
+export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
+  debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
+export type ExplainRequest = { move?: Move; loanResult?: ExplainLoanResult };
+export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence
   recurring: false | 'monthly' | 'yearly';
@@ -107,8 +116,12 @@ export type Transaction = { date: string; description: string; amount: Money };
 // The only statement data that leaves the browser. month = 'YYYY-MM'; label has names masked.
 export type StatementItem = { label: string; amount: Money; month: string; day: number };
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
-  oneOffs: { label: string; amount: Money }[]; detectedPay?: Money };
+  oneOffs: { label: string; amount: Money }[]; detectedPay?: Money;
+  lastDay?: number };
 // `totals` exclude `oneOffs`; `detectedPay` = take-home pay deposits that month (money in).
+// `lastDay` = day of month of the latest statement line in that month (any line: spending, pay or
+// a transfer), i.e. how far into the month the statement goes. Month-end projects the month in
+// progress from it. Absent on data saved before it existed: the app then falls back to today.
 
 // How the server sorted one statement line (labels only; every sum is done in code). A CostCategory
 // is spending in that category when money goes out, or a refund from that kind of merchant when it

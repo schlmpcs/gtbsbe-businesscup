@@ -76,7 +76,8 @@ describe('TodayScreen (S1)', () => {
         status: 'ready' as const,
         data: {
           projectedSpend: 3900, vsAverage: 240, drifts: [{ category: 'eatingOut' as const, delta: 120 }],
-          historyMonths: 3, fromStatement: true, takeHome: { value: 5200, isEstimate: false },
+          historyMonths: 3, noAverage: null, fromStatement: true, month: '2026-11', asOfDay: 12,
+          takeHome: { value: 5200, isEstimate: false },
         },
       },
       in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, committedMove: null,
@@ -87,7 +88,7 @@ describe('TodayScreen (S1)', () => {
     const drifts = screen.getByTestId('month-end-drifts');
     expect(within(drifts).getByText(t.today.monthEnd.vsAverageValue('+$240'))).toBeInTheDocument();
     expect(within(drifts).getByText(t.today.monthEnd.drift(common.categories.eatingOut, '+$120'))).toBeInTheDocument();
-    expect(screen.getByText(t.today.monthEnd.fromStatement)).toBeInTheDocument();
+    expect(screen.getByText(t.today.monthEnd.fromStatement('November 12'))).toBeInTheDocument();
   });
 
   it('marks the committed move done from Today', async () => {
@@ -110,6 +111,30 @@ describe('TodayScreen with statement history', () => {
     useAppStore.getState().applyStatementTotals([{ month: '2026-10', totals: totals({ groceries: 500 }), oneOffs: [] }]);
     render(<Today />);
     await waitFor(() => expect(screen.getByText(t.today.monthEnd.needHistory(1))).toBeInTheDocument());
+  });
+
+  it('with 3 past months but nothing yet this month, says so instead of asking for more months', async () => {
+    useAppStore.getState().applyStatementTotals([
+      { month: '2026-08', totals: totals({ groceries: 500 }), oneOffs: [] },
+      { month: '2026-09', totals: totals({ groceries: 500 }), oneOffs: [] },
+      { month: '2026-10', totals: totals({ groceries: 500 }), oneOffs: [] },
+    ]);
+    render(<Today />);
+    const card = await screen.findByTestId('month-end');
+    await waitFor(() => expect(within(card).getByTestId('month-end-no-current')).toBeInTheDocument());
+    expect(within(card).queryByTestId('month-end-no-history')).not.toBeInTheDocument();
+    expect(within(card).queryByText(t.today.monthEnd.needHistory(3))).not.toBeInTheDocument();
+    expect(within(card).getByText(t.today.monthEnd.noRowsThisMonth('November'))).toBeInTheDocument();
+    expect(within(card).getByText(t.today.monthEnd.needThisMonth('November'))).toBeInTheDocument();
+    expect(within(card).queryByTestId('month-end-drifts')).not.toBeInTheDocument();
+  });
+
+  it('says how far into the month the statement goes', async () => {
+    useAppStore.getState().applyStatementTotals([
+      { month: '2026-11', totals: totals({ groceries: 200 }), oneOffs: [], lastDay: 9 },
+    ]);
+    render(<Today />);
+    await waitFor(() => expect(screen.getByText(t.today.monthEnd.fromStatement('November 9'))).toBeInTheDocument());
   });
 });
 

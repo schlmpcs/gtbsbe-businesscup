@@ -7,7 +7,7 @@ import {
   AnonIdSchema, SessionRequestSchema, SessionResponseSchema, type SessionStateSchema,
   StatementCategorizeRequestSchema, StatementCategorizeResponseSchema,
   type StatementCategorizeRequest, type StatementCategorizeResponse, type StatementClass,
-  type AreaDataSchema, type CategoryTotalsSchema, type LifeCardSchema, LoanInputSchema, ProfilePatchSchema,
+  type AreaDataSchema, CategoryTotalsSchema, type LifeCardSchema, LoanInputSchema, ProfilePatchSchema,
   ProConfirmRequestSchema, ProDemoUnlockRequestSchema, ProErrorResponseSchema, type ProStatusSchema,
   ProStatusResponseSchema, ProfileSchema, PurchaseSchema, StatementItemSchema,
   type AreaData, type CategoryTotals, type ClueId, type CostCategory, type Debt, type KidAge,
@@ -154,6 +154,17 @@ describe('schemas reject the mistakes they exist for', () => {
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-10', day: 3 }).success).toBe(true);
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-13', day: 3 }).success).toBe(false);
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-10', day: 32 }).success).toBe(false);
+  });
+
+  it('checks a month’s lastDay against the length of that month', () => {
+    const m = { month: '2026-11', totals: Object.fromEntries(COST_CATEGORIES.map((c) => [c, 0])), oneOffs: [] };
+    expect(CategoryTotalsSchema.safeParse(m).success).toBe(true); // optional: older saved data has none
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 30 }).success).toBe(true);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 31 }).success).toBe(false); // November has 30 days
+    expect(CategoryTotalsSchema.safeParse({ ...m, month: '2028-02', lastDay: 29 }).success).toBe(true); // leap year
+    expect(CategoryTotalsSchema.safeParse({ ...m, month: '2026-02', lastDay: 29 }).success).toBe(false);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 0 }).success).toBe(false);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 2.5 }).success).toBe(false);
   });
 
   it('accepts purchases paid with cash, card or a loan', () => {

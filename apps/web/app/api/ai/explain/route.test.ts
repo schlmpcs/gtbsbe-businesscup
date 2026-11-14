@@ -1,8 +1,10 @@
-import { MOVE_KINDS, type LoanResult, type Move } from '@lifeguessr/types';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MOVE_KINDS, type ExplainRequest, type LoanResult, type Move } from '@lifeguessr/types';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
+import type { z } from 'zod';
 import { explanationIssues, templateExplanation } from '@/server/ai/explain';
 import { aiRateLimiter } from '@/server/ai/http';
 import { allowedForms } from '@/server/ai/numbers';
+import type { ExplainRequestSchema } from '@/server/ai/schemas';
 import { postRequest, reply } from '@/server/ai/testUtils';
 import { POST } from './route';
 
@@ -47,6 +49,11 @@ afterEach(() => {
 });
 
 describe('POST /api/ai/explain', () => {
+  it('validates the shared ExplainRequest contract (checked by typecheck)', () => {
+    expectTypeOf<ExplainRequest>().toExtend<z.input<typeof ExplainRequestSchema>>();
+    expectTypeOf<z.infer<typeof ExplainRequestSchema>>().toExtend<ExplainRequest>();
+  });
+
   it('returns the model sentence when it passes every guard', async () => {
     create.mockResolvedValueOnce(reply(GOOD));
     const res = await post({ move });
@@ -98,6 +105,36 @@ describe('POST /api/ai/explain', () => {
     expect(create.mock.calls[0][0].messages[0].content).not.toContain('27,607');
   });
 
+  it('explains a loan for a profile with no take-home pay: the debt load is said in words, not as a number', async () => {
+    const noPay = { ...loanResult, debtLoadBefore: 0, debtLoadAfter: null };
+    const text = 'This loan costs $553 a month and is paid off in 5 years. With no take-home pay in your profile, the payment has no income to come out of.';
+    create.mockResolvedValueOnce(reply(text));
+    const res = await post({ loanResult: noPay });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ text, source: 'ai' });
+    const content = create.mock.calls[0][0].messages[0].content as string;
+    expect(content).toContain('Take-home pay: none');
+    expect(content).toContain('0% before, not measurable (no take-home pay) after');
+    expect(content).not.toMatch(/Infinity|∞|NaN|null/);
+  });
+
+  it('does not let the model put a number on a debt load it was not given', async () => {
+    const noPay = { ...loanResult, debtLoadBefore: null, debtLoadAfter: null };
+    create.mockResolvedValue(reply('This loan costs $553 a month and is paid off in 5 years. Your debt payments would be 100% of your income.'));
+    const body = await (await post({ loanResult: noPay })).json();
+    expect(body.source).toBe('template');
+    expect(create.mock.calls[1][0].messages[0].content).toContain('these numbers are not in the facts: 100%');
+  });
+
+  it('works without an API key for a profile with no take-home pay', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', '');
+    const res = await post({ loanResult: { ...loanResult, debtLoadBefore: null, debtLoadAfter: null, schedule: undefined } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).text).toBe(
+      templateExplanation({ loanResult: { ...loanResult, debtLoadBefore: null, debtLoadAfter: null } }),
+    );
+  });
+
   it('uses the template without an API key and never calls the provider', async () => {
     vi.stubEnv('ANTHROPIC_API_KEY', '');
     const res = await post({ loanResult: { ...loanResult, payoffMonth: null } });
@@ -120,6 +157,8 @@ describe('POST /api/ai/explain', () => {
     ['an unknown move kind', { move: { ...move, kind: 'buyStocks' } }],
     ['a percent APR in the move patch', { move: { ...move, patch: { debts: [{ id: 'card-1', apr: 22.8 }] } } }],
     ['a non-numeric loan field', { loanResult: { ...loanResult, monthly: '553' } }],
+    ['a negative debt load', { loanResult: { ...loanResult, debtLoadAfter: -0.2 } }],
+    ['a debt load sent as text', { loanResult: { ...loanResult, debtLoadAfter: 'Infinity' } }],
     ['malformed JSON', '{"move":'],
   ])('rejects %s with 400', async (_name, body) => {
     const res = await post(body);

@@ -8,7 +8,9 @@
 // - money in sorted as a cost category is a refund: it comes off that category (never below 0);
 // - money in sorted as 'pay' → `detectedPay` (take-home pay that month);
 // - 'transfer' lines (between the user's own accounts, or money received from a person) are left
-//   out; money out sorted as 'pay' makes no sense and counts as 'other'.
+//   out; money out sorted as 'pay' makes no sense and counts as 'other';
+// - `lastDay` = the day of the month's latest line of any kind (how far the statement goes), so
+//   month-end can project the month in progress from the days that have data.
 import {
   COST_CATEGORIES, type CategoryTotals, type CostCategory, type Money, type StatementClass, type StatementItem,
 } from '@lifeguessr/types';
@@ -60,6 +62,7 @@ type MonthAcc = {
   refunds: Map<CostCategory, number>;
   payCents: number;
   oneOffs: { label: string; cents: number }[];
+  lastDay: number;
 };
 
 /**
@@ -94,12 +97,13 @@ export function statementTotals(items: readonly ClassifiedStatementItem[]): Cate
   };
 
   const acc = new Map<string, MonthAcc>(
-    months.map((m) => [m, { spend: new Map(), refunds: new Map(), payCents: 0, oneOffs: [] }]),
+    months.map((m) => [m, { spend: new Map(), refunds: new Map(), payCents: 0, oneOffs: [], lastDay: 0 }]),
   );
   const add = (map: Map<CostCategory, number>, c: CostCategory, cents: number) => map.set(c, (map.get(c) ?? 0) + cents);
 
   for (const item of items) {
     const m = acc.get(item.month)!;
+    m.lastDay = Math.max(m.lastDay, item.day); // every dated line counts, even one left out below
     const cents = toCents(item.amount);
     if (cents === 0) continue;
     if (cents > 0) {
@@ -123,6 +127,8 @@ export function statementTotals(items: readonly ClassifiedStatementItem[]): Cate
     const oneOffs = m.oneOffs
       .sort((a, b) => b.cents - a.cents)
       .map((o) => ({ label: o.label, amount: toDollars(o.cents) }));
-    return { month, totals, oneOffs, ...(m.payCents > 0 ? { detectedPay: toDollars(m.payCents) } : {}) };
+    return {
+      month, totals, oneOffs, ...(m.payCents > 0 ? { detectedPay: toDollars(m.payCents) } : {}), lastDay: m.lastDay,
+    };
   });
 }
