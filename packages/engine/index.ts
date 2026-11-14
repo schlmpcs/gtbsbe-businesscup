@@ -64,3 +64,7 @@ export { defaultEvent, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown 
 export { accountsToProfile, profileToAccounts, netWorthSummary } from './accounts';            // MP8
 export { budgetRows, budgetRowsForYear } from './budget';                                      // MP9
 export { cashFlowSummary } from './cashFlow';                                                  // MP9
+export {
+  baselineScenario, duplicateScenario, compareScenarios, planMoveEffects, previewEvent,
+  MAX_SCENARIOS, BASELINE_SCENARIO_ID, BASELINE_SCENARIO_NAME, COMPARE_TIE, type PlanMoveEffectsOptions,
+} from './scenarios';                                                                         // MP6
