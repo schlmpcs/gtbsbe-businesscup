@@ -18,10 +18,10 @@ export const afford = {
     title: 'What do you want to buy?',
     label: 'What is it?',
     labelPlaceholder: 'Laptop, gym, trip…',
-    amount: 'Price',
+    amount: 'How much?',
     recurring: 'How often?',
-    recurringOptions: { once: 'One-time', monthly: 'Every month', yearly: 'Every year' },
-    payWith: 'Pay with',
+    recurringOptions: { once: 'One-time', monthly: 'Monthly', yearly: 'Yearly' },
+    payWith: 'How would you pay?',
     payWithOptions: { cash: 'Cash', card: 'Card', loan: 'Loan' },
     payWithHints: {
       cash: 'From savings.',
@@ -86,14 +86,20 @@ export const afford = {
   result: {
     title: 'The verdict',
     loading: 'Checking…',
-    /** The sticker on the verdict tile. */
-    sticker: 'Verdict',
+    /** The tilted sticker on the answer card: the verdict in one word. */
+    stickers: { fits: 'Go', wait: 'Wait', no: 'No' },
     effectsLabel: 'Net worth vs not buying',
-    effects: { 1: 'this month', 12: 'in 1 year', 60: 'in 5 years', 120: 'in 10 years' } as Record<number, string>,
+    /** Fact cards under the answer: the net worth change at a horizon, vs not buying. */
+    effects: {
+      1: 'net worth after this month, vs not buying',
+      12: 'net worth in 1 year, vs not buying',
+      60: 'net worth in 5 years, vs not buying',
+      120: 'net worth in 10 years, vs not buying',
+    } as Record<number, string>,
     verdicts: {
-      fits: 'Yes, it fits',
-      wait: (n: number) => `Wait ${months(n)}`,
-      no: 'Not right now',
+      fits: 'Yes, it fits.',
+      wait: (n: number) => `Yes, in ${months(n)}.`,
+      no: 'Not right now.',
     },
     /** Collapsed: how the verdict is decided. */
     howTitle: 'How we decide',
@@ -119,9 +125,11 @@ export const afford = {
     horizonsCaption: 'Net worth with and without the purchase, in future (nominal) dollars',
     horizonHeaders: { when: 'When', with: 'With it', without: 'Without it', delta: 'Difference' },
     horizons: { 1: 'After this month', 12: 'In 1 year', 60: 'In 5 years', 120: 'In 10 years' } as Record<number, string>,
-    cheapestTitle: 'Cheapest way to pay',
-    cheapestWays: { cash: 'Cash', card: 'Credit card, paid off fast', loan: 'Your loan' },
-    cheapestHint: 'Cheapest = most net worth in 10 years. A loan counts only once you give its terms.',
+    cheapestTitle: 'cheapest way to pay',
+    cheapestWays: { cash: 'Cash', card: 'Card', loan: 'Loan' },
+    /** Ghost action next to the save button: switch the form to the cheapest way. */
+    tryCheapest: { cash: 'Try paying cash', card: 'Try the card, paid off fast', loan: 'Try your loan' },
+    cheapestHint: 'Cheapest = most net worth in 10 years. On a card, paid off fast. A loan counts only once you give its terms.',
     cheapestSame: 'Same as your plan.',
     cheapestDifferent: 'Cheaper than your plan.',
     errors: {
@@ -130,9 +138,14 @@ export const afford = {
     },
   },
 
+  /** Under the page: where the numbers come from (the app footer carries the disclaimer). */
+  footnote: 'Verdicts and net worth numbers come from the rules engine on your plan (canAfford).',
+
   wishlist: {
-    title: 'Wishlist',
-    count: (n: number) => `Wishlist: ${n === 1 ? '1 thing' : `${n} things`}`,
+    title: 'Your wishlist',
+    count: (n: number) => (n === 0 ? 'Nothing saved yet.' : n === 1 ? '1 thing saved' : `${n} things saved`),
+    /** The small ink pill next to the save button. */
+    proPill: 'Pro',
     add: 'Save to wishlist',
     added: 'Saved to your wishlist.',
     load: 'Check again',
