@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AREA_TIERS, COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import {
-  areaByZip, areaDataSample, cardsSample, leaseScenarioSample, LeaseScenarioSchema, loanOffersSample, profileDemo, statementTotalsSample,
+  areaByZip, areaDataSample, cardsSample, leaseScenarioFixture, LeaseScenarioFixtureSchema, leaseScenarioSample, LeaseScenarioSchema, loanOffersSample, profileDemo, statementTotalsSample,
 } from './index';
 import { readStatementSampleCsv } from './node';
 
@@ -58,8 +58,17 @@ describe('fixtures', () => {
     expect(lines.some((l) => l.includes('AMAZON PRIME'))).toBe(true);
   });
 
-  it('include an illustrative lease and reject a bad one', () => {
+  it('include an illustrative lease, every value sourced and an estimate, and reject a bad one', () => {
+    for (const [field, v] of Object.entries(leaseScenarioFixture)) {
+      expect(v.isEstimate).toBe(true);
+      expect(v.source.name).toMatch(/illustrative/i);
+      expect(leaseScenarioSample[field as keyof typeof leaseScenarioSample]).toBe(v.value);
+    }
     expect(leaseScenarioSample.termMonths).toBeGreaterThan(0);
+    const bad = { ...leaseScenarioFixture, termMonths: { ...leaseScenarioFixture.termMonths, value: 0 } };
+    expect(LeaseScenarioFixtureSchema.safeParse(bad).success).toBe(false);
+    const unsourced = { ...leaseScenarioFixture, monthly: { value: 400, isEstimate: true } };
+    expect(LeaseScenarioFixtureSchema.safeParse(unsourced).success).toBe(false);
     expect(LeaseScenarioSchema.safeParse({ ...leaseScenarioSample, termMonths: 0 }).success).toBe(false);
     expect(LeaseScenarioSchema.safeParse({ ...leaseScenarioSample, monthly: -1 }).success).toBe(false);
   });

@@ -7,8 +7,8 @@
 // The sample statement CSV is plain text, not JSON: read it with `readStatementSampleCsv` from
 // '@lifeguessr/data/fixtures/node' (Node only: tests, scripts, server routes).
 import {
-  AreaDataSchema, CategoryTotalsSchema, LifeCardSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema,
-  type AreaData, type CategoryTotals, type LifeCard, type LoanInput, type Money, type Profile,
+  AreaDataSchema, CategoryTotalsSchema, LifeCardSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema, sourced,
+  type AreaData, type CategoryTotals, type LifeCard, type LoanInput, type Money, type Profile, type Sourced,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import areaDataJson from './areaData.sample.json';
@@ -56,11 +56,32 @@ export const LeaseScenarioSchema = z.object({
   running: NonNegativeMoneySchema,
 });
 
+/** The lease fixture as stored: every value carries its `Source` and `isEstimate` (CLAUDE.md rule 5). */
+export type LeaseScenarioFixture = { [K in keyof LeaseScenario]: Sourced<LeaseScenario[K]> };
+
+export const LeaseScenarioFixtureSchema = z.object({
+  monthly: sourced(LeaseScenarioSchema.shape.monthly),
+  termMonths: sourced(LeaseScenarioSchema.shape.termMonths),
+  dueAtSigning: sourced(LeaseScenarioSchema.shape.dueAtSigning),
+  running: sourced(LeaseScenarioSchema.shape.running),
+});
+
 /**
- * S13 (Decision: keep the car or lease a new one) starting lease terms. ILLUSTRATIVE, not a quote
- * and not sourced: every value is an estimate until the user edits it on the screen.
+ * S13 (Decision: keep the car or lease a new one) starting lease terms, with their source and
+ * estimate flags. ILLUSTRATIVE, not a quote: every value is `isEstimate: true` until the user edits
+ * it on the screen. Edit `leaseScenario.sample.json` to change the example.
  */
-export const leaseScenarioSample: Readonly<LeaseScenario> = deepFreeze(LeaseScenarioSchema.parse(leaseScenarioJson));
+export const leaseScenarioFixture: Readonly<LeaseScenarioFixture> = deepFreeze(
+  LeaseScenarioFixtureSchema.parse(leaseScenarioJson),
+);
+
+/** The plain lease terms of `leaseScenarioFixture` (what the engine path takes). */
+export const leaseScenarioSample: Readonly<LeaseScenario> = deepFreeze({
+  monthly: leaseScenarioFixture.monthly.value,
+  termMonths: leaseScenarioFixture.termMonths.value,
+  dueAtSigning: leaseScenarioFixture.dueAtSigning.value,
+  running: leaseScenarioFixture.running.value,
+});
 
 /**
  * Category totals of the four full months (Jul–Oct 2026) of statement.sample.csv, oldest first: what

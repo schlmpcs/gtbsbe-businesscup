@@ -2,12 +2,13 @@
 // Both paths run the engine's forecast on the user's profile (the demo profile until they build
 // their own), 10 years, today's dollars, area inflation; the months left on the current car loan
 // come from the engine's simulate. The lease terms start from the illustrative fixture
-// (leaseScenarioSample, every value an estimate) and the user edits them.
+// (leaseScenarioFixture: every value sourced and flagged isEstimate) and the user edits them; a
+// field the user typed is theirs, so it is no longer an estimate.
 import { forecast, forecastMonths, hasEstimates, simulate, type ScheduledPurchase } from '@lifeguessr/engine';
 import type { Profile } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { mocks as copy } from '@/copy';
-import { leaseScenarioSample, LeaseScenarioSchema, type LeaseScenario } from '@/fixtures';
+import { leaseScenarioFixture, leaseScenarioSample, LeaseScenarioSchema, type LeaseScenario } from '@/fixtures';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates, displayForecast } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
@@ -100,7 +101,10 @@ export function useDecide(opts: { now?: Date } = {}): DecideVM {
 
   const { lease, invalid } = useMemo(() => leaseFromForm(form), [form]);
   const isEstimate = useMemo(
-    () => Object.fromEntries(LEASE_FIELDS.map((f) => [f, !edited.has(f)])) as Record<LeaseField, boolean>,
+    () =>
+      Object.fromEntries(
+        LEASE_FIELDS.map((f) => [f, !edited.has(f) && leaseScenarioFixture[f].isEstimate === true]),
+      ) as Record<LeaseField, boolean>,
     [edited],
   );
   const leaseIsEstimate = LEASE_FIELDS.some((f) => isEstimate[f]);
