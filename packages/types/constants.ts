@@ -126,3 +126,5 @@ export const CADENCE_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 } as const 
 export const SUBSCRIPTION_FINDINGS_MAX = 500;
 /** Longest id of a finding the schema accepts. */
 export const MAX_ID_LENGTH = 100;
+/** Most services a person can have ticked in the subscription tool (the tick-list is about 40, with room for more). */
+export const SUBSCRIPTION_TICKS_MAX = 200;
