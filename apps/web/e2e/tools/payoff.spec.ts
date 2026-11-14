@@ -1,4 +1,4 @@
-// S12 Loan Lab, the debt payoff planner section (M13, issue #89), on the demo profile: the card ($6,400) and the car
+// S12 Loan Lab, the debt payoff planner section (M13, issues #89 and #144), on the demo profile: the card ($6,400) and the car
 // loan ($17,800) plus sample offer 1 as a third debt. Written against the copy and the test ids, never a calendar
 // date: debt-free dates come from today, so the spec compares them with each other, not with a month name.
 import type { Locator, Page } from '@playwright/test';
@@ -61,17 +61,33 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
       await expect(row(page, label)).toHaveCount(3);
     }
 
-    // With no extra the three plans end in the same month ("March 2030": a month and a year).
+    // It opens at a suggested extra worked out from the demo profile (half of the $75.80 a month left once offer A's
+    // payment is in, in $25 steps: $25), so the methods already differ from minimums only, and it says where the $25
+    // came from. Dates are "March 2030": a month and a year.
+    await expect(extraSlider(page)).toHaveValue('25');
+    await expect(planner(page).getByTestId('payoff-extra-suggested')).toHaveText(loan.planner.extra.suggested.share('50%', '$76'));
     const debtFree = row(page, loan.planner.compare.rows.debtFree);
-    await expect(debtFree.nth(0)).toHaveText(/^[A-Z][a-z]+ \d{4}$/);
-    const before = (await debtFree.nth(0).textContent())!;
-    await expect(debtFree.nth(1)).toHaveText(before);
-    await expect(debtFree.nth(2)).toHaveText(before);
+    await expect(debtFree.nth(2)).toHaveText(/^[A-Z][a-z]+ \d{4}$/);
+    const minimums = (await debtFree.nth(2).textContent())!;
+    await expect(debtFree.nth(0)).not.toHaveText(minimums);
+    await expect(page.getByTestId('payoff-savings')).toContainText('less interest');
+    // On the demo debts avalanche and snowball are the same plan (the card is both the highest rate and the smallest
+    // balance, then the car loan, then the new loan); the screen says so rather than leaving it to look like a bug.
+    await expect(debtFree.nth(1)).toHaveText((await debtFree.nth(0).textContent())!);
+    await expect(planner(page).getByTestId('payoff-tie')).toHaveText(loan.planner.tie.sameOrder);
+
+    // At $0 all three end the same month, and one line says why in place of a "the same" comparison.
+    await extraSlider(page).fill('0');
+    await expect(debtFree.nth(0)).toHaveText(minimums);
+    await expect(debtFree.nth(1)).toHaveText(minimums);
+    await expect(planner(page).getByTestId('payoff-tie')).toHaveText(loan.planner.tie.noExtra);
+    await expect(page.getByTestId('payoff-savings')).toHaveCount(0);
+    await expect(planner(page).getByTestId('payoff-extra-suggested')).toHaveCount(0);
 
     // Move the planner's own extra: the picked method gets there sooner, the minimums do not move.
     await extraSlider(page).fill('500');
-    await expect(debtFree.nth(0)).not.toHaveText(before);
-    await expect(debtFree.nth(2)).toHaveText(before);
+    await expect(debtFree.nth(0)).not.toHaveText(minimums);
+    await expect(debtFree.nth(2)).toHaveText(minimums);
     await expect(page.getByTestId('payoff-savings')).toContainText('less interest');
     await expect(page.getByTestId('payoff-savings')).toContainText('sooner');
 
@@ -96,6 +112,31 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
     await expect(planner(page)).toBeVisible();
     await expect(extraSlider(page)).toHaveValue('500');
     await expect(planner(page).getByRole('radio', { name: loan.planner.method.names.snowball })).toBeChecked();
+  });
+
+  test('keeps the suggested extra a suggestion when only the method was picked, and a picked $0 as $0', async ({ page }) => {
+    await page.goto('/loan');
+    await openPlanner(page);
+    await expect(extraSlider(page)).toHaveValue('25');
+    await methodLabel(page, loan.planner.method.names.snowball).click();
+    await expect
+      .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('lifeguessr.app') ?? '{}').state?.tools?.payoff))
+      .toEqual({ method: 'snowball' });
+
+    await page.reload();
+    await openPlanner(page);
+    await expect(planner(page).getByRole('radio', { name: loan.planner.method.names.snowball })).toBeChecked();
+    await expect(extraSlider(page)).toHaveValue('25');
+    await expect(planner(page).getByTestId('payoff-extra-suggested')).toBeVisible();
+
+    await extraSlider(page).fill('0');
+    await expect
+      .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('lifeguessr.app') ?? '{}').state?.tools?.payoff))
+      .toEqual({ method: 'snowball', extra: 0 });
+    await page.reload();
+    await openPlanner(page);
+    await expect(extraSlider(page)).toHaveValue('0');
+    await expect(planner(page).getByTestId('payoff-tie')).toHaveText(loan.planner.tie.noExtra);
   });
 
   test('says the total extra a month it takes to be debt-free by a chosen month, and when no extra is needed', async ({ page }) => {

@@ -2,7 +2,8 @@
 // The S9 screen itself is the ladder feature's (features/ladder: useStatementUpload + ui); this
 // feature owns the pipeline behind its `readFile`: CSV file → in-browser parse and masking →
 // /api/statement/categorize → CategoryTotals[] (readStatementFile.ts).
-import type { CategoryTotals, StatementCategorizeResponse } from '@lifeguessr/types';
+import type { ClassifiedStatementItem } from '@lifeguessr/engine';
+import type { CategoryTotals, StatementCategorizeResponse, StatementFollowUp } from '@lifeguessr/types';
 import type { SignConvention, StatementReadErrorCode } from '@/lib/statement/read';
 
 /** Why a file could not be used, before anything was sent. */
@@ -27,4 +28,16 @@ export type StatementReadSummary = {
   categorizedBy: StatementCategorizeResponse['categorizedBy'];
 };
 
-export type StatementFileResult = { months: CategoryTotals[]; summary: StatementReadSummary };
+export type StatementFileResult = {
+  months: CategoryTotals[];
+  summary: StatementReadSummary;
+  /**
+   * The masked lines that were sent, each with how the server sorted it, so an answered follow-up
+   * can re-sort a merchant and the totals be summed again in the browser (statementTotals). Null
+   * when the server did not say how it sorted them (then follow-ups can't be answered). Held in
+   * memory only, never saved (CLAUDE.md rule 6).
+   */
+  classified: ClassifiedStatementItem[] | null;
+  /** What the statement could not settle (JF6), worst first; empty when nothing is unclear. */
+  followUps: StatementFollowUp[];
+};
