@@ -3,7 +3,9 @@ import type { z } from 'zod';
 import {
   type AREA_TIERS, type CATEGORIZED_BY, type CLUE_IDS, COST_CATEGORIES, type DEBT_KINDS, type KID_AGES,
   MAX_STATEMENT_ITEMS, type MOVE_KINDS, type PRO_ERROR_CODES, type PRO_PLANS, PRO_PRICES, type PRO_SOURCES,
-  STATEMENT_CLASSES, StatementCategorizeRequestSchema, StatementCategorizeResponseSchema,
+  type SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
+  AnonIdSchema, SessionRequestSchema, SessionResponseSchema, type SessionStateSchema,
+  StatementCategorizeRequestSchema, StatementCategorizeResponseSchema,
   type StatementCategorizeRequest, type StatementCategorizeResponse, type StatementClass,
   type AreaDataSchema, type CategoryTotalsSchema, type LifeCardSchema, LoanInputSchema, ProfilePatchSchema,
   ProConfirmRequestSchema, ProDemoUnlockRequestSchema, ProErrorResponseSchema, type ProStatusSchema,
@@ -11,6 +13,7 @@ import {
   type AreaData, type CategoryTotals, type ClueId, type CostCategory, type Debt, type KidAge,
   type LifeCard, type LoanInput, type MoveKind, type ProErrorCode, type ProPlan, type ProSource,
   type ProStatus, type Profile, type ProfilePatch, type Purchase, type StatementItem,
+  type SessionErrorCode, type SessionState,
 } from './index';
 
 // These assertions are checked by `pnpm typecheck` (tsc covers test files): a contract change
@@ -38,6 +41,8 @@ describe('schemas match the contracts', () => {
     expectTypeOf<z.infer<typeof StatementCategorizeRequestSchema>>().toExtend<StatementCategorizeRequest>();
     expectTypeOf<StatementCategorizeRequest>().toExtend<z.input<typeof StatementCategorizeRequestSchema>>();
     expectTypeOf<z.infer<typeof StatementCategorizeResponseSchema>>().toExtend<StatementCategorizeResponse>();
+    expectTypeOf<z.infer<typeof SessionStateSchema>>().toExtend<SessionState>();
+    expectTypeOf<SessionState>().toExtend<z.input<typeof SessionStateSchema>>();
   });
 
   it('value lists cover every union member', () => {
@@ -52,6 +57,7 @@ describe('schemas match the contracts', () => {
     expectTypeOf<ProErrorCode>().toEqualTypeOf<(typeof PRO_ERROR_CODES)[number]>();
     expectTypeOf<StatementClass>().toEqualTypeOf<(typeof STATEMENT_CLASSES)[number]>();
     expectTypeOf<StatementCategorizeResponse['categorizedBy']>().toEqualTypeOf<(typeof CATEGORIZED_BY)[number]>();
+    expectTypeOf<SessionErrorCode>().toEqualTypeOf<(typeof SESSION_ERROR_CODES)[number]>();
     expect(new Set(COST_CATEGORIES).size).toBe(COST_CATEGORIES.length);
     expect(new Set(STATEMENT_CLASSES).size).toBe(STATEMENT_CLASSES.length);
   });
@@ -153,5 +159,37 @@ describe('schemas reject the mistakes they exist for', () => {
       payWith: { loan: { amount: 28_000, apr: 0.069, termMonths: 36 } },
     }).success).toBe(true);
     expect(PurchaseSchema.safeParse({ label: 'Gym', amount: 30, recurring: 'weekly', payWith: 'cash' }).success).toBe(false);
+  });
+});
+
+describe('Session contracts', () => {
+  const anonId = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
+  const purchase: Purchase = { label: 'Laptop', amount: 1_400, recurring: false, payWith: 'card' };
+
+  it('accepts a crypto.randomUUID() id, lower-cased, and nothing else', () => {
+    expect(AnonIdSchema.parse(anonId.toUpperCase())).toBe(anonId);
+    for (const bad of ['', 'anon-00000001', `${anonId}x`, '0f8e2b4c1d2e4f5a9b8c7d6e5f4a3b2c', 'javascript:alert(1)']) {
+      expect(AnonIdSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it('takes { anonId } alone (a load) and refuses unknown fields', () => {
+    expect(SessionRequestSchema.safeParse({ anonId }).success).toBe(true);
+    expect(SessionRequestSchema.safeParse({ anonId, statementMonths: [] }).success).toBe(false);
+    expect(SessionRequestSchema.safeParse({ profile: undefined }).success).toBe(false);
+  });
+
+  it(`caps the wishlist at ${SESSION_WISHLIST_MAX} purchases`, () => {
+    const wishlist = (n: number) => Array.from({ length: n }, () => purchase);
+    expect(SessionRequestSchema.safeParse({ anonId, wishlist: wishlist(SESSION_WISHLIST_MAX) }).success).toBe(true);
+    expect(SessionRequestSchema.safeParse({ anonId, wishlist: wishlist(SESSION_WISHLIST_MAX + 1) }).success).toBe(false);
+  });
+
+  it('describes a reply with or without a saved profile', () => {
+    expect(SessionResponseSchema.safeParse({ ok: true, wishlist: [], revision: 0, updatedAt: null }).success).toBe(true);
+    expect(SessionResponseSchema.safeParse({
+      ok: true, wishlist: [purchase], revision: 3, updatedAt: '2026-11-14T10:00:00.000Z',
+    }).success).toBe(true);
+    expect(SessionResponseSchema.safeParse({ ok: true, wishlist: [], revision: -1, updatedAt: null }).success).toBe(false);
   });
 });

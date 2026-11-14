@@ -1,7 +1,8 @@
-// Session adapter for POST /api/session (task T4): `{ anonId, profile?, wishlist? }` → saved state.
-// 'local' mode is a no-op (localStorage already keeps everything). 'api' mode feature-detects the
-// route: the first 404/405/501 turns the adapter off for the rest of the page load, so the app
-// keeps working before T4 is deployed.
+// Session adapter for POST /api/session (task T4): `{ anonId, profile?, wishlist? }` → saved state;
+// `{ anonId }` alone loads. 'local' mode is a no-op (localStorage already keeps everything). 'api'
+// mode feature-detects the route: the first 404/405/501 turns the adapter off for the rest of the
+// page load, so a build pointed at a server without the route keeps working. Any other failure
+// (503 store down, 429, network) is skipped quietly; the next change saves again.
 import { ProfileSchema, PurchaseSchema, type Profile, type Purchase } from '@lifeguessr/types';
 import { z } from 'zod';
 import { sessionSource, type SessionSource } from '@/lib/config';
@@ -43,6 +44,11 @@ export function createHttpSessionAdapter(url = '/api/session'): SessionAdapter {
       return { profile: saved.profile, wishlist: saved.wishlist };
     } catch (err) {
       if (err instanceof ApiError && ROUTE_MISSING.has(err.status)) enabled = false;
+      // 402: the wishlist holds an item the server won't add without Pro (e.g. saved in this
+      // browser before the paywall). The profile still saves; the wishlist stays local.
+      if (err instanceof ApiError && err.status === 402 && payload.wishlist !== undefined && payload.profile !== undefined) {
+        return call(anonId, { profile: payload.profile });
+      }
       return null;
     }
   };

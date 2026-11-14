@@ -142,6 +142,8 @@ export const game = {
     freeBadge: 'Free',
     errorBadge: 'Retry',
     placeholderArt: 'Placeholder illustrations until the final art lands.',
+    /** The 3D scene (D1 renders): grouped props, e.g. two coats → ×2. */
+    count: (n: number) => `×${n}`,
     /** What each sprite shows (alt text and close-up captions). Every sprite id has a line. */
     sprites: spriteLabels,
     /** A sprite id as words (falls back to the id's last part for an id this list doesn't know). */
