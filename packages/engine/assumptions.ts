@@ -727,3 +727,28 @@ export const loanTermsTypical = {
   },
   note: 'A typical rate, not an offer. Not yet listed in `assumptions` (the "How we calculate" map).',
 } satisfies Assumption<Record<LoanKind, { apr: Rate; termMonths: number }>>;
+
+// MP8 ---------------------------------------------------------------------------------------------
+
+/**
+ * Term used to estimate a loan's monthly minimum (`amortizedPayment` of today's balance) when an
+ * account has none (accounts → profile, MP8). Cards use `cardMinPayment` instead. Auto and personal:
+ * the typical terms in `loanTermsTypical`. Student: the federal Standard Repayment Plan (10 years).
+ * Mortgage: the 30-year fixed. BNPL: pay-in-4 (four payments two weeks apart, six weeks), rounded up
+ * to 2 months. A loan partway through has less time left, so this can understate the real payment;
+ * the result is always tagged estimate and editable.
+ */
+export const debtTermMonthsDefault = {
+  value: {
+    auto: loanTermsTypical.value.auto.termMonths,
+    student: 120,
+    personal: loanTermsTypical.value.personal.termMonths,
+    bnpl: 2,
+    mortgage: 360,
+  },
+  assumption: true,
+  note:
+    'auto, personal: loanTermsTypical (Fed G.19 quote terms). student: Standard Repayment Plan, 10 years ' +
+    '(studentaid.gov). mortgage: 30-year fixed (Freddie Mac PMMS benchmark). bnpl: pay-in-4 over 6 weeks. ' +
+    'Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<Record<'auto' | 'student' | 'personal' | 'bnpl' | 'mortgage', number>>;
