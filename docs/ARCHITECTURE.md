@@ -82,6 +82,7 @@ lifeguessr/
 | S13 | Decision (car example) | `/decide` | mocks | Mock |
 | S14 | Monthly check-in | `/checkin` | mocks | Mock |
 | S15 | Paywall | `/pro` | pro | Simulated checkout (nothing charged; Stripe test mode instead when a key is set) + promo code, no real money |
+| S21 | Subscription audit | `/tools/subscriptions` | subscriptions | Guess, tick-list, reveal, statement, findings, cancel plan; cold-first, findings stay in the browser; hidden in streamer mode (no tools hub: its own entry in `lib/screens.ts`) |
 
 ## Contracts (`packages/types/index.ts`, draft)
 
