@@ -347,10 +347,6 @@ describe('Funnel event contracts', () => {
       { id, name: 'loan_compared', props: { offers: 3 } },
       { id, name: 'paywall_viewed' },
       { id, name: 'sample_loaded' },
-      { id, name: 'duel_picked', props: { round: 3, correct: false } },
-      { id, name: 'hint_opened', props: { round: 5 } },
-      { id, name: 'challenge_copied' },
-      { id, name: 'own_guess_started' },
     ];
     expect(EventsRequestSchema.safeParse({ anonId, events }).success).toBe(true);
   });
@@ -366,8 +362,6 @@ describe('Funnel event contracts', () => {
     ['a fractional count', { id, name: 'home_guessed', props: { home: 1, cluesOpened: 1.5 } }],
     ['an amount where a count goes', { id, name: 'loan_compared', props: { offers: 28_000 } }],
     ['an id that is not a UUID', { id: 'abc', name: 'forecast_viewed' }],
-    ['a duel round out of range', { id, name: 'duel_picked', props: { round: 6, correct: true } }],
-    ['a pick without its outcome', { id, name: 'duel_picked', props: { round: 1 } }],
   ])('refuses %s', (_why, ev) => {
     expect(ClientEventEnvelopeSchema.safeParse(ev).success).toBe(false);
   });

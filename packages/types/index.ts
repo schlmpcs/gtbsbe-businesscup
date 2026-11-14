@@ -243,11 +243,8 @@ export type ClientFunnelEvent =
   | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
   | { name: 'loan_compared'; props: { offers: number } }
   | { name: 'paywall_viewed' }
-  | { name: 'sample_loaded' }
-  | { name: 'duel_picked'; props: { round: DuelRound; correct: boolean } }
-  | { name: 'hint_opened'; props: { round: DuelRound } }
-  | { name: 'challenge_copied' }
-  | { name: 'own_guess_started' };
+  | { name: 'sample_loaded' };
+
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =
   | { name: 'checkout_started'; props: { plan: ProPlan } }

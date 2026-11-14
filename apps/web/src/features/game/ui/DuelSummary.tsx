@@ -11,7 +11,6 @@ export type DuelSummaryProps = {
   onShare: () => void;
   /** S5 route: price your own month. */
   guessOwnHref: string;
-  onGuessOwn: () => void;
 };
 
 const TILE: Record<DuelTileColor, string> = {
@@ -22,7 +21,7 @@ const TILE: Record<DuelTileColor, string> = {
 
 /** S3 Day result: score, the five-tile grid, your blind spot, the challenge link, share, and the bridge to S5. */
 export function DuelSummary({
-  summary, copyStatus, shareStatus, onCopyChallenge, onShare, guessOwnHref, onGuessOwn,
+  summary, copyStatus, shareStatus, onCopyChallenge, onShare, guessOwnHref,
 }: DuelSummaryProps) {
   const linkId = useId();
   const fmt = (n: number) => n.toLocaleString('en-US');
@@ -83,7 +82,7 @@ export function DuelSummary({
       <Card tone="arena" className="lg:rotate-1">
         <div className="flex flex-col gap-md">
           <p className="font-display text-3xl font-extrabold leading-tight">{t.summary.ctaLead}</p>
-          <a href={guessOwnHref} onClick={onGuessOwn} className={buttonClassName({ variant: 'dark', size: 'lg', fullWidth: true })}>
+          <a href={guessOwnHref} className={buttonClassName({ variant: 'dark', size: 'lg', fullWidth: true })}>
             {t.summary.cta}
           </a>
           <p className="text-sm font-semibold">{t.summary.nextIn(summary.nextIn.hours, summary.nextIn.minutes)}</p>

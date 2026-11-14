@@ -105,7 +105,7 @@ describe('useDuel on fixtures', () => {
     expect(loser.categories.reduce((s, c) => s + c.scale, 0)).toBeLessThan(1);
     expect(winner.categories.reduce((s, c) => s + c.amount, 0)).toBeCloseTo(winner.total!, 6);
 
-    expect(await tracked()).toEqual([{ name: 'play_started' }, { name: 'duel_picked', props: { round: 1, correct: true } }]);
+    expect(await tracked()).toEqual([{ name: 'play_started' }, { name: 'home_guessed', props: { home: 1, cluesOpened: 0 } }]);
   });
 
   it('a wrong pick scores 0, and a second tap changes nothing', async () => {
@@ -124,7 +124,7 @@ describe('useDuel on fixtures', () => {
     for (const card of hook.result.current.cards!) expect(Object.values(t.hintFacts)).toContain(card.hintFact);
     await pickAndWait(hook, RIGHT[0]!);
     expect(hook.result.current.reveal!.points).toBe(900);
-    expect(await tracked()).toContainEqual({ name: 'hint_opened', props: { round: 1 } });
+    expect(await tracked()).toContainEqual({ name: 'clue_opened', props: { home: 1, clue: 'mailbox' } });
   });
 
   it('next() moves on only after a pick; five rounds end on the day result', async () => {
@@ -159,12 +159,12 @@ describe('useDuel on fixtures', () => {
     expect(s.shareText).toContain('3/5 · 2,900 points');
 
     const events = await tracked();
-    expect(events.filter((e) => e.name === 'duel_picked')).toHaveLength(5);
+    expect(events.filter((e) => e.name === 'home_guessed')).toHaveLength(5);
     expect(events).toContainEqual({ name: 'game_finished', props: { homes: 5 } });
     expect(events.filter((e) => e.name === 'play_started')).toHaveLength(1);
   });
 
-  it('copies the challenge link, shares the result and tracks the bridge to S5', async () => {
+  it('copies the challenge link and shares the result', async () => {
     const copy = vi.fn(async () => true);
     const share = vi.fn(async () => 'shared' as const);
     const hook = await renderDuel({ copy, share });
@@ -179,11 +179,9 @@ describe('useDuel on fixtures', () => {
     act(() => hook.result.current.share());
     await waitFor(() => expect(hook.result.current.shareStatus).toBe('shared'));
     expect(share).toHaveBeenCalledWith(hook.result.current.summary!.shareText);
-    act(() => hook.result.current.startOwnGuess());
     const events = await tracked();
-    expect(events).toContainEqual({ name: 'challenge_copied' });
+    expect(events).toContainEqual({ name: 'result_shared', props: { via: 'copy' } });
     expect(events).toContainEqual({ name: 'result_shared', props: { via: 'share' } });
-    expect(events).toContainEqual({ name: 'own_guess_started' });
   });
 
   it('a failed copy says so and tracks nothing', async () => {
@@ -194,7 +192,7 @@ describe('useDuel on fixtures', () => {
     }
     act(() => hook.result.current.copyChallenge());
     await waitFor(() => expect(hook.result.current.copyStatus).toBe('failed'));
-    expect((await tracked()).map((e) => e.name)).not.toContain('challenge_copied');
+    expect(await tracked()).not.toContainEqual({ name: 'result_shared', props: { via: 'copy' } });
   });
 
   it('keeps today’s progress across a reload: same reveal, same score, no second pick', async () => {

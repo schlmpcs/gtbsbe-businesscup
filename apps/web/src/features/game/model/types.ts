@@ -323,6 +323,4 @@ export type DuelVM = {
   copyStatus: DuelCopyStatus;
   share: () => void;
   shareStatus: DuelShareStatus;
-  /** "Price my own month →" was tapped (tracks the event; the link navigates). */
-  startOwnGuess: () => void;
 };

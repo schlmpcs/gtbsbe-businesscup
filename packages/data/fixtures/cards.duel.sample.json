@@ -1,53 +1,185 @@
 [
   {
-    "id": "lc-001",
-    "slot": 1,
-    "zip": "75206",
-    "metro": "Dallas-Fort Worth, TX",
+    "id": "sample-duel-01",
+    "zip": "30316",
+    "metro": "Atlanta, GA",
     "adults": 1,
     "kids": [],
     "bedrooms": 0,
-    "eatingOutPerWeek": 3,
-    "caption": "Physical therapist who bikes to the clinic along the Katy Trail."
+    "eatingOutPerWeek": 4,
+    "caption": "Sells vintage records on weekends."
   },
   {
-    "id": "lc-002",
-    "slot": 2,
+    "id": "sample-duel-02",
+    "zip": "78744",
+    "metro": "Austin, TX",
+    "adults": 2,
+    "kids": [
+      "toddler"
+    ],
+    "bedrooms": 2,
+    "car": {
+      "price": 22000,
+      "downPayment": 3000,
+      "apr": 0.079,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Plays in a Sunday soccer league."
+  },
+  {
+    "id": "sample-duel-03",
+    "zip": "02184",
+    "metro": "Boston, MA",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "schoolAge"
+    ],
+    "bedrooms": 3,
+    "car": {
+      "price": 36000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 72
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Coaches the kids' Little League team."
+  },
+  {
+    "id": "sample-duel-04",
+    "zip": "60611",
+    "metro": "Chicago, IL",
+    "adults": 2,
+    "kids": [],
+    "bedrooms": 1,
+    "car": {
+      "price": 26000,
+      "downPayment": 5000,
+      "apr": 0.065,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 5,
+    "caption": "Restores old bikes in the garage."
+  },
+  {
+    "id": "sample-duel-05",
+    "zip": "75206",
+    "metro": "Dallas-Fort Worth, TX",
+    "adults": 1,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 1,
+    "caption": "Teaches piano lessons after work."
+  },
+  {
+    "id": "sample-duel-06",
+    "zip": "80219",
+    "metro": "Denver, CO",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Bakes sourdough for the whole block."
+  },
+  {
+    "id": "sample-duel-07",
+    "zip": "77449",
+    "metro": "Houston, TX",
+    "adults": 2,
+    "kids": [
+      "toddler"
+    ],
+    "bedrooms": 2,
+    "car": {
+      "price": 22000,
+      "downPayment": 3000,
+      "apr": 0.079,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Volunteers at the animal shelter on Saturdays."
+  },
+  {
+    "id": "sample-duel-08",
+    "zip": "90024",
+    "metro": "Los Angeles, CA",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "schoolAge"
+    ],
+    "bedrooms": 3,
+    "car": {
+      "price": 36000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 72
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Never misses a home game."
+  },
+  {
+    "id": "sample-duel-09",
     "zip": "33125",
     "metro": "Miami, FL",
     "adults": 2,
     "kids": [],
     "bedrooms": 1,
     "car": {
-      "price": 21000,
-      "downPayment": 2500,
-      "apr": 0.072,
+      "price": 26000,
+      "downPayment": 5000,
+      "apr": 0.065,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 5,
+    "caption": "Grows tomatoes on the balcony."
+  },
+  {
+    "id": "sample-duel-10",
+    "zip": "55411",
+    "metro": "Minneapolis-St. Paul, MN",
+    "adults": 1,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 1,
+    "caption": "Runs a book club that never reads the book."
+  },
+  {
+    "id": "sample-duel-11",
+    "zip": "37075",
+    "metro": "Nashville, TN",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Fixes the neighbors' laptops for free."
+  },
+  {
+    "id": "sample-duel-12",
+    "zip": "10013",
+    "metro": "New York, NY",
+    "adults": 2,
+    "kids": [
+      "toddler"
+    ],
+    "bedrooms": 2,
+    "car": {
+      "price": 22000,
+      "downPayment": 3000,
+      "apr": 0.079,
       "termMonths": 60
     },
     "eatingOutPerWeek": 2,
-    "caption": "Little Havana regulars at the domino tables on Sunday mornings."
+    "caption": "Hikes every Sunday morning."
   },
   {
-    "id": "lc-003",
-    "slot": 3,
-    "zip": "90042",
-    "metro": "Los Angeles, CA",
-    "adults": 2,
-    "kids": [],
-    "bedrooms": 1,
-    "car": {
-      "price": 33000,
-      "downPayment": 4000,
-      "apr": 0.068,
-      "termMonths": 72
-    },
-    "eatingOutPerWeek": 4,
-    "caption": "Set designer and a sound mixer above a Highland Park record shop."
-  },
-  {
-    "id": "lc-004",
-    "slot": 4,
-    "zip": "19020",
+    "id": "sample-duel-13",
+    "zip": "19125",
     "metro": "Philadelphia, PA",
     "adults": 2,
     "kids": [
@@ -57,172 +189,39 @@
     "bedrooms": 3,
     "car": {
       "price": 36000,
-      "downPayment": 5000,
-      "apr": 0.071,
+      "downPayment": 4000,
+      "apr": 0.069,
       "termMonths": 72
     },
     "eatingOutPerWeek": 2,
-    "caption": "Bensalem split-level, a UPS driver and an insurance claims adjuster."
+    "caption": "Collects houseplants faster than shelves."
   },
   {
-    "id": "lc-005",
-    "slot": 5,
-    "zip": "02124",
-    "metro": "Boston, MA",
+    "id": "sample-duel-14",
+    "zip": "85009",
+    "metro": "Phoenix, AZ",
     "adults": 2,
+    "kids": [],
+    "bedrooms": 1,
+    "car": {
+      "price": 26000,
+      "downPayment": 5000,
+      "apr": 0.065,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 5,
+    "caption": "Walks the dog before sunrise."
+  },
+  {
+    "id": "sample-duel-15",
+    "zip": "98052",
+    "metro": "Seattle, WA",
+    "adults": 1,
     "kids": [
       "infant"
     ],
-    "bedrooms": 1,
-    "eatingOutPerWeek": 1,
-    "caption": "Dorchester triple-decker, second floor, porch facing the park."
-  },
-  {
-    "id": "lc-006",
-    "slot": 1,
-    "zip": "37206",
-    "metro": "Nashville, TN",
-    "adults": 1,
-    "kids": [],
-    "bedrooms": 1,
-    "eatingOutPerWeek": 2,
-    "caption": "Session guitarist in East Nashville, rehearsing in the spare corner."
-  },
-  {
-    "id": "lc-007",
-    "slot": 2,
-    "zip": "77008",
-    "metro": "Houston, TX",
-    "adults": 1,
-    "kids": [],
-    "bedrooms": 1,
-    "car": {
-      "price": 19500,
-      "downPayment": 2000,
-      "apr": 0.109,
-      "termMonths": 60
-    },
-    "eatingOutPerWeek": 3,
-    "caption": "Petroleum engineer who runs the Heights trail at dawn."
-  },
-  {
-    "id": "lc-008",
-    "slot": 3,
-    "zip": "98103",
-    "metro": "Seattle, WA",
-    "adults": 2,
-    "kids": [],
-    "bedrooms": 1,
-    "eatingOutPerWeek": 6,
-    "caption": "Two software testers in Fremont who rate every ramen counter in town."
-  },
-  {
-    "id": "lc-009",
-    "slot": 4,
-    "zip": "30350",
-    "metro": "Atlanta, GA",
-    "adults": 2,
-    "kids": [
-      "schoolAge",
-      "preschool"
-    ],
-    "bedrooms": 3,
-    "car": {
-      "price": 41000,
-      "downPayment": 6000,
-      "apr": 0.066,
-      "termMonths": 72
-    },
-    "eatingOutPerWeek": 2,
-    "caption": "Sandy Springs cul-de-sac, a pharmaceutical rep and a high-school counselor."
-  },
-  {
-    "id": "lc-010",
-    "slot": 5,
-    "zip": "55420",
-    "metro": "Minneapolis-St. Paul, MN",
-    "adults": 2,
-    "kids": [
-      "infant",
-      "toddler"
-    ],
     "bedrooms": 2,
-    "car": {
-      "price": 16000,
-      "downPayment": 16000,
-      "apr": 0.0,
-      "termMonths": 60
-    },
     "eatingOutPerWeek": 1,
-    "caption": "Bloomington rambler near the Mall of America, two early risers."
-  },
-  {
-    "id": "lc-011",
-    "slot": 1,
-    "zip": "85018",
-    "metro": "Phoenix, AZ",
-    "adults": 1,
-    "kids": [],
-    "bedrooms": 1,
-    "car": {
-      "price": 12000,
-      "downPayment": 12000,
-      "apr": 0.0,
-      "termMonths": 60
-    },
-    "eatingOutPerWeek": 2,
-    "caption": "Arcadia casita, hikes Camelback before the heat sets in."
-  },
-  {
-    "id": "lc-012",
-    "slot": 2,
-    "zip": "60618",
-    "metro": "Chicago, IL",
-    "adults": 2,
-    "kids": [],
-    "bedrooms": 1,
-    "eatingOutPerWeek": 3,
-    "caption": "Avondale greystone, a teacher and a line cook with opposite shifts."
-  },
-  {
-    "id": "lc-013",
-    "slot": 3,
-    "zip": "78704",
-    "metro": "Austin, TX",
-    "adults": 1,
-    "kids": [],
-    "bedrooms": 1,
-    "car": {
-      "price": 31000,
-      "downPayment": 3000,
-      "apr": 0.074,
-      "termMonths": 72
-    },
-    "eatingOutPerWeek": 5,
-    "caption": "UX researcher on South Congress who never misses a food-truck opening."
-  },
-  {
-    "id": "lc-015",
-    "slot": 5,
-    "zip": "80219",
-    "metro": "Denver, CO",
-    "adults": 1,
-    "kids": [
-      "toddler"
-    ],
-    "bedrooms": 1,
-    "eatingOutPerWeek": 1,
-    "caption": "Westwood garden unit, a respiratory therapist on day shifts."
-  },
-  {
-    "id": "lc-018",
-    "slot": 3,
-    "zip": "11385",
-    "metro": "New York, NY",
-    "adults": 2,
-    "kids": [],
-    "bedrooms": 1,
-    "eatingOutPerWeek": 4,
-    "caption": "Ridgewood railroad apartment with a fire escape full of tomatoes."
+    "caption": "Learning Spanish on the commute."
   }
 ]
