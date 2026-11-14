@@ -1,3 +1,4 @@
+import { AvatarFactsSchema } from './avatar';
 import { GoalSchema } from './goal';
 export { GoalSchema } from './goal';
 // Zod schemas for the contracts in ./index.ts. Use them to validate every API input and every
@@ -112,6 +113,7 @@ export const DebtSchema = z.object({
 export const SpendingSchema = z.record(CostCategorySchema, estimate(NonNegativeMoneySchema));
 
 export const ProfileSchema = z.object({
+  household: AvatarFactsSchema.optional(),
   age: estimate(z.number().int().min(16).max(110)),
   takeHomePay: estimate(NonNegativeMoneySchema),   // monthly
   spending: SpendingSchema,
@@ -159,6 +161,9 @@ export const YearAnchorSchema = z.object({
 });
 
 export const ForecastSourceSchema = z.enum(['ai', 'rules']);
+
+/** A horizon the forecast picker offers. Kept in step with FORECAST_HORIZONS by schemas.test.ts. */
+export const HorizonYearsSchema = z.union([z.literal(1), z.literal(3), z.literal(5), z.literal(10)]);
 
 export const ForecastBundleSchema = z.object({
   source: ForecastSourceSchema,
@@ -400,6 +405,10 @@ const withProps = <N extends string, P extends z.ZodRawShape>(name: N, props: P)
  */
 export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   bare('play_started'),
+  withProps('duel_picked', { round: DuelRoundSchema, correct: z.boolean() }),
+  withProps('hint_opened', { round: DuelRoundSchema }),
+  bare('challenge_copied'),
+  bare('own_guess_started'),
   withProps('clue_opened', { home: homeIndex, clue: z.enum(CLUE_IDS) }),
   withProps('home_guessed', { home: homeIndex, cluesOpened: z.number().int().min(0).max(CLUE_IDS.length) }),
   withProps('game_finished', { homes: homeIndex }),
@@ -414,7 +423,10 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   withProps('afford_checked', { verdict: z.enum(['fits', 'wait', 'no']) }),
   withProps('loan_compared', { offers: z.number().int().min(1).max(3) }),
   bare('paywall_viewed'),
+  bare('avatar_preview_viewed'),
+  bare('avatar_stats_viewed'),
   bare('sample_loaded'),
+  withProps('forecast_horizon_changed', { years: HorizonYearsSchema }),
   withProps('goal_set', {years:z.number().int().min(1).max(30)}),
   withProps('goal_verdict_shown', {verdict:z.enum(['onTrack','withinRange','behind'])}),
   bare('goal_cleared'),
@@ -480,3 +492,5 @@ export const FunnelReportSchema = z.object({
 
 /** The reply of GET /api/events/funnel. */
 export const FunnelResponseSchema = FunnelReportSchema.extend({ ok: z.literal(true) });
+
+export { AvatarPublicSchema,AvatarPreviewSchema,AvatarStatusSchema,AvatarStampSchema,AgeBandSchema } from './avatar';

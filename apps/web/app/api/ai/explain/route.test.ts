@@ -1,6 +1,7 @@
-import { MOVE_KINDS, type ExplainRequest, type LoanResult, type Move } from '@lifeguessr/types';
+import { FORECAST_HORIZONS, MOVE_KINDS, type ExplainRequest, type LoanResult, type Move } from '@lifeguessr/types';
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import type { z } from 'zod';
+import { yearsPhrase } from '@/copy';
 import { explanationIssues, templateExplanation } from '@/server/ai/explain';
 import { aiRateLimiter } from '@/server/ai/http';
 import { allowedForms } from '@/server/ai/numbers';
@@ -55,6 +56,7 @@ describe('POST /api/ai/explain', () => {
   it('validates the shared ExplainRequest contract (checked by typecheck)', () => {
     expectTypeOf<ExplainRequest>().toExtend<z.input<typeof ExplainRequestSchema>>();
     expectTypeOf<z.infer<typeof ExplainRequestSchema>>().toExtend<ExplainRequest>();
+    expectTypeOf<z.infer<typeof ExplainRequestSchema>['horizon']>().toEqualTypeOf<ExplainRequest['horizon']>();
   });
 
   it('returns the model sentence when it passes every guard', async () => {
@@ -267,6 +269,160 @@ Rules:
     });
   });
 
+  describe('a move explained at a horizon', () => {
+    // The 10-year number of the move; the horizon's own number is what the sentence may use.
+    const horizonMove: Move = { ...move, effect10y: 10_772.6 };
+    const at3 = { years: 3, effect: 3_232 } as const;
+    const GOOD_3 = 'Putting an extra $250 a month on your credit card clears the most expensive debt first. In our simulation that adds about $3,232 to your net worth in 3 years.';
+    const GOOD_3_AI = 'Putting an extra $250 a month on your credit card clears the most expensive debt first. Our AI estimate is that it adds about $3,232 to your net worth in 3 years.';
+    const TEN_YEAR_NUMBER = 'Putting an extra $250 a month on your credit card clears the most expensive debt first. In our simulation that adds about $10,773 to your net worth in 3 years.';
+
+    it('names the horizon and its effect in the template, not 10 years', async () => {
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      const body = await (await post({ move: horizonMove, horizon: at3 })).json();
+      expect(body.source).toBe('template');
+      expect(body.text).toContain('$3,232');
+      expect(body.text).toContain('in 3 years');
+      expect(body.text).not.toContain('10 years');
+      expect(body.text).not.toContain('10,773');
+      expect(body.text).toMatch(/ In our simulation it adds about \$3,232 to your net worth in 3 years\.$/);
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [1, 'in 1 year.'],
+      [3, 'in 3 years.'],
+      [5, 'in 5 years.'],
+      [10, 'in 10 years.'],
+    ] as const)('says "%s" correctly in the template (singular for 1)', async (years, tail) => {
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      const body = await (await post({ move: horizonMove, horizon: { years, effect: 3_232 } })).json();
+      expect(body.text.endsWith(tail)).toBe(true);
+      expect(body.text).not.toContain('1 years');
+    });
+
+    it('words a loss at the horizon, and an AI estimate at the horizon', async () => {
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      const loss = await (await post({ move: horizonMove, horizon: { years: 1, effect: -250.4 } })).json();
+      expect(loss.text).toMatch(/ In our simulation it lowers your net worth by about \$250 in 1 year\.$/);
+      const ai = await (await post({ move: { ...horizonMove, source: 'ai' }, horizon: at3 })).json();
+      expect(ai.text).toMatch(/ Our AI estimate is that it adds about \$3,232 to your net worth in 3 years\.$/);
+      expect(ai.text).not.toMatch(/simulation/i);
+    });
+
+    it('tells the model the horizon in the facts and uses the horizon effect, not the 10-year one', async () => {
+      create.mockResolvedValueOnce(reply(GOOD_3));
+      const res = await post({ move: horizonMove, horizon: at3 });
+      expect(await res.json()).toEqual({ text: GOOD_3, source: 'ai' });
+      expect(create).toHaveBeenCalledTimes(1);
+      const params = create.mock.calls[0][0];
+      expect(params.messages[0].content).toBe(`Facts:
+- Move: This move puts your extra money toward your credit card balance first.
+- Change in net worth after 3 years: +$3,232
+- Extra monthly payment on a debt: $250`);
+      expect(params.system).not.toMatch(/10-year/);
+    });
+
+    it('says "1 year" in the facts', async () => {
+      create.mockResolvedValueOnce(reply(GOOD_3.replace('$3,232', '$1,000').replace('3 years', '1 year')));
+      const body = await (await post({ move: horizonMove, horizon: { years: 1, effect: 1_000 } })).json();
+      expect(body.source).toBe('ai');
+      expect(create.mock.calls[0][0].messages[0].content).toContain('- Change in net worth after 1 year: +$1,000');
+    });
+
+    it('names the horizon in the AI-estimate rule, and keeps the source label', async () => {
+      create.mockResolvedValueOnce(reply(GOOD_3_AI));
+      const res = await post({ move: { ...horizonMove, source: 'ai' }, horizon: at3 });
+      expect(await res.json()).toEqual({ text: GOOD_3_AI, source: 'ai' });
+      const params = create.mock.calls[0][0];
+      expect(params.messages[0].content).toContain('- Change in net worth after 3 years (AI estimate, checked against our rules): +$3,232');
+      expect(params.system).toContain("The move's 3-year change in net worth is an AI estimate that we checked against our rules");
+      expect(params.system).not.toMatch(/10-year/);
+      expect(params.system).not.toMatch(/come from the simulation/i);
+    });
+
+    it('rejects an answer that credits the simulation for an AI estimate at the horizon, naming the horizon', async () => {
+      create.mockResolvedValueOnce(reply(GOOD_3)).mockResolvedValueOnce(reply(GOOD_3_AI));
+      const body = await (await post({ move: { ...horizonMove, source: 'ai' }, horizon: at3 })).json();
+      expect(body).toEqual({ text: GOOD_3_AI, source: 'ai' });
+      expect(create.mock.calls[1][0].messages[0].content).toContain('the 3-year figure is an AI estimate');
+    });
+
+    it('rejects the 10-year number, retries once and accepts the horizon number', async () => {
+      create.mockResolvedValueOnce(reply(TEN_YEAR_NUMBER)).mockResolvedValueOnce(reply(GOOD_3));
+      const body = await (await post({ move: horizonMove, horizon: at3 })).json();
+      expect(body).toEqual({ text: GOOD_3, source: 'ai' });
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(create.mock.calls[1][0].messages[0].content).toContain('these numbers are not in the facts: 10,773');
+    });
+
+    it('falls back to the horizon template when the 10-year number is named twice', async () => {
+      create.mockResolvedValue(reply(TEN_YEAR_NUMBER));
+      const body = await (await post({ move: horizonMove, horizon: at3 })).json();
+      expect(body).toEqual({ text: templateExplanation({ move: horizonMove, horizon: at3 }), source: 'template' });
+      expect(body.text).toContain('in 3 years');
+      expect(create).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects "10 years" for a move explained at 3 years', async () => {
+      create.mockResolvedValue(reply(GOOD_3.replace('3 years', '10 years')));
+      const body = await (await post({ move: horizonMove, horizon: at3 })).json();
+      expect(body.source).toBe('template');
+      expect(create.mock.calls[1][0].messages[0].content).toContain('these numbers are not in the facts: 10');
+    });
+
+    it('ignores a horizon with no move: the loan stays at 10 years', async () => {
+      const text = 'This loan costs $553 a month and is paid off in 5 years. In 10 years your net worth is about $9,413 lower.';
+      create.mockResolvedValueOnce(reply(text));
+      const body = await (await post({ loanResult, horizon: at3 })).json();
+      expect(body).toEqual({ text, source: 'ai' });
+      const content = create.mock.calls[0][0].messages[0].content as string;
+      expect(content).toContain('Change in net worth after 10 years: −$9,413');
+      expect(content).not.toContain('3 years');
+      expect(content).not.toContain('3,232');
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      expect((await (await post({ loanResult, horizon: at3 })).json()).text).toBe(templateExplanation({ loanResult }));
+    });
+
+    it('with a move and a loan, the move is at the horizon and the loan stays at 10 years', async () => {
+      const text = 'Putting an extra $250 a month on your card adds about $3,232 in 3 years. The loan costs $553 a month and lowers your net worth by about $9,413 in 10 years.';
+      create.mockResolvedValueOnce(reply(text));
+      const body = await (await post({ move: horizonMove, loanResult, horizon: at3 })).json();
+      expect(body).toEqual({ text, source: 'ai' });
+      const content = create.mock.calls[0][0].messages[0].content as string;
+      expect(content).toContain('- Change in net worth after 3 years: +$3,232');
+      expect(content).toContain('- Change in net worth after 10 years: −$9,413');
+      expect(content).not.toContain('10,773');
+    });
+
+    it('accepts every picker horizon and rejects any other year or shape', async () => {
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      for (const years of FORECAST_HORIZONS) {
+        expect((await post({ move: horizonMove, horizon: { years, effect: 5 } })).status).toBe(200);
+      }
+      for (const horizon of [
+        { years: 7, effect: 1 },
+        { years: 0, effect: 1 },
+        { years: '3', effect: 1 },
+        { years: 3, effect: '1' },
+        { years: 3 },
+        { effect: 1 },
+        { years: 3, effect: 1, extra: true },
+        null,
+        3,
+      ]) {
+        const res = await post({ move: horizonMove, horizon });
+        expect(res.status, JSON.stringify(horizon)).toBe(400);
+        expect((await res.json()).error.code).toBe('bad_request');
+      }
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it('a horizon alone is not a request', async () => {
+      expect((await post({ horizon: at3 })).status).toBe(400);
+    });
+  });
+
   it('accepts a body with and without a source, and rejects a source that is neither ai nor rules', async () => {
     create.mockResolvedValue(reply(GOOD));
     expect((await post({ move })).status).toBe(200);
@@ -344,6 +500,36 @@ describe('templates', () => {
     expect(explanationIssues('It helps. The simulation adds about $48,214 in 10 years.', allowed, 'ai')).toHaveLength(1);
     // Other uses of the word are not "the number comes from the simulation".
     expect(explanationIssues('It helps. Our AI estimate is $48,214 in 10 years, not a promise from a simulator.', allowed, 'ai')).toEqual([]);
+  });
+
+  it.each(MOVE_KINDS)('the %s template at each horizon is two sentences with only the horizon numbers', (kind) => {
+    for (const years of FORECAST_HORIZONS) {
+      for (const effect of [3_232.4, -250.4]) {
+        for (const source of [undefined, 'ai'] as const) {
+          const m: Move = { ...move, kind, category: 'eatingOut', ...(source ? { source } : {}) };
+          const text = templateExplanation({ move: m, horizon: { years, effect } });
+          expect(explanationIssues(text, allowedForms([effect, years]), source, years)).toEqual([]);
+          expect(text).toContain(`in ${yearsPhrase(years)}.`);
+          if (years !== 10) expect(text).not.toContain('10 years');
+        }
+      }
+    }
+  });
+
+  it('yearsPhrase is singular for 1 and plural otherwise', () => {
+    expect(yearsPhrase(1)).toBe('1 year');
+    for (const years of [3, 5, 10]) expect(yearsPhrase(years)).toBe(`${years} years`);
+  });
+
+  it('the issue about crediting the simulation names the horizon, and says 10-year by default', () => {
+    const allowed = allowedForms([3_232, 3]);
+    const text = 'It helps. In our simulation it adds about $3,232 in 3 years.';
+    expect(explanationIssues(text, allowed, 'ai', 3)).toEqual([
+      'the 3-year figure is an AI estimate, so do not credit the simulation for it; say it is an AI estimate',
+    ]);
+    expect(explanationIssues(text, allowed, 'ai')).toEqual([
+      'the 10-year figure is an AI estimate, so do not credit the simulation for it; say it is an AI estimate',
+    ]);
   });
 
   it('the loan templates are two sentences with only input numbers', () => {

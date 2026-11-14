@@ -1,3 +1,6 @@
+import { createAvatarStore,type AvatarStore } from './avatars';
+import { createMemoryAvatarRepository } from './avatars.memory';
+import { createPostgresAvatarRepository } from './avatars.postgres';
 // Server-only: the app's store (sessions, the T5 daily game, T8 funnel events).
 //
 //   getStore()            the process-wide Store for STORE_URL (Postgres), or in memory in dev and
@@ -14,6 +17,9 @@
 // Adding a domain (e.g. T5 guesses): write `<domain>.ts` (interface + pure rules), then
 // `<domain>.postgres.ts` and `<domain>.memory.ts`, add the field to Store and to both factories
 // below, and add a migration (./migrations/index.ts explains the rules).
+import type { DuelStore } from './duel';
+import { createMemoryDuelStore } from './duel.memory';
+import { createPostgresDuelStore } from './duel.postgres';
 import { storeConfig } from './config';
 import { StoreUnavailableError, type StoreUnavailableReason } from './errors';
 import type { GameStore } from './game';
@@ -37,7 +43,9 @@ export type { EventStore, FunnelWindow, StoredEvent } from './events';
 export interface Store {
   readonly backend: 'postgres' | 'memory';
   readonly sessions: SessionStore;
+  readonly avatars: AvatarStore;
   readonly game: GameStore;
+  readonly duel: DuelStore;
   readonly events: EventStore;
   /** The Postgres connection, or null for the memory store. */
   readonly db: Db | null;
@@ -48,10 +56,13 @@ export interface Store {
 
 export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
   const db = createDb(url, opts);
+  const sessions = createPostgresSessionStore(db);
   return {
     backend: 'postgres',
-    sessions: createPostgresSessionStore(db),
+    sessions,
+    avatars: createAvatarStore(createPostgresAvatarRepository(db),sessions),
     game: createPostgresGameStore(db),
+    duel: createPostgresDuelStore(db),
     events: createPostgresEventStore(db),
     db,
     check: () => db.check(),
@@ -60,10 +71,13 @@ export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
 }
 
 export function createMemoryStore(): Store {
+  const sessions = createMemorySessionStore();
   return {
     backend: 'memory',
-    sessions: createMemorySessionStore(),
+    sessions,
+    avatars: createAvatarStore(createMemoryAvatarRepository(),sessions),
     game: createMemoryGameStore(),
+    duel: createMemoryDuelStore(),
     events: createMemoryEventStore(),
     db: null,
     check: async () => {},

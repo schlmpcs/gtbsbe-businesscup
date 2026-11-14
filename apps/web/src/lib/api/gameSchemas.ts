@@ -4,7 +4,7 @@
 // validates the replies, and the game state restored from storage goes through them too.
 // They live here, not in packages/types, so the shared contracts don't change in this task.
 import {
-  AnonIdSchema, AreaTierSchema, CLUE_IDS, CostCategorySchema, KidAgeSchema, LifeCardSchema, MoneySchema, SourceSchema,
+  AnonIdSchema, AreaTierSchema, CLUE_IDS, CostCategorySchema, DuelHintSchema, KidAgeSchema, LifeCardSchema, MoneySchema, SourceSchema,
   type ClueReveal, type CostBreakdown, type GuessReveal, type Money, type PublicCard,
 } from '@lifeguessr/types';
 import { z } from 'zod';
@@ -157,6 +157,18 @@ export const LeaderboardResponseSchema = z.object({
   todayStats: LeaderboardEntrySchema.omit({ rank: true, you: true }).nullable(),
 });
 export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
+
+// ----- Duel routes (DU5, DU4) --------------------------------------------------------------------
+// The requests are `DuelHintRequestSchema` and `DuelPickRequestSchema` in packages/types (strict:
+// a client-sent score, hint count or total is a 400). Only the replies live here.
+
+/**
+ * POST /api/daily/hint reply: one more fact per life (the neighborhood tier) plus whether this
+ * ask was recorded. `recorded: false` for a repeat or an ask after the pick: the text is the same,
+ * the score is not affected.
+ */
+export const HintReplySchema = DuelHintSchema.extend({ recorded: z.boolean() });
+export type HintReply = z.infer<typeof HintReplySchema>;
 
 /** Error codes of the game routes (`{ ok: false, error: { code } }`). */
 export const GAME_ERROR_CODES = [

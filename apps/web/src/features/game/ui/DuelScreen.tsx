@@ -135,6 +135,7 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
               shareStatus={vm.shareStatus}
               onCopyChallenge={vm.copyChallenge}
               onShare={vm.share}
+              onGuessOwn={vm.guessOwn}
               guessOwnHref={guessOwnHref}
             />
           )}
