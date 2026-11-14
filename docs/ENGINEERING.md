@@ -150,10 +150,11 @@ Measuring from the nearest edge, not from the mid, keeps the score continuous: a
 | `entry` | `adults`, `kids` | coats and shoes per person | groceries |
 | `mailbox` | `zip`, `tier` | ZIP + neighborhood tier sign | rentUtilities |
 
-- Props without a `clue` are decor (plants, lamps, posters) and must not suggest a cost (no luxury decor in a cheap home).
-- Car price bands and takeout buckets live in `scene.ts` as named constants.
-- `<HouseScene>` renders the layout, the decor and closed rooms. A tap zooms into the room, calls `/api/daily/clue`, and then shows that room's props and facts. It works with labeled placeholder rectangles before the sprite kit lands.
-- Tests: a snapshot of `sceneOf` for every fixture card, plus a consistency test that every clue maps to a `CostBreakdown` item.
+- Props without a `clue` are decor (plants, lamps, posters) and must not suggest a cost (no luxury decor in a cheap home). Decor depends only on the layout (skyline, lamp and plant in the living room, a tree in the yard, one bed per bedroom; a studio has a sleeping loft and the bed in the living room), so two homes with the same layout look the same until a room is opened.
+- Car price bands (`CAR_PRICE_BANDS`: economy < $25k ≤ mid ≤ $45k < luxury), takeout buckets (`TAKEOUT_BUCKETS`) and the clue → cost-line map (`CLUE_COST_CATEGORIES`) live in `scene.ts` as named constants. `sceneOf` throws when the area is not the card's ZIP.
+- Sprite ids (`SPRITE_IDS`) are file paths under `apps/web/public/scene/` (`garage/luxury` → `garage/luxury.svg`). The placeholder kit there is drawn in the Dollhouse palette; the D1 kit replaces it one-for-one by id. The ids, the layout shells' 400 × 320 room grid and what each sprite stands for are in `apps/web/public/scene/README.md`.
+- `<HouseScene>` (`apps/web/src/ui-kit/HouseScene.tsx`) renders the layout shell, the decor and the closed rooms (each shows what opening it costs). A tap zooms the house into the room (CSS transform; instant with reduced motion), raises `onOpenRoom` (the game view-model's `openClue` → `/api/daily/clue` or the fixture client), and the close-up under the house shows the room's props and facts. Esc or "Back to the house" zooms out and returns focus to the room. `features/game/ui/HouseSceneClues.tsx` maps the view-model onto it and is `PlayScreen`'s default `ClueSlot`; the static `ClueBoard` takes the same props and stays as the fallback.
+- Tests (`packages/engine/scene.test.ts`): a snapshot of `sceneOf` for every fixture card, and a consistency test over every fixture card (and the full deck from `@lifeguessr/data` when present) that turns each clue's props back into the cost lines they stand for and compares them with `costOfLife`: no-car sprite ⇔ no car lines, band ⇔ price, loan tag ⇔ loan payment line (amount checked), childcare = Σ the area's price per kid prop, groceries = coats, the takeout pile = the bucket of the meals the eating-out line prices, rent = the layout's bedrooms, tier sign = the area's tier; and every cost line of a card is covered by a clue or the layout.
 
 ### Next Moves (Amir, Y3)
 
