@@ -1,51 +1,66 @@
 [
   {
-    "id": "life-001",
-    "zip": "10002",
-    "metro": "New York",
+    "id": "sample-01-single-nocar-cheap",
+    "zip": "75216",
+    "metro": "Dallas-Fort Worth, TX",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 1,
+    "eatingOutPerWeek": 1,
+    "caption": "One-bedroom, bus pass, cooks almost every night."
+  },
+  {
+    "id": "sample-02-single-nocar-mid",
+    "zip": "75206",
+    "metro": "Dallas-Fort Worth, TX",
     "adults": 1,
     "kids": [],
     "bedrooms": 0,
-    "eatingOutPerWeek": 0,
-    "caption": "A quiet start to the week.",
-    "pack": "coastal-lives"
+    "eatingOutPerWeek": 5,
+    "caption": "Studio off Greenville Ave, bikes to work, knows every taco spot."
   },
   {
-    "id": "life-002",
-    "zip": "10001",
-    "metro": "New York",
+    "id": "sample-03-couple-toddler",
+    "zip": "75216",
+    "metro": "Dallas-Fort Worth, TX",
     "adults": 2,
-    "kids": [
-      "infant"
-    ],
-    "bedrooms": 0,
+    "kids": ["toddler"],
+    "bedrooms": 2,
+    "car": { "price": 18000, "downPayment": 2000, "apr": 0.089, "termMonths": 60 },
     "eatingOutPerWeek": 2,
-    "caption": "A home with a busy calendar.",
-    "car": {
-      "price": 32000,
-      "downPayment": 4000,
-      "apr": 0.069,
-      "termMonths": 60
-    },
-    "pack": "coastal-lives"
+    "caption": "Two parents, one toddler, one used sedan."
   },
   {
-    "id": "life-003",
-    "zip": "10013",
-    "metro": "New York",
+    "id": "sample-04-family-schoolage-carloan",
+    "zip": "75024",
+    "metro": "Dallas-Fort Worth, TX",
+    "adults": 2,
+    "kids": ["schoolAge", "schoolAge"],
+    "bedrooms": 3,
+    "car": { "price": 38000, "downPayment": 4000, "apr": 0.069, "termMonths": 72 },
+    "eatingOutPerWeek": 3,
+    "caption": "Suburban family of four, two kids in after-school care, a new SUV."
+  },
+  {
+    "id": "sample-05-single-luxury-car",
+    "zip": "75205",
+    "metro": "Dallas-Fort Worth, TX",
     "adults": 1,
-    "kids": [
-      "preschool"
-    ],
-    "bedrooms": 0,
+    "kids": [],
+    "bedrooms": 1,
+    "car": { "price": 62000, "downPayment": 10000, "apr": 0.059, "termMonths": 60 },
+    "eatingOutPerWeek": 8,
+    "caption": "One-bedroom in Highland Park, German coupe, dinner out most nights."
+  },
+  {
+    "id": "sample-06-family-infant-preschool",
+    "zip": "75205",
+    "metro": "Dallas-Fort Worth, TX",
+    "adults": 2,
+    "kids": ["infant", "preschool"],
+    "bedrooms": 4,
+    "car": { "price": 52000, "downPayment": 8000, "apr": 0.064, "termMonths": 72 },
     "eatingOutPerWeek": 4,
-    "caption": "Someone has just moved in.",
-    "car": {
-      "price": 52000,
-      "downPayment": 4000,
-      "apr": 0.069,
-      "termMonths": 60
-    },
-    "pack": "coastal-lives"
+    "caption": "Four bedrooms, a baby and a preschooler, both in daycare."
   }
 ]

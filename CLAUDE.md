@@ -8,7 +8,7 @@ Read this first. It tells you what the product is, how the repo is laid out, and
 
 A **forward-looking budget planner** for US adults aged 25–45, built in 24 hours for the **Zimran Business Cup** hackathon.
 
-- **Product (what people pay for):** a forecast of your month, of "You in 10 years", and your next best money moves ranked in dollars. It also includes "Can I Afford It?" (purchases) and "Loan Lab" (loans), with no bank login needed.
+- **Product (what people pay for):** a forecast of your month, of "You in 10 years", and your next best money moves ranked in dollars. It also includes "Can I Afford It?" (purchases) and "Loan Lab" (loans), with no bank login needed (connecting a bank app is an optional extra, shown as "coming soon" in the 24h build).
 - **Marketing (how people find it):** a GeoGuessr-style daily game. You explore a stranger's home (an illustrated dollhouse cutaway: tap the garage, kitchen, kids' room… for clues that cost points) and guess what their life costs per month; then the game asks you to guess your own. It is built for streamers and TikTok.
 - **Pitch line:** "Money apps forecast your accounts. We forecast your decisions, and rank which one to make next." (Don't say budget apps only look backward: Monarch and PocketSmith do forecast. See `docs/PRODUCT.md`.)
 

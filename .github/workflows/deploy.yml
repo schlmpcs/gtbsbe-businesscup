@@ -1,0 +1,67 @@
+name: Deploy
+
+# Deploys main to the team server after CI is green. It runs on a self-hosted runner that lives on
+# that server and builds the image there (deploy/deploy.sh, setup in deploy/README.md).
+#
+# Safety: the runner can start containers on a shared server, so only this workflow may use it.
+#   - `workflow_run` always loads this file from the default branch, so a pull request cannot
+#     change what runs here.
+#   - The job runs only for a CI run triggered by a push to main in this repository: never for a
+#     pull request, and never for a fork whose branch happens to be called main.
+#   - Do not add `pull_request` or `pull_request_target` triggers to this file.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time; a newer run waits for the running one instead of cancelling it mid-deploy.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy to the team server
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: [self-hosted, linux, lifeguessr-deploy]
+    environment: production
+    timeout-minutes: 30
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      # Skip when a newer commit has already landed on main: its own run will deploy it, and an
+      # older build must never replace a newer one.
+      - name: Is this still the tip of main?
+        id: tip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tip=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github.sha" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/main")
+          if [ "$tip" = "$SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main has moved on to ${tip:0:12}; not deploying ${SHA:0:12}"
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.tip.outputs.current == 'true'
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+
+      - name: Deploy
+        if: steps.tip.outputs.current == 'true'
+        env:
+          DEPLOY_HOST: local
+        run: deploy/deploy.sh "$SHA"

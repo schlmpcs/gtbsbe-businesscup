@@ -19,13 +19,23 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 
 ## Default stack
 
-- Next.js (App Router) + TypeScript, deployed on Vercel; pnpm workspaces monorepo.
+- Next.js (App Router) + TypeScript, deployed with Docker on the team's own server (see Deployment below); pnpm workspaces monorepo.
 - Tailwind reading CSS variables from `tokens.css`, which is generated from `tokens.json` (Figma variables export).
 - Zustand (or React context) for client state; local storage holds the anonymous ID and a profile cache.
 - Vitest (engine) and Playwright (one end-to-end demo path).
-- Supabase Postgres or Vercel KV for sessions, leaderboard and events.
-- One server-side LLM client; responses validated with zod.
+- A self-hosted store on the team's own server for sessions, leaderboard and events (T4/T5; connection via `STORE_URL`).
+- One server-side LLM client: Anthropic Claude (`ANTHROPIC_API_KEY`, model in `ANTHROPIC_MODEL`); responses validated with zod.
 - Charts: one wrapper component (e.g. Recharts or visx) behind `<ForecastChart>` so restyling stays local.
+
+## Deployment
+
+Production runs on the team's own server, not on Vercel. The files are in `deploy/` (runbook: `deploy/README.md`). It is live: a push to `main` that passes CI is deployed automatically.
+
+- **Public URL:** the Tailscale Funnel host that PawCoach used. PawCoach has been removed from the server, and LifeGuessr takes over the host's root `/`, so it needs no sub-path and no Next.js `basePath`. Funnel terminates HTTPS on the host (port 443) and proxies to the app on loopback port 3000. Other apps on that host keep their own routes (for example `/ember`) and must not be touched.
+- **Runtime:** a Docker image (`deploy/Dockerfile`, Next.js standalone build) and `deploy/compose.yaml`, with an `.env` beside it on the server, never in the repo. The app port is published on `127.0.0.1` only, so Funnel is the only way in from outside. The store for sessions, leaderboard and events (`STORE_URL`) lives on the same server, in the `/data` volume.
+- **CI/CD:** CI (lint, typecheck, test, build, Playwright e2e) runs on GitHub-hosted runners for every PR and push. `.github/workflows/deploy.yml` then deploys `main` by running `deploy/deploy.sh` on a self-hosted runner on the server: build there, health check on `/api/health`, automatic rollback to the previous image. Rules for that runner are in `deploy/README.md`.
+- **Server notes:** the runner has its own user on the server and keeps the app's `.env` in that user's home. Its clock must be right (`deploy/README.md`). The server address and Funnel hostname stay out of this repo, which becomes public; they live in the team's private notes.
+- **No PR previews:** without Vercel there are no per-PR preview deploys.
 
 ## Folder structure (owner in brackets)
 
@@ -66,13 +76,13 @@ lifeguessr/
 | S6 | Closest life | `/me/closest` | ladder | Real |
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
 | S8 | Balance sheet | `/me/balance` | ladder | Real |
-| S9 | Statement upload + "What we keep" | `/me/upload` | upload (logic) + ladder (ui) | Real |
+| S9 | Statement upload + "What we keep" (+ "connect your bank app", coming soon) | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: Mock) |
 | S10 | You in 10 years + Next Moves | `/future` | forecast | Real |
 | S11 | Can I Afford It? | `/afford` | afford | Real |
 | S12 | Loan Lab | `/loan` | loan | Real |
 | S13 | Decision (car example) | `/decide` | mocks | Mock |
 | S14 | Monthly check-in | `/checkin` | mocks | Mock |
-| S15 | Paywall | `/pro` | mocks | Mock |
+| S15 | Paywall | `/pro` | pro | Real: Stripe test mode + promo code, no real money |
 
 ## Contracts (`packages/types/index.ts`, draft)
 
@@ -193,7 +203,8 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 | `sceneOf` | Aibek | `(card: LifeCard, area: AreaData) => { public: PublicCard; clues: Record<ClueId, ClueReveal> }` (deterministic; the only place scene props come from) |
 | `forecast` | Amir | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` |
 | `applyPatch` | Amir | `(p: Profile, patch: ProfilePatch) => Profile` |
-| `rankMoves` | Amir | `(p: Profile) => Move[]` |
+| `rankMoves` | Amir | `(p: Profile, opts?: { rates?: Partial<ForecastRates>; subscriptionsDetected?: boolean }) => Move[]` (level 1, top 3; `effect10y` in today's dollars; the committed move is the one with `id === p.committedMoveId`) |
+| `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
 | `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
 | `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
 | `loan` | Aibek | `(p: Profile, l: LoanInput) => LoanResult` |
@@ -218,6 +229,20 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `POST /api/events` | Aibek | `{ anonId, name, props? }` → ok |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
 | `POST /api/ai/explain` | Amir | `{ move? , loanResult? }` → `{ text }` (2 sentences, no new numbers) |
+| `GET /api/pro/status` | Amir | header `x-anon-id` → `{ status: ProStatus, checkoutAvailable, demo: { enabled, code? } }` |
+| `POST /api/pro/checkout` | Amir | `{ plan }` → `{ url }`, a Stripe Checkout Session in test mode to redirect to |
+| `POST /api/pro/confirm` | Amir | `{ sessionId }` → `{ status }`; the server retrieves the session from Stripe and checks it is test-mode, complete, paid and this anonymous ID's |
+| `POST /api/pro/demo-unlock` | Amir | `{ code }` → `{ status }`; the promo code shown on the Pro screen, for the jury |
+
+## Pro paywall (S15, demo)
+
+No real money moves. Pro unlocks through a Stripe Checkout in **test mode** (the test card is shown on screen) or through the promo code shown on the Pro screen, which exists so the jury can pass the paywall without paying (FAQ Q115). Both end in the same entitlement, keyed by the anonymous ID. The shared contracts and prices (`PRO_PRICES`: $39.99/year, $6.99/month, an assumption) live in `packages/types`.
+
+- **Test mode only.** `STRIPE_SECRET_KEY` is accepted only if it starts with `sk_test_` or `rk_test_`; anything else leaves checkout unavailable and the promo code still works. `/api/pro/confirm` accepts only `cs_test_…` session ids and refuses a session with `livemode: true`.
+- **No webhook.** The success URL carries the session ID; `/api/pro/confirm` fetches the session from Stripe, so nothing needs to reach the server from outside (the server is behind a Funnel route). The session is bound to the anonymous ID (`client_reference_id`) and can be claimed by one ID only.
+- **Entitlements** sit behind an `EntitlementStore` interface. The default is one JSON file in `PRO_DATA_DIR` on the server's volume, a stopgap until the shared self-hosted store (T4, `STORE_URL`) lands. A Stripe grant replaces a demo grant, never the reverse.
+- **What is gated.** Server-side routes call `requirePro(req)` (`src/server/pro/http.ts`); T4's session save should. In this build the one real gate is saving a purchase to the wishlist (S11, `wishlistLocked`), and it is enforced in the browser because the engine runs there. Items already in the wishlist stay.
+- **Env:** `STRIPE_SECRET_KEY`, `APP_URL` (public base URL including any sub-path, used for the return URLs), `PRO_DEMO_CODE`, `PRO_DEMO_UNLOCK` (`off` disables the code), `PRO_DATA_DIR`. Names only in `.env.example`.
 
 ## Data flow
 
@@ -239,4 +264,6 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - The server receives only `StatementItem`s: merchant label, amount, month and day of month. The day lets the server detect subscriptions and yearly charges. It returns totals; raw items are not stored.
 - Labels pass through the LLM provider for categorizing. Use the provider's no-training / zero-retention option, and say so in the "What we keep" panel.
 - Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
+- Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
+- Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test` or `demo`), when, and the Stripe test Checkout Session ID. No card data or email ever reaches our server; the test checkout page belongs to Stripe.

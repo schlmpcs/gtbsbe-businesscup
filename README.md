@@ -1,59 +1,67 @@
 # LifeGuessr
 
-Explore five daily homes, guess their monthly costs, then model your own budget, ten-year forecast, next moves, purchases and loans. Educational simulation, not financial advice.
+A forward-looking budget planner for US adults aged 25–45, plus a GeoGuessr-style daily game that brings people in. Built in 24 hours for the Zimran Business Cup.
 
-## Run locally
+- **Planner:** a forecast of your month and of "You in 10 years", your next best money moves ranked in dollars, "Can I Afford It?" and "Loan Lab". No sign-up, no bank login.
+- **Game:** explore a stranger's home, open clues, guess what their life costs per month, then guess your own.
 
-Requires Go matching `go.mod`, Node 22+, and pnpm (`npm install -g pnpm@10.28.2`).
+Every number comes from a pure, tested engine (`packages/engine`) fed by public data with sources (HUD, BLS, USDA, DOL). AI only parses text and explains results; it never produces a number you see. Educational simulation, not financial advice.
 
-```sh
-pnpm install --frozen-lockfile
-STORE_MODE=memory PUBLIC_ORIGIN=http://localhost:3000 go run ./services/api/cmd/server
-# In another terminal:
-pnpm dev
+## Commands
+
+Requires Node 22.12+ and pnpm 10 (`corepack enable` picks up the pinned version).
+
+```
+pnpm install
+pnpm dev            # apps/web on localhost:3000
+pnpm test           # Vitest (engine, types, data fixtures, web utils, ui-kit components in jsdom)
+pnpm lint           # ESLint, incl. the UI import rule; checks tokens.css is up to date
+pnpm typecheck      # tsc in every package
+pnpm build          # Next.js production build
+pnpm e2e            # Playwright: builds, starts and smoke-tests every screen
+pnpm tokens         # tokens.json → apps/web/src/ui-kit/tokens.css
+pnpm data:refresh   # re-fetch public data (T2, not implemented yet)
 ```
 
-Open http://localhost:3000. Memory mode is explicitly development-only and resets on restart. For durable storage, set `DATABASE_URL` to your Supabase Postgres connection string instead. The server applies its initial table migration on startup. Never expose the database service key to the browser.
+Copy `.env.example` to `.env` for the AI routes and storage.
 
-## Features
+## Repo map
 
-- Daily five-home game, deterministic server-side scoring, paid-in-points clues, reveal and anonymous leaderboard.
-- Separate square/story share PNGs generated from stored results; no client-supplied score.
-- Anonymous cookie sessions retaining profile, wishlist and category totals.
-- Go-only financial engine: costs, loans, payoff ordering, forecasts, moves, affordability and month-end drift.
-- Local CSV parsing, column mapping, masked labels, category corrections and one-off exclusions. Only category totals persist. Eligible Anthropic categorization is optional and explicitly gated.
-- Sixty ZIPs across fifteen metros, fifty modeled life cards and two creator packs; see data limitations below.
-- Responsive placeholder house rooms and screens, plus clearly marked decision/check-in/paywall concepts. No payments collected.
-
-## Verify
-
-```sh
-pnpm lint
-pnpm test:csv
-pnpm test:data
-go test -race ./...
-pnpm contracts
-pnpm build
-pnpm exec playwright install chromium
-pnpm e2e
+```
+packages/types     @lifeguessr/types   shared contracts (index.ts) + zod schemas (schemas.ts)
+packages/engine    @lifeguessr/engine  pure functions + Vitest: cost, score, forecast, moves, afford, month, scene, loan/
+packages/data      @lifeguessr/data    public data pipeline (T2) and the canonical fixtures in fixtures/
+apps/web           web                 Next.js App Router app
+  app/             routes (S3 and S4 are states of /play); app/api/* server routes
+  src/features/<feature>/{model,ui}    view-model hooks and presentational components
+  src/ui-kit/      primitives + tokens.css (generated); every primitive is on show at /kit
+  src/copy/        all user-facing strings, one file per feature (import from @/copy)
+  src/fixtures/    re-exports packages/data/fixtures
+tokens.json        design tokens (Figma variables export)
+docs/              PRODUCT, ARCHITECTURE, ENGINEERING, DATA, TASKS
 ```
 
-`TEST_DATABASE_URL=postgres://... go test -race ./...` additionally runs real Postgres concurrency, restart and isolation checks. CI provisions Postgres and runs the browser demo path. `pnpm tokens` regenerates CSS tokens; `pnpm data:refresh` refreshes offline source data and reports missing sources. Source refresh can require Python dependencies documented in `packages/data`.
+Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in [docs/](docs).
 
-The OpenAPI artifact is generated from Go engine types in `packages/contracts/openapi.json`; the browser consumes its generated TypeScript types. Update both with `pnpm contracts`. Engine math never lives in browser code.
+## Status
 
-## Deployment
-
-Configure the VPS `.env` with `DOMAIN`, `DATABASE_URL` and optional Anthropic credentials. Then:
-
-```sh
-docker compose up -d --build
-```
-
-Caddy serves HTTPS on ports 80/443 and proxies `/api/*` to Go. Keep API and Next ports private. DNS must point to the VPS, ports 80/443 must be open, and the database role must be allowed to create the initial table. Production requires Postgres; it cannot silently fall back to memory. Compose enables secure cookies and trusted-proxy handling only inside its private network. Keep `.env` out of source control. Back up Postgres through your provider and retain the prior image/checkout for rollback.
-
-## Data and delivery limitations
-
-All numeric inputs carry sources or explicit estimate labels. BLS and USDA inputs are sourced. DOL childcare rows cover 56 ZIPs, adjusted for inflation; four ZIPs retain fallback estimates. ZIP-to-county mappings remain estimates pending crosswalk verification. Consult `packages/data/out/incomplete-data-report.json` for coverage. HUD/Census access was blocked during implementation, so rent and rent-range inputs remain labeled estimates until imported through the refresh pipeline. Do not present those estimates as measured local data.
-
-This checkout does not contain Kiko’s final Figma frames or sprite kit. The placeholder scene remains playable; design tokens and presentation boundaries support later replacement. AI text parsing uses a clear manual-form fallback. Live deployment and submission recording require the VPS target and a reachable production URL; neither is implied by passing local tests.
+| Area | State |
+| --- | --- |
+| Monorepo, lint (incl. UI import rule), Vitest, Playwright, CI | Done (T1) |
+| Contracts and zod schemas | Done (H0) |
+| Fixtures: 4 Dallas–Fort Worth ZIPs (HUD FY2027 SAFMR, DOL childcare, USDA, EIA, BLS), 6 life cards, demo profile, sample statement, 3 loan offers | Done (H0) |
+| Engine: `loan`, `compareLoans`, `payoffOrder`, `monthEnd`, `sceneOf` | Working stubs until T3, T9, T12 |
+| Engine: `forecast` (range band, today's dollars, purchases), `applyPatch`, `simulate` | Done (Y2) |
+| Engine: `costOfLife`, `cardToProfile`, `scoreGuess` | Done (Y1) |
+| Engine: `rankMoves` (level 1, top 3 by 10-year effect), `movesLevel` / `isLevelUnlocked` | Done (Y3) |
+| Engine: `canAfford` (fits / wait / no over the next 12 months: cash cushion, debt load, card paid off within 12 months; `baselineFails`; with / without forecasts; `cheapestWay`) | Done (Y4) |
+| AI routes: `POST /api/ai/parse` (text → `ProfilePatch` / `Purchase` / `LoanInput`, zod-validated, user confirms) and `POST /api/ai/explain` (2 sentences, numbers checked against the input, template fallback); rate-limited; work without a key | Done (Y12) |
+| UI kit: Button, Card, Slider (linear + log), Stat, Gauge, Tabs, Sheet, ForecastChart, BarBreakdown, Field/NumberInput, EstimateTag, SourceNote, Money, Stack/Row; showcase at `/kit` | Done |
+| View-model hooks S1–S12 (`features/*/model`) + client state (`src/state`: Zustand store persisted to localStorage, anon id, session sync seam); game playable on fixtures (`NEXT_PUBLIC_GAME_SOURCE`) | Done (Y7) |
+| S1 Today (`/`): You in 10 years with its range, month-end card (drift flags from 3 statement months), play CTA, committed / best move, Can I Afford It? / Loan Lab / profile entry points, all-screens list | Placeholder UI on real data (Y10) |
+| S10 You in 10 years + Next Moves (`/future`): forecast chart with the range band ("range from the numbers we estimated"), today's dollars toggle, compare with a move, top 3 moves with commit / done / "Why?" (`/api/ai/explain`), level 2 preview, "How we calculate" | Placeholder UI on real data (Y10) |
+| Game `/play`: S2 explore (static home card + tap-to-reveal clue rooms with the clue cost shown, log-scale guess slider + typed entry), S3 reveal (guess on the range, points × multiplier, cost bars by category with sources), summary (emoji share grid, Web Share with clipboard fallback, bridge to S5), S4 streamer mode (`?stream=1`, big type, countdown that locks in at zero). `<HouseScene>` (T12) plugs into `PlayScreen`'s `ClueSlot` | Placeholder UI (Y8) |
+| Ladder S5–S9 (`/me/guess`, `/me/closest`, `/me/sliders`, `/me/balance`, `/me/upload`): guess vs. engine estimate, closest life with sources, sliders + "describe your life" (confirm before apply), balance sheet with debts, statement review + "What we keep"; rung progress and the 10-year range narrowing as estimates become real | Placeholder UI done (Y9); S9 file reading waits for T6/T7 |
+| S11 Can I Afford It? (`/afford`: form + free text with confirm, verdict and reason, with / without chart, wishlist) and S12 Loan Lab (`/loan`: 3 offers side by side, debt-load gauges, extra-payment slider, edit / add / type an offer) | Placeholder UI on real data (Y11) |
+| Screens S13–S15 | Placeholder pages |
+| Deploy (live URL) | Done: live on the team server; a push to `main` that passes CI is deployed automatically (`deploy/README.md`) |

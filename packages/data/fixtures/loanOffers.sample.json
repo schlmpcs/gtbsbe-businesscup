@@ -1,18 +1,5 @@
 [
-  {
-    "amount": 28000,
-    "apr": 0.069,
-    "termMonths": 36
-  },
-  {
-    "amount": 28000,
-    "apr": 0.079,
-    "termMonths": 48
-  },
-  {
-    "amount": 28000,
-    "apr": 0.089,
-    "termMonths": 60,
-    "fees": 400
-  }
+  { "amount": 28000, "apr": 0.069, "termMonths": 36 },
+  { "amount": 28000, "apr": 0.0549, "termMonths": 60, "downPayment": 3000, "fees": 495 },
+  { "amount": 28000, "apr": 0.0899, "termMonths": 72, "downPayment": 0, "fees": 0 }
 ]

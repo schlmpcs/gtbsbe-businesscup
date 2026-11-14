@@ -1,0 +1,34 @@
+@import "tailwindcss";
+/* Design tokens (generated from tokens.json by `pnpm tokens`): CSS variables + Tailwind theme. */
+@import "../src/ui-kit/tokens.css";
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    line-height: var(--leading-normal);
+  }
+
+  /* Headlines use the display face from the Figma screens (Bricolage Grotesque, extra bold). */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  h1 {
+    font-weight: var(--font-weight-extrabold);
+    letter-spacing: -0.02em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}

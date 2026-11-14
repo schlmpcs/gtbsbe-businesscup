@@ -1,0 +1,104 @@
+// S8 Balance sheet in six taps: age, take-home pay, cash, retirement, card balance and APR, other
+// loans. A value the user types is measured; a skipped one stays an estimate. Every value is
+// clamped to what the profile contract accepts, so a half-typed number never breaks the profile.
+import { DEBT_KINDS } from '@lifeguessr/types';
+import { useCallback, useMemo } from 'react';
+import { debtLoadGauge, netWorthToday, thisMonth } from '@/lib/model/profile';
+import { useAppReady, useAppStore, type DebtInput } from '@/state';
+import { BALANCE_FIELD_BOUNDS, DEBT_BOUNDS, DEBT_LOAD_GAUGE_MAX } from './constants';
+import type { BalanceFieldKey, BalanceSheetVM, DebtRowVM, InputBounds } from './types';
+
+const FIELDS: readonly BalanceFieldKey[] = ['age', 'takeHomePay', 'cash', 'retirement'];
+
+const within = (v: number, { min, max }: InputBounds) => Math.min(max, Math.max(min, v));
+
+/** A typed field value inside its bounds (age in whole years); null when it is not a number. */
+export function clampField(field: BalanceFieldKey, value: number): number | null {
+  if (!Number.isFinite(value)) return null;
+  const v = within(value, BALANCE_FIELD_BOUNDS[field]);
+  return field === 'age' ? Math.round(v) : v;
+}
+
+/** A debt row inside its bounds (balance and payment ≥ 0, APR a decimal 0–1); null when not numbers. */
+export function clampDebt(input: DebtInput): DebtInput | null {
+  if (!Number.isFinite(input.balance) || !Number.isFinite(input.apr)) return null;
+  if (input.minPayment !== null && !Number.isFinite(input.minPayment)) return null;
+  return {
+    kind: input.kind,
+    balance: within(input.balance, DEBT_BOUNDS.balance),
+    apr: within(input.apr, DEBT_BOUNDS.apr),
+    minPayment: input.minPayment === null ? null : within(input.minPayment, DEBT_BOUNDS.minPayment),
+  };
+}
+
+export function useBalanceSheet(): BalanceSheetVM {
+  const ready = useAppReady();
+  const profile = useAppStore((s) => s.profile);
+  const setFieldAction = useAppStore((s) => s.setField);
+  const skipField = useAppStore((s) => s.skipField);
+  const addDebtAction = useAppStore((s) => s.addDebt);
+  const updateDebtAction = useAppStore((s) => s.updateDebt);
+  const removeDebt = useAppStore((s) => s.removeDebt);
+
+  const fields = useMemo(
+    () => Object.fromEntries(FIELDS.map((f) => [f, { ...profile[f] }])) as BalanceSheetVM['fields'],
+    [profile],
+  );
+
+  const debts: DebtRowVM[] = useMemo(
+    () =>
+      profile.debts.map((d) => ({
+        id: d.id,
+        kind: d.kind,
+        balance: d.balance,
+        apr: d.apr,
+        minPayment: d.minPayment.value,
+        minPaymentIsEstimate: d.minPayment.isEstimate,
+      })),
+    [profile.debts],
+  );
+
+  const month = useMemo(() => thisMonth(profile), [profile]);
+  const netWorth = useMemo(() => netWorthToday(profile), [profile]);
+
+  const setField = useCallback(
+    (field: BalanceFieldKey, value: number) => {
+      const v = clampField(field, value);
+      if (v !== null) setFieldAction(field, v);
+    },
+    [setFieldAction],
+  );
+
+  const addDebt = useCallback(
+    (input: DebtInput) => {
+      const clean = clampDebt(input);
+      return clean ? addDebtAction(clean) : '';
+    },
+    [addDebtAction],
+  );
+
+  const updateDebt = useCallback(
+    (id: string, input: DebtInput) => {
+      const clean = clampDebt(input);
+      if (clean) updateDebtAction(id, clean);
+    },
+    [updateDebtAction],
+  );
+
+  return {
+    status: ready ? 'ready' : 'loading',
+    fields,
+    fieldBounds: BALANCE_FIELD_BOUNDS,
+    debts,
+    debtKinds: DEBT_KINDS,
+    debtBounds: DEBT_BOUNDS,
+    debtLoad: debtLoadGauge(month.debtLoad),
+    debtLoadMax: DEBT_LOAD_GAUGE_MAX,
+    netWorth,
+    setField,
+    skipField: (field) => skipField(field),
+    addDebt,
+    updateDebt,
+    removeDebt,
+  };
+}

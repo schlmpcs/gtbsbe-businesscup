@@ -21,7 +21,7 @@
 
 ## Git workflow
 
-- Trunk-based: small PRs to `main`, merged within about 30 minutes. CI (lint + test) must be green. Vercel previews every PR.
+- Trunk-based: small PRs to `main`, merged within about 30 minutes. CI (lint + test) must be green. There are no per-PR preview deploys. A push to `main` that passes CI is deployed to the team server automatically (`ARCHITECTURE.md`, Deployment; `deploy/README.md`).
 - Commit prefix with the task ID: `Y2: forecast range band`, `T6: CSV column detection`.
 - Give a heads-up in chat before touching the other person's folder or `packages/types`.
 
@@ -55,6 +55,7 @@ All monthly. `t` = month index starting at 0. Defaults live in `assumptions.ts` 
 | `safetyCushionMonths` | 1 month of spending | For Can I Afford It? |
 | `clueCost`, `clueFloor` | 0.10 per opened clue, floor 0.50 | Game tuning, not finance; tune after playtests |
 | `avgMealPrice`, `monthlyGallons`, `kidGroceryFactor` | from BLS CE / national averages | Source-tagged or assumption |
+| `payCardExtraShareOfSurplus`, `payCardExtraStep`, `cutCategoryShare`, `cancelSubscriptionsShare` | 0.5 of the surplus in $10 steps, 0.20, 0.5 | Next Moves sizes; assumptions |
 
 ### Loan amortization (Aibek, T3)
 
@@ -158,6 +159,13 @@ Level 1 candidates:
 
 Level 2 unlocks once a level 1 move is in `doneMoveIds`, or is `committedMoveId` and has been checked in on. It adds: retirementMatch, hsa, refinance, negotiateRent (local rent data), reshopInsurance. These need inputs the profile doesn't have yet (employer match, insurance quote), so they stay in the mock path for the hackathon.
 
+Implementation details (Y3, `packages/engine/moves.ts`):
+- `effect10y` is in today's dollars (what S10 shows), with the same `rates` for both forecasts; pass the area's inflation as on S10. The order is the same in nominal dollars.
+- `payCardFirst` size: `payCardExtraShareOfSurplus` (0.5) of this month's surplus, rounded down to a multiple of `payCardExtraStep` ($10), capped by the card balance, added to any existing `extraPayment`. No surplus or no card with a balance: no move.
+- `cancelSubscriptions` needs `opts.subscriptionsDetected` from the caller (a statement upload found subscription charges). The Profile has no statement flag, and `isEstimate: false` also means "typed in the Quick Sliders", so the engine can't infer it. It cancels `cancelSubscriptionsShare` (0.5) of subscriptions; while it is offered, `cutCategory` leaves subscriptions out so two moves never target one line.
+- Ids: `payCardFirst:<debt id>`, `cutCategory:<category>`, `cancelSubscriptions`. A done move never comes back; the next one of its kind takes its place (next card by APR, next largest category). Moves under $1 of effect are dropped.
+- The committed move is always returned while it applies and helps; outside the top 3 it takes the third slot. Level 2 unlocks when a level 1 move is done or committed (the check-in is a mock).
+
 ### Can I Afford It? (Amir, Y4)
 
 Run `forecast` with and without the purchase over the next 12 months. A month **passes** when all three hold:
@@ -174,6 +182,16 @@ Without rules 2 and 3, paying by card or loan never lowers cash, so everything w
 - `baselineFails`: set when the plan fails a rule even without the purchase. The UI then says so, instead of blaming the purchase.
 
 `cheapestWay` compares `'cash' | 'card' | 'loan'` by 10-year effect.
+
+Implementation notes (full detail in the header of `packages/engine/afford.ts`):
+
+- **Cushion** = `safetyCushionMonths` × that month's outflow: spending + required debt payments (including a loan or card the purchase adds) + the purchase's own monthly cost when it recurs (yearly ÷ 12).
+- **Rule 3 needs a payoff plan.** The forecast default pays a card only its minimum, so every card purchase would "revolve". Can I Afford It? simulates the purchase with `ScheduledPurchase.payOffFromSurplus`: whatever it puts on a card (the charge, or the part of a cash payment cash couldn't cover) sits on its own card balance, and each month's whole positive surplus pays it down before cash or retirement. A charge made in month c must be gone by the end of month c + 11. Savings above the cushion are not used to pay it (that would be the cash purchase).
+- **Window:** the purchase month and the 11 months after it (for "wait k", months k+1..k+12).
+- **baselineFails vs verdict:** `baselineFails` = rule 1 or 2 breaks in the next 12 months without the purchase. A failing rule counts against the purchase only if it holds without the purchase that month, or the purchase makes it worse. So `baselineFails` can come with any verdict: "fits" (the purchase doesn't touch what's broken), "wait" (the plan recovers first) or "no" (the purchase breaks or deepens a rule).
+- `failsOn` is set for "wait" and "no": the first rule that buying now breaks (earliest month, then cushion → debt load → card).
+- `with` = buying now as chosen (with the payoff plan); `without` = the plain forecast.
+- **cheapestWay** = highest net worth at month 120 (mid) over cash, card (paid off from the surplus) and the loan only when the user gave loan terms. There is no sourced default for personal-loan APR/term, so no loan is invented. Ties go to cash, then card.
 
 ### Month-end (Aibek, T9)
 

@@ -1,37 +1,63 @@
-name: Verify
-on: [push, pull_request]
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  verify:
+  check:
+    name: lint, typecheck, test, build
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: lifeguessr
-        ports: ['5432:5432']
-        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
-    env:
-      TEST_DATABASE_URL: postgres://postgres:test@localhost:5432/lifeguessr?sslmode=disable
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+
+      # pnpm version comes from "packageManager" in package.json (pnpm@10.34.9).
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
         with:
-          go-version-file: go.mod
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  # The Playwright specs in apps/web/e2e (phone + desktop). `pnpm e2e` builds and starts the app
+  # itself. It runs on a GitHub-hosted runner, in parallel with `check`.
+  e2e:
+    name: e2e (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm contracts && git diff --exit-code -- packages/contracts/openapi.json apps/web/src/lib/generated-api.ts
-      - run: pnpm lint && pnpm test:csv && pnpm test:data
-      - run: go test -race ./...
-      - run: pnpm build
-      - run: pnpm exec playwright install --with-deps chromium
+      # Both projects (Pixel 7, Desktop Chrome) run on Chromium.
+      - run: pnpm --filter web exec playwright install --with-deps chromium
       - run: pnpm e2e
-      - uses: actions/upload-artifact@v4
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: browser-traces
-          path: test-results/
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7

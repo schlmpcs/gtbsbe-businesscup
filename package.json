@@ -1,23 +1,31 @@
 {
   "name": "lifeguessr",
   "private": true,
-  "packageManager": "pnpm@10.28.2",
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
-    "dev": "pnpm --dir apps/web dev",
-    "build": "pnpm --dir apps/web build",
-    "lint": "node scripts/check-ui.mjs && pnpm --dir apps/web lint",
-    "test": "go test ./...",
-    "test:race": "go test -race ./...",
-    "api": "go run ./services/api/cmd/server",
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "start": "pnpm --filter web start",
+    "lint": "pnpm tokens:check && eslint .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "pnpm --filter web e2e",
     "tokens": "node scripts/tokens.mjs",
-    "data:refresh": "node scripts/python.mjs packages/data/scripts/refresh.py",
-    "e2e": "playwright test",
-    "contracts": "go run ./services/api/cmd/contracts && openapi-typescript packages/contracts/openapi.json -o apps/web/src/lib/generated-api.ts",
-    "test:csv": "node scripts/test-csv.mjs",
-    "test:data": "node scripts/python.mjs -m unittest discover -s packages/data/scripts -p \"test_*.py\""
+    "tokens:check": "node scripts/tokens.mjs --check",
+    "data:refresh": "pnpm --filter @lifeguessr/data refresh"
   },
   "devDependencies": {
-    "@playwright/test": "^1.65.1",
-    "openapi-typescript": "^7.13.0"
+    "@eslint/js": "10.0.1",
+    "eslint": "10.15.0",
+    "eslint-config-next": "16.4.6",
+    "globals": "17.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2",
+    "vitest": "5.1.0"
   }
 }
