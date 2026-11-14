@@ -4,12 +4,14 @@
 
 Build all logic and data behind fixed contracts first, with placeholder screens, so the Figma design can be dropped in screen by screen without touching logic.
 
+The app is a Monarch-style planner (sidebar: Dashboard, Accounts, Transactions, Cash Flow, Budget, Recurring, Goals, Plan) with the Duel as the front door. Why, and what we take from Monarch: `docs/PIVOT.md` (epic #160). One simulation feeds every plan number: `plan()` and `monteCarlo()` in `packages/engine`.
+
 ## Layers (top changes for design; bottom never does)
 
 | Layer | Path | Responsibility | Changes when Figma arrives? |
 | --- | --- | --- | --- |
 | UI | `apps/web/src/features/*/ui` | Presentational components: props in, events out. No math, no fetching, no business state. | **Rewritten** |
-| UI kit | `apps/web/src/ui-kit` | Button, Card, Slider, Stat, Gauge, Tabs, Sheet, `<ForecastChart>`, `<BarBreakdown>`, `<HouseScene>`. Styled only via tokens; scene art comes from the sprite kit. | **Restyled** |
+| UI kit | `apps/web/src/ui-kit` | Button, Card, Slider, Stat, Gauge, Tabs, Sheet, `<ForecastChart>` (the plan chart and the fan of Monte Carlo paths), `<BarBreakdown>`, a Sankey, the app shell, `<HouseScene>` (slider rollback only). Styled only via tokens; scene art comes from the sprite kit. | **Restyled** |
 | View-models | `apps/web/src/features/*/model` | One hook per screen returning plain data + action callbacks. Calls engine and APIs. | No (may gain fields) |
 | Core | `packages/engine`, `packages/data`, `apps/web/app/api` | Pure math, cached public data, server routes (AI, sessions, leaderboard, categorize). | No |
 
@@ -22,8 +24,10 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 - Zustand (or React context) for client state; local storage holds the anonymous ID and a profile cache.
 - Vitest (engine) and Playwright (one end-to-end demo path).
 - A self-hosted Postgres store on the team's own server for sessions, Pro entitlements, leaderboard and events (T4; `STORE_URL`, `pg` driver, server code in `apps/web/src/server/store/`).
-- One server-side LLM client: Anthropic Claude (`ANTHROPIC_API_KEY`, model in `ANTHROPIC_MODEL`); responses validated with zod. It also produces the 10-year forecast for the demo (`/api/ai/forecast`, optional `ANTHROPIC_FORECAST_MODEL`); the rules engine is the fallback.
+- One server-side LLM client: Anthropic Claude (`ANTHROPIC_API_KEY`, model in `ANTHROPIC_MODEL`); responses validated with zod. It also produces the **AI estimate** line on `/plan` (`/api/ai/forecast`, optional `ANTHROPIC_FORECAST_MODEL`): a labeled second opinion checked against the Monte Carlo band and hidden when it fails (ENGINEERING.md → AI forecast); it never feeds a KPI.
 - Charts: one wrapper component (e.g. Recharts or visx) behind `<ForecastChart>` so restyling stays local.
+- **Browser-only user data:** accounts, transactions and scenarios live in the browser (`localStorage` through `safeStorage`; transactions in IndexedDB with a memory fallback). The server never receives them; it sees only masked labels to categorize, as before.
+- **Web Worker:** Chance of success runs `monteCarlo()` in `apps/web/src/features/plan/model/monteCarlo.worker.ts`, so the main thread never blocks; the previous run is cancelled when settings change.
 
 ## Deployment
 
@@ -33,7 +37,7 @@ Production runs on the team's own server, not on Vercel. The files are in `deplo
 - **Runtime:** a Docker image (`deploy/Dockerfile`, Next.js standalone build) and `deploy/compose.yaml`, with an `.env` beside it on the server, never in the repo. The app port is published on `127.0.0.1` only, so Funnel is the only way in from outside.
 - **Store:** a `postgres` service (`postgres:17-alpine`) in the same compose project, with no published port (the compose network only), its data in the named volume `pgdata`, a healthcheck and a 512 MB cap. The app starts after it is healthy and gets `STORE_URL` from compose, built from `STORE_PASSWORD` in the server's `.env` (required: compose and `remote.sh` stop the deploy when it is missing). The app runs its schema migrations itself on first use (see Store below).
 - **Game flags:** which game the image serves is fixed at build time by three public flags: `NEXT_PUBLIC_GAME_MODE` (`duel`: `/play` is the duel; `slider`: the rollback), `NEXT_PUBLIC_DUEL_SOURCE` and `NEXT_PUBLIC_GAME_SOURCE` (`api`: the duel and the slider game play against the server routes, so the answers never reach the browser). The Dockerfile's defaults are production's (`duel` / `api` / `api`), so the server's `.env` needs no line for them; a line there overrides the default. `GET /api/health` reports what the image was built with (`build`). Rollback, and the smoke check to run after a deploy, are in `deploy/README.md` (The game flags).
-- **CI/CD:** CI runs on GitHub-hosted runners for every PR and push: lint, typecheck, test with a Postgres service, and the production build (the flags above) with the browser-bundle check; Playwright on the fixture build (`e2e`, every spec, with a real store for sessions and events); Playwright on the production build against Postgres (`e2e-production`: the demo path, the duel against the server and every screen route, then the bundle check); Playwright on the rollback build (`e2e-rollback`: the slider game, S4 streamer mode and the streamer notice's link); and a dry run of `deploy/deploy.sh` with the whole compose stack on the CI runner, which checks that the image reports the production flags and plays a duel on Postgres. `.github/workflows/deploy.yml` then deploys `main` by running `deploy/deploy.sh` on a self-hosted runner on the server: build there, make sure `postgres` is healthy, back it up (`pg_dump`, newest 14 kept), recreate only the app container, check `/api/health` (container liveness, then `store.status: "ok"` from the new image), automatic rollback to the previous image when either fails. A deploy never recreates the database volume. Rules for that runner are in `deploy/README.md`.
+- **CI/CD:** CI runs on GitHub-hosted runners for every PR and push: lint, typecheck, test with a Postgres service, and the production build (the flags above) with the browser-bundle check; Playwright on the fixture build (`e2e`, every spec, with a real store for sessions and events); Playwright on the production build against Postgres (`e2e-production`: the demo path, the duel against the server and every screen route, then the bundle check); Playwright on the rollback build (`e2e-rollback`: the slider game, its streamer mode and the streamer notice's link); and a dry run of `deploy/deploy.sh` with the whole compose stack on the CI runner, which checks that the image reports the production flags and plays a duel on Postgres. `.github/workflows/deploy.yml` then deploys `main` by running `deploy/deploy.sh` on a self-hosted runner on the server: build there, make sure `postgres` is healthy, back it up (`pg_dump`, newest 14 kept), recreate only the app container, check `/api/health` (container liveness, then `store.status: "ok"` from the new image), automatic rollback to the previous image when either fails. A deploy never recreates the database volume. Rules for that runner are in `deploy/README.md`.
 - **Server notes:** the runner has its own user on the server and keeps the app's `.env` in that user's home. Its clock must be right (`deploy/README.md`). The server address and Funnel hostname stay out of this repo, which becomes public; they live in the team's private notes.
 - **No PR previews:** without Vercel there are no per-PR preview deploys.
 
@@ -45,10 +49,11 @@ lifeguessr/
     types/            shared contracts                          [both]
     engine/           pure TS + Vitest                          [Amir; loan/, month.ts, scene.ts = Aibek]
       cost.ts score.ts scene.ts forecast.ts moves.ts afford.ts month.ts loan/ assumptions.ts
+      plan.ts planEvents.ts monteCarlo.ts scenarios.ts accounts.ts budget.ts cashFlow.ts   (planner; see Engine API)
     data/             fetch scripts, normalized JSON, cards     [Aibek]
       fixtures/       canonical fixtures (engine tests + web)   [both]
   apps/web/
-    app/              routes (S2/S3 are states of /play; S4 in the slider build)  [Amir]
+    app/              routes (P11's reveal and day result are states of /play; P9 and P10 are views of /plan)  [Amir]
     app/api/
       daily/ daily/clue/ daily/guess/ leaderboard/ share/       [Aibek]
       events/ session/ statement/                               [Aibek]
@@ -56,7 +61,9 @@ lifeguessr/
     src/ui-kit/       primitives + tokens.css                   [Amir; HouseScene/ = Aibek]
     public/scene/     sprite kit (SVG layouts + props, from Figma)  [Kiko]
     src/features/
-      game/ ladder/ forecast/ afford/ loan/                     [Amir]   (model/ + ui/)
+      game/ ladder/ forecast/ afford/ loan/                     [Amir]   (model/ + ui/; forecast/afford/loan are legacy until MP14 removes their routes)
+      plan/ shell/                                              [plan: Amir (model), Kiko (ui); shell: Kiko]
+      dashboard/ accounts/ transactions/ cashflow/ budget/ recurring/ goals/   [Aibek (model), Kiko (ui)]
       upload/ mocks/                                            [Aibek]
     src/fixtures/     re-exports packages/data/fixtures         [both]
     src/copy.ts       all user-facing strings                   [Amir]
@@ -66,24 +73,47 @@ lifeguessr/
 
 ## Screens
 
-| ID | Screen | Route | Feature folder | Build |
+Screen IDs **P1–P12** name the Figma frames and the routes. The sidebar (desktop) or bottom tabs (phone: Dashboard, Plan, Budget, Play, More) holds P11, P1, P8, P2–P7. Every screen works on fixtures before it is wired to its store.
+
+| ID | Screen | Route | Feature folder | View-models (`features/<feature>/model`) | Build |
+| --- | --- | --- | --- | --- | --- |
+| P1 | Dashboard: net worth with the 1-month change, this month's spending pace, budget summary, plan teaser (success % from the last Chance run), top Next Move, today's Duel card, recent transactions, setup checklist (x of 5). First visit before onboarding: Play / Try with sample data, no numbers | `/` (after onboarding) | dashboard | `useDashboard` | Real |
+| P2 | Accounts: net worth chart, groups with totals, add account (pick type → form); account detail with balance history, summary and its transactions. "Connect a bank" is a disabled "coming soon" card | `/accounts`, `/accounts/[id]` | accounts | `useAccounts`, `useAccount(id)`, `useAddAccount` | Real |
+| P3 | Transactions: list, filters, summary, CSV import (browser parse, masked labels to categorize), manual add, category override, export | `/transactions` | transactions | `useTransactions` | Real |
+| P4 | Cash Flow: income, expenses, savings, savings rate; bars and Sankey; Monthly / Quarterly / Yearly | `/cash-flow` | cashflow | `useCashFlow` | Real (needs statement months) |
+| P5 | Budget: planned vs actual per category (Fixed and Flexible groups) with a "where you should be today" marker; "Create my budget" fills Planned from `profile.spending`; Month / Year | `/budget` | budget | `useBudget` | Real |
+| P6 | Recurring: detected recurring charges, list and calendar (the old subscription audit, moved into the shell) | `/recurring` | recurring | `useRecurring` | Real |
+| P7 | Goals: **Save up** (On track / At risk / Completed) and **Pay down** (= Loan Lab and the payoff planner) | `/goals` | goals | `useGoals` | Real |
+| P8 | **Plan** (hero): KPI strip, yearly net-worth line to age 90 with draggable event markers and the labeled AI estimate line, tabs Accounts / Cash Flow / Events, Assumptions panel, Add event catalog and event editor, Scenarios, Next Moves, autosave | `/plan` | plan | `usePlan`, `useScenarios`, `useEventCatalog`, `useEventEditor`, `useAssumptions`, `usePlanMoves`, `useAiLine` | Real |
+| P9 | Plan › Compare: two scenarios overlaid, diff table, sentence ("Plan B leaves you $34K richer by 2036") | `/plan?view=compare` | plan | `useCompare` | Real |
+| P10 | Plan › Chance of success: gauge, fan of paths, p10–p90 band, histograms (net worth at retirement, at the end, shortfall age), settings (inflation, growth, paths, fixed seed) | `/plan?view=chance` | plan | `useChanceOfSuccess` (Web Worker) | Real |
+| P11 | **Play (Duel)**: "Which life costs more?" (two composite lives, pick the costlier, optional hint), the reveal (both monthly totals by category, what decided it, sources), the day result (share, challenge link, bridge to Guess yourself). Also at `/duel`. A challenge link (`/duel?c=` or `/play?c=`) shows the friend's real score before play and, on the day result, "You 3/5 · Friend 4/5" with both grids; your own link shows your result, an earlier day's link says so and does not compare, an unknown id falls back to "A friend challenged you". Rollback: the slider game with `NEXT_PUBLIC_GAME_MODE=slider` (explore the home, tap rooms for clues, guess; streamer mode at `/play?stream=1`; its reveal and summary) | `/play` | game | existing game view-models | Real. Production (`NEXT_PUBLIC_DUEL_SOURCE=api`, the deploy image's default): the HTTP duel client plays against `GET /api/daily?game=duel`, `POST /api/daily/pick` and `/hint` (server-scored with the engine's `costOfLife` + `dailyDuelPairs` + `scoreDuelPick`, progress resumes from the store). With `NEXT_PUBLIC_DUEL_SOURCE=fixtures` (local work without a store) the same engine runs in the browser on made-up cards |
+| P12 | Pro: simulated checkout + promo code (Stripe test mode when a key is set) | `/pro` | pro | existing Pro view-models | Simulated checkout (nothing charged) + promo code, no real money |
+
+### Game flow and onboarding
+
+After the Duel's day result, the bridge runs through these steps (they keep their routes; the balance sheet and the upload are editors of the same accounts and transactions as P2 and P3). Their IDs stay as in the old build.
+
+| ID | Step | Route | Feature folder | Build |
 | --- | --- | --- | --- | --- |
-| S1 | Today (first visit: Play / Try with sample data, no numbers; then month-end card, You in N years (the year picked on S10), the daily duel: "Play today's five", then "Keep playing (2 of 5)" and the day's score from the rounds the server last counted, kept in this browser by the duel client) | `/` | forecast | Real (drift flags need ≥ 3 uploaded months; before that the card shows the projection only) |
-| S2 | Game: the duel "Which life costs more?" (two composite lives, pick the costlier, optional hint). Also at `/duel`. Rollback: the slider game (explore the home, tap rooms for clues, guess) with `NEXT_PUBLIC_GAME_MODE=slider` | `/play` | game | Real. Production (`NEXT_PUBLIC_DUEL_SOURCE=api`, the deploy image's default): the HTTP duel client plays against GET /api/daily?game=duel, POST /api/daily/pick and /hint (server-scored with the engine's `costOfLife` + `dailyDuelPairs` + `scoreDuelPick`, progress resumes from the store). With `NEXT_PUBLIC_DUEL_SOURCE=fixtures` (local work without a store) the same engine runs in the browser on made-up cards |
-| S3 | Duel reveal (both monthly totals by category, what decided it, sources) and day result (share, challenge link, bridge to S5). A challenge link (`/duel?c=` or `/play?c=`) shows the friend's real score before play ("Your friend got 4/5 · 3,600 points") and, on the day result, "You 3/5 · Friend 4/5" with both grids; your own link shows your result, an earlier day's link says so and does not compare, an unknown id falls back to "A friend challenged you"; the slider's reveal and summary with `NEXT_PUBLIC_GAME_MODE=slider` | `/play` (state) | game | Real, same source as S2 |
-| S4 | Streamer mode (slider game only). The duel has no streamer view, so while `/play` is the duel nothing links to it (S1's All screens list leaves it out; the streamer notices of the tools link back to the plain `/play`) and `/play?stream=1` opens the plain duel | `/play?stream=1` with `NEXT_PUBLIC_GAME_MODE=slider` | game | Real (slider build only) |
 | S5 | Guess yourself | `/me/guess` | ladder | Real |
 | S6 | Closest life | `/me/closest` | ladder | Real |
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
-| S8 | Balance sheet | `/me/balance` | ladder | Real |
-| S9 | Statement upload + "What we keep" + "Try with sample statement" | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: not shown until built) |
-| S10 | You in N years + Next Moves (a picker: 1, 3, 5 or 10 years, default 10; the headline, range, chart and the moves' gains and ranking read that year; S1's forecast card and the S14 check-in follow it) + "Coming up" (future life events under the chart: raise, kid, move, big purchase or something else, dated by month; every number in the app follows them) | `/future` | forecast | Real |
-| S11 | Can I Afford It? | `/afford` | afford | Real |
-| S12 | Loan Lab | `/loan` | loan | Real |
-| S13 | Decision (car example) | `/decide` | mocks | Mock |
-| S14 | Monthly check-in | `/checkin` | mocks | Mock |
-| S15 | Paywall | `/pro` | pro | Simulated checkout (nothing charged; Stripe test mode instead when a key is set) + promo code, no real money |
-| S21 | Subscription audit | `/tools/subscriptions` | subscriptions | Guess, tick-list, reveal, statement, findings, cancel plan; cold-first, findings stay in the browser; hidden in streamer mode (no tools hub: its own entry in `lib/screens.ts`) |
+| S8 | Balance sheet (edits the accounts of P2) | `/me/balance` | ladder | Real |
+| S9 | Statement upload + "What we keep" + "Try with sample statement" (imports into P3) | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: not shown until built) |
+
+### Old routes
+
+Old routes redirect into the new shell once MP14 lands; nothing on the demo path returns a 404. Until then their code and tests stay.
+
+| Old route | Goes to |
+| --- | --- |
+| `/future` | `/plan` (P8) |
+| `/afford` | `/plan` (an Expense event, P8) |
+| `/loan` | `/goals` (Pay down, P7) |
+| `/decide` | `/plan?view=compare` (P9) |
+| `/checkin` | `/budget` (P5) |
+| `/tools/subscriptions` | `/recurring` (P6) |
 
 ## Contracts (`packages/types/index.ts`, draft)
 
@@ -164,7 +194,7 @@ export type Profile = {
   events?: LifeEvent[];          // future life events, at most MAX_LIFE_EVENTS (12); absent = none
   asOf?: YearMonth;              // the month today's values describe (forecast month 0); stamped by the client, never stored
 };
-// Future life events (S10 "Coming up"). Amounts in today's dollars; no free text (rule 6): `preset` only picks the label.
+// Future life events (the old Future screen's "Coming up"; the plan's events on P8 are the successor). Amounts in today's dollars; no free text (rule 6): `preset` only picks the label.
 export type YearMonth = string;  // 'YYYY-MM'
 export type LifeEvent = { id: string /* client-made, ≤ 64 chars */; month: YearMonth; preset?: 'raise' | 'kid' | 'move' | 'bigPurchase' } & (
   | { kind: 'pay'; takeHomePay: Estimate<Money> }                                                // monthly take-home from `month` ($0 allowed)
@@ -190,7 +220,7 @@ export type LoanInput = { amount: Money; apr: Rate; termMonths: number;
   fees?: Money; downPayment?: Money; extraPayment?: Money };
   // financed principal = amount − downPayment + fees (fees are rolled into the loan)
 export type ForecastSource = 'ai' | 'rules';
-export type HorizonYears = 1 | 3 | 5 | 10;   // the S10 picker's years (`FORECAST_HORIZONS`); default 10
+export type HorizonYears = 1 | 3 | 5 | 10;   // the old Future screen's picker years (`FORECAST_HORIZONS`); default 10
 export type YearAnchor = { year: number; low: Money; mid: Money; high: Money }; // what the model returns: years 1–10, nominal
 export type ForecastBundle = {            // /api/ai/forecast response; nominal dollars (todaysDollars: false)
   source: ForecastSource; model?: string;
@@ -206,7 +236,7 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
 export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
   debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
 // move.source = the forecast its effect10y came from; the server words the sentence by it.
-// horizon = the S10 picker's year and the move's effect there (`move.effect10y` cannot say it); absent = 10 years.
+// horizon = the old picker's year and the move's effect there (`move.effect10y` cannot say it); absent = 10 years.
 export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult;
   horizon?: { years: HorizonYears; effect: Money } };
 export type ExplainResponse = { text: string; source: 'ai' | 'template' };
@@ -231,6 +261,112 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
 ```
 
+### Planner contracts (`packages/types/plan.ts`, MP2 #162)
+
+New in the pivot; re-exported from `packages/types/index.ts`, with zod schemas in `schemas.ts` and fixtures in `packages/data/fixtures/` (`accounts.demo.json`, `scenario.demo.json`, `scenario.alt.json`, `plan.demo.json`, `monteCarlo.demo.json`, `transactions.demo.json`). No existing type changes meaning; if `Profile` needs a field (e.g. `scenarios`) it is added optional. Every amount a user enters is in today's dollars. Names stay as below; adjust fields only with a note in the PR and in this file. Accounts, transactions and scenarios never leave the browser.
+
+```ts
+// ----- Accounts (P2) -----
+export type AccountGroup =
+  | 'cash' | 'investments' | 'retirement' | 'realEstate' | 'vehicle' | 'otherAsset'   // assets
+  | 'creditCard' | 'loan' | 'mortgage';                                                // liabilities
+export const ASSET_GROUPS: readonly AccountGroup[];   // first six
+export type Account = {
+  id: string;
+  group: AccountGroup;
+  name: string;                     // user's label; stays in the browser, never sent to the server
+  balance: Estimate<Money>;         // BALANCE, always ≥ 0; the sign comes from the group
+  apr?: Rate;                       // liabilities only
+  minPayment?: Estimate<Money>;     // monthly, liabilities only
+  debtKind?: Debt['kind'];          // loan only: auto | student | personal | bnpl
+  growth?: Rate;                    // per year; override of the group default (home appreciation, car depreciation < 0)
+  excluded?: boolean;               // left out of net worth and the plan
+  history: { month: YearMonth; balance: Money }[]; // one point per edit, for the balance chart
+};
+
+// ----- Plan events (P8) — every amount in today's dollars -----
+export type PlanEventType =
+  | 'income' | 'expense' | 'buyHome' | 'haveKid' | 'newJob'
+  | 'careerBreak' | 'windfall' | 'retire' | 'socialSecurity';
+type PlanEventBase = { id: string; type: PlanEventType; year: number; enabled: boolean; name?: string };
+export type PlanEvent = PlanEventBase & (
+  | { type: 'income'; monthly: Money; endYear?: number }
+  | { type: 'expense'; amount: Money; cadence: 'once' | 'monthly'; endYear?: number;
+      financing?: { downPayment: Money; apr: Rate; termMonths: number } }      // = old Can I Afford It?
+  | { type: 'buyHome'; homeValue: Money; downPayment: Money; payCash: boolean;
+      termYears: 15 | 30; rate: Rate; propertyTaxRate: Rate;                  // tax: per year, share of value
+      insuranceMonthly: Estimate<Money>;                                      // AreaData.homeInsuranceMonthly
+      upkeepRate: Rate; replaceHousing: boolean }                             // upkeep: per year, share of value
+  | { type: 'haveKid'; childcareMonthly: Estimate<Money>; childcareYears: number; otherMonthly: Estimate<Money> }
+  | { type: 'newJob'; takeHomePay: Money }
+  | { type: 'careerBreak'; endYear: number }
+  | { type: 'windfall'; amount: Money }
+  | { type: 'retire' }                                // year derived from assumptions.retireAge by default
+  | { type: 'socialSecurity'; monthly: Estimate<Money> }
+);
+
+// ----- Assumptions + scenarios -----
+export type PlanAssumptions = {
+  retireAge: number;                 // default 67
+  endAge: number;                    // default 90 ("End of plan")
+  inflation: Rate;                   // default AreaData.cpiYoY ?? 0.03
+  display: 'today' | 'future';       // today's dollars (default) or future dollars
+  expenses: { mode: 'budget' } | { mode: 'manual'; monthly: Money };
+  growth: Partial<Record<AccountGroup, Rate>>;            // overrides of engine defaults
+  withdrawalOrder: AccountGroup[];                        // default cash → investments → retirement
+  savingsSplit: { group: AccountGroup; share: Rate }[];   // shares sum to 1; default from profile.retirementShare
+};
+export type Scenario = { id: string; name: string; icon?: string; assumptions: PlanAssumptions; events: PlanEvent[] };
+
+// ----- Plan output -----
+export type PlanAccountRow = { accountId: string; start: Money; growth: Money; deposits: Money; withdrawals: Money; end: Money };
+export type PlanYear = {
+  year: number; age: number;
+  netWorth: Money; assets: Money; liabilities: Money;
+  shortfall: Money;                  // unfunded expenses so far (a BALANCE, ≥ 0)
+  accounts: PlanAccountRow[];
+  cashFlow: { income: { key: string; amount: Money }[]; expenses: { key: string; amount: Money }[];
+              withdrawals: Money; net: Money };     // per YEAR
+  events: string[];                  // ids of events that start this year
+};
+export type PlanKpis = { netWorthEndOfYear: Money; netWorthAtRetirement: Money; retireAge: number;
+  netWorthAtEnd: Money; shortfallAge: number | null };
+export type PlanResult = { years: PlanYear[]; kpis: PlanKpis; display: 'today' | 'future'; source: 'rules' };
+
+// ----- Monte Carlo (P10) -----
+export type MonteCarloSettings = {
+  paths: number;                     // default 1000, max 5000
+  seed: number | null;               // null = new seed each run (the result returns the one used)
+  inflation: { mean: Rate; sd: Rate };                       // default { cpi, 0.02 }
+  growth: Partial<Record<AccountGroup, { mean: Rate; sd: Rate }>>;
+  endThreshold: Money;               // success: net worth at end ≥ this AND shortfall never > 0
+};
+export type HistogramBin = { from: number; to: number; count: number };
+export type MonteCarloResult = {
+  paths: number; seed: number; successRate: Rate;
+  bands: { year: number; p10: Money; p50: Money; p90: Money }[];
+  samplePaths: { success: boolean; netWorth: Money[] }[];   // ≤ 200 paths for drawing
+  histograms: { atRetirement: HistogramBin[]; atEnd: HistogramBin[]; shortfallAge: HistogramBin[] };
+};
+
+// ----- Budget (P5) + Cash Flow (P4) -----
+export type BudgetRow = { category: CostCategory; planned: Money; actual: Money; remaining: Money;
+  expectedByToday: Money; status: 'under' | 'onPace' | 'over' };
+export type CashFlowSummary = {
+  period: { from: YearMonth; to: YearMonth };
+  income: Money; expenses: Money; savings: Money; savingsRate: Rate | null;
+  byCategory: { category: CostCategory; amount: Money }[];
+  sankey: { nodes: { id: string; kind: 'income' | 'total' | 'category' | 'savings' }[];
+            links: { source: string; target: string; value: Money }[] };
+};
+
+// ----- Transactions (P3), browser only -----
+export type Transaction = { id: string; date: string /* YYYY-MM-DD */; label: string; amount: Money; // + in, − out
+  accountId?: string; cls: StatementClass; categoryOverridden: boolean; goalId?: string };
+```
+
+`Transaction` here is the stored, browser-only line of P3. It clashes with the parser's `Transaction` above (`date`, `description`, `amount`, the raw CSV line): MP2 settles the name in its PR and updates this file.
+
 ## Engine API (pure, no I/O)
 
 | Function | Owner | Signature |
@@ -239,7 +375,7 @@ export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: 
 | `cardToProfile` | Amir | `(card: LifeCard, area: AreaData) => Profile` (Closest Life; car loan becomes an `auto` debt, all fields `isEstimate: true`) |
 | `scoreGuess` | Amir | `(guess: Money, cost: CostBreakdown, cluesOpened: number) => GuessResult` |
 | `sceneOf` | Aibek | `(card: LifeCard, area: AreaData) => { public: PublicCard; clues: Record<ClueId, ClueReveal> }` (deterministic; the only place scene props come from) |
-| `forecast` | Amir | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` (the rules provider: fallback and yardstick; the headline forecast comes from `/api/ai/forecast`) |
+| `forecast` | Amir | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` (the original rules forecast: the yardstick for the AI estimate's sanity checks and the basis `plan()` builds on; the AI line comes from `/api/ai/forecast`) |
 | `applyPatch` | Amir | `(p: Profile, patch: ProfilePatch) => Profile` |
 | `rankMoves` | Amir | `(p: Profile, opts?: { rates?: Partial<ForecastRates>; subscriptionsDetected?: boolean }) => Move[]` (level 1, top 3; `effect10y` in today's dollars; the committed move is the one with `id === p.committedMoveId`) |
 | `moveCandidates` / `rankCandidates` | Amir | `(p: Profile, opts?: RankMovesOptions) => MoveCandidate[]` / `(p: Profile, candidates: MoveCandidate[], effectOf: (c: MoveCandidate) => Money) => Move[]`. `rankMoves` is both with the rules forecast as `effectOf`; the AI path supplies `effectOf` from the bundle. `MoveCandidate = Omit<Move, 'effect10y'>`. |
@@ -251,6 +387,13 @@ export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: 
 | `loan` | Aibek | `(p: Profile, l: LoanInput, opts?: { rates?: Partial<ForecastRates> }) => LoanResult` (`effect10y` in today's dollars, like moves) |
 | `compareLoans` | Aibek | `(p: Profile, ls: LoanInput[], opts?: { rates?: Partial<ForecastRates> }) => LoanResult[]` (same order as `ls`) |
 | `payoffOrder` | Aibek | `(debts: Debt[], extra: Money, method: 'avalanche' \| 'snowball') => { order: string[] /* debt ids */; payoffMonth: number \| null; totalInterest: Money }` |
+| `plan` | Amir | `(profile: Profile, accounts: Account[], scenario: Scenario, area?: AreaData) => PlanResult` (MP3; one `PlanYear` per calendar year to `endAge`; builds on `simulate()` behind options whose defaults keep the old behavior; ENGINEERING.md → Plan) |
+| `defaultEvent` / `expandEvent` / `buyHomeBreakdown` / `expenseFinancingBreakdown` | Aibek | `(type: PlanEventType, ctx) => PlanEvent` / `(event: PlanEvent, ctx) => { lifeEvents: LifeEvent[]; debts: Debt[]; assets: { group: AccountGroup; month: number; value: Money }[] }` (MP4; `ctx = { profile, area?, assumptions, asOf }`; defaults come from `AreaData`) |
+| `monteCarlo` | Amir | `(profile, accounts, scenario, settings: MonteCarloSettings, area?) => MonteCarloResult` (MP5; mulberry32 + Box–Muller, same seed = same result) |
+| `baselineScenario` / `duplicateScenario` / `compareScenarios` / `planMoveEffects` / `previewEvent` | Amir | MP6: scenarios (max 4), Compare data and sentence data, Next Moves measured on the scenario's plan (`effectAtRetirement`, `successRateDelta` with the same seed), and the with / without preview for the event panel |
+| `accountsToProfile` / `profileToAccounts` / `netWorthSummary` | Aibek | MP8: keeps every existing engine function working unchanged; the round trip keeps every forecast number |
+| `budgetRows` / `budgetRowsForYear` | Aibek | `(planned: Record<CostCategory, Money>, actual: CategoryTotals \| null, today: { day: number; daysInMonth: number }) => { income: BudgetRow; rows: BudgetRow[]; totals }` (MP9) |
+| `cashFlowSummary` | Aibek | `(totals: CategoryTotals[], period) => CashFlowSummary` (MP9; incl. the Sankey data) |
 
 All assumptions (inflation, returns, thresholds) live in `packages/engine/assumptions.ts` with a `Source` or an `assumption: true` flag. The UI shows them in a "How we calculate" panel.
 
@@ -267,7 +410,7 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `POST /api/daily/hint` | Amir | `{ anonId, date, round }` (strict; `date` required) → `DuelHint { A, B }` + `{ recorded }`: one more fact on both cards of the duel round (each life's neighborhood tier, from the shared builder so the fixture and server texts match). The server records the hint first (`store.duel.openHint`), and `/api/daily/pick` scores 900 instead of 1,000 from that record; the client sends no count or score (400). One hint per round: asking twice, or after the pick, answers the same text with `recorded: false` and changes nothing. 409 `day_over` (carries `today`) past the grace period, 413, 429 (`Retry-After`), 503 when the store is down. |
 | `POST /api/daily/pick` | Amir | `{ anonId, date, round, choice }` (strict; `date` required) → `PickResult` + `{ replayed }` (`PickReplySchema`). The only place a duel is scored in an API build: `duelScorer(pair, choice)` runs inside the store's transaction (`store.duel.submitPick`) with the hints the server recorded for that round (1,000 for the costlier life, 900 after a hint, 0 for the other), never a count, score or total from the client (400). One pick per round per anonId per day, stored under the day's `resultId`; a repeat, even with the other letter, answers the first result with `replayed: true`. Rounds may be picked in any order. `crowd` is live from `liveCrowds`, counted after the pick is stored (so it includes this pick, and a replay carries the current count); null below `DUEL_CROWD_MIN_PICKS` = 20. A pair whose lives cost the same is never scored: the route throws (500, logged) before anything is stored. 409 `day_over` (carries `today`) past the grace period, 413, 429 (`Retry-After`; 20/min per anonId, 120/min per IP), 503 when the store is down. |
 | `GET /api/daily/challenge` | Amir | query `c` = a duel day's `resultId` (32 hex) → `{ ok, date, rounds: 5, played, right, points, tiles, today }` (`DuelChallengeResponseSchema`): the score a friend shared with their challenge link (`/duel?c={resultId}`, built by the day result) and nothing else, read from `store.duel.findDuelDay`: right picks out of the rounds played, the points, one tile colour per played round (`duelTileColor` in `lib/duel/duelDay`, the same rule as the day result and the share card) and the day. No anonymous key, no choices, no totals, no card ids, and the browser sends no `x-anon-id`: it is what the friend already chose to share. `today` = the day is the one `GET /api/daily?game=duel` serves now; for an earlier day the screen says "This challenge was for {date}. Here are today's five." and does not compare, and a day still being played (`played` < 5) is no score to beat (the generic "a friend challenged you" line). The id is looked up as a duel day only. 404 `not_found` for an unknown id; a malformed or missing one answers 404 without a store query. 429 (`Retry-After`; the per-IP read budget it shares with `GET /api/daily` and `/api/leaderboard`), 503 when the store is down. `Cache-Control: no-store`, because `today` turns false at New York midnight. The browser reads it through `DuelClient.challenge(resultId, today)` (HTTP client: this route, and no request at all for an id that is not 32 hex; fixture client: only the day this browser played). |
-| `GET /api/leaderboard` | Aibek | query `date` (default today), `limit` (1–100, default 50) (+ own `anonId` in a header) → `{ ok, date, players, entries, rank, todayStats }`, summed from stored guesses. Ties on points share a rank; handles are made up from a hash (no id, no PII). The client never sends a score. It reads slider results only (`store.game`), so nothing in the app links to it while `/play` is the duel; S16 is after the cut line and needs duel picks. |
+| `GET /api/leaderboard` | Aibek | query `date` (default today), `limit` (1–100, default 50) (+ own `anonId` in a header) → `{ ok, date, players, entries, rank, todayStats }`, summed from stored guesses. Ties on points share a rank; handles are made up from a hash (no id, no PII). The client never sends a score. It reads slider results only (`store.game`), so nothing in the app links to it while `/play` is the duel; the leaderboard screen is after the cut line and needs duel picks. |
 | `GET /api/share` | Aibek | query `resultId, format` (`9x16` default, `1x1`) → PNG (1080×1920 or 1080×1080, `next/og`) from a stored result, so share cards can't be faked. The id is looked up as a **duel day** first (`store.duel.findDuelDay`: "Which life costs more?", the date, "4 of 5", total points and the tile grid, colored by the same `duelTileColor` as the day result; a day still being played shows its played rounds only), then as a **slider guess** (`store.game.findResult`); both miss → 404, a malformed id → 404 without a query. The duel card shows no amounts, choices, metros or anything about the player. A slider card and a finished duel day (all five picked) are cached as immutable for a year; a duel day still being played answers `no-store`, since its picture changes with every pick under the same URL. The duel's day result downloads the 9:16 card and shares it as a file (`navigator.share({ files })`) where `navigator.canShare` accepts files, else shares the text grid (`result_shared` either way). 400 bad format, 429, 503 when the store is down |
 | `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → `{ ok: true, ...SessionState }`. `anonId` = `crypto.randomUUID()` (a UUID, required). `{ anonId }` alone loads; each field sent replaces the saved one whole. 402 `not_paid` when the save would add to the wishlist without Pro; 503 `unavailable` when the store is down or not configured. `GET /api/session` with the `x-anon-id` header loads too. |
 | `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed', classes?: { label, class: StatementClass }[] /* how each distinct masked label was sorted */ }`; keyword rules without an API key; nothing stored |
@@ -276,14 +419,14 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `GET /api/events/funnel` | Aibek | query `days` (1–90, default 7) → `FunnelReport`: distinct anonymous ids per event and per `FUNNEL_STEPS` step (with how many went through every earlier step, and the conversion), plus clues per home, blind-guess, finish and share rates. Aggregates only. |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan' \| 'spend', text }` → `ProfilePatch` / `Purchase` / `LoanInput` / `SpendItem[]` (zod-validated; for `spend` every amount must be written in the text). The parsed values are shown to the user to confirm before they enter the profile. |
 | `POST /api/ai/explain` | Amir | `ExplainRequest { move? (optional `source: 'ai' \| 'rules'` words the sentence), loanResult?, horizon? { years: 1 \| 3 \| 5 \| 10, effect } (the sentence is about the move's gain at that year; ignored without a move) }` → `{ text, source }` (2 sentences, no new numbers; a debt load with no take-home pay is `null`) |
-| `POST /api/ai/forecast` | Amir | `{ profile, rates?, scenarios?: { id, patch }[] }` → `ForecastBundle` (nominal dollars). Validated in code, cached, falls back to the rules forecast (`source: 'rules'`). Has its own rate limiter so it cannot use up the parse and explain budget. |
+| `POST /api/ai/forecast` | Amir | `{ profile, rates?, scenarios?: { id, patch }[] }` → `ForecastBundle` (nominal dollars). Validated in code, cached, falls back to the rules forecast (`source: 'rules'`). Has its own rate limiter so it cannot use up the parse and explain budget. Since the pivot it feeds only the labeled AI estimate line on `/plan` (P8): the client checks it against the Monte Carlo p5–p95 band and hides it on failure; no KPI, verdict or move reads it. |
 | `GET /api/pro/status` | Amir | header `x-anon-id` → `{ status: ProStatus, checkoutAvailable, demo: { enabled, code? } }` |
 | `POST /api/pro/checkout` | Amir | `{ plan }` → `{ url }`, a Stripe Checkout Session in test mode to redirect to |
 | `POST /api/pro/confirm` | Amir | `{ sessionId }` → `{ status }`; the server retrieves the session from Stripe and checks it is test-mode, complete, paid and this anonymous ID's |
 | `POST /api/pro/demo-unlock` | Amir | `{ code }` → `{ status }`; the promo code shown on the Pro screen, for the jury |
 | `POST /api/pro/demo-checkout` | Amir | `{ plan }` (strict: any other field is a 400) → `{ status }` with source `demo_checkout`; the simulated checkout, nothing is charged. 503 when `PRO_DEMO_UNLOCK=off`. |
 
-## Pro paywall (S15, demo)
+## Pro paywall (P12, demo)
 
 No real money moves. The Pro screen offers one checkout: the **simulated checkout** (a pre-filled demo card and a Pay (demo) button, no payment processor) when the server has no Stripe key, or Stripe's hosted Checkout in **test mode** (the test card is shown on screen) when it has one. The promo code shown on the Pro screen lets the jury skip both and pass the paywall without paying (FAQ Q115). All end in the same entitlement, keyed by the anonymous ID. The shared contracts and prices (`PRO_PRICES`: $39.99/year, $6.99/month, an assumption) live in `packages/types`.
 
@@ -291,7 +434,7 @@ No real money moves. The Pro screen offers one checkout: the **simulated checkou
 - **Test mode only (Stripe).** `STRIPE_SECRET_KEY` is accepted only if it starts with `sk_test_` or `rk_test_`; anything else leaves checkout unavailable and the promo code still works. `/api/pro/confirm` accepts only `cs_test_…` session ids and refuses a session with `livemode: true`.
 - **No webhook.** The success URL carries the session ID; `/api/pro/confirm` fetches the session from Stripe, so nothing needs to reach the server from outside (the server is behind a Funnel route). The session is bound to the anonymous ID (`client_reference_id`) and can be claimed by one ID only.
 - **Entitlements** sit behind an `EntitlementStore` interface. With `STORE_URL` they live in the Postgres store (tables `pro_entitlements`, `pro_checkout_sessions`); the JSON file of the earlier builds (`PRO_DATA_DIR`) is imported once on first use. Without `STORE_URL` (dev) they stay in that file. Sources rank `stripe_test` > `demo_checkout` > `demo`: a grant replaces the current one only when it ranks the same or higher, and the promo code never replaces anything, so nothing downgrades a Stripe purchase (migration 005 added `demo_checkout` to the `source` check).
-- **What is gated.** Server-side routes call `requirePro(req)`, or `proStatusFor(anonId)` when only part of a request is gated (`src/server/pro/http.ts`). In this build the one real gate is saving a purchase to the wishlist (S11, `wishlistLocked`): the browser hides the button, and `POST /api/session` refuses (402) a save that would add a purchase to the saved wishlist without Pro. Items already in the wishlist stay and can be removed; the profile always saves.
+- **What is gated.** Server-side routes call `requirePro(req)`, or `proStatusFor(anonId)` when only part of a request is gated (`src/server/pro/http.ts`). In this build the one real gate is saving a purchase to the wishlist (the Expense event's wishlist save, `wishlistLocked`): the browser hides the button, and `POST /api/session` refuses (402) a save that would add a purchase to the saved wishlist without Pro. Items already in the wishlist stay and can be removed; the profile always saves.
 - **Env:** `STRIPE_SECRET_KEY`, `APP_URL` (public base URL including any sub-path, used for the return URLs), `PRO_DEMO_CODE`, `PRO_DEMO_UNLOCK` (`off` disables the promo code and the simulated checkout), `PRO_DATA_DIR`. Names only in `.env.example`.
 
 ## Store (`apps/web/src/server/store/`)
@@ -311,13 +454,20 @@ Server-only. `getStore()` returns the process-wide store: Postgres for a `postgr
 ```
 packages/data scripts ──► packages/data/out/areas.json (cached, committed)
                                    │
-cards.json (server) ──► sceneOf ──► /api/daily (PublicCard) + /api/daily/clue (ClueReveal) ──► HouseScene (S2)
-                 └──► costOfLife + scoreGuess in /api/daily/guess ──► game reveal (S3)
+cards.json (server) ──► costOfLife + dailyDuelPairs ──► /api/daily?game=duel (public duels) ──► Duel (P11)
+                 └──► scoreDuelPick in /api/daily/pick (server-scored) ──► reveal + day result (P11)
                                    │
-sliders / balance sheet / CSV / life events ──► Profile ──► (+ asOf, state/profile.ts) ──► /api/ai/forecast (S1, S10; rules fallback) · engine (the ladder's 10-year preview on S5–S9, canAfford, loan, monthEnd)
-                                   │                         │
-                         /api/session (persist)        view-model hooks ──► ui
-CSV (browser parse, mask names) ──► StatementItem[] ──► /api/statement/categorize ──► CategoryTotals[] ──► Profile
+sliders / balance sheet (S7, S8) ──► Account[] (browser) ──accountsToProfile──► Profile ──► engine: moves, canAfford, loan, monthEnd, budgetRows
+                                   │                                              │
+Account[] + Profile + Scenario (events, assumptions) ──► plan() ──► PlanResult ──► KPIs, chart, Accounts / Cash Flow / Events tables (P8)
+                                   │                  └► monteCarlo() in a Web Worker ──► bands, success %, histograms (P10); the p5–p95 band checks the AI line
+                                   │                  └► compareScenarios() (P9) · planMoveEffects() (Next Moves)
+Profile ──► /api/ai/forecast ──► AI estimate line on P8 (validated, hidden when it fails; never feeds a KPI)
+                                   │
+CSV (browser parse, mask names) ──► StatementItem[] ──► /api/statement/categorize ──► CategoryTotals[] ──► Transactions store (browser, IndexedDB)
+                                   ──► budgetRows (P5) · cashFlowSummary (P4) · detectSubscriptions (P6) · Profile (statement-apply path)
+                                   │
+                         /api/session (persist Profile)        view-model hooks ──► ui
 ```
 
 ## Privacy design
@@ -330,4 +480,5 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is not shown (dead buttons are hidden).
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
 - Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test`, `demo_checkout` or `demo`), when, and the Stripe test Checkout Session ID for a Stripe test payment. No card data or email ever reaches our server: the simulated checkout has no card field, and the Stripe test checkout page belongs to Stripe.
-- The forecast request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers to the model provider, which does not train on API data. Zero data retention is not enabled, so no copy claims it; the "What we keep" panel says only that these numbers (no names or account numbers) go to the provider, which does not train on API data.
+- Accounts (names and balances), transactions and scenarios stay in the browser (`localStorage`; transactions in IndexedDB) and are never sent to the server or saved in the database. "Delete all my data" clears them. The server sees only the masked labels to categorize, as before. The profile derived from the accounts (balances and debts, no names) is what a session save and the forecast request contain.
+- The AI estimate request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers to the model provider, which does not train on API data. Zero data retention is not enabled, so no copy claims it; the "What we keep" panel says only that these numbers (no names or account numbers) go to the provider, which does not train on API data.
