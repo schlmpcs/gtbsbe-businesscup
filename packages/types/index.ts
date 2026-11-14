@@ -79,6 +79,16 @@ export type ProfilePatch = {
 export type ForecastPoint = { month: number; mid: Money; low: Money; high: Money }; // net worth (balance)
 export type Forecast = { points: ForecastPoint[]; in10y: ForecastPoint; todaysDollars: boolean };
   // always simulated for ≥ 120 months; in10y = point at month 120
+
+// The 10-year forecast with its scenarios (one per move candidate or purchase), from the AI forecaster
+// ('ai') or the rules engine ('rules'). `model` names the AI model and is absent for 'rules'.
+// All forecasts in a bundle share one unit: nominal dollars, `todaysDollars: false`.
+export type ForecastSource = 'ai' | 'rules';
+// One year-end net worth estimate from the AI forecaster. `year` counts from today (1–10), `mid` is
+// the estimate and `low` ≤ `mid` ≤ `high` is the range around it. Nominal dollars (a balance).
+export type YearAnchor = { year: number; low: Money; mid: Money; high: Money };
+export type ForecastBundle = { source: ForecastSource; model?: string; base: Forecast;
+  scenarios: Record<string, Forecast> };
 export type MoveKind = 'payCardFirst' | 'cutCategory' | 'cancelSubscriptions'
   | 'retirementMatch' | 'hsa' | 'refinance' | 'negotiateRent' | 'reshopInsurance';
 export type Move = { id: string; kind: MoveKind; level: 1|2|3; category?: CostCategory;
