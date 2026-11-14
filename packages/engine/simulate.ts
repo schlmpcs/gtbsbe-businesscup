@@ -52,6 +52,8 @@
 //   expenses, never paid back, growing each month at the monthly inflation rate before new unfunded
 //   outflow is added. In 'separate' mode no card is ever charged for a shortfall (a payOffFromSurplus
 //   purchase's uncovered cash part included); card purchases still go on a card.
+// - `newDebts` open in step 3 of their month (first payment the month after, like a loan purchase);
+//   `newAssets` are added to their group in step 1 of their month, after its growth (a deposit).
 // - With any plan option, netWorth = all asset groups − debtBalance − shortfall.
 import {
   ASSET_GROUPS,
@@ -141,6 +143,15 @@ export type SimulateOptions = {
   /** Spending base: the profile's categories ('budget', default) or one manual monthly amount. */
   expenses?: PlanAssumptions['expenses'];
   yearlyRates?: YearlyRates;
+  /**
+   * Debts that open in a later month (expandEvent's mortgage or financed purchase): added in step 3 of
+   * month `month` (0-based), like a loan purchase, so the first payment is the month after. The id is
+   * made unique if it is taken. The required payment is `minPayment` (the card formula for an
+   * estimated card minimum), shifted by `scenario` like a profile debt.
+   */
+  newDebts?: readonly { month: number; debt: Debt }[];
+  /** BALANCES added to an asset group in month `month` after its growth (expandEvent's home value). */
+  newAssets?: readonly { group: AccountGroup; month: number; value: Money }[];
 };
 
 /** One asset group over one month: flows for the month, the balance at its end. */
@@ -171,6 +182,7 @@ export type SimulationMonth = {
   groups?: Record<AssetGroup, GroupMonth>; // cash and retirement included (same balances as above)
   shortfall?: Money;            // unfunded expenses so far (a BALANCE, ≥ 0)
   shortfallAdded?: Money;       // unfunded outflow of this month (in `shortfall`, after its growth)
+  oneOffIncome?: Money;         // one-off income events this month, paid into cash (not in `income`)
 };
 
 export type Simulation = {
@@ -184,6 +196,8 @@ export type Simulation = {
    * opened, or null (no flag, or nothing was ever put on a card within the horizon).
    */
   payoffCardIds: (string | null)[];
+  /** With a plan option: the APR of every debt by id (opened ones included), for interest by debt. */
+  debtApr?: Record<string, Rate>;
 };
 
 /** Effective monthly rate for a yearly rate: (1 + annual)^(1/12) − 1. */
@@ -301,7 +315,7 @@ function checkRate(name: string, value: number): void {
 function hasPlanOptions(opts: SimulateOptions): boolean {
   return opts.shortfallMode !== undefined || opts.withdrawalOrder !== undefined || opts.savingsSplit !== undefined
     || opts.balances !== undefined || opts.growth !== undefined || opts.expenses !== undefined
-    || opts.yearlyRates !== undefined;
+    || opts.yearlyRates !== undefined || opts.newDebts !== undefined || opts.newAssets !== undefined;
 }
 
 const zeroGroups = (): Record<AssetGroup, Money> =>
@@ -394,6 +408,19 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     for (let t = 0; t < months; t++) priceAt.push(priceAt[t]! * (1 + monthlyRate(inflation[yearOf(t)]!)));
   }
   const incomeFollowsPrices = priceAt !== null && opts.rates?.incomeGrowthAnnual === undefined;
+  const newDebts = opts.newDebts ?? [];
+  for (const { month, debt } of newDebts) {
+    if (!Number.isInteger(month) || month < 0) throw new RangeError(`Invalid new debt month: ${month}`);
+    if (!Number.isFinite(debt.balance) || debt.balance < 0) throw new RangeError(`Invalid new debt balance: ${debt.balance}`);
+    checkRate('new debt apr', debt.apr);
+  }
+  const newAssets: { group: AssetGroup; month: number; value: Money }[] = [];
+  for (const { group, month, value } of opts.newAssets ?? []) {
+    if (!isAssetGroup(group)) throw new RangeError(`Invalid new asset group: ${group}`);
+    if (!Number.isInteger(month) || month < 0) throw new RangeError(`Invalid new asset month: ${month}`);
+    if (!Number.isFinite(value) || value < 0) throw new RangeError(`Invalid new asset value: ${value}`);
+    newAssets.push({ group, month, value });
+  }
   const cashYield0 = opts.growth?.cash ?? rates.cashYieldAnnual;
   const retirementReturn0 = opts.growth?.retirement ?? rates.returnAnnualNominal;
 
@@ -522,7 +549,7 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     else bal[g] += amount;
   };
   type PlanFlows = { growth: Record<AssetGroup, Money>; deposits: Record<AssetGroup, Money>;
-    withdrawals: Record<AssetGroup, Money>; shortfallAdded: Money };
+    withdrawals: Record<AssetGroup, Money>; shortfallAdded: Money; oneOffIncome: Money };
 
   const snapshot = (
     month: number,
@@ -550,12 +577,12 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
     return {
       month, ...flows, cash, retirement, debtBalance, cardBalance, debts: byId,
       netWorth: cash + retirement + bal.investments + bal.realEstate + bal.vehicle + bal.otherAsset - debtBalance - shortfall,
-      groups, shortfall, shortfallAdded: plan.shortfallAdded,
+      groups, shortfall, shortfallAdded: plan.shortfallAdded, oneOffIncome: plan.oneOffIncome,
     };
   };
 
   const noPlanFlows = (): PlanFlows =>
-    ({ growth: zeroGroups(), deposits: zeroGroups(), withdrawals: zeroGroups(), shortfallAdded: 0 });
+    ({ growth: zeroGroups(), deposits: zeroGroups(), withdrawals: zeroGroups(), shortfallAdded: 0, oneOffIncome: 0 });
   const path: SimulationMonth[] = [
     snapshot(0, {
       income: 0, spending: 0, debtPayments: 0, requiredDebtPayments: 0, purchasesCash: 0,
@@ -614,6 +641,11 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
         flow.growth[g] = bal[g] - before;
       }
       shortfall *= 1 + rInflation;
+      for (const x of newAssets) {
+        if (x.month !== t) continue;
+        addTo(x.group, x.value);
+        flow.deposits[x.group] += x.value;
+      }
     }
 
     // 2. Debts: interest, then the payment (never more than what is owed).
@@ -680,6 +712,19 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
       }
     }
     debts.push(...newLoans);
+    for (const { month: at, debt: d } of newDebts) {
+      if (at !== t) continue;
+      debts.push({
+        id: uniqueId(d.id),
+        kind: d.kind,
+        apr: d.apr,
+        balance: d.balance,
+        fixedPayment: usesCardFormula(d) ? null : d.minPayment.value,
+        paymentFactor: shift(1, d.minPayment.isEstimate, scenario, d.apr > cashYield0),
+        extra: d.extraPayment ?? 0,
+        payoffMonth: d.balance <= PAID_OFF_EPSILON ? month : null,
+      });
+    }
     chargeCard(toCard);
 
     // 4. Surplus: pays off payOffFromSurplus cards, then is split between retirement and cash (or by
@@ -718,7 +763,10 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
       cash += surplus;
     }
     cash += oneOffIncome * priceFactor;
-    if (flow) flow.deposits.cash += oneOffIncome * priceFactor;
+    if (flow) {
+      flow.deposits.cash += oneOffIncome * priceFactor;
+      flow.oneOffIncome = oneOffIncome * priceFactor;
+    }
     let shortfallToCard = 0;
     if (cash < 0) {
       let need = -cash;
@@ -764,5 +812,7 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
 
   const payoffMonth: Record<string, number | null> = {};
   for (const d of debts) payoffMonth[d.id] = d.payoffMonth;
-  return { rates, path, payoffMonth, payoffCardIds: payoffCards.map((d) => d?.id ?? null) };
+  const result: Simulation = { rates, path, payoffMonth, payoffCardIds: payoffCards.map((d) => d?.id ?? null) };
+  if (planMode) result.debtApr = Object.fromEntries(debts.map((d) => [d.id, d.apr]));
+  return result;
 }

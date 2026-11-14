@@ -41,7 +41,7 @@ describe('simulate plan options: defaults', () => {
     const plain = simulate(p, 24);
     const withDefaults = simulate(p, 24, { shortfallMode: 'card', withdrawalOrder: [], expenses: { mode: 'budget' } });
     for (const [m, month] of withDefaults.path.entries()) {
-      const { groups: _g, shortfall, shortfallAdded: _a, ...rest } = month;
+      const { groups: _g, shortfall, shortfallAdded: _a, oneOffIncome: _o, ...rest } = month;
       expect(rest).toEqual(plain.path[m]);
       expect(shortfall).toBe(0);
     }
@@ -212,6 +212,38 @@ describe('simulate plan options: expenses mode', () => {
     expect(manual.path[1]!.spending).toBe(2200);
     expect(manual.path[13]!.spending).toBeCloseTo(2266, 9);
     expect(() => simulate(p, 1, { expenses: { mode: 'manual', monthly: -1 } })).toThrow(RangeError);
+  });
+});
+
+describe('simulate plan options: dated debts and assets (expandEvent output)', () => {
+  it('a new debt opens in its month and is first paid the month after', () => {
+    // Pay 1000, nothing spent, ZERO rates. Debt 1200 at 0% with a $100 payment, month index 1:
+    // month 1: cash 1000, no debt; month 2: cash 2000, debt 1200 (opened after payments), net worth
+    // 2000 − 1200 = 800; month 3: pays 100 → debt 1100, cash 2000 + 900 = 2900.
+    const loan = { id: 'ev:loan', kind: 'personal' as const, balance: 1200, apr: 0, minPayment: { value: 100, isEstimate: false } };
+    const sim = simulate(profile({ pay: 1000 }), 3, { rates: ZERO, newDebts: [{ month: 1, debt: loan }] });
+    expect(sim.path[1]!.debts).toEqual({});
+    expect(sim.path[2]!.debts).toEqual({ 'ev:loan': 1200 });
+    expect(sim.path[2]!.debtPayments).toBe(0);
+    expect(sim.path[2]!.netWorth).toBe(800);
+    expect(sim.path[3]!.debts['ev:loan']).toBe(1100);
+    expect(sim.path[3]!.debtPayments).toBe(100);
+    expect(sim.path[3]!.cash).toBe(2900);
+    expect(sim.debtApr).toEqual({ 'ev:loan': 0 });
+  });
+
+  it('a new asset is a deposit in its month and grows from the next', () => {
+    // 100000 of real estate at month index 2 (path[3]), growth 12%: path[3] = 100000, then 12 monthly
+    // steps (t = 3..14) give path[15] = 100000 × 1.12 = 112000.
+    const sim = simulate(profile({ pay: 0 }), 15, {
+      rates: ZERO, growth: { realEstate: 0.12 }, newAssets: [{ group: 'realEstate', month: 2, value: 100_000 }],
+    });
+    expect(sim.path[2]!.groups!.realEstate.balance).toBe(0);
+    expect(sim.path[3]!.groups!.realEstate.balance).toBe(100_000);
+    expect(sim.path[3]!.groups!.realEstate.deposits).toBe(100_000);
+    expect(sim.path[3]!.groups!.realEstate.growth).toBe(0);
+    expect(sim.path[15]!.groups!.realEstate.balance).toBeCloseTo(112_000, 6);
+    expect(sim.path[15]!.netWorth).toBeCloseTo(112_000, 6);
   });
 });
 
