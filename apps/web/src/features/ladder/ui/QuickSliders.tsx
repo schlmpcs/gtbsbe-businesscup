@@ -1,7 +1,8 @@
 // S7 Quick sliders (Design v3, Figma 202:2004): one slider per spending category (a colored dot, the
 // label, an estimate tag, the value on the right) in a white card on the left; the retirement share
 // sits under "More options" at the bottom of that card (its view-model is S7's, so it stays here).
-// Free text can fill the sliders after the user confirms; it is one text link until opened. On the
+// Free text can fill the sliders after the user confirms; it is one text link until opened. After a
+// statement import a green line over the sliders says which months they come from. On the
 // right an ink card: the S5 guess struck through, "Your month: $Y" in orange and how far off the
 // guess was, with take-home and what's left over; then the house under construction.
 import { common, ladder } from '@/copy';
@@ -76,6 +77,11 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
     >
       <div id="sliders" className="rounded-xl bg-surface p-xl shadow-md">
         <h2 className="sr-only">{t.slidersTitle}</h2>
+        {vm.statementMonths.length > 0 && (
+          <p data-testid="sliders-from-statement" className="mb-lg rounded-lg bg-positive-soft p-md text-sm font-medium text-positive">
+            {t.fromStatement(vm.statementMonths)}
+          </p>
+        )}
         <ul aria-label={t.slidersLabel} className="flex flex-col gap-lg">
           {vm.sliders.map((s, i) => (
             <li key={s.category}>

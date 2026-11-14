@@ -1,7 +1,7 @@
 // Pure Profile updates the client makes on the user's behalf. Values the user states are measured
 // (`isEstimate: false`); values we fill in stay estimates. None of these invent a number: they
 // copy user input or measured statement totals, and averages of those totals.
-import { applyPatch, cardMinPaymentFor } from '@lifeguessr/engine';
+import { applyPatch, cardMinPaymentFor, statementAverages } from '@lifeguessr/engine';
 import {
   COST_CATEGORIES, LifeEventSchema, MAX_LIFE_EVENTS,
   type CategoryTotals, type CostCategory, type Debt, type LifeEvent, type LifeEventPreset, type Money, type Profile,
@@ -107,22 +107,22 @@ export function mergeStatementHistory(existing: readonly CategoryTotals[], incom
 }
 
 /**
- * Statement totals → Profile: each category becomes the mean of its monthly totals (measured).
- * One-off charges are not in `totals`, so they don't inflate the monthly figures. Pay detected in
- * the statement (mean over the months that have it) becomes take-home pay. Categories missing from
- * every month keep their current value and flag.
+ * Statement totals → Profile: each category becomes its monthly mean (measured), taken over the
+ * months the statement covers in full (`statementAverages`), so an export that stops on the 12th
+ * doesn't pull every category down. One-off charges are not in `totals`, so they don't inflate the
+ * figures. Pay detected in the statement becomes take-home pay. A category the averages leave out
+ * (housing or groceries the statement shows none of: paid from another account) keeps its value
+ * and flag, so a card-only statement never claims the rent is $0.
  */
 export function mergeStatementTotals(p: Profile, months: readonly CategoryTotals[]): Profile {
-  if (months.length === 0) return p;
+  const avg = statementAverages(months);
+  if (avg.months.length === 0) return p;
   const spending = { ...p.spending };
   for (const c of COST_CATEGORIES) {
-    const values = months.map((m) => m.totals[c]).filter((v): v is Money => typeof v === 'number' && Number.isFinite(v));
-    if (values.length === 0) continue;
-    const mean = values.reduce((s, v) => s + v, 0) / values.length;
-    spending[c] = measured(Math.max(0, mean));
+    const value = avg.spending[c];
+    if (value !== undefined) spending[c] = measured(value);
   }
-  const pays = months.map((m) => m.detectedPay).filter((v): v is Money => typeof v === 'number' && v > 0);
-  const takeHomePay = pays.length > 0 ? measured(pays.reduce((s, v) => s + v, 0) / pays.length) : p.takeHomePay;
+  const takeHomePay = avg.takeHomePay !== null ? measured(avg.takeHomePay) : p.takeHomePay;
   return { ...p, spending, takeHomePay };
 }
 
