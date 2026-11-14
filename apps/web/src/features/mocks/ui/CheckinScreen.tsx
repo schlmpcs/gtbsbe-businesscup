@@ -156,7 +156,14 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
             <Sticker tone="positive">{m.sticker}</Sticker>
             <span className="text-xl font-bold">{title}</span>
           </div>
-          <span className="text-sm font-semibold text-positive tabular-nums">{m.effect(formatMoney(c.effect10y, { signed: true }))}</span>
+          <div className="flex flex-col items-end gap-xs">
+            <span className="text-sm font-semibold text-positive tabular-nums">{m.effect(formatMoney(c.effect10y, { signed: true }))}</span>
+            {c.source && (
+              <Tag data-testid="forecast-source" data-source={c.source}>
+                {forecast.source[c.source]}
+              </Tag>
+            )}
+          </div>
         </div>
         {move.progress?.status === 'ready' && move.progress.data && <Progress progress={move.progress.data} />}
         {move.progress?.status === 'error' && <ErrorNote error={move.progress.error} />}
@@ -168,7 +175,9 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
           <div className="flex flex-col gap-sm">
             <p className="font-semibold">{m.question}</p>
             <div className="flex flex-wrap gap-sm">
-              <Button onClick={move.markDone}>{m.done}</Button>
+              <Button onClick={move.markDone} disabled={move.actionsDisabled}>
+                {m.done}
+              </Button>
               <Button variant="secondary" onClick={move.keepGoing}>
                 {m.keepGoing}
               </Button>

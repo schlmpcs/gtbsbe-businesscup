@@ -88,6 +88,7 @@ export function evaluateDecision(p: Profile, lease: LeaseScenario, leaseIsEstima
     better: keepAdvantage10y >= 0 ? 'keep' : 'lease',
     betterBy10y: Math.abs(keepAdvantage10y),
     isEstimate: hasEstimates(p) || leaseIsEstimate,
+    forecastSource: 'rules',
   };
 }
 

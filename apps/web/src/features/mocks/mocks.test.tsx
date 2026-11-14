@@ -2,7 +2,8 @@
 // S13 / S14 screens on their real view-model hooks (the demo profile and the fixtures). Every number
 // the tests expect on screen is computed by the engine here, never taken from a constant.
 import { monthEnd, rankMoves } from '@lifeguessr/engine';
-import { render, screen, within } from '@testing-library/react';
+import type { ForecastBundle } from '@lifeguessr/types';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -11,6 +12,7 @@ import { cloneProfileDemo, leaseScenarioSample, statementTotalsSample } from '@/
 import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
+import { mockForecastRoute, rulesAnswer } from '@/test/forecastApi';
 import { resetProState } from '@/test/pro';
 import { formatMoney } from '@/ui-kit';
 import { compareOf, useCheckin } from './model/useCheckin';
@@ -50,6 +52,8 @@ describe('S13 decision', () => {
     const r = evaluateDecision(cloneProfileDemo(), leaseScenarioSample, true);
     const score = screen.getByLabelText(d.scoreLabel);
     expect(within(score).getByText(formatMoney(r.betterBy10y, { signed: true }))).toBeTruthy();
+    // The two 10-year numbers come from the rules engine, whatever S10 shows: labeled so.
+    expect(screen.getByTestId('decide-forecast-source').textContent).toBe(forecast.source.rules);
     // The other decisions are coming soon.
     expect(screen.getByText(d.next.wedding)).toBeTruthy();
   });
@@ -100,10 +104,24 @@ describe('S14 check-in', () => {
     const title = forecast.moves.title(card.kind, card.category ? common.categories[card.category] : undefined);
     await user.click(screen.getByRole('button', { name: `${c.move.commit}: ${title}` }));
     expect(useAppStore.getState().committedMove?.id).toBe(card.id);
+    // The committed move is shown as ranked now, so its number says who made it too.
+    expect(within(await screen.findByTestId('checkin-move')).getByTestId('forecast-source').textContent).toBe(forecast.source.rules);
     expect(screen.getByRole('progressbar', { name: c.move.progressLabel })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: c.move.done }));
     expect(screen.getByText(c.move.doneBody(title))).toBeTruthy();
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([card.id]);
+  });
+
+  it('“I did it” stays disabled until the forecast answer for the current profile is in', async () => {
+    let release: (() => void) | undefined;
+    mockForecastRoute((body) => new Promise<ForecastBundle>((resolve) => (release = () => resolve(rulesAnswer(body)))));
+    useAppStore.getState().commitMove(rankMoves(cloneProfileDemo(), { rates })[0]!);
+    render(<Checkin />);
+    const done = await screen.findByRole('button', { name: c.move.done });
+    expect(done).toBeDisabled();
+    await waitFor(() => expect(release).toBeDefined());
+    await act(async () => release?.());
+    await waitFor(() => expect(screen.getByRole('button', { name: c.move.done })).toBeEnabled());
   });
 
   it('“not yet” keeps the committed move', async () => {

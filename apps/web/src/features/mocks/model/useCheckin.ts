@@ -22,6 +22,8 @@ import type {
   CheckinCompareVM, CheckinDataSource, CheckinMonthVM, CheckinMoveAnswer, CheckinVM, MoveProgressVM, MoveVM,
 } from './types';
 
+const NO_MOVES: MoveVM[] = [];
+
 /** Categories that get a tile on the check-in (drifted ones first, the rest as "on track"). */
 export const TILE_CATEGORIES: readonly CostCategory[] = ['eatingOut', 'subscriptions', 'groceries', 'car'];
 
@@ -158,22 +160,29 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
   const compare = useMemo(() => (month.result.status === 'ready' ? compareOf(month.result.data) : null), [month]);
 
   const committedMoveId = profile.committedMoveId;
-  const committed: MoveVM | null = useMemo(
+  // The committed move as stored (its patch and target are what progress is measured against; its source is unknown).
+  const stored: MoveVM | null = useMemo(
     () => (committedMove && committedMoveId === committedMove.id ? toMoveVM(committedMove, { committedMoveId }, null) : null),
     [committedMove, committedMoveId],
   );
+  // What is shown: the move as ranked now (current number and who made it) when it is on the list, else as stored
+  // (no label), like S1.
+  const rankedMoves = nextMoves.moves.status === 'ready' ? nextMoves.moves.data : NO_MOVES;
+  const committed: MoveVM | null = stored && (rankedMoves.find((m) => m.id === stored.id) ?? stored);
 
   const progress: Loadable<MoveProgressVM | null> | null = useMemo(
-    () => (committed ? runEngine(() => moveProgress(profile, committed, { ...review, source })) : null),
-    [committed, profile, review, source],
+    () => (stored ? runEngine(() => moveProgress(profile, stored, { ...review, source })) : null),
+    [stored, profile, review, source],
   );
 
+  const { actionsDisabled } = nextMoves;
   const markDone = useCallback(() => {
-    if (!committedMove) return;
+    // Like S1: not while the list on screen is a previous profile's answer.
+    if (!committedMove || actionsDisabled) return;
     setDoneMove(toMoveVM(committedMove, profile, null));
     markMoveDone(committedMove);
     setAnswer('done');
-  }, [committedMove, profile, markMoveDone]);
+  }, [committedMove, profile, markMoveDone, actionsDisabled]);
 
   const { commit: commitMove } = nextMoves;
   const commit = useCallback(
@@ -193,7 +202,7 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
       committed,
       progress,
       suggestions: nextMoves.moves,
-      actionsDisabled: nextMoves.actionsDisabled,
+      actionsDisabled,
       answer,
       doneMove,
       level: movesLevel(profile),
