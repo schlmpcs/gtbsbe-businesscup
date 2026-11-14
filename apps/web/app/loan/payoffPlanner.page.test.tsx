@@ -5,7 +5,7 @@
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loan as t } from '@/copy';
-import { plannerOptions } from '@/features/loan/model/payoffTestUtils';
+import { plannerOptions } from '@/test/payoff';
 import type { PayoffPlannerOptions } from '@/features/loan/model/usePayoffPlanner';
 import { resetClientState } from '@/test/clientState';
 import LoanLabPage from './page';

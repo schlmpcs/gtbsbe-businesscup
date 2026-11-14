@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // The payoff planner section of Loan Lab (M13, issue #89): the real view-model hooks on a fake payoff engine,
-// behind the placeholder UI. Expected figures come from the canned plans in model/payoffTestUtils.ts (November 2026 today).
+// behind the placeholder UI. Expected figures come from the canned plans in src/test/payoff.ts (November 2026 today).
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -8,7 +8,7 @@ import { common, loan as t } from '@/copy';
 import { cloneProfileDemo } from '@/fixtures';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
-import { plannerOptions } from './model/payoffTestUtils';
+import { plannerOptions } from '@/test/payoff';
 import type { PayoffPlannerVM } from './model/types';
 import { useLoanLab } from './model/useLoanLab';
 import { usePayoffPlanner, type PayoffPlannerOptions } from './model/usePayoffPlanner';

@@ -4,7 +4,7 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as State from '@/state';
 import { resetClientState } from '@/test/clientState';
-import { plannerOptions } from './payoffTestUtils';
+import { plannerOptions } from '@/test/payoff';
 import { useLoanLab } from './useLoanLab';
 import { usePayoffPlanner } from './usePayoffPlanner';
 

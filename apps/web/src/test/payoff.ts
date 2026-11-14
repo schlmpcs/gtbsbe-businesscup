@@ -1,13 +1,15 @@
-// Test helpers for the payoff planner (tests only; nothing in the app imports this file).
+// Test helpers for the debt payoff planner (M13): tests only; nothing in the app imports this file.
 //
-// The planner takes the payoff engine, the event sender and today's date from outside, so these tests run it
-// on fakes: `fakeEngine` answers with plans written out by hand below, and the tests check what the view-model
-// does with them (which debts it sends, how it reads the answer), never an engine number. Binding the real
-// engine is a few lines in wiring.ts.
+// The planner takes the payoff engine, the event sender and today's date from outside, so its tests run on
+// fakes. `fakeEngine` answers with plans written out by hand below. They are shaped examples chosen so the
+// arithmetic is easy to check (40, 41 and 46 months; $5,000, $5,400 and $6,200 of interest), NOT output of the
+// real engine: for the demo debts plus sample offer 1 the real engine gives 43 months and $9,684 at extra $0.
+// The tests check what the view-model does with an answer (which debts it sends, how it reads the answer),
+// never an engine number. Binding the real engine is a few lines in features/loan/model/wiring.ts.
 import type { Debt, Money, PayoffComparison, PayoffPlan } from '@lifeguessr/types';
 import { vi } from 'vitest';
-import type { PayoffChoice } from './types';
-import type { PayoffEngine, PayoffPlannerOptions } from './usePayoffPlanner';
+import type { PayoffChoice } from '@/features/loan/model/types';
+import type { PayoffEngine, PayoffPlannerOptions } from '@/features/loan/model/usePayoffPlanner';
 
 /**
  * The demo profile's debts and sample offer 1 as the planner sees them: card $6,400, auto $17,800, new loan $28,000
@@ -127,4 +129,4 @@ export function plannerOptions(over: Partial<PayoffPlannerOptions> & { engineOpt
   return { options, track, ...fake };
 }
 
-export { hasNonFinite } from './finite';
+export { hasNonFinite } from '@/features/loan/model/finite';

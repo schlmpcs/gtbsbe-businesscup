@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The debt payoff planner (M13, issue #89) on fakes of the payoff engine, the event sender and today's date.
 // Every expected figure is worked out by hand from the demo profile (card $6,400 at 24.36%, auto $17,800 at 7.4%),
-// sample offer 1 ($28,000 at 6.9%), the canned plans in payoffTestUtils.ts and "today = November 2026".
+// sample offer 1 ($28,000 at 6.9%), the canned plans in src/test/payoff.ts and "today = November 2026".
 import { payoffOrder } from '@lifeguessr/engine';
 import type { Debt, PayoffComparison } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo, loanOffersSample } from '@/fixtures';
 import { resetClientState } from '@/test/clientState';
 import { useAppStore } from '@/state';
-import { hasNonFinite, plannerOptions } from './payoffTestUtils';
+import { hasNonFinite, plannerOptions } from '@/test/payoff';
 import { useLoanLab } from './useLoanLab';
 import { PAYOFF_EXTRA_LIMIT, PAYOFF_NEVER_FIX_MONTHS, usePayoffPlanner, type PayoffPlannerOptions, type PayoffStoredState } from './usePayoffPlanner';
 

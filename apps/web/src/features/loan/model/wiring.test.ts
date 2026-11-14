@@ -4,7 +4,7 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { track } from '@/lib/events';
 import { resetClientState } from '@/test/clientState';
-import { fakeEngine } from './payoffTestUtils';
+import { fakeEngine } from '@/test/payoff';
 import { payoffPlannerOptions, usePayoffWiring } from './wiring';
 
 beforeEach(() => {
