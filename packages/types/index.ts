@@ -1,3 +1,4 @@
+import type { AvatarFacts } from './avatar';
 import type { Goal } from './goal';
 import type { Cadence, ServiceCategory } from './subscriptions';
 import type { TOOL_IDS } from './constants';
@@ -104,6 +105,8 @@ export type Debt = { id: string; kind: 'card'|'auto'|'student'|'personal'|'bnpl'
   minPayment: Estimate<Money>;   // monthly; defaulted from assumptions when the user skips it
   extraPayment?: Money };        // monthly, set by moves
 export type Profile = {
+  /** Optional household facts, confirmed in the avatar preview; no effect on forecast math. */
+  household?: AvatarFacts;
   age: Estimate<number>;
   takeHomePay: Estimate<Money>;  // monthly, after tax and payroll retirement contributions
   spending: Record<CostCategory, Estimate<Money>>;      // monthly
@@ -126,6 +129,8 @@ export type Forecast = { points: ForecastPoint[]; in10y: ForecastPoint; todaysDo
 // ('ai') or the rules engine ('rules'). `model` names the AI model and is absent for 'rules'.
 // All forecasts in a bundle share one unit: nominal dollars, `todaysDollars: false`.
 export type ForecastSource = 'ai' | 'rules';
+/** The years the forecast screen's picker offers; 10 is the default and what the AI forecaster returns. */
+export type HorizonYears = 1 | 3 | 5 | 10;
 // One year-end net worth estimate from the AI forecaster. `year` counts from today (1–10), `mid` is
 // the estimate and `low` ≤ `mid` ≤ `high` is the range around it. Nominal dollars (a balance).
 export type YearAnchor = { year: number; low: Money; mid: Money; high: Money };
@@ -153,7 +158,10 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
 export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
   debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
 // `move.source` = the forecast its `effect10y` came from; the server words the sentence by it.
-export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult };
+// `horizon` = the year the forecast screen shows (1, 3, 5 or 10) and the move's effect there, which
+// `move.effect10y` cannot say; absent, the sentence is about 10 years.
+export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult;
+  horizon?: { years: HorizonYears; effect: Money } };
 export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence
@@ -262,6 +270,8 @@ export type SubscriptionAudit = {
 export type ToolId = (typeof TOOL_IDS)[number];
 export type MissBucket = 'under0.5'|'0.5to0.8'|'0.8to1.25'|'1.25to2'|'over2';
 export type ClientFunnelEvent =
+  | {name:'avatar_preview_viewed'}
+  | {name:'avatar_stats_viewed'}
   | {name:'goal_set';props:{years:number}}
   | {name:'goal_verdict_shown';props:{verdict:'onTrack'|'withinRange'|'behind'}}
   | {name:'goal_cleared'}
@@ -272,6 +282,10 @@ export type ClientFunnelEvent =
   | { name: 'renewals_exported' }
   | { name: 'overpaying_checked'; props: { lines: number; above: number } }
   | { name: 'payoff_planned'; props: { method: 'avalanche'|'snowball' } }
+  | { name: 'duel_picked'; props: { round: DuelRound; correct: boolean } }
+  | { name: 'hint_opened'; props: { round: DuelRound } }
+  | { name: 'challenge_copied' }
+  | { name: 'own_guess_started' }
   | { name: 'play_started' }
   | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
   | { name: 'home_guessed'; props: { home: number; cluesOpened: number } }
@@ -287,10 +301,13 @@ export type ClientFunnelEvent =
   | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
   | { name: 'loan_compared'; props: { offers: number } }
   | { name: 'paywall_viewed' }
-  | { name: 'sample_loaded' };
+  | { name: 'sample_loaded' }
+  | { name: 'forecast_horizon_changed'; props: { years: HorizonYears } };
 
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =
+  | {name:'avatar_published';props:{stamp:'selfReported'|'statementVerified';republish:boolean}}
+  | {name:'avatar_unpublished'}
   | { name: 'checkout_started'; props: { plan: ProPlan } }
   | { name: 'pro_purchased'; props: { plan: ProPlan } }   // a test-mode Stripe Checkout, confirmed paid
   | { name: 'pro_demo_purchased'; props: { plan: ProPlan } } // the simulated checkout; kept apart from pro_purchased on purpose
@@ -330,3 +347,4 @@ export * from './payoff';
 export * from './overpaying';
 export * from './subscriptions';
 export * from './subscriptionAudit';
+export * from './avatar';

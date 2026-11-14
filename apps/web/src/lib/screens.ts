@@ -18,9 +18,10 @@ export const SCREEN_ROUTES = {
   S14: '/checkin',
   S15: '/pro',
   S21: '/tools/subscriptions',
+  S23: '/tools/overpaying',
 } as const satisfies Record<ScreenId, string>;
 
-/** Screens in order S1–S15, then S21. */
+/** Screens in order S1–S15, then S21 and S23. */
 export const SCREEN_IDS = (Object.keys(SCREEN_ROUTES) as ScreenId[]).sort(
   (a, b) => Number(a.slice(1)) - Number(b.slice(1)),
 );

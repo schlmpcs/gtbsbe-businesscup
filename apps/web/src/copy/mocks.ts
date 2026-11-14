@@ -169,7 +169,6 @@ export const mocks = {
       progressLabel: 'Card paid off this month',
       pace: (withMove: string, without: string) => `Card gone in ${withMove}, not ${without}.`,
       notWithin10y: 'more than 10 years',
-      effect: (amount: string) => `${amount} in 10 years`,
       spendingTarget: (category: string, target: string, planned: string) =>
         `Target: ${category.toLowerCase()} at ${target} a month (now ${planned}).`,
       actual: (amount: string) => `This month: ${amount}.`,

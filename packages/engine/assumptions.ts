@@ -347,14 +347,17 @@ export const oneOffOutlierMultiple = {
 export type AiForecastSanity = {
   /** Yearly mid may lie this share of |rules mid| outside the rules band. */
   relative: number;
-  /** The tolerance never goes below this many months of take-home pay (net worth near 0 or a zero band). */
+  /**
+   * The tolerance never goes below this many months of take-home pay (net worth near 0 or a zero band).
+   * The year-10 value: at year y the floor is floorMonths × y / 10 months (1.2 at year 1).
+   */
   floorMonths: number;
   /** The AI band may be this many times as wide as the rules band; the limit never goes below the tolerance. */
   bandMaxRatio: number;
-  /** A scenario's 10-year effect must be between these multiples of the rules effect (same sign)... */
+  /** A scenario's effect (at 1, 3, 5 or 10 years) must be between these multiples of the rules effect (same sign)... */
   effectRatioMin: number;
   effectRatioMax: number;
-  /** ...unless it is within this many dollars of it. */
+  /** ...unless it is within this many dollars of it. The year-10 value: at year y it is effectFloor × y / 10 ($100 at year 1). */
   effectFloor: Money;
 };
 
@@ -426,11 +429,14 @@ export const subsSteadyMinCharges = {
   note: 'One charge is not a steady amount: a lone different charge on the usual day is more likely a one-off than a new price.',
 } satisfies Assumption<number>;
 
-/** A step more than this many times bigger or smaller (either way) is a different charge, not a price change. */
+/**
+ * A step more than this many times bigger or smaller (either way) is a different charge, not a price change.
+ * The same factor bounds a lone charge of a service that sells only monthly plans against a plan's price.
+ */
 export const subsStepMaxRatio = {
   value: 2,
   assumption: true,
-  note: 'Keeps an annual fee or a one-off on the billing day from being read as a price change. A smaller first charge can still be an intro price (below).',
+  note: 'Keeps an annual fee or a one-off on the billing day from being read as a price change. A smaller first charge can still be an intro price (below). Also keeps a one-off purchase or a yearly prepayment from a known vendor (a $1,299 store order, a $264 annual plan) from being read as one monthly bill: a lone charge counts only within this factor of a monthly plan price.',
 } satisfies Assumption<number>;
 
 /** `introEnded`: the first charges were at most this share of the amount that followed. */

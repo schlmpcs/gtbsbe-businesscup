@@ -1,9 +1,11 @@
 // M3: detectSubscriptions and auditTotals. Every expected number is worked out by hand in the test
 // that uses it (never read back from the detector). The catalogue here is a small one defined for
-// these tests: the real one (M4) is data the detector receives as a parameter. The golden audit of
+// these tests: the real one (M4) is data the detector receives as a parameter, and only the lone
+// charge bound is also checked against it (one block, with the plan prices read off it). The golden audit of
 // the sample statement with the keyword rules' classes lives in
 // apps/web/src/lib/statement/subscriptionsGolden.test.ts (the rules are server code).
 import { statementItemsSample } from '@lifeguessr/data/fixtures/tools';
+import { knownServices } from '@lifeguessr/data/subscriptions';
 import {
   KnownServiceSchema, SubscriptionAuditSchema, SubscriptionFindingSchema,
   type KnownService, type ServiceCategory, type StatementClass, type StatementItem, type SubscriptionAudit,
@@ -643,6 +645,89 @@ describe('detectSubscriptions: the catalogue and single charges', () => {
   it('does not take Amazon marketplace purchases for Prime or anything else', () => {
     const items = [item('2026-07', 18, 'AMAZON MKTPL*[ref] Amzn.com/bill WA', 77.84), item('2026-10', 18, 'AMAZON MKTPL*[ref] Amzn.com/bill WA', 21.77)];
     expect(run(items, { classOf: asClass('other'), catalogue: CATALOGUE }).findings).toEqual([]);
+  });
+});
+
+// ----- a lone charge of a monthly-only service is bounded by its plan price --------------------
+// A service whose plans are all monthly has its lone charge taken as monthly at any price near a
+// plan's: within a factor of 2 either way (subsStepMaxRatio), so price/2 <= charge <= price × 2.
+// Outside it the charge is a one-off or a prepayment, and nothing is reported or counted.
+
+describe('detectSubscriptions: a lone charge of a monthly-only service stays within 2x of a plan price', () => {
+  const asOf = payday('2026-11', 12);
+  const lone = (label: string, amount: number, catalogue: readonly KnownService[]) =>
+    run([item('2026-11', 7, label, amount), asOf], { catalogue });
+  const nothing = (audit: SubscriptionAudit) => [audit.findings, audit.monthlyTotal, audit.yearlyTotal];
+
+  // $10.00: the bound is 10.00 ÷ 2 = 5.00 up to 10.00 × 2 = 20.00, both whole cents.
+  const ten = [service('exact', 'Exact Plan', 'software', ['EXACT PLAN'], [[10, 'monthly']])];
+
+  it('takes exactly 2x the plan price: $20.00 on a $10.00 plan, at $240 a year', () => {
+    const f = only(lone('EXACT PLAN', 20, ten));
+    expect([f.cadence, f.amount, f.yearly, f.chargesSeen]).toEqual(['monthly', 20, 240, 1]);      // 20 × 12
+  });
+
+  it('does not take one cent above 2x: $20.01 on a $10.00 plan is no subscription, and nothing is counted', () => {
+    expect(nothing(lone('EXACT PLAN', 20.01, ten))).toEqual([[], 0, 0]);
+  });
+
+  it('takes exactly half the plan price: $5.00 on a $10.00 plan', () => {
+    const f = only(lone('EXACT PLAN', 5, ten));
+    expect([f.cadence, f.amount, f.yearly]).toEqual(['monthly', 5, 60]);                         // 5 × 12
+  });
+
+  it('does not take one cent below half: $4.99 on a $10.00 plan is no subscription, and nothing is counted', () => {
+    expect(nothing(lone('EXACT PLAN', 4.99, ten))).toEqual([[], 0, 0]);
+  });
+
+  it('bounds a Netflix-like $17.99 plan at 2 × 17.99 = $35.98: that is taken, $35.99 is not', () => {
+    expect(only(lone('NETFLIX.COM # CA', 35.98, CATALOGUE)).amount).toBe(35.98);
+    expect(nothing(lone('NETFLIX.COM # CA', 35.99, CATALOGUE))).toEqual([[], 0, 0]);
+  });
+
+  it('is near some monthly plan, not the first: plans at $9.99 and $29.99 take $50.00 but not $60.00', () => {
+    // $9.99 reaches 4.995 to 19.98; $29.99 reaches 14.995 to 59.98. $50.00 is inside only the second; $60.00 inside neither.
+    const tiers = [service('tiers', 'Tiers', 'software', ['TIERS APP'], [[9.99, 'monthly'], [29.99, 'monthly']])];
+    expect(only(lone('TIERS APP', 50, tiers)).amount).toBe(50);
+    expect(nothing(lone('TIERS APP', 60, tiers))).toEqual([[], 0, 0]);
+  });
+
+  it('judges the latest charge when several do not repeat: $17.99 then $299.00 reports nothing', () => {
+    const items = [item('2026-09', 3, 'NETFLIX.COM # CA', 17.99), item('2026-11', 20, 'NETFLIX.COM # CA', 299), asOf];
+    expect(nothing(run(items, { catalogue: CATALOGUE }))).toEqual([[], 0, 0]);
+  });
+
+  it('still reports the latest charge when it is near the plan and an earlier one was not: $299.00 then $17.99', () => {
+    const items = [item('2026-09', 3, 'NETFLIX.COM # CA', 299), item('2026-11', 20, 'NETFLIX.COM # CA', 17.99), asOf];
+    const f = only(run(items, { catalogue: CATALOGUE }));
+    expect([f.amount, f.chargesSeen, f.monthly]).toEqual([17.99, 1, 17.99]);
+  });
+
+  describe('with the real catalogue', () => {
+    // Plan prices there (monthly only): Microsoft 365 $9.99 (bound 4.995 to 19.98), Adobe $22.99
+    // (11.495 to 45.98), Xbox Game Pass $19.99 (9.995 to 39.98).
+    it('does not read a $1,299.00 Microsoft Store purchase as Microsoft 365 at $15,588 a year', () => {
+      expect(nothing(lone('MICROSOFT*STORE # WA', 1299, knownServices))).toEqual([[], 0, 0]);
+    });
+
+    it('does not read a $59.99 Xbox charge as a monthly subscription (above 2 × the plan, whichever Microsoft entry takes it)', () => {
+      expect(nothing(lone('MICROSOFT*XBOX', 59.99, knownServices))).toEqual([[], 0, 0]);
+      expect(nothing(lone('XBOX GAME PASS', 59.99, knownServices))).toEqual([[], 0, 0]);
+    });
+
+    it('does not read a $263.88 Adobe annual prepayment as a monthly charge', () => {
+      expect(nothing(lone('ADOBE *CREATIVE CLOUD', 263.88, knownServices))).toEqual([[], 0, 0]);
+    });
+
+    it('still finds Microsoft 365 at its plan price: $9.99, $119.88 a year, seen once, medium', () => {
+      const f = only(lone('MICROSOFT*STORE # WA', 9.99, knownServices));
+      expect(f).toMatchObject({ serviceId: 'microsoft-365', cadence: 'monthly', amount: 9.99, monthly: 9.99, yearly: 119.88, chargesSeen: 1, confidence: 'medium' });  // 9.99 × 12
+    });
+
+    it('takes Microsoft 365 up to 2 × $9.99 = $19.98 and not at $19.99', () => {
+      expect(only(lone('MICROSOFT*STORE # WA', 19.98, knownServices)).amount).toBe(19.98);
+      expect(nothing(lone('MICROSOFT*STORE # WA', 19.99, knownServices))).toEqual([[], 0, 0]);
+    });
   });
 });
 

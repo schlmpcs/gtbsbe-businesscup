@@ -19,7 +19,7 @@ export {
   type ScheduledPurchase, type Scenario,
 } from './simulate';
 export {
-  anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, scenarioEffectIssues,
+  anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, pointAt, scenarioEffectIssues,
 } from './anchors';
 export { forecastFacts, rulesBundle, type ForecastFacts } from './bundle';
 export {
@@ -41,3 +41,4 @@ export {
 } from './loan/index';
 export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';
+export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';
