@@ -1,0 +1,23 @@
+# systemd user unit template for the CI runners (deploy/README.md, "CI runners"): one instance per
+# runner, lifeguessr-ci@1 .. lifeguessr-ci@3, each in ~/ci-runners/<n>. install.sh (this folder)
+# installs and enables it as the CI user; that user needs `loginctl enable-linger`.
+[Unit]
+Description=GitHub Actions CI runner %i (LifeGuessr)
+After=network-online.target docker.service
+# The user's rootless Docker runs the jobs' service containers (Postgres).
+Wants=docker.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+ExecStart=%h/ci-runners/%i/run.sh
+WorkingDirectory=%h/ci-runners/%i
+# Same policy as the deploy runner (../lifeguessr-runner.service): run.sh exits 0 on a terminal
+# error (a bad registration, a wrong clock), so only crashes are restarted.
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+
+[Install]
+WantedBy=default.target
