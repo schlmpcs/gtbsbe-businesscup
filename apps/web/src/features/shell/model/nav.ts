@@ -35,7 +35,7 @@ const MORE: ShellLinkKey[] = ['accounts', 'transactions', 'cashflow', 'budget', 
 /** Every route the shell links to, in sidebar order then Go Pro (for tests and the docs). */
 export const SHELL_ROUTES: readonly string[] = [...SIDEBAR.flatMap((g) => g.links.map((k) => D[k].href)), D.pro.href];
 
-export function isActive(pathname: string, def: NavDef): boolean {
+export function isActive(pathname: string, def: Pick<NavDef, 'href' | 'match'>): boolean {
   if (def.href === '/') return pathname === '/';
   return [def.href, ...(def.match ?? [])].some((h) => pathname === h || pathname.startsWith(`${h}/`));
 }

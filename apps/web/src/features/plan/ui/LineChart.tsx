@@ -227,9 +227,9 @@ export function LineChart({
                   />
                 ))}
                 <div
-                  role="status"
-                  className="pointer-events-none absolute top-sm z-10 flex min-w-36 flex-col gap-xs rounded-md border border-border bg-surface p-sm text-xs shadow-md"
-                  style={fx(hoverX) > 0.55 ? { right: `${(1 - fx(hoverX)) * 100}%`, marginRight: 8 } : { left: `${fx(hoverX) * 100}%`, marginLeft: 8 }}
+                  className="pointer-events-none absolute top-sm z-10 flex w-max min-w-36 max-w-[calc(100%-16px)] flex-col gap-xs rounded-md border border-border bg-surface p-sm text-xs shadow-md"
+                  // Pinned to the corner away from the crosshair, so it never runs off a phone screen.
+                  style={fx(hoverX) > 0.5 ? { left: 8 } : { right: 8 }}
                 >
                   <span className="font-semibold">{xLabel(hoverX)}</span>
                   {hoverRows.map(({ s, p }) => (
