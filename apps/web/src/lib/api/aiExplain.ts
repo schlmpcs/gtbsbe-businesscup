@@ -35,14 +35,11 @@ export type ExplainInput = {
   loanResult?: Omit<LoanResult, 'schedule'>;
 };
 
-/** The request as sent: the contract's, plus the forecast source of a move. */
-type ExplainBody = Omit<ExplainRequest, 'move'> & { move?: Move & { source?: ForecastSource } };
-
 export type ExplainOptions = { anonId?: string; signal?: AbortSignal };
 
 /** Ask the server to explain a move and/or a loan result in two plain sentences. */
 export async function explainResult(input: ExplainInput, opts: ExplainOptions = {}): Promise<ExplainResult> {
-  const body: ExplainBody = {};
+  const body: ExplainRequest = {};
   // Send only the contract fields (a MoveVM carries UI flags; a LoanResult's schedule is unused).
   if (input.move) {
     const { id, kind, level, category, effect10y, patch, source } = input.move;

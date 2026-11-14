@@ -186,7 +186,8 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
 // POST /api/ai/explain. JSON has no Infinity: a debt load with no take-home pay is sent as null.
 export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
   debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
-export type ExplainRequest = { move?: Move; loanResult?: ExplainLoanResult };
+// move.source = the forecast its effect10y came from; the server words the sentence by it.
+export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult };
 export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence
@@ -299,4 +300,4 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
 - Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test` or `demo`), when, and the Stripe test Checkout Session ID. No card data or email ever reaches our server; the test checkout page belongs to Stripe.
-- The forecast request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers to the model provider, which does not train on API data. Zero data retention is not enabled, so no copy claims it; the "What we keep" panel says only that these numbers go to the provider and that we don't store them.
+- The forecast request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers to the model provider, which does not train on API data. Zero data retention is not enabled, so no copy claims it; the "What we keep" panel says only that these numbers (no names or account numbers) go to the provider, which does not train on API data.

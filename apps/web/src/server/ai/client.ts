@@ -3,7 +3,8 @@
 //
 // Data policy: Anthropic does not train models on API data. Zero data retention is NOT enabled
 // on the account that owns ANTHROPIC_API_KEY, so user-facing copy must not claim it (the S9
-// "What we keep" panel says only that labels go to the provider to be sorted). If it is ever
+// "What we keep" panel says only that labels go to the provider to be sorted, and that the
+// profile's numbers (no names or account numbers) go to it for the 10-year forecast). If it is ever
 // enabled: it is an organization/workspace arrangement with no per-request flag, the Messages
 // API (the only endpoint we call) is eligible, and we use nothing outside it (no batches or
 // Files API); nothing in this code changes, only the copy may then mention it.
