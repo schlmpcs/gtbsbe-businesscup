@@ -50,7 +50,7 @@ US adults aged 25–45 with a job, bills and at least one big decision ahead. Ty
 | F10 | **Decisions**: car, moving city, having a kid, job offer, wedding (Path A vs B) | Mock (car example) |
 | F11 | **This Life vs Yours**: each game card compared with your own numbers | Real if time allows |
 | F12 | **Monthly Check-in**: forecast vs 3-month average, drift flags, progress on your committed move | Mock |
-| F13 | **Pro / Paywall** | Mock |
+| F13 | **Pro / Paywall**: Stripe Checkout in test mode (test card shown on screen) plus a promo code on screen for the jury; gates saving purchases to the wishlist | Real (test mode, no real money) |
 | F14 | **Can I Afford It?**: a planned purchase (one-time or recurring) and its effect on this month, 12 months, 5 and 10 years; verdict and wishlist | Real |
 | F15 | **Loan Lab**: model car, personal, student, BNPL, card and mortgage loans; compare 3 options; debt-load gauge; extra payments | Real |
 | F16 | **Game as marketing**: streamer mode, share cards (9:16 and 1:1), creator packs, daily leaderboard | Streamer mode + share cards real |

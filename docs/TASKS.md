@@ -26,6 +26,7 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 | [x] | Y11 | Placeholder UI: S11 Can I Afford It? + S12 Loan Lab | 2 | Y4; T3 | Compare 3 loans, gauge, slider work |
 | [x] | Y12 | `/api/ai/parse` + `/api/ai/explain` | 1 | Contracts | Typed JSON or clear error; no numbers; parsed values confirmed by the user |
 | [ ] | Y14 | Figma skin pass | 2 | Figma frames | Screens match Figma; no model or engine file changed |
+| [ ] | P1 | Pro paywall demo (replaces the S15 part of T11): Stripe Checkout in test mode + promo code, `/api/pro/*`, entitlement store, S15 screen, wishlist gate | — | Y7 | Test checkout and the promo code both unlock Pro; a live key is refused; wishlist save locked until Pro |
 
 ## Aibek (backend)
 

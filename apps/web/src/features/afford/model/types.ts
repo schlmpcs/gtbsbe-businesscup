@@ -67,7 +67,11 @@ export type AffordVM = {
   /** "A $1,200 laptop on my card" → Purchase; fills the form after confirmation. */
   parse: ParseConfirmVM<Purchase>;
   wishlist: WishlistItem[];
-  /** Save the current purchase; returns its id (null if the form is invalid). */
+  /** Saving to the wishlist is a Pro feature: true unless the user is Pro. Saved items stay usable. */
+  wishlistLocked: boolean;
+  /** Where the lock notice sends the user to unlock Pro (S15). */
+  proHref: string;
+  /** Save the current purchase; returns its id (null if the form is invalid or the wishlist is locked). */
   addToWishlist: () => string | null;
   removeFromWishlist: (id: string) => void;
   /** Put a saved purchase back in the form. */

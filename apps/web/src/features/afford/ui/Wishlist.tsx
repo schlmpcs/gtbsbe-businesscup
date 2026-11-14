@@ -1,7 +1,7 @@
 'use client';
 
-import { afford as t } from '@/copy';
-import { Button, Card, Money, Row, Stack } from '@/ui-kit';
+import { afford as t, pro } from '@/copy';
+import { Button, Card, LockNotice, Money, Row, Stack } from '@/ui-kit';
 import { useState } from 'react';
 import type { AffordVM, Purchase } from '../model/types';
 
@@ -13,29 +13,48 @@ function payWithText(p: Purchase): string {
   return t.wishlist.payWith[typeof p.payWith === 'object' ? 'loan' : p.payWith];
 }
 
-export type WishlistProps = Pick<AffordVM, 'wishlist' | 'addToWishlist' | 'removeFromWishlist' | 'loadFromWishlist'> & {
+export type WishlistProps = Pick<
+  AffordVM,
+  'wishlist' | 'addToWishlist' | 'removeFromWishlist' | 'loadFromWishlist' | 'wishlistLocked' | 'proHref'
+> & {
   /** The form describes a valid purchase that can be saved. */
   canAdd: boolean;
 };
 
-/** Saved purchases (kept on this device): check one again or remove it. */
-export function Wishlist({ wishlist, addToWishlist, removeFromWishlist, loadFromWishlist, canAdd }: WishlistProps) {
+/**
+ * Saved purchases (kept on this device): check one again or remove it. Saving a new one is a Pro
+ * feature, so a free user gets a notice that links to the paywall instead of a save button.
+ */
+export function Wishlist({
+  wishlist,
+  addToWishlist,
+  removeFromWishlist,
+  loadFromWishlist,
+  wishlistLocked,
+  proHref,
+  canAdd,
+}: WishlistProps) {
   const [justAdded, setJustAdded] = useState(false);
   return (
     <Card
       title={t.wishlist.title}
       action={
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={!canAdd}
-          onClick={() => setJustAdded(addToWishlist() !== null)}
-        >
-          {t.wishlist.add}
-        </Button>
+        wishlistLocked ? undefined : (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={!canAdd}
+            onClick={() => setJustAdded(addToWishlist() !== null)}
+          >
+            {t.wishlist.add}
+          </Button>
+        )
       }
     >
       <Stack gap="sm">
+        {wishlistLocked ? (
+          <LockNotice title={pro.lock.title} body={pro.lock.wishlistBody} ctaLabel={pro.lock.cta} href={proHref} />
+        ) : null}
         <p aria-live="polite" className="text-xs text-text-muted">
           {justAdded ? t.wishlist.added : ''}
         </p>

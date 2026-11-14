@@ -80,7 +80,7 @@ lifeguessr/
 | S12 | Loan Lab | `/loan` | loan | Real |
 | S13 | Decision (car example) | `/decide` | mocks | Mock |
 | S14 | Monthly check-in | `/checkin` | mocks | Mock |
-| S15 | Paywall | `/pro` | mocks | Mock |
+| S15 | Paywall | `/pro` | pro | Real: Stripe test mode + promo code, no real money |
 
 ## Contracts (`packages/types/index.ts`, draft)
 
@@ -227,6 +227,20 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `POST /api/events` | Aibek | `{ anonId, name, props? }` → ok |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
 | `POST /api/ai/explain` | Amir | `{ move? , loanResult? }` → `{ text }` (2 sentences, no new numbers) |
+| `GET /api/pro/status` | Amir | header `x-anon-id` → `{ status: ProStatus, checkoutAvailable, demo: { enabled, code? } }` |
+| `POST /api/pro/checkout` | Amir | `{ plan }` → `{ url }`, a Stripe Checkout Session in test mode to redirect to |
+| `POST /api/pro/confirm` | Amir | `{ sessionId }` → `{ status }`; the server retrieves the session from Stripe and checks it is test-mode, complete, paid and this anonymous ID's |
+| `POST /api/pro/demo-unlock` | Amir | `{ code }` → `{ status }`; the promo code shown on the Pro screen, for the jury |
+
+## Pro paywall (S15, demo)
+
+No real money moves. Pro unlocks through a Stripe Checkout in **test mode** (the test card is shown on screen) or through the promo code shown on the Pro screen, which exists so the jury can pass the paywall without paying (FAQ Q115). Both end in the same entitlement, keyed by the anonymous ID. The shared contracts and prices (`PRO_PRICES`: $39.99/year, $6.99/month, an assumption) live in `packages/types`.
+
+- **Test mode only.** `STRIPE_SECRET_KEY` is accepted only if it starts with `sk_test_` or `rk_test_`; anything else leaves checkout unavailable and the promo code still works. `/api/pro/confirm` accepts only `cs_test_…` session ids and refuses a session with `livemode: true`.
+- **No webhook.** The success URL carries the session ID; `/api/pro/confirm` fetches the session from Stripe, so nothing needs to reach the server from outside (the server is behind a Funnel route). The session is bound to the anonymous ID (`client_reference_id`) and can be claimed by one ID only.
+- **Entitlements** sit behind an `EntitlementStore` interface. The default is one JSON file in `PRO_DATA_DIR` on the server's volume, a stopgap until the shared self-hosted store (T4, `STORE_URL`) lands. A Stripe grant replaces a demo grant, never the reverse.
+- **What is gated.** Server-side routes call `requirePro(req)` (`src/server/pro/http.ts`); T4's session save should. In this build the one real gate is saving a purchase to the wishlist (S11, `wishlistLocked`), and it is enforced in the browser because the engine runs there. Items already in the wishlist stay.
+- **Env:** `STRIPE_SECRET_KEY`, `APP_URL` (public base URL including any sub-path, used for the return URLs), `PRO_DEMO_CODE`, `PRO_DEMO_UNLOCK` (`off` disables the code), `PRO_DATA_DIR`. Names only in `.env.example`.
 
 ## Data flow
 
@@ -249,3 +263,4 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - Labels pass through the LLM provider for categorizing. Use the provider's no-training / zero-retention option, and say so in the "What we keep" panel.
 - Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
+- Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test` or `demo`), when, and the Stripe test Checkout Session ID. No card data or email ever reaches our server; the test checkout page belongs to Stripe.

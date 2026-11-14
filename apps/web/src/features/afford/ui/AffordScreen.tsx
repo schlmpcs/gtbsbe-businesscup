@@ -43,6 +43,8 @@ export function AffordScreen({ vm }: { vm: AffordVM }) {
               addToWishlist={vm.addToWishlist}
               removeFromWishlist={vm.removeFromWishlist}
               loadFromWishlist={vm.loadFromWishlist}
+              wishlistLocked={vm.wishlistLocked}
+              proHref={vm.proHref}
               canAdd={vm.purchase !== null}
             />
           </Stack>

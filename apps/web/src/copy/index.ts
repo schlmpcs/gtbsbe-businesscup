@@ -9,11 +9,12 @@ import { kitShowcase } from './kitShowcase';
 import { ladder } from './ladder';
 import { loan } from './loan';
 import { mocks } from './mocks';
+import { pro } from './pro';
 import { upload } from './upload';
 
-export { afford, ai, common, forecast, game, kitShowcase, ladder, loan, mocks, upload };
+export { afford, ai, common, forecast, game, kitShowcase, ladder, loan, mocks, pro, upload };
 
-export const copy = { common, game, ladder, forecast, afford, loan, upload, mocks, ai, kitShowcase } as const;
+export const copy = { common, game, ladder, forecast, afford, loan, upload, mocks, pro, ai, kitShowcase } as const;
 
 /** Every screen title by screen ID (S1–S15), merged from the feature files. */
 export const screenTitles = {

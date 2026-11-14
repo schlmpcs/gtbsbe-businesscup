@@ -43,7 +43,8 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    PRO_DATA_DIR=/data/pro
 
 # A new named volume takes the owner of the image's directory, so creating /data for the app user
 # here is what makes it writable (the self-hosted store lives there, T4/T5).

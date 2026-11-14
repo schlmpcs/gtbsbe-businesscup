@@ -4,11 +4,12 @@ import type { Purchase } from '@lifeguessr/types';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { afford as t } from '@/copy';
+import { afford as t, pro } from '@/copy';
 import type { AffordResultVM } from '@/features/afford/model/types';
 import { AffordResultPanel } from '@/features/afford/ui/AffordResultPanel';
 import type * as AiParse from '@/lib/api/aiParse';
 import { resetClientState } from '@/test/clientState';
+import { fakeProAdapter, PRO_DEMO, resetProState, statusInfo } from '@/test/pro';
 import AffordPage from './page';
 
 const parseText = vi.hoisted(() => vi.fn());
@@ -19,6 +20,7 @@ vi.mock('@/lib/api/aiParse', async (importOriginal) => ({
 
 beforeEach(() => {
   resetClientState();
+  resetProState(); // a free user, and no request leaves the test
   parseText.mockReset();
 });
 
@@ -65,7 +67,8 @@ describe('/afford (S11)', () => {
     await waitFor(() => expect(verdict()).toBeTruthy());
   });
 
-  it('free text is shown for confirmation before it fills the form; saved to the wishlist', async () => {
+  it('free text is shown for confirmation before it fills the form; Pro saves it to the wishlist', async () => {
+    resetProState(fakeProAdapter(statusInfo(PRO_DEMO)));
     const parsed: Purchase = { label: 'Gym', amount: 60, recurring: 'monthly', payWith: 'card' };
     parseText.mockResolvedValue({ value: parsed, inferred: ['payWith'] });
     const user = await renderReady();
@@ -80,8 +83,16 @@ describe('/afford (S11)', () => {
     expect((screen.getByRole('radio', { name: t.form.recurringOptions.monthly }) as HTMLInputElement).checked).toBe(true);
     await waitFor(() => expect(verdict()).toBeTruthy());
 
-    await user.click(screen.getByRole('button', { name: t.wishlist.add }));
+    await user.click(await screen.findByRole('button', { name: t.wishlist.add }));
     expect(screen.getByRole('button', { name: t.wishlist.loadLabel('Gym') })).toBeTruthy();
+  });
+
+  it('a free user sees a link to Pro instead of the wishlist save button', async () => {
+    await renderReady();
+    const note = await screen.findByRole('note');
+    expect(within(note).getByText(pro.lock.wishlistBody)).toBeTruthy();
+    expect(within(note).getByRole('link', { name: pro.lock.cta }).getAttribute('href')).toBe('/pro');
+    expect(screen.queryByRole('button', { name: t.wishlist.add })).toBeNull();
   });
 
   it('a parser failure falls back to the form', async () => {

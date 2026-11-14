@@ -8,7 +8,7 @@
 // Rate schemas reject percent numbers (22.8 instead of 0.228) on purpose: that is the most
 // likely LLM/user mistake and it would silently break every forecast.
 import { z } from 'zod';
-import { AREA_TIERS, COST_CATEGORIES, DEBT_KINDS, KID_AGES } from './constants';
+import { AREA_TIERS, COST_CATEGORIES, DEBT_KINDS, KID_AGES, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES } from './constants';
 
 // ----- primitives ----------------------------------------------------------------------------
 
@@ -163,4 +163,56 @@ export const CategoryTotalsSchema = z.object({
   totals: z.record(CostCategorySchema, MoneySchema),
   oneOffs: z.array(z.object({ label: z.string().min(1), amount: MoneySchema })),
   detectedPay: NonNegativeMoneySchema.optional(),  // monthly
+});
+
+// ----- Pro (S15): requests and responses of /api/pro/* ---------------------------------------
+// Shared by the routes and the browser client so the two cannot drift. Failures are
+// `{ ok: false, error: { code: ProErrorCode, ... } }`, like the /api/ai/* routes.
+
+export const ProPlanSchema = z.enum(PRO_PLANS);
+export const ProSourceSchema = z.enum(PRO_SOURCES);
+export const ProErrorCodeSchema = z.enum(PRO_ERROR_CODES);
+
+export const ProStatusSchema = z.discriminatedUnion('pro', [
+  z.object({ pro: z.literal(false) }),
+  z.object({
+    pro: z.literal(true),
+    source: ProSourceSchema,
+    plan: ProPlanSchema.optional(),                // stripe_test only
+    since: z.iso.datetime(),
+  }),
+]);
+
+/** POST /api/pro/checkout */
+export const ProCheckoutRequestSchema = z.object({ plan: ProPlanSchema });
+export const ProCheckoutResponseSchema = z.object({ ok: z.literal(true), url: z.url() });
+
+/**
+ * POST /api/pro/confirm: the Checkout Session id Stripe put in the success URL. Test-mode ids
+ * only: a live-mode id is rejected here, so no real charge can ever unlock Pro.
+ */
+export const ProConfirmRequestSchema = z.object({
+  sessionId: z.string().regex(/^cs_test_[A-Za-z0-9]{8,200}$/, 'expected a Stripe test-mode Checkout Session id'),
+});
+
+/** POST /api/pro/demo-unlock */
+export const ProDemoUnlockRequestSchema = z.object({ code: z.string().trim().min(1).max(64) });
+
+/** GET /api/pro/status */
+export const ProStatusResponseSchema = z.object({
+  ok: z.literal(true),
+  status: ProStatusSchema,
+  /** False when no Stripe test key is configured: the screen then offers only the promo code. */
+  checkoutAvailable: z.boolean(),
+  /** The promo code is shown on the Pro screen on purpose, so the jury can pass the paywall. */
+  demo: z.object({ enabled: z.boolean(), code: z.string().optional() }),
+});
+
+/** The reply of POST /api/pro/confirm and POST /api/pro/demo-unlock. */
+export const ProMutationResponseSchema = z.object({ ok: z.literal(true), status: ProStatusSchema });
+
+/** Any failed /api/pro/* reply. `retryAfterSeconds` accompanies `rate_limited`. */
+export const ProErrorResponseSchema = z.object({
+  ok: z.literal(false),
+  error: z.object({ code: ProErrorCodeSchema, retryAfterSeconds: z.number().optional() }).loose(),
 });

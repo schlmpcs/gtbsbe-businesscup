@@ -32,6 +32,11 @@ records the commit, the author and the time.
    exists (T4/T5), `NEXT_PUBLIC_GAME_SOURCE`, `NEXT_PUBLIC_SESSION_SOURCE`, and optionally
    `PUBLIC_URL` (the public https URL; `deploy.sh` asks its `/api/health` after a deploy).
    `NEXT_PUBLIC_*` values are read at build time, so changing them needs a new deploy.
+   For the Pro paywall demo: `STRIPE_SECRET_KEY` (a **test-mode** key, `sk_test_…`; without it
+   checkout is off and only the promo code works), `APP_URL` (the same public https URL, plus the
+   sub-path if there is one; Stripe sends the payer back to it) and optionally `PRO_DEMO_CODE`.
+   Who is Pro is kept in `/data/pro` (the image sets `PRO_DATA_DIR`), so it survives deploys.
+   The file store needs a single app container.
 2. Funnel's `/` route must point at `http://127.0.0.1:3000` (it already does).
 3. For auto-deploy, a GitHub Actions runner with the label `lifeguessr-deploy` on the server,
    running as a user that can use Docker. See "The self-hosted runner" below.

@@ -11,6 +11,8 @@ export { getAnonId, ANON_ID_KEY } from './anonId';
 export { useHydrated, startHydration } from './hydration';
 export { useSessionSync, setSessionAdapter } from './sessionSync';
 export type { DebtInput, ProfileField } from './profileOps';
+export { usePro, useProStore, initialProData, resetProStore, PRO_CACHE_KEY } from './pro';
+export type { ProActions, ProData, ProState, ProVM } from './pro';
 
 /** Every screen hook calls this: true once saved state is loaded; also runs the session sync. */
 export function useAppReady(): boolean {
