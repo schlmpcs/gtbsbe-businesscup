@@ -10,7 +10,8 @@ import type { RevealVM } from '../model/types';
 export function RangeScale({ reveal }: { reveal: RevealVM }) {
   const { scale, total, guess, direction } = reveal;
   const vars = { '--lo': scale.low, '--hi': scale.high, '--mid': scale.mid, '--guess': scale.guess } as CSSProperties;
-  const pin = direction === 'in' ? 'bg-positive' : 'bg-negative';
+  // A miss is marked in ink, not red (Design v3: a miss is neutral, never an alarm).
+  const pin = direction === 'in' ? 'bg-positive' : 'bg-ink';
   return (
     <figure
       aria-label={t.reveal.scaleLabel(formatMoney(guess), formatMoney(total.low), formatMoney(total.high))}

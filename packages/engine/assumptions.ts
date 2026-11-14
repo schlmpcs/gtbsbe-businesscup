@@ -96,6 +96,16 @@ export const clueFloor = {
   note: 'Tune after playtests.',
 } satisfies Assumption<number>;
 
+/**
+ * Game (duel): two lives closer than this share of the costlier total are never paired (a coin
+ * flip, not a question). The pick score reuses clueCost and clueFloor per hint.
+ */
+export const duelMinGap = {
+  value: 0.03,
+  assumption: true,
+  note: 'Tune after playtests.',
+} satisfies Assumption<number>;
+
 // ----- Y1: life cards and scoring (costOfLife, cardToProfile, scoreGuess) ----------------------
 
 /**
@@ -383,6 +393,7 @@ export const assumptions = {
   safetyCushionMonths,
   clueCost,
   clueFloor,
+  duelMinGap,
   ...lifeCardAssumptions,
   avgMealPrice,
   monthlyGallons,

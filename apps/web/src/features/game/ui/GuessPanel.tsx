@@ -13,10 +13,12 @@ export type GuessPanelProps = {
   error: VMError | null;
   /** Streamer mode: guess and hidden answer as white tiles on the orange page, black lock-in button. */
   large?: boolean;
+  /** The per-home maximum, formatted ("1,000"), for the "worth up to" line (omit to hide it). */
+  maxPoints?: string;
 };
 
 /** The guess: the amount shown huge, log-scale slider, a number box for exact typing, and the lock-in button. */
-export function GuessPanel({ guess, onGuessChange, onLockIn, submitting, error, large = false }: GuessPanelProps) {
+export function GuessPanel({ guess, onGuessChange, onLockIn, submitting, error, large = false, maxPoints }: GuessPanelProps) {
   const headingId = useId();
   const money = (v: number) => formatMoney(v);
   const shown = money(guess.value);
@@ -53,8 +55,14 @@ export function GuessPanel({ guess, onGuessChange, onLockIn, submitting, error, 
   );
 
   return (
-    <section aria-labelledby={headingId} className="flex min-w-0 flex-col gap-lg">
-      <h2 id={headingId} className={cx('font-semibold', large ? 'text-2xl' : 'text-lg')}>
+    <section
+      aria-labelledby={headingId}
+      className={cx('flex min-w-0 flex-col gap-lg', !large && 'rounded-xl bg-surface p-xl text-text shadow-md')}
+    >
+      <h2
+        id={headingId}
+        className={cx('font-bold uppercase tracking-wide', large ? 'text-2xl' : 'text-sm text-text-muted')}
+      >
         {t.guess.heading}
       </h2>
 
@@ -78,7 +86,7 @@ export function GuessPanel({ guess, onGuessChange, onLockIn, submitting, error, 
         <>
           {/* Same value as the slider's output; shown huge, hidden from screen readers to avoid repeating it. */}
           <p aria-hidden="true" className="flex flex-wrap items-end gap-x-md">
-            <span className="font-display text-display font-extrabold leading-display text-primary tabular-nums lg:text-[length:calc(var(--text-display)*1.8)]">
+            <span className="font-display text-display font-extrabold leading-display text-primary tabular-nums lg:text-[length:calc(var(--text-display)*1.5)]">
               {shown}
             </span>
             <span className="pb-sm text-xl text-text-muted">{t.guess.perMonth}</span>
@@ -102,6 +110,9 @@ export function GuessPanel({ guess, onGuessChange, onLockIn, submitting, error, 
       >
         {submitting ? t.guess.locking : error ? t.errors.guessRetry : t.guess.lockIn(shown)}
       </Button>
+      {maxPoints && (
+        <p className={cx('text-center text-sm', large ? 'font-semibold' : 'text-text-muted')}>{t.guess.worth(maxPoints)}</p>
+      )}
     </section>
   );
 }

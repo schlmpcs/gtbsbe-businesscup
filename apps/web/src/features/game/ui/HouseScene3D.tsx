@@ -95,8 +95,8 @@ function Scene({ card, onOpenClue, disabled = false, large = false }: ClueBoardP
   const closeUpId = `${baseId}-closeup`;
 
   return (
-    <section aria-labelledby={headingId} className="min-w-0 rounded-xl bg-surface p-xs text-text shadow-lg sm:p-md lg:-rotate-1">
-      <div className="flex flex-col gap-md rounded-lg bg-surface-strong p-sm sm:p-lg">
+    <section aria-labelledby={headingId} className="min-w-0 rounded-xl bg-surface p-sm text-text shadow-md sm:p-lg">
+      <div className="flex flex-col gap-md">
         <div className="flex flex-col gap-xs">
           <h2 id={headingId} className={cx('font-display font-extrabold leading-tight', large ? 'text-4xl' : 'text-2xl')}>
             {t.clues.heading}
@@ -146,14 +146,19 @@ function Scene({ card, onOpenClue, disabled = false, large = false }: ClueBoardP
                     aria-controls={zoomed === clue.id ? closeUpId : undefined}
                     data-status={clue.status}
                     className={cx(
-                      'flex w-full items-center justify-between gap-md rounded-full border-2 bg-surface px-lg py-sm text-left font-bold shadow-md lg:w-max lg:px-md lg:py-xs',
+                      'flex w-full items-center justify-between gap-md rounded-full px-lg py-sm text-left font-bold shadow-md lg:w-max lg:px-md lg:py-xs',
                       'transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-                      isOpen ? 'border-ink hover:bg-surface-strong' : 'border-primary hover:bg-primary-soft',
+                      isOpen
+                        ? 'bg-primary-soft text-primary hover:bg-surface'
+                        : 'bg-surface text-text ring-1 ring-surface-strong hover:bg-primary-soft',
                       large ? 'text-xl' : 'text-base lg:text-sm',
                     )}
                   >
-                    <span>{t.clues.rooms[clue.id]}</span>
-                    <span aria-hidden="true" className={cx('text-xs font-bold', isOpen ? 'text-text' : 'text-primary')}>
+                    <span className="flex items-center gap-sm">
+                      <span aria-hidden="true">{t.clues.icons[clue.id]}</span>
+                      <span>{t.clues.rooms[clue.id]}</span>
+                    </span>
+                    <span aria-hidden="true" className={cx('text-xs font-bold', isOpen ? 'text-primary' : 'text-text-muted')}>
                       {badgeOf(clue, card)}
                     </span>
                   </button>
@@ -176,7 +181,7 @@ function Scene({ card, onOpenClue, disabled = false, large = false }: ClueBoardP
             id={closeUpId}
             aria-label={k.closeUp(t.clues.rooms[zoomedClue.id])}
             aria-live="polite"
-            className={cx('flex flex-col gap-md rounded-lg border-2 border-ink bg-surface p-md shadow-md', large ? 'text-xl' : 'text-base')}
+            className={cx('flex flex-col gap-md rounded-lg bg-bg p-md', large ? 'text-xl' : 'text-base')}
           >
             <div className="flex flex-wrap items-baseline justify-between gap-md">
               <h3 ref={closeUpHeading} tabIndex={-1} className="text-xl font-bold outline-none">

@@ -1,5 +1,5 @@
 import { game as t } from '@/copy';
-import { Button } from '@/ui-kit';
+import { Button, Sticker } from '@/ui-kit';
 import type { StreamerVM } from '../model/types';
 
 /** S4: the streamer countdown, giant and white on the orange page. The view-model locks the guess in at zero. */
@@ -7,7 +7,9 @@ export function Countdown({ streamer }: { streamer: StreamerVM }) {
   const { countdown, locked } = streamer;
   return (
     <div className="flex flex-col gap-md">
-      <p className="text-sm font-bold uppercase tracking-wide">{t.streamer.countdown}</p>
+      <Sticker tone="ink" tilt={-3} className="text-sm">
+        {t.streamer.countdown}
+      </Sticker>
       <p
         role="timer"
         aria-label={t.streamer.secondsLabel(countdown.secondsLeft)}
@@ -30,9 +32,14 @@ export function Countdown({ streamer }: { streamer: StreamerVM }) {
               {t.streamer.start}
             </Button>
           )}
-          <Button variant="secondary" size="lg" onClick={streamer.resetCountdown}>
+          {/* A white button on the orange page (the secondary outline would vanish on orange). */}
+          <button
+            type="button"
+            onClick={streamer.resetCountdown}
+            className="inline-flex items-center justify-center rounded-lg bg-surface px-2xl py-lg text-xl font-bold text-text shadow-md transition-colors hover:bg-primary-soft"
+          >
             {t.streamer.reset}
-          </Button>
+          </button>
         </div>
       )}
     </div>

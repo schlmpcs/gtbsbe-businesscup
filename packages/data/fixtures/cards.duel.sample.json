@@ -1,0 +1,227 @@
+[
+  {
+    "id": "sample-duel-01",
+    "zip": "30316",
+    "metro": "Atlanta, GA",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Sells vintage records on weekends."
+  },
+  {
+    "id": "sample-duel-02",
+    "zip": "78744",
+    "metro": "Austin, TX",
+    "adults": 2,
+    "kids": [
+      "toddler"
+    ],
+    "bedrooms": 2,
+    "car": {
+      "price": 22000,
+      "downPayment": 3000,
+      "apr": 0.079,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Plays in a Sunday soccer league."
+  },
+  {
+    "id": "sample-duel-03",
+    "zip": "02184",
+    "metro": "Boston, MA",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "schoolAge"
+    ],
+    "bedrooms": 3,
+    "car": {
+      "price": 36000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 72
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Coaches the kids' Little League team."
+  },
+  {
+    "id": "sample-duel-04",
+    "zip": "60611",
+    "metro": "Chicago, IL",
+    "adults": 2,
+    "kids": [],
+    "bedrooms": 1,
+    "car": {
+      "price": 26000,
+      "downPayment": 5000,
+      "apr": 0.065,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 5,
+    "caption": "Restores old bikes in the garage."
+  },
+  {
+    "id": "sample-duel-05",
+    "zip": "75206",
+    "metro": "Dallas-Fort Worth, TX",
+    "adults": 1,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 1,
+    "caption": "Teaches piano lessons after work."
+  },
+  {
+    "id": "sample-duel-06",
+    "zip": "80219",
+    "metro": "Denver, CO",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Bakes sourdough for the whole block."
+  },
+  {
+    "id": "sample-duel-07",
+    "zip": "77449",
+    "metro": "Houston, TX",
+    "adults": 2,
+    "kids": [
+      "toddler"
+    ],
+    "bedrooms": 2,
+    "car": {
+      "price": 22000,
+      "downPayment": 3000,
+      "apr": 0.079,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Volunteers at the animal shelter on Saturdays."
+  },
+  {
+    "id": "sample-duel-08",
+    "zip": "90024",
+    "metro": "Los Angeles, CA",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "schoolAge"
+    ],
+    "bedrooms": 3,
+    "car": {
+      "price": 36000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 72
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Never misses a home game."
+  },
+  {
+    "id": "sample-duel-09",
+    "zip": "33125",
+    "metro": "Miami, FL",
+    "adults": 2,
+    "kids": [],
+    "bedrooms": 1,
+    "car": {
+      "price": 26000,
+      "downPayment": 5000,
+      "apr": 0.065,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 5,
+    "caption": "Grows tomatoes on the balcony."
+  },
+  {
+    "id": "sample-duel-10",
+    "zip": "55411",
+    "metro": "Minneapolis-St. Paul, MN",
+    "adults": 1,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 1,
+    "caption": "Runs a book club that never reads the book."
+  },
+  {
+    "id": "sample-duel-11",
+    "zip": "37075",
+    "metro": "Nashville, TN",
+    "adults": 1,
+    "kids": [],
+    "bedrooms": 0,
+    "eatingOutPerWeek": 4,
+    "caption": "Fixes the neighbors' laptops for free."
+  },
+  {
+    "id": "sample-duel-12",
+    "zip": "10013",
+    "metro": "New York, NY",
+    "adults": 2,
+    "kids": [
+      "toddler"
+    ],
+    "bedrooms": 2,
+    "car": {
+      "price": 22000,
+      "downPayment": 3000,
+      "apr": 0.079,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Hikes every Sunday morning."
+  },
+  {
+    "id": "sample-duel-13",
+    "zip": "19125",
+    "metro": "Philadelphia, PA",
+    "adults": 2,
+    "kids": [
+      "schoolAge",
+      "schoolAge"
+    ],
+    "bedrooms": 3,
+    "car": {
+      "price": 36000,
+      "downPayment": 4000,
+      "apr": 0.069,
+      "termMonths": 72
+    },
+    "eatingOutPerWeek": 2,
+    "caption": "Collects houseplants faster than shelves."
+  },
+  {
+    "id": "sample-duel-14",
+    "zip": "85009",
+    "metro": "Phoenix, AZ",
+    "adults": 2,
+    "kids": [],
+    "bedrooms": 1,
+    "car": {
+      "price": 26000,
+      "downPayment": 5000,
+      "apr": 0.065,
+      "termMonths": 60
+    },
+    "eatingOutPerWeek": 5,
+    "caption": "Walks the dog before sunrise."
+  },
+  {
+    "id": "sample-duel-15",
+    "zip": "98052",
+    "metro": "Seattle, WA",
+    "adults": 1,
+    "kids": [
+      "infant"
+    ],
+    "bedrooms": 2,
+    "eatingOutPerWeek": 1,
+    "caption": "Learning Spanish on the commute."
+  }
+]

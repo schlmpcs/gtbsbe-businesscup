@@ -60,7 +60,7 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
   const inputId = useId();
   const busy = parse.status === 'parsing';
   return (
-    <Card title={t.parse.title} tone="muted">
+    <Card title={t.parse.title}>
       <Stack gap="md">
         <form
           onSubmit={(e) => {
@@ -79,7 +79,7 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
             value={parse.text}
             onChange={(e) => parse.setText(e.target.value)}
             placeholder={t.parse.placeholder}
-            className="w-full resize-y rounded-md border border-border bg-bg px-md py-sm text-base"
+            className="w-full resize-y rounded-lg bg-bg px-md py-md text-lg font-semibold placeholder:font-normal placeholder:text-text-muted"
           />
           <Row>
             <Button type="submit" variant="secondary" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
@@ -90,7 +90,7 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
 
         <div aria-live="polite">
           {parse.status === 'confirming' && parse.parsed && (
-            <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-md border border-border bg-bg p-lg">
+            <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg bg-bg p-lg">
               <h3 className="text-base font-semibold">{t.parse.confirmTitle}</h3>
               <ParsedLoan input={parse.parsed} inferred={parse.inferred} />
               <Row>
@@ -102,7 +102,7 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
             </section>
           )}
           {parse.status === 'error' && (
-            <div role="alert" className="flex flex-col gap-sm rounded-md border border-border bg-bg p-lg">
+            <div role="alert" className="flex flex-col gap-sm rounded-lg bg-bg p-lg">
               <p className="text-sm">{errorText(parse.error)}</p>
               <Row>
                 <Button variant="ghost" size="sm" onClick={parse.cancel}>

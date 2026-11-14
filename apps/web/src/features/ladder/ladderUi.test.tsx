@@ -40,6 +40,7 @@ function uploadVM(over: Partial<StatementUploadVM> = {}): StatementUploadVM {
     hasDriftHistory: false,
     whatWeKeep: { months: [], categories: [], takeHomePay: false, savedProfileToServer: false },
     readFile: null,
+    trySample: vi.fn(),
     submitTotals: vi.fn(),
     apply: vi.fn(),
     discard: vi.fn(),
@@ -100,11 +101,26 @@ describe('StatementUpload (S9)', () => {
     expect(ladder.upload.keep.forecastSent).not.toMatch(/retention|keep them/i);
   });
 
-  it('offers connecting a bank app as coming soon, not as a working option', () => {
+  it('does not show “Connect your bank app”: it is not built, so the dead button is hidden', () => {
+    render(<StatementUpload vm={uploadVM({ readFile: vi.fn() })} progress={progress} />);
+    expect(screen.queryByText(/connect your bank/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /bank/i })).not.toBeInTheDocument();
+  });
+
+  it('“Try with sample statement” asks the view-model to read the sample; disabled while reading', async () => {
+    const trySample = vi.fn();
+    const { rerender } = render(<StatementUpload vm={uploadVM({ readFile: vi.fn(), trySample })} progress={progress} />);
+    await userEvent.click(screen.getByRole('button', { name: ladder.upload.trySample }));
+    expect(trySample).toHaveBeenCalledTimes(1);
+    rerender(<StatementUpload vm={uploadVM({ readFile: vi.fn(), trySample, status: 'reading' })} progress={progress} />);
+    expect(screen.getByRole('button', { name: ladder.upload.trySample })).toBeDisabled();
+  });
+
+  it('footer: skip to the forecast on the left, the one orange CTA to the forecast on the right', () => {
     render(<StatementUpload vm={uploadVM()} progress={progress} />);
-    const connect = screen.getByRole('button', { name: `${ladder.upload.bank.button} · ${ladder.upload.bank.soon}` });
-    expect(connect).toBeDisabled();
-    expect(connect).toHaveAccessibleDescription(ladder.upload.bank.note);
+    expect(screen.getByRole('link', { name: ladder.shell.skip.S9 })).toHaveAttribute('href', '/future');
+    expect(screen.getByRole('link', { name: ladder.shell.cta.S9 })).toHaveAttribute('href', '/future');
+    expect(screen.getByRole('link', { name: ladder.shell.back })).toHaveAttribute('href', '/x/S8');
   });
 
   it('with a reader: the picker hands the file over', async () => {
@@ -279,5 +295,25 @@ describe('GuessYourself (S5)', () => {
     expect(screen.getByTestId('guess-verdict')).toHaveTextContent(ladder.guess.below('$1,000', '25%'));
     expect(screen.getByText(ladder.guess.basis.closestLife)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: ladder.guess.update })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: ladder.guess.submit })).toBeNull();
+    expect(screen.getByRole('link', { name: ladder.shell.cta.S5 })).toHaveAttribute('href', '/x/S6');
+  });
+
+  it('before a guess is saved: locking it is the CTA, with the game line as a sticker', async () => {
+    const vm: GuessYourselfVM = {
+      status: 'ready',
+      guess: { value: 3000, min: 1000, max: 15000, step: 10, position: 0.4 },
+      savedGuess: null,
+      comparison: null,
+      bridge: { played: 5, guessedLow: 4, guessedHigh: 1 },
+      setGuess: vi.fn(),
+      setGuessPosition: vi.fn(),
+      submit: vi.fn(),
+    };
+    render(<GuessYourself vm={vm} progress={progress} />);
+    expect(screen.getByText(ladder.guess.bridgeLow(4, 5))).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: ladder.shell.cta.S5 })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: ladder.guess.submit }));
+    expect(vm.submit).toHaveBeenCalledOnce();
   });
 });

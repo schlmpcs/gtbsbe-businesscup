@@ -225,12 +225,17 @@ export function usePaywall({ checkoutReturn, navigate = assignLocation }: UsePay
   );
 
   const status = pro.status;
+  // The cached hint skips the loading state only when it says Pro. A free hint says nothing about
+  // which checkout this server runs, so an offer built from it would use the pre-answer defaults
+  // (no checkout, no promo) and then jump when the answer lands. Wait for the server instead; a
+  // failed status request still ends on the offer, with the error and a retry.
+  const serverAnswered = pro.origin === 'server' || pro.load === 'error';
   const view: PaywallVM['view'] =
     busy === 'confirm'
       ? 'confirming'
       : status.pro
         ? justUnlocked ? 'success' : 'pro'
-        : pro.known || pro.load === 'error' ? 'offer' : 'loading';
+        : serverAnswered ? 'offer' : 'loading';
   // Saw the offer (checkout and unlocks are recorded by the server routes themselves).
   useTrackOnce(view === 'offer', 'paywall_viewed', { name: 'paywall_viewed' });
 
