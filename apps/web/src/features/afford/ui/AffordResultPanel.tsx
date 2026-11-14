@@ -106,6 +106,14 @@ function Fact({ value, label, note }: { value: ReactNode; label: string; note?: 
   );
 }
 
+/** The goal effect in one sentence (only when a goal is set). */
+function goalText(g: NonNullable<AffordResultVM['goalEffect']>): string {
+  const target = formatMoney(g.target, { compact: true });
+  if (g.reachYear === null || g.delayMonths === null) return t.result.goal.never(target);
+  if (!g.onTime) return t.result.goal.late(target, g.reachYear, g.delayMonths);
+  return g.delayMonths === 0 ? t.result.goal.sameTime(target, g.reachYear) : t.result.goal.later(target, g.reachYear, g.delayMonths);
+}
+
 /**
  * JF14: where you will be with vs without the purchase at the furthest horizon (rules engine, labeled),
  * then the cost in words. No bare signed number as a headline.
@@ -145,6 +153,11 @@ function WithVsWithout({ data }: { data: AffordResultVM }) {
       <p data-testid="afford-cost" className="text-lg font-semibold">
         {sentence}
       </p>
+      {data.goalEffect && (
+        <p data-testid="afford-goal-effect" className="text-lg">
+          {goalText(data.goalEffect)}
+        </p>
+      )}
       <SourceLabel source={data.forecastSource} className="self-start" />
     </div>
   );
@@ -164,9 +177,15 @@ function Details({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWith
         {data.horizons.length > 0 && <Horizons data={data} />}
         <dl className="grid grid-cols-1 gap-md">
           <Fact
-            value={t.result.cheapestWays[data.cheapestWay]}
+            value={data.cheapestWayFits ? t.result.cheapestWays[data.cheapestWay] : t.result.cheapestNone}
             label={t.result.cheapestTitle}
-            note={data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent}
+            note={
+              !data.cheapestWayFits
+                ? t.result.cheapestNoneNote
+                : data.cheapestWay === chosenWay
+                  ? t.result.cheapestSame
+                  : t.result.cheapestDifferent
+            }
           />
         </dl>
       </div>

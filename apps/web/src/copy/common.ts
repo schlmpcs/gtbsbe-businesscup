@@ -60,6 +60,15 @@ export const common = {
       yearTick: (years: number) => (years === 0 ? NOW : `${years}y`),
       /** Tooltip / table heading for a point in time. */
       yearLabel: (years: number) => (years === 0 ? NOW : years === 1 ? 'In 1 year' : `In ${years} years`),
+      /** Tooltip heading for any month from now: months under a year, else years and months ("In 1 year, 3 months"). */
+      monthLabel: (month: number) => {
+        const years = Math.floor(month / 12);
+        const months = month % 12;
+        const m = months === 1 ? '1 month' : `${months} months`;
+        if (months === 0) return years === 0 ? NOW : years === 1 ? 'In 1 year' : `In ${years} years`;
+        if (years === 0) return `In ${m}`;
+        return `${years === 1 ? 'In 1 year' : `In ${years} years`}, ${m}`;
+      },
       tableCaption: 'Chart data by year',
       tableYear: 'When',
       tableMid: 'Most likely',

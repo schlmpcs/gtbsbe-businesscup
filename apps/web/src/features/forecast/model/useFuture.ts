@@ -2,12 +2,12 @@
 // the picked horizon, which inputs are estimates, the top 3 moves and commit / done. Every number on
 // screen is read from the one answered bundle at that year, so the headline, the chart, the comparison,
 // the band and the moves agree; picking another year re-reads it (no request).
-import { pointAt, simulate } from '@lifeguessr/engine';
+import { pointAt } from '@lifeguessr/engine';
 import type { ForecastPoint, HorizonYears } from '@lifeguessr/types';
 import { useMemo, useState } from 'react';
 import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
-import { estimatedFields } from '@/lib/model/profile';
+import { areaRates, estimatedFields } from '@/lib/model/profile';
 import { useAppStore, useProfile } from '@/state';
 import { answerDollars, committedScenario, shownForecast } from './forecastAnswer';
 import { howWeCalculate } from './howWeCalculate';
@@ -15,6 +15,7 @@ import type { FutureVM, MoveVM } from './types';
 import { useMoveExplain, type ExplainFn } from './useMoveExplain';
 import { useNextMoves } from './useNextMoves';
 import { useSampleRequest } from './useSampleRequest';
+import { whyLine } from './whyLine';
 
 const NO_MOVES: MoveVM[] = [];
 const NO_POINTS: ForecastPoint[] = [];
@@ -68,16 +69,9 @@ export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}):
 
   // JF14 "why" line: the first simulated month's flows (rules engine; same for AI and rules answers).
   const why = useMemo(() => {
-    const r = runEngine(() => {
-      const path = simulate(profile, 12 * horizonYears).path;
-      const first = path[1];
-      if (!first) return null;
-      const outflow = first.spending + first.debtPayments;
-      const cashOutIdx = first.surplus < 0 && (path[0]?.cash ?? 0) > 0 ? path.findIndex((m) => m.month > 0 && m.cash <= 0) : -1;
-      return { takeHome: first.income, outflow, cashOutMonth: cashOutIdx > 0 ? path[cashOutIdx]!.month : null };
-    });
+    const r = runEngine(() => whyLine(profile, areaRates(profile)));
     return r.status === 'ready' ? r.data : null;
-  }, [profile, horizonYears]);
+  }, [profile]);
 
   const assumptionsVM = useMemo(() => howWeCalculate(profile), [profile]);
 

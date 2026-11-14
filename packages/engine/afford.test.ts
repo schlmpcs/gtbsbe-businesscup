@@ -212,6 +212,31 @@ describe('canAfford: cheapestWay', () => {
     expect(canAfford(p, buy(1000, 'cash'), { rates }).cheapestWay).toBe('card');
   });
 
+  it('only a way that fits now is recommended: a cheaper card that revolves loses to cash', () => {
+    // $100 surplus a month pays the card: 12 × 100 = 1,200 is cleared by month 12, 1,300 is not.
+    // On the card, cash keeps its 3% yield, so the card is cheaper overall (as at 1,000 above).
+    const card = debt({ id: 'c', kind: 'card', balance: 0, apr: 0, min: 0, estimate: true });
+    const p = profile({ pay: 3000, other: 2900, cash: 50_000, debts: [card] });
+    const rates = { ...ZERO, cashYieldAnnual: 0.03 };
+    expect(canAfford(p, buy(1200, 'cash'), { rates })).toMatchObject({ cheapestWay: 'card', cheapestWayFits: true });
+    // 1,300: the card breaks cardRevolves; cash (50,000 − 1,300 + 100 ≥ 2,900 cushion) fits.
+    expect(canAfford(p, buy(1300, 'card'), { rates }).verdict).toBe('no');
+    expect(canAfford(p, buy(1300, 'card'), { rates })).toMatchObject({ cheapestWay: 'cash', cheapestWayFits: true });
+  });
+
+  it('says so when no way to pay fits now', () => {
+    // $28,000 car, $4,000 cash, $1,000 surplus. Cash: 4,000 covers part, cash hits 0 < the $4,000
+    // cushion, and 4,000 + 1,000·k ≥ 32,000 needs k = 28 > 12 months, so "no". Card: the card's
+    // minimum payment joins the outflow, so $4,000 of cash is under a cushion of 4,000 + that
+    // minimum (and 12 × 1,000 = 12,000 of the 28,000 would be cleared in 12 months anyway).
+    const saver = profile({ pay: 5000, other: 4000, cash: 4000 });
+    const r = canAfford(saver, buy(28_000, 'cash'), { rates: ZERO });
+    expect(r.verdict).toBe('no');
+    expect(canAfford(saver, buy(28_000, 'card'), { rates: ZERO })).toMatchObject({ verdict: 'no', failsOn: 'cushion' });
+    // 0% card, no yield: both ways end at the same net worth, so the tie goes to cash, not fitting.
+    expect(r).toMatchObject({ cheapestWay: 'cash', cheapestWayFits: false });
+  });
+
   it('ties go to cash', () => {
     // Paid off from the surplus in the purchase month: card and cash end up identical.
     const p = profile({ pay: 5000, other: 1000, cash: 10_000 });

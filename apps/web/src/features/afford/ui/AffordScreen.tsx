@@ -24,7 +24,7 @@ export function AffordScreen({ vm }: { vm: AffordVM }) {
   const [justAdded, setJustAdded] = useState(false);
   const formTitleId = useId();
   const ready = vm.result?.status === 'ready' ? vm.result.data : null;
-  const cheaperWay = ready && ready.cheapestWay !== vm.form.payWith ? ready.cheapestWay : null;
+  const cheaperWay = ready && ready.cheapestWayFits && ready.cheapestWay !== vm.form.payWith ? ready.cheapestWay : null;
 
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl">

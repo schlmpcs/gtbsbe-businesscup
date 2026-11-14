@@ -148,12 +148,23 @@ export const afford = {
     horizonsCaption: 'Net worth with and without the purchase, in future (nominal) dollars',
     horizonHeaders: { when: 'When', with: 'With it', without: 'Without it', delta: 'Difference' },
     horizons: { 1: 'After this month', 12: 'In 1 year', 60: 'In 5 years', 120: 'In 10 years' } as Record<number, string>,
+    /** The goal effect (target already formatted). */
+    goal: {
+      label: 'Your goal',
+      sameTime: (target: string, year: number) => `You still reach ${target} by ${year}, no later than without it.`,
+      later: (target: string, year: number, delay: number) => `You still reach ${target} by ${year}, ${months(delay)} later.`,
+      late: (target: string, year: number, delay: number) => `You reach ${target} in ${year}, ${months(delay)} later, after your goal date.`,
+      never: (target: string) => `With this, your plan doesn’t reach ${target} in time.`,
+    },
     cheapestTitle: 'cheapest way to pay',
     cheapestWays: { cash: 'Cash', card: 'Card', loan: 'Loan' },
     /** Ghost action next to the save button: switch the form to the cheapest way. */
     tryCheapest: { cash: 'Try paying cash', card: 'Try the card, paid off fast', loan: 'Try your loan' },
     cheapestHint: 'Cheapest = most net worth in 10 years. On a card, paid off fast. A loan counts only once you give its terms.',
     cheapestSame: 'Same as your plan.',
+    /** No way to pay passes the checks now: say so instead of recommending one. */
+    cheapestNone: 'None fits now',
+    cheapestNoneNote: 'No way to pay passes the checks right now.',
     cheapestDifferent: 'Cheaper than your plan.',
     errors: {
       notImplemented: 'This calculation is still being built. Try again soon.',

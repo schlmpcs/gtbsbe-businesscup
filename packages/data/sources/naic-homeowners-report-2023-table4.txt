@@ -1,0 +1,379 @@
+Extract of Table 4 ("2023 Average Premium by Amount of Insurance, Dwelling Fire and Homeowners
+Owner-Occupied Policy Forms"), pages 30-134 of NAIC, Dwelling Fire, Homeowners Owner-Occupied, and
+Homeowners Tenant and Condominium/Cooperative Unit Owner's Insurance Report: Data for 2023 (July 2026),
+(c) 2026 National Association of Insurance Commissioners.
+Source PDF: https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf
+PDF sha256: b157866e6656e17041416665557867f4effe77b7b124656a747d2833ea9f4739 (downloaded 2026-11-15 through
+the Internet Archive copy of that URL, snapshot 20261110211919, because content.naic.org answers scripted
+clients with a Cloudflare challenge).
+Extracted with `pdftotext -layout`. For each state (and Countrywide) this keeps the first Table 4 page's
+name line, column header and "Total" block (all amounts of insurance); the lines are unchanged. Exposure is
+in house-years, Premium is annual written premium in US dollars, Average = Premium / Exposure (annual US
+dollars per house-year). refresh.py reads the HO-3 column (the standard owner-occupied policy, 77% of
+countrywide house-years) and checks that its Average matches Premium / Exposure.
+Texas data come from the Texas Department of Insurance, whose own policy forms are "similar, but not
+identical" to the countrywide forms; California data come from the California Department of Insurance.
+
+                                                                 Countrywide
+Insurance
+Range                                        DW           %         HO-1          %        HO-2          %       HO-3           %
+Total                Exposure               2,119,464.1    2.9      1,227,588.5   1.7     4,537,979.1    6.2     56,164,751.3   77.1
+                     Premium              2,160,206,073    1.7    2,870,969,772   2.3   7,134,461,110    5.7   97,559,502,869   77.4
+                     Average                     $1,019                 $2,339                $1,572                  $1,737
+
+                                                                 Alabama
+Insurance
+Range                                        DW           %       HO-1           %      HO-2          %      HO-3           %
+Total                Exposure                  47,162.5    3.8             0.9   0.0     116,598.3    9.5      983,091.4    79.7
+                     Premium                 32,237,113    1.4           1,302   0.0   205,332,482    8.9   1,874,181,529   81.6
+                     Average                       $684              $1,420                $1,761                 $1,906
+
+                                                                 Alaska
+Insurance
+Range                                        DW           %      HO-1            %     HO-2          %     HO-3           %
+Total                Exposure                   8,169.5    5.0             9.2   0.0          47.4   0.0     151,711.6    92.0
+                     Premium                  3,937,414    2.0          8,411    0.0     53,139      0.0   184,432,093    94.2
+                     Average                       $482                 $918             $1,121                $1,216
+
+                                                                Arizona
+Insurance
+Range                                        DW           %      HO-1           %      HO-2         %      HO-3           %
+Total                Exposure                  13,489.6   0.7            22.1   0.0     118,605.7   6.4     1,474,848.8   79.7
+                     Premium                  8,585,206   0.4           6,442   0.0   165,263,559   7.0   1,760,264,698   74.8
+                     Average                       $636                 $292              $1,393                $1,194
+
+                                                                 Arkansas
+Insurance
+Range                                        DW           %       HO-1           %     HO-2          %     HO-3          %
+Total                Exposure                  13,628.5    2.4           538.2   0.1     49,492.8    8.7     459,589.0   80.3
+                     Premium                  7,786,387    0.7       291,711     0.0   92,754,493    8.7   859,484,952   80.4
+                     Average                       $571                  $542             $1,874               $1,870
+
+                                                                 California
+Insurance
+Range                                        DW           %        HO-1           %     HO-2          %      HO-3           %
+Total                Exposure                 329,584.8    5.0              2.9   0.0      396.4      0.0     5,227,903.4   79.6
+                     Premium               559,212,431     5.1            2,028   0.0    391,279      0.0   8,652,528,350   78.6
+                     Average                     $1,697                   $695             $987                   $1,655
+
+                                                                Colorado
+Insurance
+Range                                        DW           %      HO-1           %      HO-2          %      HO-3           %
+Total                Exposure                  10,408.9   0.7                           102,588.8    6.6     1,260,123.9   81.4
+                     Premium                 10,036,336   0.2               *         277,878,046    6.9   3,140,038,597   78.0
+                     Average                       $964                                   $2,709                 $2,492
+
+                                                                Connecticut
+Insurance
+Range                                        DW           %       HO-1            %     HO-2          %      HO-3           %
+Total                Exposure                  13,894.4   1.8               1.0   0.0     26,032.2    3.3      653,255.3    82.6
+                     Premium                 16,532,098   1.0               36    0.0   45,917,957    2.8   1,329,982,867   81.6
+                     Average                     $1,190                  $36               $1,764                 $2,036
+
+                                                                 Delaware
+Insurance
+Range                                        DW           %       HO-1           %     HO-2          %     HO-3          %
+Total                Exposure                   3,523.3    1.2             1.0   0.0     21,251.3    7.4     256,605.3   89.5
+                     Premium                  1,683,384    0.5           784     0.0   22,715,775    6.7   306,909,020   89.9
+                     Average                       $478                  $784             $1,069               $1,196
+
+                                                                    District of Columbia
+Insurance
+Range                                        DW               %            HO-1            %    HO-2          %     HO-3           %
+Total                Exposure                     527.1       0.6                   3.0   0.0      318.6      0.4      79,202.5    91.9
+                     Premium                    192,179       0.1                 5,169   0.0    696,549      0.5   122,336,092    90.4
+                     Average                       $365                        $1,723             $2,186                $1,545
+
+                                                                 Florida
+Insurance
+Range                                        DW           %      HO-1          %   HO-2          %       HO-3           %
+Total                Exposure                 818,532.3   17.8                        4,675.9    0.1      3,743,014.0   81.3
+                     Premium               777,952,661     6.8             *       17,368,983    0.2   10,402,414,497   91.1
+                     Average                       $950                               $3,715                  $2,779
+
+                                                                   Georgia
+    Insurance
+    Range                                       DW          %      HO-1       %      HO-2         %        HO-3          %
+    Total                Exposure               31,560.6     1.3      18.6    0.0     312,001.8   12.4     1,900,180.4   75.8
+                         Premium             23,391,346      0.5    20,581    0.0   474,592,377   10.7   3,474,434,766   78.1
+                         Average                    $741            $1,107              $1,521                 $1,828
+
+                                                                   Hawaii
+    Insurance
+    Range                                       DW          %      HO-1       %   HO-2          %      HO-3           %
+    Total                Exposure                3,049.8     1.4                    1,499.3      0.7     213,397.9    97.3
+                         Premium               1,961,453     0.6          *       3,791,476      1.1   330,554,191    94.8
+                         Average                    $643                            $2,529                 $1,549
+
+                                                                    Idaho
+    Insurance
+    Range                                       DW          %      HO-1       %     HO-2         %      HO-3          %
+    Total                Exposure                2,138.0    0.5     3,030.2   0.7     42,422.1    9.2     333,978.3   72.5
+                         Premium               1,433,990    0.3   1,280,469   0.2   49,305,593    9.0   379,131,885   69.1
+                         Average                    $671              $423             $1,162               $1,135
+
+                                                                   Illinois
+    Insurance
+    Range                                       DW          %      HO-1       %      HO-2         %        HO-3          %
+    Total                Exposure               15,517.7     0.6     193.5    0.0     278,549.8   10.1     2,132,797.8   77.5
+                         Premium             13,772,050      0.3   114,739    0.0   463,172,790   10.9   3,155,916,330   74.3
+                         Average                    $888             $593               $1,663                 $1,480
+
+                                                                  Indiana
+    Insurance
+    Range                                       DW          %     HO-1        %      HO-2         %       HO-3          %
+    Total                Exposure                7,134.8    0.4     231.4     0.0     132,567.8   7.5     1,365,138.7   77.3
+                         Premium               5,369,619    0.2   143,814     0.0   186,891,757   8.1   1,718,205,285   74.6
+                         Average                    $753            $621                $1,410                $1,259
+
+                                                                    Iowa
+    Insurance
+    Range                                       DW          %      HO-1        %     HO-2         %     HO-3          %
+    Total                Exposure               16,121.5     2.0      95.7     0.0     36,084.5   4.4     640,972.3   77.6
+                         Premium             10,329,897      0.9    41,377     0.0   48,149,511   4.2   860,085,384   75.6
+                         Average                    $641             $433               $1,334              $1,342
+
+                                                                   Kansas
+    Insurance
+    Range                                       DW          %      HO-1       %     HO-2         %        HO-3          %
+    Total                Exposure               43,873.2     5.1     659.7    0.1     47,463.8    5.5      617,687.8    71.8
+                         Premium             17,159,783      1.1   661,201    0.0   95,870,249    6.2   1,070,644,224   69.1
+                         Average                    $391            $1,002             $2,020                 $1,733
+
+                                                                  Kentucky
+    Insurance
+    Range                                       DW          %     HO-1       %      HO-2         %        HO-3          %
+    Total                Exposure                7,207.1    0.7      262.1   0.0     108,818.1   10.9      774,282.6    77.2
+                         Premium               3,236,214    0.2    185,136   0.0   140,457,636    9.4   1,181,147,857   79.4
+                         Average                    $449             $706              $1,291                 $1,525
+
+                                                                  Louisiana
+    Insurance
+    Range                                       DW         %      HO-1        %      HO-2         %        HO-3          %
+    Total                Exposure               61,157.1    6.9        4.1    0.0      80,497.3    9.1      720,868.3    81.5
+                         Premium            116,591,912     4.6      9,914    0.0   176,196,047    7.0   2,182,256,688   86.3
+                         Average                  $1,906            $2,428              $2,189                 $3,027
+
+                                                                   Maine
+    Insurance
+    Range                                       DW          %      HO-1      %     HO-2         %     HO-3          %
+    Total                Exposure                5,054.8     1.2     289.4   0.1     15,463.5   3.7     342,748.3   82.1
+                         Premium               2,774,730     0.6   169,616   0.0   19,567,974   4.0   394,200,997   80.2
+                         Average                    $549             $586             $1,265              $1,150
+
+                                                                  Maryland
+    Insurance
+    Range                                       DW          %     HO-1       %      HO-2          %       HO-3          %
+    Total                Exposure                8,455.9    0.6      114.4   0.0      96,554.8    6.4     1,184,758.8   78.0
+                         Premium               6,579,392    0.3    101,359   0.0   146,094,441    6.2   1,870,129,097   78.9
+                         Average                    $778             $886              $1,513                 $1,578
+
+                                                                  Massachusetts
+    Insurance
+    Range                                       DW          %        HO-1         %   HO-2          %       HO-3          %
+    Total                 Exposure                7,738.0   0.5         182.2   0.0     52,525.7    3.4     1,280,537.2   84.0
+                          Premium              7,737,909    0.2       108,366   0.0   84,535,642    2.6   2,733,239,944   84.1
+                          Average                 $1,000                $595             $1,609                 $2,134
+
+                                                                   Michigan
+    Insurance
+    Range                                       DW          %       HO-1       %      HO-2          %       HO-3          %
+    Total                 Exposure               17,527.8    0.7        9.1    0.0     128,967.9    4.9     2,335,550.8   89.5
+                          Premium             18,112,942     0.6      6,553    0.0   177,876,513    5.9   2,592,998,716   85.9
+                          Average                 $1,033              $721               $1,379                 $1,110
+
+                                                                   Minnesota
+    Insurance
+    Range                                       DW          %       HO-1       %      HO-2         %       HO-3          %
+    Total                 Exposure               33,667.8    2.3       648.9   0.0      41,170.0   2.8     1,152,131.6   77.9
+                          Premium             19,183,544     0.6     215,872   0.0   104,633,305   3.5   2,289,884,623   76.0
+                          Average                   $570               $333              $2,541                $1,988
+
+                                                                   Mississippi
+    Insurance
+    Range                                       DW          %        HO-1        %   HO-2         %     HO-3          %
+    Total                 Exposure               19,241.3    3.6                       42,105.8   7.9     442,671.2   82.5
+                          Premium             48,557,970     4.5            *        76,772,924   7.1   898,253,059   83.5
+                          Average                 $2,524                                $1,823              $2,029
+
+                                                                   Missouri
+    Insurance
+    Range                                       DW          %       HO-1       %      HO-2         %       HO-3          %
+    Total                 Exposure               17,049.0    1.1       70.8    0.0      53,930.7   3.4     1,304,378.2   82.6
+                          Premium             11,831,950     0.4     83,169    0.0   101,009,397   3.8   2,073,206,155   78.3
+                          Average                   $694             $1,174              $1,873                $1,589
+
+                                                                     Montana
+    Insurance
+    Range                                       DW             %      HO-1       %     HO-2         %     HO-3          %
+    Total                 Exposure                2,182.5      0.9      887.3    0.3      9,991.3   3.9     207,134.7   81.0
+                          Premium              1,797,158       0.4    456,005    0.1   18,074,979   3.8   366,281,885   76.8
+                          Average                   $823                $514              $1,809              $1,768
+
+                                                                   Nebraska
+    Insurance
+    Range                                       DW          %       HO-1       %     HO-2           %     HO-3          %
+    Total                 Exposure               11,398.8    2.1      206.5    0.0     46,863.4     8.6     410,827.3   75.0
+                          Premium              8,420,958     0.7    148,781    0.0   95,002,762     8.1   879,883,239   74.8
+                          Average                   $739              $720              $2,027                $2,142
+
+                                                                   Nevada
+    Insurance
+    Range                                       DW          %      HO-1       %     HO-2          %     HO-3          %
+    Total                 Exposure                5,636.2    0.8       5.0    0.0     50,244.0    7.1     562,405.2   79.2
+                          Premium              3,050,533     0.4     2,481    0.0   55,924,130    7.4   569,525,269   75.7
+                          Average                   $541              $496             $1,113               $1,013
+
+                                                                   New Hampshire
+    Insurance
+    Range                                       DW          %         HO-1       %     HO-2         %     HO-3          %
+    Total                 Exposure                2,416.6    0.7         252.6   0.1      8,654.8   2.4     302,069.3   84.0
+                          Premium              1,727,115     0.4       212,570   0.0   13,126,251   2.7   392,736,737   82.0
+                          Average                   $715                 $842             $1,517              $1,300
+
+                                                                   New Jersey
+    Insurance
+    Range                                       DW          %        HO-1       %      HO-2          %       HO-3          %
+    Total                 Exposure               21,868.1    1.2       931.3    0.1     176,227.3    9.6     1,492,295.8   81.6
+                          Premium             15,116,340     0.5    1,903,492   0.1   237,551,625    8.3   2,315,072,326   81.1
+                          Average                   $691              $2,044              $1,348                 $1,551
+
+                                                                  New Mexico
+    Insurance
+    Range                                       DW          %       HO-1        %     HO-2           %     HO-3          %
+    Total                 Exposure                6,134.8   1.3         2.0     0.0     36,997.7     8.0     349,489.2   75.1
+                          Premium              5,874,080    0.8         785     0.0   50,718,998     7.1   520,749,965   72.7
+                          Average                   $958               $393              $1,371                $1,490
+
+                                                                  New York
+    Insurance
+    Range                                       DW         %       HO-1       %      HO-2         %        HO-3          %
+    Total                Exposure               81,310.8    2.8     1,774.4   0.1     358,195.8   12.3     2,209,137.8   75.6
+                         Premium             52,765,567     1.0    817,006    0.0   572,687,663   11.1   3,978,003,119   76.9
+                         Average                    $649              $460              $1,599                 $1,801
+
+                                                                   North Carolina
+    Insurance
+    Range                                       DW          %         HO-1       %      HO-2         %        HO-3          %
+    Total                Exposure               88,403.0     3.8           1.0   0.0     155,576.6    6.7     2,040,734.0   88.3
+                         Premium             32,918,919      0.8         3,418   0.0   220,988,631    5.4   3,778,565,035   92.3
+                         Average                    $372                $3,418             $1,420                 $1,852
+
+                                                                      North Dakota
+    Insurance
+    Range                                       DW             %        HO-1         %     HO-2          %      HO-3           %
+    Total                Exposure                5,095.8        3.1        268.8     0.2     5,549.1      3.4     125,368.6    77.0
+                         Premium               2,633,592        1.1       34,834     0.0   8,292,126      3.5   177,315,484    75.6
+                         Average                    $517                   $130              $1,494                 $1,414
+
+                                                                   Ohio
+    Insurance
+    Range                                       DW          %     HO-1        %      HO-2         %        HO-3          %
+    Total                Exposure               20,635.3    0.7     678.7     0.0     285,053.2    9.1     2,288,747.8   72.8
+                         Premium             16,296,994     0.5   378,564     0.0   287,201,032    8.1   2,553,315,347   71.9
+                         Average                    $790            $558                $1,008                 $1,116
+
+                                                                   Oklahoma
+    Insurance
+    Range                                       DW          %       HO-1       %      HO-2         %        HO-3          %
+    Total                Exposure               25,593.7     2.8     4,593.3   0.5     111,968.8   12.2      628,892.8    68.3
+                         Premium             20,007,917      0.9   2,283,849   0.1   247,526,216   11.2   1,563,394,258   70.8
+                         Average                    $782               $497              $2,211                 $2,486
+
+                                                                   Oregon
+    Insurance
+    Range                                       DW          %      HO-1       %     HO-2          %     HO-3          %
+    Total                Exposure                5,750.4     0.6       6.0    0.0     60,566.9    6.0     720,317.7   71.0
+                         Premium               5,096,099     0.5     2,910    0.0   72,572,931    6.6   722,219,021   65.6
+                         Average                    $886             $485              $1,198               $1,003
+
+                                                                   Pennsylvania
+    Insurance
+    Range                                       DW          %        HO-1         %      HO-2         %        HO-3          %
+    Total                Exposure               40,243.1     1.2       6,229.4    0.2     298,537.2    8.8     2,338,688.6   69.0
+                         Premium             21,688,598      0.5     2,777,936    0.1   365,178,808    9.1   2,845,454,668   71.2
+                         Average                    $539                 $446               $1,223                 $1,217
+
+                                                                 Rhode Island
+    Insurance
+    Range                                       DW         %       HO-1         %     HO-2         %      HO-3          %
+    Total                Exposure                6,714.7   2.7        663.2     0.3     35,023.7   14.2     182,838.4   74.0
+                         Premium               7,959,671   1.4      495,892     0.1   64,511,446   11.3   438,018,811   76.5
+                         Average                  $1,185              $748               $1,842               $2,396
+
+                                                                   South Carolina
+    Insurance
+    Range                                       DW          %         HO-1       %      HO-2         %        HO-3          %
+    Total                Exposure               16,463.8     1.3         350.3   0.0      97,227.3    8.0     1,072,109.3   87.8
+                         Premium               9,290,819     0.4       209,593   0.0   138,517,903    6.6   1,879,876,057   89.1
+                         Average                    $564                 $598              $1,425                 $1,753
+
+                                                                South Dakota
+Insurance
+Range                                        DW          %        HO-1          %     HO-2          %      HO-3          %
+Total                Exposure                  6,344.8    2.7         432.5     0.2     6,697.3      2.9     183,176.3   79.1
+                     Premium                3,323,299     0.9       228,609     0.1   8,209,789      2.1   295,705,472   77.4
+                     Average                      $524                   $529           $1,226                 $1,614
+
+                                                               Tennessee
+Insurance
+Range                                        DW          %      HO-1          %       HO-2         %       HO-3          %
+Total                Exposure                19,931.9    1.2      19,016.4     1.1     122,872.3   7.3     1,327,530.3   79.1
+                     Premium               13,046,249    0.5    21,465,656     0.8   197,856,739   7.2   2,188,777,438   79.3
+                     Average                      $655             $1,129                $1,610                $1,649
+
+                                                                   Texas
+Insurance
+Range                                        DW          %        HO-1          %       HO-2         %        HO-3          %
+Total                Exposure               146,310.3     2.6     1,175,620.3   20.8     338,478.7    6.0     3,342,767.0   59.2
+                     Premium              179,355,347     1.2   2,831,218,565   18.2   780,740,342    5.0   9,572,766,392   61.4
+                     Average                   $1,226                 $2,408               $2,307                 $2,864
+
+                                                                Utah
+Insurance
+Range                                        DW          %     HO-1          %     HO-2         %      HO-3          %
+Total                Exposure                  3,604.9   0.5           8.4   0.0     53,458.9    7.6     528,833.9   75.1
+                     Premium                1,626,323    0.2       6,375     0.0   65,930,813    8.0   585,349,037   71.2
+                     Average                      $451                $757            $1,233               $1,107
+
+                                                                Vermont
+Insurance
+Range                                        DW          %      HO-1          %      HO-2          %      HO-3          %
+Total                Exposure                  2,282.8    1.2      2,110.8     1.1     4,829.2      2.6     159,691.1   86.3
+                     Premium                1,486,538     0.7    1,777,691     0.8   4,936,747      2.2   194,061,102   85.2
+                     Average                      $651                 $842            $1,022                 $1,215
+
+                                                               Virginia
+Insurance
+Range                                        DW          %     HO-1           %      HO-2         %       HO-3          %
+Total                Exposure                15,398.1    0.8      5,534.4     0.3     116,912.9   5.8     1,656,961.1   82.8
+                     Premium                7,660,361    0.3    2,163,459     0.1   181,247,856   6.0   2,547,019,708   84.5
+                     Average                      $497                $391              $1,550                $1,537
+
+                                                                Washington
+Insurance
+Range                                        DW          %       HO-1           %      HO-2          %       HO-3          %
+Total                Exposure                14,480.9     0.8         585.3     0.0     141,432.6    7.6     1,344,132.3   72.5
+                     Premium               12,835,524     0.5       408,935     0.0   159,234,768    6.8   1,655,357,026   70.5
+                     Average                      $886                  $699              $1,126                 $1,232
+
+                                                               West Virginia
+Insurance
+Range                                        DW          %       HO-1          %     HO-2         %      HO-3          %
+Total                Exposure                  3,308.7   0.8          552.9    0.1     36,021.7    9.0     275,848.8   68.8
+                     Premium                2,026,541    0.4        338,653    0.1   34,097,087    7.5   325,347,897   71.2
+                     Average                      $612                  $612              $947               $1,179
+
+                                                               Wisconsin
+Insurance
+Range                                        DW          %      HO-1          %     HO-2         %       HO-3          %
+Total                Exposure                11,448.7    0.6        486.4     0.0     67,887.8   3.7     1,274,175.6   69.4
+                     Premium                6,923,126    0.4      177,579     0.0   73,315,635   4.1   1,175,615,081   66.2
+                     Average                      $605                 $365            $1,080                   $923
+
+                                                               Wyoming
+Insurance
+Range                                        DW          %     HO-1          %     HO-2          %     HO-3           %
+Total                Exposure                  1,090.4   0.8          2.0    0.0     2,080.8     1.6     109,153.5    81.6
+                     Premium                1,098,495    0.4       2,856     0.0   3,725,939     1.4   202,230,599    77.2
+                     Average                   $1,007             $1,428             $1,791                $1,853

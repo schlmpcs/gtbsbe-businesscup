@@ -149,11 +149,109 @@ class CommittedSourcesTests(unittest.TestCase):
         self.assertEqual(usda['value'], 367.95)
         self.assertTrue(usda['url'].endswith('CostofFoodOct2026LowModLib.pdf'))
 
+    def test_naic_homeowners_extract(self):
+        premiums = refresh.naic_homeowners_premiums()
+        self.assertEqual(premiums['Texas'], 2864)
+        self.assertEqual(premiums['New York'], 1801)
+        self.assertEqual(premiums['Countrywide'], 1737)
+        self.assertEqual(len(premiums), 52)   # 50 states, DC and Countrywide
+
     def test_naic_extract(self):
         naic = refresh.naic_premiums()
         self.assertEqual(naic['Texas'], 1726.91)
         self.assertEqual(naic['New York'], 1895.99)
         self.assertEqual(set(naic) - {'Countrywide'}, set(refresh.STATE_NAMES.values()))
+
+
+def acs_cell(estimate, moe):
+    return {'estimate': estimate, 'moe': moe}
+
+
+def owner_row(**overrides):
+    """An ACS row with only the owner-side cells the home fields read."""
+    row = {
+        'ownerUnits': acs_cell(5000.0, 400.0),
+        'B25077001': acs_cell(415200.0, 9000.0),
+        'B25088002': acs_cell(2794.0, 216.0),
+        'B25088003': acs_cell(950.0, 153.0),
+        'B25082001': acs_cell(2_000_000_000.0, 1e8),
+        'B25090001': acs_cell(20_000_000.0, 2e6),
+    }
+    row.update(overrides)
+    return row
+
+
+class HomeTests(unittest.TestCase):
+    ACS = {'label': 'ACS 2020-2024 5-year', 'year': 2024}
+
+    def test_measured_medians_are_used_as_published(self):
+        self.assertEqual(refresh.acs_median(owner_row(), 'B25077001'), (415200.0, None))
+
+    def test_top_coded_median_is_its_floor_and_an_estimate(self):
+        row = owner_row(B25077001=acs_cell(2000001.0, None), B25088003=acs_cell(1501.0, None))
+        fields, cov = refresh.home_from_acs('10013', self.ACS, row)
+        self.assertEqual(fields['homeValueMedian']['value'], 2_000_000)
+        self.assertTrue(fields['homeValueMedian']['isEstimate'])
+        self.assertIn('$2,000,000 or more', fields['homeValueMedian']['source']['name'])
+        self.assertEqual(fields['ownerCostsWithoutMortgageMonthly']['value'], 1500)
+        self.assertNotIn('isEstimate', fields['ownerCostsWithMortgageMonthly'])
+        self.assertIn('top-coded', cov['homeValueMedian'])
+
+    def test_a_median_without_moe_that_is_not_a_top_code_is_refused(self):
+        row = owner_row(B25088002=acs_cell(3999.0, None))
+        fields, cov = refresh.home_from_acs('10013', self.ACS, row)
+        self.assertNotIn('ownerCostsWithMortgageMonthly', fields)
+        self.assertIn('missing', cov['ownerCostsWithMortgageMonthly'])
+
+    def test_small_owner_samples_and_missing_rows_give_no_home_fields(self):
+        fields, cov = refresh.home_from_acs('98101', self.ACS, owner_row(ownerUnits=acs_cell(150.0, 60.0)))
+        self.assertEqual(fields, {})
+        self.assertIn('150 owner-occupied units', cov['home'])
+        self.assertEqual(refresh.home_from_acs('98101', self.ACS, None)[0], {})
+
+    def test_property_tax_rate_is_aggregate_taxes_over_aggregate_value(self):
+        rate, why, diag = refresh.property_tax_rate(owner_row())
+        self.assertEqual(rate, 0.01)
+        self.assertIsNone(why)
+        self.assertEqual(diag['taxesRelativeMoe'], 0.1)
+        with self.assertRaises(refresh.SourceError):   # 25% a year is a broken row, not a place
+            refresh.property_tax_rate(owner_row(B25090001=acs_cell(500_000_000.0, 1.0)))
+        rate, why, _ = refresh.property_tax_rate(owner_row(B25082001=acs_cell(None, None)))
+        self.assertIsNone(rate)
+
+    def test_fhfa_file_and_annualized_change(self):
+        text = ('cbsa\tmetro_name\tyr\tqtr\tindex_nsa\tindex_sa\r\n'
+                '35614\t"New York-Jersey City-White Plains, NY-NJ (MSAD)"\t1996\t2\t100.00\t100.50\r\n'
+                '35614\t"New York-Jersey City-White Plains, NY-NJ (MSAD)"\t2026\t1\t390.00\t391.00\r\n'
+                '35614\t"New York-Jersey City-White Plains, NY-NJ (MSAD)"\t2026\t2\t400.00\t401.00\r\n'
+                '10580\t"Albany-Schenectady-Troy, NY"\t2026\t2\t300.00\t300.00\r\n')
+        places = refresh.parse_fhfa_po_metro(text, {'35614'})
+        self.assertEqual(set(places), {'35614'})
+        self.assertEqual(places['35614']['name'], 'New York-Jersey City-White Plains, NY-NJ (MSAD)')
+        rate, end = refresh.annualized_change(places['35614']['quarters'], 30)
+        self.assertAlmostEqual(rate, 4 ** (1 / 30) - 1)   # same quarter at both ends: 1996 Q2 -> 2026 Q2
+        self.assertEqual(end, (2026, 2))
+        self.assertIsNone(refresh.annualized_change(places['35614']['quarters'], 10))
+        with self.assertRaises(refresh.SourceError):
+            refresh.parse_fhfa_po_metro('cbsa,metro_name\n', {'35614'})
+
+    def test_split_metros_use_their_division(self):
+        omb = refresh.omb_delineation()
+        self.assertEqual(refresh.hpi_place('42017', omb)[0], '33874')   # Bucks: Montgomery-Bucks-Chester
+        self.assertEqual(refresh.hpi_place('42101', omb)[0], '37964')   # Philadelphia County
+        self.assertEqual(refresh.hpi_place('48085', omb)[0], '19124')   # Collin: Dallas-Plano-Irving
+        self.assertEqual(refresh.hpi_place('48453', omb), ('12420', 'Austin-Round Rock-San Marcos, TX'))
+        with self.assertRaises(refresh.SourceError):
+            refresh.hpi_place('99999', omb)
+
+    def test_appreciation_refuses_an_fhfa_area_named_differently_from_omb(self):
+        omb = refresh.omb_delineation()
+        fhfa = {'places': {'33874': {'name': 'Somewhere Else, PA (MSAD)', 'quarters': {'1996Q2': 1.0, '2026Q2': 2.0}}}}
+        with self.assertRaises(refresh.SourceError):
+            refresh.home_appreciation(fhfa, '42017', omb)
+        value, note = refresh.home_appreciation({'places': {}}, '42017', omb)
+        self.assertIsNone(value)
+        self.assertIn('missing', note)
 
 
 class OutputTests(unittest.TestCase):
@@ -179,6 +277,20 @@ class OutputTests(unittest.TestCase):
             for rent in a['rentByBedrooms'].values():
                 self.assertNotIn('isEstimate', rent)   # every rent is a HUD value, none defaulted
             self.assertTrue(a['carInsuranceMonthly']['isEstimate'])
+
+    def test_home_values_are_sourced_and_estimates_say_why(self):
+        for a in json.loads(refresh.AREAS_PATH.read_text()):
+            for field in ('homeValueMedian', 'ownerCostsWithMortgageMonthly', 'ownerCostsWithoutMortgageMonthly',
+                          'propertyTaxRate', 'homeInsuranceMonthly', 'homeAppreciationAnnual'):
+                v = a[field]
+                self.assertTrue(v['source']['url'].startswith('https://'), (a['zip'], field))
+                if field in ('homeInsuranceMonthly', 'homeAppreciationAnnual'):
+                    self.assertTrue(v['isEstimate'], (a['zip'], field))   # defaults, never measured here
+                elif v.get('isEstimate'):
+                    self.assertIn('top-coded', v['source']['name'], (a['zip'], field))
+            self.assertLess(a['propertyTaxRate']['value'], 0.04)   # a decimal per year, never a percent
+            self.assertLess(a['homeAppreciationAnnual']['value'], 0.15)
+            self.assertGreater(a['ownerCostsWithMortgageMonthly']['value'], a['ownerCostsWithoutMortgageMonthly']['value'])
 
 
 if __name__ == '__main__':

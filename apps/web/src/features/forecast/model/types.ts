@@ -273,9 +273,10 @@ export type FutureVM = NextMovesVM & {
   /** The engine assumptions behind these numbers, for the "How we calculate" panel. */
   howWeCalculate: HowWeCalculateVM;
   /**
-   * JF14 "why" line: this month's take-home pay and what goes out (spending + debt payments), per month,
-   * from the rules simulation of the profile; `cashOutMonth` = the first month cash reaches 0 when more
-   * goes out than comes in (null otherwise or beyond the horizon). Null when the engine cannot run.
+   * JF14 "why" line (./whyLine.ts): this month's take-home pay and everything that goes out (spending,
+   * debt payments, cash purchases), from the rules simulation of the profile at area rates;
+   * `cashOutMonth` = the first month cash is gone while more goes out than comes in (null otherwise or
+   * beyond 10 years, whatever horizon is picked). Null when the engine cannot run.
    */
   why: { takeHome: number; outflow: number; cashOutMonth: number | null } | null;
 };

@@ -51,6 +51,10 @@ export type AffordResultVM = {
   /** The plan already breaks a rule without the purchase: say so instead of blaming the purchase. */
   baselineFails: boolean;
   cheapestWay: AffordResult['cheapestWay'];
+  /** False when no way to pay fits now: the UI says so instead of recommending `cheapestWay`. */
+  cheapestWayFits: boolean;
+  /** The goal effect, when a goal is set; null otherwise. */
+  goalEffect: AffordGoalEffectVM | null;
   /** canAfford's forecasts are nominal (not today's dollars). */
   todaysDollars: false;
   /**
@@ -74,6 +78,19 @@ export type AffordWorkTimeVM = {
   hoursPerWeek: number;
   /** Take-home pay is an estimate. */
   isEstimate: boolean;
+};
+
+/**
+ * When the plan reaches the goal's target (today's dollars), with the purchase vs without.
+ * `reachYear` = calendar year it is reached with the purchase (null = not within the goal's years
+ * + 10). `delayMonths` = how much later than without (0 = no change; null when either never gets there).
+ */
+export type AffordGoalEffectVM = {
+  target: Money;
+  reachYear: number | null;
+  delayMonths: number | null;
+  /** Reached with the purchase by the goal's own date. */
+  onTime: boolean;
 };
 
 /** The thresholds canAfford checks (engine assumptions), so the UI can name them in its copy. */
