@@ -14,7 +14,8 @@ import { resetClientState } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
 import { csvFile, fakeCategorize, realisticCatalogue, ruleClasses, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
 import { CANCEL_MOVE_ID, cancelCandidate } from './audit';
-import { SubscriptionsToolStateSchema, type SubscriptionsToolState } from './state';
+import { type SubscriptionsToolState } from './state';
+import { SubscriptionToolStateSchema } from '@lifeguessr/types';
 import { useCancelResult } from './useCancelResult';
 import { useSubscriptions, type SubscriptionsDeps } from './useSubscriptions';
 
@@ -511,7 +512,7 @@ describe('statement path', () => {
     await ready(tool);
     await uploaded(tool);
     const saved = JSON.stringify(tool.result.current.store.saves);
-    expect(SubscriptionsToolStateSchema.safeParse(tool.result.current.store.state).success).toBe(true);
+    expect(SubscriptionToolStateSchema.safeParse(tool.result.current.store.state).success).toBe(true);
     // Lines of the sample that are not subscriptions, and what the masker removes, are nowhere in it.
     expect(saved).not.toMatch(/Tom Becker|Maria Lopez|WHATABURGER|STARBUCKS|PAYROLL|Zelle|7339\.80|DEBIT_CARD/i);
     expect(tool.result.current.store.state!.audit!.findings.map((f) => f.id)).toEqual(subscriptionsExpected.findings.map((f) => f.id));
@@ -907,9 +908,10 @@ describe('cancel plan', () => {
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    await waitFor(() => expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready' }));
-    const asked = route.calls.at(-1) as { scenarios: { id: string; patch: unknown }[] };
-    expect(asked.scenarios).toEqual([{ id: CANCEL_MOVE_ID, patch: { spending: { subscriptions: 55.02 } } }]);
+    // The number shows at once (rules first); the request follows, after the debounce of a profile or plan change.
+    const asking = () => (route.calls as { scenarios: { id: string; patch: unknown }[] }[]).filter((c) => c.scenarios.length > 0);
+    await waitFor(() => expect(asking().length).toBeGreaterThan(0), { timeout: 3000 });
+    expect(asking().at(-1)!.scenarios).toEqual([{ id: CANCEL_MOVE_ID, patch: { spending: { subscriptions: 55.02 } } }]);
   });
 
   it('addAsMove commits the measured move through the store, once the number is in', async () => {
@@ -998,15 +1000,20 @@ describe('cancel plan', () => {
     expect(route.calls).toEqual([]);
   });
 
-  it('addAsMove does nothing while the forecast is still on its way', async () => {
-    mockForecastRoute(() => new Promise(() => {})); // never answers
+  it('rules first, as on S10: while the model is still answering the plan shows the rules number at once, and the model’s replaces it', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    mockForecastRoute(async (body) => {
+      await held;
+      return aiAnswer(body, { effects: { [CANCEL_MOVE_ID]: 20_000 } });
+    });
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    expect(tool.result.current.cancel.effect).toEqual({ status: 'loading' });
-    expect(tool.result.current.cancel.canAddAsMove).toBe(false);
-    act(() => tool.result.current.cancel.addAsMove());
-    expect(useAppStore.getState().committedMove).toBeNull();
+    expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready', data: { source: 'rules' } });
+    expect(tool.result.current.cancel.canAddAsMove).toBe(true);
+    await act(async () => release());
+    await waitFor(() => expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready', data: { source: 'ai' } }));
   });
 
   it('says when the profile holds less for subscriptions than is marked; using the audit in the plan fixes it', async () => {

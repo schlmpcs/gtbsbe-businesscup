@@ -1,8 +1,9 @@
 import { subscriptionsExpected } from '@lifeguessr/data/fixtures/tools';
 import { describe, expect, it } from 'vitest';
-import { emptyToolState, restoreToolState, SubscriptionsToolStateSchema } from './state';
+import { SubscriptionToolStateSchema as SubscriptionsToolStateSchema } from '@lifeguessr/types';
+import { emptyToolState, restoreToolState } from './state';
 
-describe('SubscriptionsToolStateSchema', () => {
+describe('the slice schema the tool saves with (the contract’s SubscriptionToolStateSchema)', () => {
   it('an empty object is the empty state: the lists default to empty', () => {
     expect(SubscriptionsToolStateSchema.parse({})).toEqual(emptyToolState());
     expect(emptyToolState()).toEqual({ ticks: [], confirmed: [], dismissed: [], cancelMarked: [] });

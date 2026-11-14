@@ -12,7 +12,7 @@
 // and the event sender. Wiring them is `./wiring.ts`.
 import { auditTotals, detectSubscriptions, subsMinCharges } from '@lifeguessr/engine';
 import {
-  EVENT_COUNT_MAX, SERVICE_CATEGORIES,
+  ServiceCategorySchema,
   type ClientFunnelEvent, type KnownService, type MissBucket, type Profile, type ServiceCategory,
   type StatementClass, type SubscriptionFinding,
 } from '@lifeguessr/types';
@@ -174,7 +174,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
         isEstimate: true,
       };
     });
-    const groups: TickGroupVM[] = SERVICE_CATEGORIES.map((category: ServiceCategory) => ({
+    const groups: TickGroupVM[] = ServiceCategorySchema.options.map((category: ServiceCategory) => ({
       category, services: services.filter((s) => s.category === category),
     })).filter((g) => g.services.length > 0);
     return { groups, count: tickAudit.findings.length, monthly: tickAudit.monthlyTotal, yearly: tickAudit.yearlyTotal };
@@ -268,7 +268,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
             setUpload({ status: 'idle', error: null });
             setChosen('findings');
             const flagged = audit.findings.filter((f) => f.flags.length > 0).length;
-            if (flagged > 0) emit({ name: 'subs_flagged', props: { count: Math.min(flagged, EVENT_COUNT_MAX) } });
+            if (flagged > 0) emit({ name: 'subs_flagged', props: { count: flagged } });
           } catch (err) {
             setUpload({ status: 'error', error: toVMError(err) });
           }
@@ -366,7 +366,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
       if (!now.merged.some((f) => f.id === id && isCounted(f, now.confirmed))) return;
       if (markedFindings(latest.current, catalogue).some((f) => f.id === id)) return; // already marked, maybe through its ticked service
       update((s) => ({ ...s, cancelMarked: withId(s.cancelMarked, id) }));
-      emit({ name: 'subs_cancel_marked', props: { count: Math.min(markedFindings(latest.current, catalogue).length, EVENT_COUNT_MAX) } });
+      emit({ name: 'subs_cancel_marked', props: { count: markedFindings(latest.current, catalogue).length } });
     },
     [catalogue, update, emit],
   );
