@@ -36,7 +36,8 @@ export const common = {
     opensInNewTab: '(opens in a new tab)',
     gaugeZones: { low: 'Low', medium: 'Medium', high: 'High' },
     chart: {
-      rangeLegend: 'Likely range',
+      /** The band is the spread from estimated inputs only (ENGINEERING.md → Forecast: label it this way). */
+      rangeLegend: 'Range from the numbers we estimated',
       yearAxis: 'Years from now',
       /** X-axis tick for a whole number of years from now. */
       yearTick: (years: number) => (years === 0 ? NOW : `${years}y`),

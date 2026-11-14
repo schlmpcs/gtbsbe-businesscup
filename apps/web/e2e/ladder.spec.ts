@@ -2,6 +2,7 @@
 // closest life → sliders → balance sheet (add a debt) → /future, with the forecast updating.
 import { expect, test, type Page } from '@playwright/test';
 import { common } from '../src/copy/common';
+import { forecast } from '../src/copy/forecast';
 import { ladder } from '../src/copy/ladder';
 
 let pageErrors: string[] = [];
@@ -32,7 +33,7 @@ async function savedProfile(page: Page) {
 test('closest life → sliders → balance sheet with a new debt → /future', async ({ page }) => {
   // S6: start from the first life.
   await page.goto('/me/closest');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('S6');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(ladder.screens.S6);
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
   await choose.click();
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
@@ -85,10 +86,14 @@ test('closest life → sliders → balance sheet with a new debt → /future', a
   await expect(page.getByRole('progressbar', { name: ladder.shell.narrowedLabel })).toBeVisible();
   await expect(range(page)).toBeVisible();
 
-  // S10: the CTA leads to the forecast with the profile built above still saved.
+  // S10: the CTA leads to the forecast of the profile built above (same engine number as the ladder's).
+  const in10y = (await page.getByTestId('ladder-in10y').getByText(/^−?\$[\d,]+$/).textContent()) ?? '';
+  expect(in10y).toMatch(/\$/);
   await page.getByRole('link', { name: ladder.shell.futureCta }).click();
   await expect(page).toHaveURL(/\/future$/);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('S10');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.future.title);
+  await expect(page.getByTestId('in10y')).toContainText(in10y);
+  await expect(page.getByRole('figure', { name: forecast.future.chartTitle }).locator('.recharts-line-curve').first()).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);
 });

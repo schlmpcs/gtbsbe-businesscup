@@ -57,13 +57,15 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
 
         {ready && (
           <Stack gap="sm">
-            <Stat
-              label={t.in10yLabel}
-              value={formatMoney(in10y.mid)}
-              size="lg"
-              isEstimate={estimates.left > 0}
-              hint={t.in10yHint}
-            />
+            <div data-testid="ladder-in10y">
+              <Stat
+                label={t.in10yLabel}
+                value={formatMoney(in10y.mid)}
+                size="lg"
+                isEstimate={estimates.left > 0}
+                hint={t.in10yHint}
+              />
+            </div>
             <p className="text-sm tabular-nums" data-testid="ladder-range">
               {t.range(formatMoney(in10y.low), formatMoney(in10y.high))}
             </p>

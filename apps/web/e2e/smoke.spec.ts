@@ -5,7 +5,7 @@ import { SCREEN_ROUTES } from '../src/lib/screens';
 
 test('home page loads with the disclaimer and a link to every screen', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('S1');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByText(common.disclaimer)).toBeVisible();
   await expect(page.locator('nav a[data-screen]')).toHaveCount(Object.keys(SCREEN_ROUTES).length);
 });
@@ -15,6 +15,7 @@ for (const [id, route] of Object.entries(SCREEN_ROUTES)) {
   test(`${id} renders at ${route}`, async ({ page }) => {
     const response = await page.goto(route);
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(id);
+    // Placeholder screens put the ID in the heading; real screens just need one.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 }

@@ -1,14 +1,28 @@
 // Next Moves shared by S1 and S10: engine rankMoves with the screen's rates, plus commit / done.
-import { movesLevel, rankMoves } from '@lifeguessr/engine';
-import type { Move, Profile } from '@lifeguessr/types';
+import { MOVE_LEVELS, movesLevel, rankMoves } from '@lifeguessr/engine';
+import type { CostCategory, Move, MoveKind, Profile } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
-import type { MoveVM, NextMovesVM } from './types';
+import type { MoveTarget, MoveVM, NextMovesVM } from './types';
+
+const LEVEL_2_KINDS = (Object.keys(MOVE_LEVELS) as MoveKind[]).filter((k) => MOVE_LEVELS[k] === 2);
+
+/** The change a move's patch makes, for display (no math: values are read from the patch). */
+export function moveTarget(move: Move): MoveTarget | null {
+  const debt = move.patch.debts?.find((d) => d.extraPayment !== undefined);
+  if (debt?.extraPayment !== undefined) return { kind: 'extraPayment', debtId: debt.id, monthly: debt.extraPayment };
+  const spending = move.patch.spending ?? {};
+  const category = move.category && spending[move.category] !== undefined
+    ? move.category
+    : (Object.keys(spending) as CostCategory[])[0];
+  const monthly = category === undefined ? undefined : spending[category];
+  return category !== undefined && monthly !== undefined ? { kind: 'spendingTo', category, monthly } : null;
+}
 
 export function toMoveVM(move: Move, p: Pick<Profile, 'committedMoveId'>): MoveVM {
-  return { ...move, isCommitted: move.id === p.committedMoveId };
+  return { ...move, isCommitted: move.id === p.committedMoveId, target: moveTarget(move) };
 }
 
 export function useNextMoves(profile: Profile): NextMovesVM {
@@ -45,8 +59,16 @@ export function useNextMoves(profile: Profile): NextMovesVM {
     [find, markMoveDone],
   );
 
-  const moves: NextMovesVM['moves'] =
-    ranked.status === 'ready' ? { status: 'ready', data: ranked.data.map((m) => toMoveVM(m, profile)) } : ranked;
+  // Memoized so the list (and anything derived from it, like S10's comparison) keeps its identity
+  // between renders while the ranking is unchanged.
+  const committedMoveId = profile.committedMoveId;
+  const moves: NextMovesVM['moves'] = useMemo(
+    () =>
+      ranked.status === 'ready'
+        ? { status: 'ready', data: ranked.data.map((m) => toMoveVM(m, { committedMoveId })) }
+        : ranked,
+    [ranked, committedMoveId],
+  );
 
-  return { moves, level: movesLevel(profile), doneCount: profile.doneMoveIds.length, commit, uncommit, markDone };
+  return { moves, level: movesLevel(profile), level2Kinds: LEVEL_2_KINDS, doneCount: profile.doneMoveIds.length, commit, uncommit, markDone };
 }

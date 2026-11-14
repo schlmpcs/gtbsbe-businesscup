@@ -20,9 +20,7 @@ export function LadderShell({ screen, progress, loading = false, children }: Lad
     <main className="mx-auto w-full max-w-(--container-2xl) px-lg py-xl">
       <Stack gap="xl">
         <header className="flex flex-col gap-sm">
-          <h1 className="text-2xl font-semibold leading-tight">
-            <span className="text-text-muted">{screen}</span> {screenTitles[screen]}
-          </h1>
+          <h1 className="text-2xl font-semibold leading-tight">{screenTitles[screen]}</h1>
           <p className="text-base text-text-muted">{ladder.shell.intro[screen]}</p>
         </header>
         {loading ? <LoadingState /> : children}
