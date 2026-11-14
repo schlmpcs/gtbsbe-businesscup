@@ -55,6 +55,7 @@ export function WhatWeKeep({ keep, sendsLabels }: WhatWeKeepProps) {
               </p>
             )}
             <p className="rounded-md bg-bg p-md">{t.forecastSent}</p>
+            <p className="rounded-md bg-bg p-md">{t.tools}</p>
           </Stack>
         </details>
       </Stack>

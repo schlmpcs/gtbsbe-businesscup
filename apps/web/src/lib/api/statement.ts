@@ -14,5 +14,5 @@ export async function categorizeStatement(
   opts: CategorizeOptions = {},
 ): Promise<StatementCategorizeResponse> {
   const res = await postJson('/api/statement/categorize', { items }, StatementCategorizeResponseSchema, opts);
-  return { months: res.months, categorizedBy: res.categorizedBy };
+  return { months: res.months, categorizedBy: res.categorizedBy, ...(res.classes && {classes:res.classes}) };
 }

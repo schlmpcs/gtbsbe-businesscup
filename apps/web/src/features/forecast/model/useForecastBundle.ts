@@ -2,9 +2,12 @@
 // POST /api/ai/forecast, with the local rules engine as the fallback. Spec: docs/ENGINEERING.md →
 // AI forecast.
 //
+// - Rules first: until a key has an answer of its own, the screen shows the rules bundle computed
+//   here for that very key, labeled 'rules' and `isRefreshing` (the model takes ~15–20 s), then the
+//   model's answer replaces it. So there is no skeleton, and a profile edit moves the numbers at once.
+//   Only if the local engine fails is the previous key's answer shown meanwhile (`isStale`).
 // - One request per distinct (profile facts, scenarios, rates), identified by a canonical key. A
-//   profile change asks again after FORECAST_DEBOUNCE_MS, with the previous answer still on screen
-//   (`isRefreshing` and `isStale`: it answers another profile). The first request goes at once.
+//   profile change asks again after FORECAST_DEBOUNCE_MS. The first request goes at once.
 // - Every answer carries the (profile, candidates) pair it was asked about (`ForecastAnswer`), so
 //   a screen can rank with the bundle's own ids and patches and never with another request's.
 // - Whatever goes wrong (offline, 4xx/5xx, a broken or incomplete body, no answer within
@@ -28,8 +31,8 @@ import type { ForecastAnswer, ForecastState } from './types';
 
 /** Wait this long after the last profile change before asking again (starting value). */
 export const FORECAST_DEBOUNCE_MS = 600;
-/** Give up on the server after this long (starting value; the route's own deadline is 20 s) and use the rules. */
-export const FORECAST_CLIENT_TIMEOUT_MS = 25_000;
+/** Give up on the server after this long and use the rules (the route's own deadline is 40 s: a retry included). */
+export const FORECAST_CLIENT_TIMEOUT_MS = 50_000;
 /** Answers kept for the session, oldest dropped first. */
 const MEMORY_LIMIT = 20;
 
@@ -121,6 +124,16 @@ export function useForecastBundle(
     setView(current);
   }
 
+  // Rules first: what this key shows until it has an answer of its own (null if the local engine fails).
+  const rulesFirst = useMemo((): Answered | null => {
+    try {
+      const bundle = rulesBundle(profile, request.scenarios, request.rates);
+      return { key: request.key, answer: { bundle, profile, candidates: [...candidates] } };
+    } catch {
+      return null;
+    }
+  }, [profile, candidates, request]);
+
   // The effect below runs when the key or `hasRememberedAi` changes, not on every render: it reads the rest from here.
   const latest = useRef({ profile, candidates, request, hasPrevious: false });
   useEffect(() => {
@@ -204,9 +217,9 @@ export function useForecastBundle(
         ? { status: 'error', error: result.error }
         : { status: 'ready', source: result.answer.bundle.source, answer: result.answer, isRefreshing: false, isStale: false };
     }
-    // Not settled yet: this key's remembered rules answer (current, being revalidated), else the previous
-    // key's (stale).
-    const shown = remembered ?? current.before;
+    // Not settled yet: this key's remembered rules answer (current, being revalidated), else the rules
+    // bundle computed here for this key (rules first), else, when the engine failed, the previous key's (stale).
+    const shown = remembered ?? rulesFirst ?? current.before;
     if (shown !== null) {
       return {
         status: 'ready', source: shown.answer.bundle.source, answer: shown.answer, isRefreshing: true,
@@ -214,5 +227,5 @@ export function useForecastBundle(
       };
     }
     return LOADING;
-  }, [ready, key, remembered, current]);
+  }, [ready, key, remembered, current, rulesFirst]);
 }

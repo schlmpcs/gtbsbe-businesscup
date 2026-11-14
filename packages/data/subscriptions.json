@@ -1,0 +1,1512 @@
+[
+  {
+    "id": "netflix",
+    "name": "Netflix",
+    "category": "video",
+    "matchers": [
+      "NETFLIX",
+      "NETFLIX COM"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Standard with ads",
+        "price": 8.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Netflix public pricing / membership page",
+      "year": 2026,
+      "url": "https://help.netflix.com/en/node/24926"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "spotify",
+    "name": "Spotify",
+    "category": "music",
+    "matchers": [
+      "SPOTIFY",
+      "SPOTIFY USA"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Premium Individual",
+        "price": 12.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Spotify public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.spotify.com/us/premium/"
+    },
+    "isEstimate": false
+  },
+  {
+    "id": "apple",
+    "name": "Apple billing",
+    "category": "other",
+    "matchers": [
+      "APPLE COM BILL",
+      "ITUNES",
+      "ICLOUD"
+    ],
+    "ambiguous": true,
+    "plans": [
+      {
+        "id": "default",
+        "name": "iCloud+ 50 GB",
+        "price": 0.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Apple billing public pricing / membership page",
+      "year": 2026,
+      "url": "https://support.apple.com/en-us/108047"
+    },
+    "isEstimate": false
+  },
+  {
+    "id": "planet-fitness",
+    "name": "Planet Fitness",
+    "category": "fitness",
+    "matchers": [
+      "PLANET FITNESS",
+      "PLANET FITNESS CLUB FEES"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 15.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Planet Fitness public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.planetfitness.com/gyms/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "amazon-prime",
+    "name": "Amazon Prime",
+    "category": "other",
+    "matchers": [
+      "AMAZON PRIME"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 139.0,
+        "cadence": "yearly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Amazon Prime public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.amazon.com/amazonprime"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "hulu",
+    "name": "Hulu",
+    "category": "video",
+    "matchers": [
+      "HULU"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 11.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Hulu public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.hulu.com/welcome"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "disney-plus",
+    "name": "Disney+",
+    "category": "video",
+    "matchers": [
+      "DISNEY PLUS",
+      "DISNEYPLUS",
+      "DISNEY"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 11.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Disney+ public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.disneyplus.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "hbo-max",
+    "name": "HBO Max",
+    "category": "video",
+    "matchers": [
+      "HBO MAX",
+      "HBO",
+      "MAX COM"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 10.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "HBO Max public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.hbomax.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "paramount-plus",
+    "name": "Paramount+",
+    "category": "video",
+    "matchers": [
+      "PARAMOUNT PLUS",
+      "PARAMOUNT"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 7.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Paramount+ public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.paramountplus.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "peacock",
+    "name": "Peacock",
+    "category": "video",
+    "matchers": [
+      "PEACOCK"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 10.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Peacock public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.peacocktv.com/plans/all-monthly"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "apple-tv",
+    "name": "Apple TV",
+    "category": "video",
+    "matchers": [
+      "APPLE TV"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 12.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Apple TV public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.apple.com/apple-tv/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "crunchyroll",
+    "name": "Crunchyroll",
+    "category": "video",
+    "matchers": [
+      "CRUNCHYROLL"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 7.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Crunchyroll public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.crunchyroll.com/premium"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "youtube-premium",
+    "name": "YouTube Premium",
+    "category": "video",
+    "matchers": [
+      "YOUTUBE PREMIUM",
+      "YOUTUBEPREMIUM"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 13.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "YouTube Premium public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.youtube.com/premium"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "youtube-tv",
+    "name": "YouTube TV",
+    "category": "video",
+    "matchers": [
+      "YOUTUBE TV"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 82.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "YouTube TV public pricing / membership page",
+      "year": 2026,
+      "url": "https://tv.youtube.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "sling",
+    "name": "Sling",
+    "category": "video",
+    "matchers": [
+      "SLING"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 45.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Sling public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.sling.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "philo",
+    "name": "Philo",
+    "category": "video",
+    "matchers": [
+      "PHILO"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 28.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Philo public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.philo.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "fubo",
+    "name": "Fubo",
+    "category": "video",
+    "matchers": [
+      "FUBO"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 84.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Fubo public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.fubo.tv/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "apple-music",
+    "name": "Apple Music",
+    "category": "music",
+    "matchers": [
+      "APPLE MUSIC"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 10.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Apple Music public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.apple.com/apple-music/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "tidal",
+    "name": "Tidal",
+    "category": "music",
+    "matchers": [
+      "TIDAL"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 10.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Tidal public pricing / membership page",
+      "year": 2026,
+      "url": "https://tidal.com/pricing"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "pandora",
+    "name": "Pandora",
+    "category": "music",
+    "matchers": [
+      "PANDORA"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 10.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Pandora public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.pandora.com/upgrade"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "siriusxm",
+    "name": "SiriusXM",
+    "category": "music",
+    "matchers": [
+      "SIRIUSXM",
+      "SIRIUS XM"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 24.98,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "SiriusXM public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.siriusxm.com/plans"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "audible",
+    "name": "Audible",
+    "category": "learning",
+    "matchers": [
+      "AUDIBLE"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 14.95,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Audible public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.audible.com/ep/memberbenefits"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "kindle-unlimited",
+    "name": "Kindle Unlimited",
+    "category": "learning",
+    "matchers": [
+      "KINDLE UNLIMITED"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 11.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Kindle Unlimited public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.amazon.com/kindle-dbs/hz/subscribe/ku"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "google",
+    "name": "Google billing",
+    "category": "other",
+    "matchers": [
+      "GOOGLE STORAGE",
+      "GOOGLE SERVICES",
+      "GOOGLE COM BILL"
+    ],
+    "ambiguous": true,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 1.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Google billing public pricing / membership page",
+      "year": 2026,
+      "url": "https://one.google.com/about/plans"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "microsoft-365",
+    "name": "Microsoft 365",
+    "category": "software",
+    "matchers": [
+      "MICROSOFT",
+      "MSFT"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 9.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Microsoft 365 public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.microsoft.com/en-us/microsoft-365/buy/compare-all-microsoft-365-products"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "adobe",
+    "name": "Adobe",
+    "category": "software",
+    "matchers": [
+      "ADOBE"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 22.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Adobe public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.adobe.com/creativecloud/plans.html"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "canva",
+    "name": "Canva",
+    "category": "software",
+    "matchers": [
+      "CANVA"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 15.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Canva public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.canva.com/pricing/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "notion",
+    "name": "Notion",
+    "category": "software",
+    "matchers": [
+      "NOTION"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 12.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Notion public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.notion.com/pricing"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "zoom",
+    "name": "Zoom",
+    "category": "software",
+    "matchers": [
+      "ZOOM US",
+      "ZOOM"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 15.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Zoom public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.zoom.com/en/products/virtual-meetings/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "chatgpt",
+    "name": "ChatGPT",
+    "category": "software",
+    "matchers": [
+      "OPENAI",
+      "CHATGPT"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 20.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "ChatGPT public pricing / membership page",
+      "year": 2026,
+      "url": "https://openai.com/chatgpt/pricing/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "claude",
+    "name": "Claude",
+    "category": "software",
+    "matchers": [
+      "ANTHROPIC",
+      "CLAUDE AI"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 20.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Claude public pricing / membership page",
+      "year": 2026,
+      "url": "https://claude.com/pricing"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "grammarly",
+    "name": "Grammarly",
+    "category": "software",
+    "matchers": [
+      "GRAMMARLY"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 30.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Grammarly public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.grammarly.com/plans"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "onepassword",
+    "name": "1Password",
+    "category": "software",
+    "matchers": [
+      "PASSWORD",
+      "ONEPASSWORD"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 35.88,
+        "cadence": "yearly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "1Password public pricing / membership page",
+      "year": 2026,
+      "url": "https://1password.com/pricing"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "lastpass",
+    "name": "LastPass",
+    "category": "software",
+    "matchers": [
+      "LASTPASS"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 36.0,
+        "cadence": "yearly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "LastPass public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.lastpass.com/pricing"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "nordvpn",
+    "name": "NordVPN",
+    "category": "software",
+    "matchers": [
+      "NORDVPN"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 12.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "NordVPN public pricing / membership page",
+      "year": 2026,
+      "url": "https://nordvpn.com/pricing/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "expressvpn",
+    "name": "ExpressVPN",
+    "category": "software",
+    "matchers": [
+      "EXPRESSVPN"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 12.95,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "ExpressVPN public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.expressvpn.com/order"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "dropbox",
+    "name": "Dropbox",
+    "category": "cloud",
+    "matchers": [
+      "DROPBOX"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 11.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Dropbox public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.dropbox.com/plans"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "backblaze",
+    "name": "Backblaze",
+    "category": "cloud",
+    "matchers": [
+      "BACKBLAZE"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 9.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Backblaze public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.backblaze.com/cloud-backup/pricing"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "box",
+    "name": "Box",
+    "category": "cloud",
+    "matchers": [
+      "BOX COM"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 14.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Box public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.box.com/pricing/individual"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "la-fitness",
+    "name": "LA Fitness",
+    "category": "fitness",
+    "matchers": [
+      "LA FITNESS"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 39.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "LA Fitness public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.lafitness.com/Pages/MembershipSignUpSearch.aspx"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "crunch",
+    "name": "Crunch Fitness",
+    "category": "fitness",
+    "matchers": [
+      "CRUNCH FITNESS"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 15.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Crunch Fitness public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.crunch.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "anytime-fitness",
+    "name": "Anytime Fitness",
+    "category": "fitness",
+    "matchers": [
+      "ANYTIME FITNESS"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 41.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Anytime Fitness public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.anytimefitness.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "peloton",
+    "name": "Peloton",
+    "category": "fitness",
+    "matchers": [
+      "PELOTON"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 44.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Peloton public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.onepeloton.com/membership"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "strava",
+    "name": "Strava",
+    "category": "fitness",
+    "matchers": [
+      "STRAVA"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 11.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Strava public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.strava.com/pricing"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "calm",
+    "name": "Calm",
+    "category": "fitness",
+    "matchers": [
+      "CALM COM"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 69.99,
+        "cadence": "yearly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Calm public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.calm.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "headspace",
+    "name": "Headspace",
+    "category": "fitness",
+    "matchers": [
+      "HEADSPACE"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 12.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Headspace public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.headspace.com/subscriptions"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "nytimes",
+    "name": "The New York Times",
+    "category": "news",
+    "matchers": [
+      "NYTIMES",
+      "NEW YORK TIMES"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 25.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "The New York Times public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.nytimes.com/subscription"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "wsj",
+    "name": "The Wall Street Journal",
+    "category": "news",
+    "matchers": [
+      "WSJ",
+      "WALL STREET JOURNAL"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 38.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "The Wall Street Journal public pricing / membership page",
+      "year": 2026,
+      "url": "https://subscribe.wsj.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "washington-post",
+    "name": "The Washington Post",
+    "category": "news",
+    "matchers": [
+      "WASHINGTON POST"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 12.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "The Washington Post public pricing / membership page",
+      "year": 2026,
+      "url": "https://subscribe.washingtonpost.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "apple-news",
+    "name": "Apple News+",
+    "category": "news",
+    "matchers": [
+      "APPLE NEWS"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 12.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Apple News+ public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.apple.com/apple-news/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "xbox",
+    "name": "Xbox Game Pass",
+    "category": "gaming",
+    "matchers": [
+      "XBOX"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 19.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Xbox Game Pass public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.xbox.com/en-US/xbox-game-pass"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "playstation",
+    "name": "PlayStation Plus",
+    "category": "gaming",
+    "matchers": [
+      "PLAYSTATION"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 9.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "PlayStation Plus public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.playstation.com/en-us/ps-plus/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "nintendo",
+    "name": "Nintendo Switch Online",
+    "category": "gaming",
+    "matchers": [
+      "NINTENDO"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 19.99,
+        "cadence": "yearly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Nintendo Switch Online public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.nintendo.com/us/gaming-systems/switch/online/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "ea-play",
+    "name": "EA Play",
+    "category": "gaming",
+    "matchers": [
+      "EA PLAY"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 5.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "EA Play public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.ea.com/ea-play"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "ubisoft",
+    "name": "Ubisoft+",
+    "category": "gaming",
+    "matchers": [
+      "UBISOFT"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 17.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Ubisoft+ public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.ubisoft.com/en-us/ubisoft-plus"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "duolingo",
+    "name": "Super Duolingo",
+    "category": "learning",
+    "matchers": [
+      "DUOLINGO"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 83.99,
+        "cadence": "yearly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Super Duolingo public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.duolingo.com/super"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "masterclass",
+    "name": "MasterClass",
+    "category": "learning",
+    "matchers": [
+      "MASTERCLASS"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 120.0,
+        "cadence": "yearly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "MasterClass public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.masterclass.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "coursera",
+    "name": "Coursera Plus",
+    "category": "learning",
+    "matchers": [
+      "COURSERA"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 59.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Coursera Plus public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.coursera.org/courseraplus"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "hellofresh",
+    "name": "HelloFresh",
+    "category": "food",
+    "matchers": [
+      "HELLOFRESH"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 80.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "HelloFresh public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.hellofresh.com/plans"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "blue-apron",
+    "name": "Blue Apron",
+    "category": "food",
+    "matchers": [
+      "BLUE APRON"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 80.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Blue Apron public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.blueapron.com/"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "factor",
+    "name": "Factor",
+    "category": "food",
+    "matchers": [
+      "FACTOR"
+    ],
+    "ambiguous": false,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 100.0,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Factor public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.factor75.com/plans"
+    },
+    "isEstimate": true
+  },
+  {
+    "id": "amazon",
+    "name": "Amazon billing",
+    "category": "other",
+    "matchers": [
+      "AMAZON COM BILL",
+      "AMAZON DIGITAL"
+    ],
+    "ambiguous": true,
+    "plans": [
+      {
+        "id": "default",
+        "name": "Catalogue estimate",
+        "price": 14.99,
+        "cadence": "monthly"
+      }
+    ],
+    "priceYear": 2026,
+    "source": {
+      "name": "Amazon billing public pricing / membership page",
+      "year": 2026,
+      "url": "https://www.amazon.com/amazonprime"
+    },
+    "isEstimate": true
+  }
+]

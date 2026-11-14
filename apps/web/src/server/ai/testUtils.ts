@@ -46,6 +46,7 @@ export const DEMO_SCENARIOS: { id: string; patch: ProfilePatch }[] = [
   { id: 'cut-eating', patch: { spending: { eatingOut: 200 } } },
 ];
 
+/** A forecast as the tests build it (anchors with their years); `toWire` writes it the way the model does. */
 export type WireForecast = { id: string; anchors: YearAnchor[] };
 
 /** The yearly anchors (end of years 1..10) of a forecast: what the model is asked to return. */
@@ -64,8 +65,13 @@ export function goodAnswer(req: Pick<ForecastRequest, 'profile' | 'scenarios' | 
   ];
 }
 
+/** These forecasts in the wire shape the model writes: `years` as [low, mid, high] triples, year 1 first (the year is the position). */
+export const toWire = (forecasts: WireForecast[]) => ({
+  forecasts: forecasts.map((f) => ({ id: f.id, years: f.anchors.map((a) => [a.low, a.mid, a.high]) })),
+});
+
 /** A model response carrying these forecasts as its JSON answer. */
-export const forecastReply = (forecasts: WireForecast[]) => reply(JSON.stringify({ forecasts }));
+export const forecastReply = (forecasts: WireForecast[]) => reply(JSON.stringify(toWire(forecasts)));
 
 /** A model response with the good answer for the request. */
 export const goodReply = (req: Pick<ForecastRequest, 'profile' | 'scenarios' | 'rates'>) => forecastReply(goodAnswer(req));
