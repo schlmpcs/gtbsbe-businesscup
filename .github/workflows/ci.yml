@@ -52,6 +52,8 @@ jobs:
       - run: pnpm test
         env:
           TEST_STORE_URL: postgres://lifeguessr:ci-only-not-a-secret@localhost:5432/lifeguessr_test
+      # Data pipeline (Python standard library, no network): parsers + out/areas.json is up to date.
+      - run: pnpm --filter @lifeguessr/data test:py
       - run: pnpm build
         env:
           NEXT_TELEMETRY_DISABLED: 1
