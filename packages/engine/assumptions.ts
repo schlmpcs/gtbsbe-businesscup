@@ -768,6 +768,137 @@ export const loanTermsTypical = {
   note: 'A typical rate, not an offer. Not yet listed in `assumptions` (the "How we calculate" map).',
 } satisfies Assumption<Record<LoanKind, { apr: Rate; termMonths: number }>>;
 
+// MP4: plan events (planEvents.ts: defaultEvent, expandEvent, buyHomeBreakdown) ----------------------
+// What "Add event" fills in when the area data has no value, and the national figures the events
+// build on. Not yet listed in `assumptions` (the "How we calculate" map) above.
+
+/**
+ * Default mortgage rate of a Buy a home event: the Freddie Mac Primary Mortgage Market Survey average
+ * 30-year fixed rate, week of 2026-11-12 (the 15-year averaged 6.45% that week).
+ */
+export const mortgageRateAnnual = {
+  value: 0.0711 as Rate,
+  source: {
+    name: 'Freddie Mac Primary Mortgage Market Survey, 30-year fixed-rate average, week of 2026-11-12',
+    year: 2026,
+    url: 'https://www.freddiemac.com/pmms',
+  },
+  note: 'A national weekly average, not a quote; the event panel lets the user type their own rate.',
+} satisfies Assumption<Rate>;
+
+/** CPI-U (US city average, all items) annual averages, to bring the 2015 USDA figures to 2024 dollars. */
+const CPI_U_2015 = 237.017;
+const CPI_U_2024 = 313.689;
+const usdaChildrenSource: Source = {
+  name:
+    'USDA Center for Nutrition Policy and Promotion, Expenditures on Children by Families, 2015 (Table 1, ' +
+    'married-couple families, before-tax income $59,200 to $107,400), 2015 dollars brought to 2024 with the BLS CPI-U annual average',
+  year: 2015,
+  url: 'https://fns-prod.azureedge.us/sites/default/files/crc2015_March2017.pdf',
+};
+
+/**
+ * Have a kid: the monthly cost of raising a child apart from child care and housing (food,
+ * transportation, clothing, health care, miscellaneous), middle-income married couple, birth to 17:
+ * ($233,610 total − $66,240 housing − $38,040 child care and education) ÷ 216 months = $598.75 in 2015
+ * dollars, × CPI-U 313.689 / 237.017 (2024 / 2015) = $792.44 a month.
+ */
+export const kidOtherMonthly = {
+  value: (((233_610 - 66_240 - 38_040) / 216) * (CPI_U_2024 / CPI_U_2015)) as Money,
+  source: usdaChildrenSource,
+  note: 'Housing is left out because the housing line already holds it; child care comes from the area (DOL NDCP).',
+} satisfies Assumption<Money>;
+
+/**
+ * Have a kid, when the area has no childcare price: the USDA child care and education component for
+ * a child aged 0-2 (same table): $2,870 a year ÷ 12 = $239.17 in 2015 dollars × 313.689 / 237.017 =
+ * $316.53 a month. An average over all care arrangements, so well below a full-time center price.
+ */
+export const childcareMonthlyFallback = {
+  value: ((2_870 / 12) * (CPI_U_2024 / CPI_U_2015)) as Money,
+  source: usdaChildrenSource,
+  note: 'Used only when AreaData.childcareMonthly is missing; the county DOL NDCP price replaces it.',
+} satisfies Assumption<Money>;
+
+/**
+ * Buy a home, when the area has no insurance figure: the countrywide average HO-3 premium, NAIC
+ * Homeowners Report, data for 2023: $1,737 a year ÷ 12 = $144.75 a month (not inflated).
+ */
+export const homeInsuranceMonthlyFallback = {
+  value: (1_737 / 12) as Money,
+  source: {
+    name: 'NAIC Homeowners Insurance Report, countrywide average HO-3 premium 2023, per month; any home value, not a quote',
+    year: 2023,
+    url: 'https://content.naic.org/sites/default/files/publication-hmr-zu-homeowners-report.pdf',
+  },
+  note: 'Used only when AreaData.homeInsuranceMonthly is missing (packages/data/sources/naic-homeowners-report-2023-table4.txt).',
+} satisfies Assumption<Money>;
+
+/**
+ * Buy a home: utilities a homeowner still pays once rent stops. The housing line (rentUtilities) is
+ * gross rent, rent + utilities; its utilities part is taken as this national average, capped at the
+ * line itself. BLS Consumer Expenditure Survey 2025, utilities, fuels, and public services, all
+ * consumer units: $4,931 a year ÷ 12 = $410.92 a month.
+ */
+export const utilitiesMonthlyAverage = {
+  value: (4_931 / 12) as Money,
+  source: {
+    name: 'BLS Consumer Expenditure Survey 2025, utilities, fuels, and public services, all consumer units (Table 1)',
+    year: 2025,
+    url: 'https://www.bls.gov/news.release/cesan.nr0.htm',
+  },
+  note: 'A national average for owners and renters together; not adjusted for area or home size.',
+} satisfies Assumption<Money>;
+
+/** Social Security: the age the default event starts at, the full retirement age for anyone born in 1960 or later. */
+export const socialSecurityClaimAge = {
+  value: 67,
+  source: {
+    name: 'Social Security Administration: full retirement age is 67 for people born in 1960 or later',
+    year: 2026,
+    url: 'https://www.ssa.gov/benefits/retirement/planner/agereduction.html',
+  },
+} satisfies Assumption<number>;
+
+/**
+ * Social Security: the default monthly benefit as a share of today's take-home pay (today's dollars).
+ * A placeholder: the benefit depends on 35 years of earnings, which we don't ask for.
+ */
+export const socialSecurityShareOfTakeHome = {
+  value: 0.4 as Rate,
+  assumption: true,
+  note:
+    'Roughly the replacement rate SSA reports for a medium earner (about 40% of career-average earnings). ' +
+    "The user's better source is their own estimate from the SSA Quick Calculator (https://www.ssa.gov/OACT/quickcalc/).",
+} satisfies Assumption<Rate>;
+
+/** What "Add event" fills in for values the area data does not give. Each one is shown as an estimate and is editable. */
+export const planEventDefaults = {
+  value: {
+    incomeMonthly: 500 as Money,         // Income: per month, from next year, no end
+    expenseAmount: 5_000 as Money,       // Expense: once, next year, no financing
+    windfallAmount: 10_000 as Money,     // Windfall: once
+    homeValue: 400_000 as Money,         // Buy a home: BALANCE, when the area has no ACS median value
+    downPaymentShare: 0.2,               // Buy a home: share of the home value
+    termYears: 30 as const,              // Buy a home: mortgage term
+    propertyTaxRate: 0.01 as Rate,       // Buy a home: per year, share of value, when the area has no ACS rate
+    upkeepRate: 0.01 as Rate,            // Buy a home: maintenance per year, share of value
+    childcareYears: 5,                   // Have a kid: years of paid childcare, birth to school age
+    kidCostYears: 18,                    // Have a kid: years the other child costs last (birth through 17, as in the USDA table)
+    newJobRaise: 0.1,                    // New job: take-home pay × (1 + this)
+    careerBreakYears: 1,                 // Career break: length in years
+  },
+  assumption: true,
+  note:
+    'Starting values for one-tap events, not data. 20% down avoids mortgage insurance; 1% a year upkeep and ' +
+    'a 1% property tax are common rules of thumb (the area ACS tax rate replaces the latter).',
+} satisfies Assumption<{
+  incomeMonthly: Money; expenseAmount: Money; windfallAmount: Money; homeValue: Money; downPaymentShare: number;
+  termYears: 30; propertyTaxRate: Rate; upkeepRate: Rate; childcareYears: number; kidCostYears: number;
+  newJobRaise: number; careerBreakYears: number;
+}>;
+
+// ----- end MP4 --------------------------------------------------------------------------------
 // MP8 ---------------------------------------------------------------------------------------------
 
 /**
