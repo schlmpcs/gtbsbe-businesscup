@@ -63,6 +63,8 @@ export const lifeEvents = {
     addTitle: (name: string) => `Add: ${name.toLowerCase()}`,
     editTitle: (name: string) => `Edit: ${name.toLowerCase()}`,
     month: 'Starting month',
+    /** Desktop Safari and Firefox show a plain text box for a month input: the format it takes. */
+    monthPlaceholder: 'YYYY-MM',
     oneOffMonth: 'Month',
     kindLegend: 'What changes',
     kinds: { pay: 'My pay', spending: 'A monthly cost', oneOff: 'A one-off' } satisfies Record<LifeEventKind, string>,

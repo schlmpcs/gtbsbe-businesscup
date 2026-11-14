@@ -143,7 +143,7 @@ function MonthInput({ value, min, max, onChange }: { value: string; min: YearMon
       {...control}
       type="month"
       // Desktop Safari and Firefox show a plain text box for type="month": say the format it takes.
-      placeholder="YYYY-MM"
+      placeholder={t.form.monthPlaceholder}
       pattern="\d{4}-\d{2}"
       value={value}
       min={min}
