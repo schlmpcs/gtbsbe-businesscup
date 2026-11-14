@@ -1,0 +1,374 @@
+[
+  {
+    "zip": "75216",
+    "metro": "Dallas-Fort Worth, TX",
+    "county": "Dallas County",
+    "state": "TX",
+    "tier": "cheap",
+    "rentByBedrooms": {
+      "0": {
+        "value": 1070,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "1": {
+        "value": 1100,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "2": {
+        "value": 1300,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "3": {
+        "value": 1640,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "4": {
+        "value": 2080,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      }
+    },
+    "childcareMonthly": {
+      "infant": 840.67,
+      "toddler": 780.0,
+      "preschool": 758.33,
+      "schoolAge": 710.67,
+      "source": {
+        "name": "U.S. DOL Women's Bureau, National Database of Childcare Prices, Dallas County TX, center-based weekly median x 52/12 (2022 dollars, not yet inflated)",
+        "year": 2022,
+        "url": "https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx"
+      }
+    },
+    "groceriesPerAdult": {
+      "value": 367.95,
+      "source": {
+        "name": "USDA Moderate-Cost Food Plan, October 2026, U.S. average, mean of male and female age 19-50",
+        "year": 2026,
+        "url": "https://www.fns.usda.gov/sites/default/files/resource-files/CostofFoodOct2026LowModLib.pdf"
+      }
+    },
+    "gasPerGallon": {
+      "value": 3.408,
+      "source": {
+        "name": "EIA weekly retail price, regular gasoline, Texas, week of 2026-11-09",
+        "year": 2026,
+        "url": "https://www.eia.gov/petroleum/gasdiesel/"
+      }
+    },
+    "carInsuranceMonthly": {
+      "value": 150,
+      "source": {
+        "name": "MoneyGeek, average full-coverage car insurance in Texas (one sample driver, Quadrant quotes; other publishers report up to $240)",
+        "year": 2026,
+        "url": "https://www.moneygeek.com/insurance/auto/average-cost-car-insurance-texas"
+      },
+      "isEstimate": true
+    },
+    "cpiYoY": {
+      "value": 0.03,
+      "source": {
+        "name": "BLS CPI-U, Dallas-Fort Worth-Arlington, all items, 12 months ending September 2026",
+        "year": 2026,
+        "url": "https://www.bls.gov/regions/southwest/news-release/consumerpriceindex_dallasfortworth.htm"
+      }
+    }
+  },
+  {
+    "zip": "75206",
+    "metro": "Dallas-Fort Worth, TX",
+    "county": "Dallas County",
+    "state": "TX",
+    "tier": "mid",
+    "rentByBedrooms": {
+      "0": {
+        "value": 1840,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "1": {
+        "value": 1900,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "2": {
+        "value": 2230,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "3": {
+        "value": 2810,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "4": {
+        "value": 3570,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      }
+    },
+    "childcareMonthly": {
+      "infant": 840.67,
+      "toddler": 780.0,
+      "preschool": 758.33,
+      "schoolAge": 710.67,
+      "source": {
+        "name": "U.S. DOL Women's Bureau, National Database of Childcare Prices, Dallas County TX, center-based weekly median x 52/12 (2022 dollars, not yet inflated)",
+        "year": 2022,
+        "url": "https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx"
+      }
+    },
+    "groceriesPerAdult": {
+      "value": 367.95,
+      "source": {
+        "name": "USDA Moderate-Cost Food Plan, October 2026, U.S. average, mean of male and female age 19-50",
+        "year": 2026,
+        "url": "https://www.fns.usda.gov/sites/default/files/resource-files/CostofFoodOct2026LowModLib.pdf"
+      }
+    },
+    "gasPerGallon": {
+      "value": 3.408,
+      "source": {
+        "name": "EIA weekly retail price, regular gasoline, Texas, week of 2026-11-09",
+        "year": 2026,
+        "url": "https://www.eia.gov/petroleum/gasdiesel/"
+      }
+    },
+    "carInsuranceMonthly": {
+      "value": 150,
+      "source": {
+        "name": "MoneyGeek, average full-coverage car insurance in Texas (one sample driver, Quadrant quotes; other publishers report up to $240)",
+        "year": 2026,
+        "url": "https://www.moneygeek.com/insurance/auto/average-cost-car-insurance-texas"
+      },
+      "isEstimate": true
+    },
+    "cpiYoY": {
+      "value": 0.03,
+      "source": {
+        "name": "BLS CPI-U, Dallas-Fort Worth-Arlington, all items, 12 months ending September 2026",
+        "year": 2026,
+        "url": "https://www.bls.gov/regions/southwest/news-release/consumerpriceindex_dallasfortworth.htm"
+      }
+    }
+  },
+  {
+    "zip": "75205",
+    "metro": "Dallas-Fort Worth, TX",
+    "county": "Dallas County",
+    "state": "TX",
+    "tier": "expensive",
+    "rentByBedrooms": {
+      "0": {
+        "value": 2240,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "1": {
+        "value": 2300,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "2": {
+        "value": 2710,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "3": {
+        "value": 3410,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "4": {
+        "value": 4340,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      }
+    },
+    "childcareMonthly": {
+      "infant": 840.67,
+      "toddler": 780.0,
+      "preschool": 758.33,
+      "schoolAge": 710.67,
+      "source": {
+        "name": "U.S. DOL Women's Bureau, National Database of Childcare Prices, Dallas County TX, center-based weekly median x 52/12 (2022 dollars, not yet inflated)",
+        "year": 2022,
+        "url": "https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx"
+      }
+    },
+    "groceriesPerAdult": {
+      "value": 367.95,
+      "source": {
+        "name": "USDA Moderate-Cost Food Plan, October 2026, U.S. average, mean of male and female age 19-50",
+        "year": 2026,
+        "url": "https://www.fns.usda.gov/sites/default/files/resource-files/CostofFoodOct2026LowModLib.pdf"
+      }
+    },
+    "gasPerGallon": {
+      "value": 3.408,
+      "source": {
+        "name": "EIA weekly retail price, regular gasoline, Texas, week of 2026-11-09",
+        "year": 2026,
+        "url": "https://www.eia.gov/petroleum/gasdiesel/"
+      }
+    },
+    "carInsuranceMonthly": {
+      "value": 150,
+      "source": {
+        "name": "MoneyGeek, average full-coverage car insurance in Texas (one sample driver, Quadrant quotes; other publishers report up to $240)",
+        "year": 2026,
+        "url": "https://www.moneygeek.com/insurance/auto/average-cost-car-insurance-texas"
+      },
+      "isEstimate": true
+    },
+    "cpiYoY": {
+      "value": 0.03,
+      "source": {
+        "name": "BLS CPI-U, Dallas-Fort Worth-Arlington, all items, 12 months ending September 2026",
+        "year": 2026,
+        "url": "https://www.bls.gov/regions/southwest/news-release/consumerpriceindex_dallasfortworth.htm"
+      }
+    }
+  },
+  {
+    "zip": "75024",
+    "metro": "Dallas-Fort Worth, TX",
+    "county": "Collin County",
+    "state": "TX",
+    "tier": "suburb",
+    "rentByBedrooms": {
+      "0": {
+        "value": 1990,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "1": {
+        "value": 2050,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "2": {
+        "value": 2410,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "3": {
+        "value": 3030,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      },
+      "4": {
+        "value": 3860,
+        "source": {
+          "name": "HUD Small Area Fair Market Rents FY2027, Dallas TX HUD Metro FMR Area (40th-percentile gross rent: rent + utilities)",
+          "year": 2027,
+          "url": "https://www.huduser.gov/portal/datasets/fmr/fmr2027/FY27_safmrs.xlsx"
+        }
+      }
+    },
+    "childcareMonthly": {
+      "infant": 827.67,
+      "toddler": 762.67,
+      "preschool": 736.67,
+      "schoolAge": 702.0,
+      "source": {
+        "name": "U.S. DOL Women's Bureau, National Database of Childcare Prices, Collin County TX, center-based weekly median x 52/12 (2022 dollars, not yet inflated)",
+        "year": 2022,
+        "url": "https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx"
+      }
+    },
+    "groceriesPerAdult": {
+      "value": 367.95,
+      "source": {
+        "name": "USDA Moderate-Cost Food Plan, October 2026, U.S. average, mean of male and female age 19-50",
+        "year": 2026,
+        "url": "https://www.fns.usda.gov/sites/default/files/resource-files/CostofFoodOct2026LowModLib.pdf"
+      }
+    },
+    "gasPerGallon": {
+      "value": 3.408,
+      "source": {
+        "name": "EIA weekly retail price, regular gasoline, Texas, week of 2026-11-09",
+        "year": 2026,
+        "url": "https://www.eia.gov/petroleum/gasdiesel/"
+      }
+    },
+    "carInsuranceMonthly": {
+      "value": 150,
+      "source": {
+        "name": "MoneyGeek, average full-coverage car insurance in Texas (one sample driver, Quadrant quotes; other publishers report up to $240)",
+        "year": 2026,
+        "url": "https://www.moneygeek.com/insurance/auto/average-cost-car-insurance-texas"
+      },
+      "isEstimate": true
+    },
+    "cpiYoY": {
+      "value": 0.03,
+      "source": {
+        "name": "BLS CPI-U, Dallas-Fort Worth-Arlington, all items, 12 months ending September 2026",
+        "year": 2026,
+        "url": "https://www.bls.gov/regions/southwest/news-release/consumerpriceindex_dallasfortworth.htm"
+      }
+    }
+  }
+]

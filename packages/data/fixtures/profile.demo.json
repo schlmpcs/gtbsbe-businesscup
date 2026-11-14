@@ -1,0 +1,35 @@
+{
+  "age": { "value": 32, "isEstimate": false },
+  "takeHomePay": { "value": 5200, "isEstimate": false },
+  "spending": {
+    "rentUtilities": { "value": 1950, "isEstimate": false },
+    "car": { "value": 310, "isEstimate": true },
+    "childcare": { "value": 0, "isEstimate": false },
+    "groceries": { "value": 520, "isEstimate": true },
+    "eatingOut": { "value": 340, "isEstimate": true },
+    "subscriptions": { "value": 85, "isEstimate": false },
+    "debtPayments": { "value": 0, "isEstimate": true },
+    "other": { "value": 450, "isEstimate": true }
+  },
+  "cash": { "value": 3800, "isEstimate": false },
+  "retirement": { "value": 14500, "isEstimate": true },
+  "retirementShare": { "value": 0, "isEstimate": true },
+  "debts": [
+    {
+      "id": "card-1",
+      "kind": "card",
+      "balance": 6400,
+      "apr": 0.2436,
+      "minPayment": { "value": 193.92, "isEstimate": true }
+    },
+    {
+      "id": "auto-1",
+      "kind": "auto",
+      "balance": 17800,
+      "apr": 0.074,
+      "minPayment": { "value": 412, "isEstimate": false }
+    }
+  ],
+  "zip": "75206",
+  "doneMoveIds": []
+}
