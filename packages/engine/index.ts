@@ -42,3 +42,5 @@ export {
 export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';
 export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';
+export { lifeEvents, kidAgeAt, LIFE_EVENTS_YEARS, type LifeEventsOptions } from './lifeEvents';
+export type { MonthlyAdjust } from './simulate';

@@ -348,3 +348,4 @@ export * from './overpaying';
 export * from './subscriptions';
 export * from './subscriptionAudit';
 export * from './avatar';
+export * from './lifeEvents';

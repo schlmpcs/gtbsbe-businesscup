@@ -11,6 +11,7 @@ const hrefs = {
   subscriptions: SCREEN_ROUTES.S21,
   overpaying: SCREEN_ROUTES.S23,
   exact: SCREEN_ROUTES.S9,
+  lifeEvents: '/tools/life-events',
 };
 
 export default function ToolsPage() {

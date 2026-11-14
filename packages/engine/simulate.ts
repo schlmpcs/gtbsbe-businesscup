@@ -19,6 +19,8 @@
 //      `payOffFromSurplus` purchase caused goes on that purchase's own card balance instead).
 // - income = takeHomePay × (1 + incomeGrowth)^(t/12); spending = Σ categories except debtPayments
 //   × (1 + inflation)^(t/12). `spending.debtPayments` is informational: payments come from `debts`.
+//   `opts.adjust` (life events) adds month t's income / spending change, in today's dollars, before
+//   the growth factor.
 // - Purchases are consumption, not assets: nothing is added to net worth for the thing bought.
 import type { AreaData, Debt, LoanInput, Money, Profile, Purchase, Rate } from '@lifeguessr/types';
 import {
@@ -68,7 +70,15 @@ export type SimulateOptions = {
   extra?: readonly ScheduledPurchase[];
   rates?: Partial<ForecastRates>;
   scenario?: Scenario;
+  /**
+   * Month-by-month changes in today's dollars (life events): entry t is added to month t + 1's
+   * take-home pay (grown like income) or spending (inflated like prices). Missing entries are 0.
+   */
+  adjust?: MonthlyAdjust;
 };
+
+/** Changes to income and spending by 0-based month, in today's dollars (see `SimulateOptions.adjust`). */
+export type MonthlyAdjust = { income?: readonly Money[]; spending?: readonly Money[] };
 
 /** State at the end of one month. Flows are for that month; balances are at its end. */
 export type SimulationMonth = {
@@ -230,6 +240,11 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
   const rates = resolveRates(opts.rates);
   const scenario = opts.scenario ?? 'mid';
   const extra = opts.extra ?? [];
+  const adjustIncome = opts.adjust?.income ?? [];
+  const adjustSpending = opts.adjust?.spending ?? [];
+  for (const v of [...adjustIncome, ...adjustSpending]) {
+    if (!Number.isFinite(v)) throw new RangeError('Invalid monthly adjustment');
+  }
   for (const x of extra) {
     const start = x.startMonth ?? 0;
     if (!Number.isInteger(start) || start < 0) throw new RangeError(`Invalid purchase startMonth: ${start}`);
@@ -339,8 +354,8 @@ export function simulate(p: Profile, months: number, opts: SimulateOptions = {})
   for (let t = 0; t < months; t++) {
     const month = t + 1;
     const priceFactor = (1 + rates.inflationAnnual) ** (t / 12);
-    const income = takeHome * (1 + rates.incomeGrowthAnnual) ** (t / 12);
-    const spending = monthlySpending * priceFactor;
+    const income = (takeHome + (adjustIncome[t] ?? 0)) * (1 + rates.incomeGrowthAnnual) ** (t / 12);
+    const spending = (monthlySpending + (adjustSpending[t] ?? 0)) * priceFactor;
 
     // 1. Growth on the opening balances.
     if (cash > 0) cash *= 1 + rCash;

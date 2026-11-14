@@ -638,3 +638,30 @@ export const INSURANCE_TOLERANCE = 0.2;
 export const GROCERY_TOLERANCE = 0.15;
 /** Childcare varies by provider; assumed ±20% range around the county benchmark. */
 export const CHILDCARE_TOLERANCE = 0.2;
+
+// ----- Life events (what-if timeline) -----------------------------------------------------------
+/** Life events: bedrooms of the rent compared when a move does not say (rent scales by area price). */
+export const lifeEventBedroomsDefault = {
+  value: 2 as 0 | 1 | 2 | 3 | 4,
+  assumption: true,
+  note: 'A move compares 2-bedroom HUD rents of the two areas unless the person picks another size.',
+} satisfies Assumption<0 | 1 | 2 | 3 | 4>;
+
+/**
+ * Life events: a child's age in months from which each NDCP childcare price applies (the survey's
+ * age groups: infant 0–23 months, toddler 24–35, preschool 36–59, school age from 60).
+ */
+export const kidAgeBandStartMonths = {
+  value: { infant: 0, toddler: 24, preschool: 36, schoolAge: 60 },
+  source: {
+    name: "U.S. DOL Women's Bureau, National Database of Childcare Prices: age groups of the price columns",
+    year: 2022,
+    url: 'https://www.dol.gov/agencies/wb/topics/featured-childcare',
+  },
+} satisfies Assumption<Record<'infant' | 'toddler' | 'preschool' | 'schoolAge', number>>;
+
+/** Source shown on a life-event line that is the person's own input (a raise, a car's loan terms). */
+export const yourInputSource: Source = {
+  name: 'Your own numbers (the amounts and loan terms you entered)',
+  year: 2026,
+};
