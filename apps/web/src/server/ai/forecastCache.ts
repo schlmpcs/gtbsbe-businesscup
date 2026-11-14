@@ -11,7 +11,7 @@
 // profiles that differ only in what the model never sees share an answer, and nothing that
 // identifies a person is in a key (CLAUDE.md rule 6).
 import { createHash } from 'node:crypto';
-import { forecastFacts } from '@lifeguessr/engine';
+import { forecastFacts, resolveRates } from '@lifeguessr/engine';
 import type { ForecastBundle } from '@lifeguessr/types';
 import { PROMPT_VERSION } from './forecast';
 import type { ForecastRequest } from './schemas';
@@ -40,16 +40,18 @@ const byId = (a: { id: string }, b: { id: string }): number => (a.id < b.id ? -1
 
 /**
  * The cache key of a request: a sha256 hex digest of the canonical JSON of what the model is shown
- * (`forecastFacts` of the profile, the scenarios, the rates) with the model id and `PROMPT_VERSION`.
- * The scenarios are sorted by id first: the bundle is keyed by id, so the order a client lists
- * them in must not split the cache.
+ * (`forecastFacts` of the profile, the scenarios, the rates as `forecastPrompt` resolves them) with
+ * the model id and `PROMPT_VERSION`. The scenarios are sorted by id first: the bundle is keyed by
+ * id, so the order a client lists them in must not split the cache. The rates are resolved first,
+ * so a request that leaves them out and one that spells out the defaults, which make the same
+ * prompt, share a key.
  */
 export function forecastKey(req: ForecastRequest, model: string): string {
   const scenarios = [...req.scenarios].sort(byId);
   const canonical = canonicalJson({
     facts: forecastFacts(req.profile),
     scenarios,
-    rates: req.rates,
+    rates: resolveRates(req.rates),
     model,
     promptVersion: PROMPT_VERSION,
   })!; // an object always has a text
@@ -60,7 +62,7 @@ export type ForecastCache = {
   /**
    * The cached AI bundle for `key`, or the result of `compute`. Calls that arrive while `compute`
    * is running share its promise (a rejection reaches every one of them and is not kept). The
-   * bundle is shared between callers: do not modify it.
+   * bundle is shared between callers, so it is deeply frozen: a write to it throws.
    */
   getOrCompute(key: string, compute: () => Promise<ForecastBundle>): Promise<ForecastBundle>;
   /** Forgets every stored answer and every computation in flight (their callers still get their answer; it is not stored). */
@@ -68,6 +70,14 @@ export type ForecastCache = {
 };
 
 type Stored = { bundle: ForecastBundle; expiresAt: number };
+
+/** Freezes `value` and everything inside it, in place. A bundle is plain data: objects, arrays, numbers and strings. */
+function deepFreeze<T>(value: T): T {
+  if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  Object.freeze(value);
+  for (const member of Object.values(value)) deepFreeze(member);
+  return value;
+}
 
 export function createForecastCache(
   opts: { max?: number; ttlMs?: number; now?: () => number } = {},
@@ -102,7 +112,8 @@ export function createForecastCache(
       const startedIn = generation;
       // An async function, so a `compute` that throws instead of returning a promise is a rejection too.
       const promise: Promise<ForecastBundle> = (async () => {
-        const bundle = await compute();
+        // Every caller of this key gets this one object: freeze it, so none can change it for the others.
+        const bundle = deepFreeze(await compute());
         if (bundle.source === 'ai' && startedIn === generation) store(key, bundle);
         return bundle;
       })().finally(() => {

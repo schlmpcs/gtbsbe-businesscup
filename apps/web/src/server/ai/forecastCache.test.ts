@@ -1,4 +1,4 @@
-import { rulesBundle } from '@lifeguessr/engine';
+import { resolveRates, rulesBundle } from '@lifeguessr/engine';
 import type { ForecastBundle } from '@lifeguessr/types';
 import { describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
@@ -68,11 +68,18 @@ describe('forecastKey', () => {
     expect(forecastKey({ ...absent, rates: undefined }, MODEL)).toBe(forecastKey(absent, MODEL));
   });
 
-  it('changes with the rates', () => {
+  it('is the same with `rates` absent and with the default inflation spelled out (the prompt is the same)', () => {
+    const defaults = resolveRates();
+    expect(forecastKey(request({ rates: { inflationAnnual: defaults.inflationAnnual } }), MODEL))
+      .toBe(forecastKey(request(), MODEL));
+  });
+
+  it('changes with the rates the model is shown', () => {
     const base = forecastKey(request(), MODEL);
     const rated = forecastKey(request({ rates: { inflationAnnual: 0.04 } }), MODEL);
     expect(rated).not.toBe(base);
     expect(forecastKey(request({ rates: { inflationAnnual: 0.05 } }), MODEL)).not.toBe(rated);
+    expect(forecastKey(request({ rates: { inflationAnnual: resolveRates().inflationAnnual + 0.01 } }), MODEL)).not.toBe(base);
   });
 
   it('changes with one spending value', () => {
@@ -123,6 +130,8 @@ describe('forecastKey', () => {
 const rules: ForecastBundle = rulesBundle(cloneProfileDemo(), []);
 const aiBundle = (model = 'm'): ForecastBundle => ({ ...rules, source: 'ai', model });
 const rulesAnswer = (): ForecastBundle => ({ ...rules });
+/** A bundle with a scenario, so there are nested objects and arrays to try to change. */
+const richAiBundle = (): ForecastBundle => ({ ...rulesBundle(cloneProfileDemo(), DEMO_SCENARIOS), source: 'ai', model: 'm' });
 
 /** A promise settled by hand, to control when a `compute` finishes. */
 function deferred<T>() {
@@ -183,6 +192,53 @@ describe('createForecastCache', () => {
     await cache.getOrCompute('k', compute);
     await cache.getOrCompute('k', compute);
     expect(compute).toHaveBeenCalledTimes(2);
+  });
+
+  describe('shared bundles', () => {
+    // These files are ES modules, so a write to a frozen object throws a TypeError.
+    const changes = (bundle: ForecastBundle): (() => void)[] => [
+      () => { bundle.model = 'other'; },
+      () => { bundle.source = 'rules'; },
+      () => { bundle.scenarios['extra'] = bundle.base; },
+      () => { bundle.base.in10y.mid = 1; },
+      () => { bundle.base.points[0]!.mid = 1; },
+      () => { bundle.base.points.push(bundle.base.points[0]!); },
+      () => { bundle.base.points.length = 0; },
+      () => { bundle.scenarios['pay-card']!.points[5]!.low = 1; },
+      () => { delete bundle.scenarios['cut-eating']; },
+    ];
+
+    it('hands out a deeply frozen bundle on a hit, and a failed change leaves the cache as it was', async () => {
+      const cache = createForecastCache();
+      await cache.getOrCompute('k', async () => richAiBundle());
+      const hit = await cache.getOrCompute('k', async () => aiBundle('never'));
+      for (const change of changes(hit)) expect(change).toThrow(TypeError);
+
+      const again = await cache.getOrCompute('k', async () => aiBundle('never'));
+      expect(again).toEqual(richAiBundle());
+      expect(again.model).toBe('m');
+    });
+
+    it('hands the computing caller and every waiter the same frozen bundle', async () => {
+      const cache = createForecastCache();
+      const d = deferred<ForecastBundle>();
+      const calls = [cache.getOrCompute('k', () => d.promise), cache.getOrCompute('k', () => d.promise)];
+      d.resolve(richAiBundle());
+      for (const bundle of await Promise.all(calls)) {
+        for (const change of changes(bundle)) expect(change).toThrow(TypeError);
+      }
+    });
+
+    it('freezes a rules answer too: waiters share it by reference even though it is not stored', async () => {
+      const cache = createForecastCache();
+      const d = deferred<ForecastBundle>();
+      const calls = [cache.getOrCompute('k', () => d.promise), cache.getOrCompute('k', () => d.promise)];
+      d.resolve({ ...rulesBundle(cloneProfileDemo(), DEMO_SCENARIOS) });
+      for (const bundle of await Promise.all(calls)) {
+        expect(bundle.source).toBe('rules');
+        for (const change of changes(bundle)) expect(change).toThrow(TypeError);
+      }
+    });
   });
 
   describe('time to live', () => {

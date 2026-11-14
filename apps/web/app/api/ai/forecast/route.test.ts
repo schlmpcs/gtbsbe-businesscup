@@ -1,4 +1,4 @@
-import { rulesBundle } from '@lifeguessr/engine';
+import { resolveRates, rulesBundle } from '@lifeguessr/engine';
 import { ForecastBundleSchema } from '@lifeguessr/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
@@ -109,14 +109,28 @@ describe('POST /api/ai/forecast', () => {
     it('makes one model call for two identical requests that are in flight together', async () => {
       let release!: (value: ReturnType<typeof answerFor>) => void;
       create.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
-      const both = Promise.all([post(body()), post(body())]);
-      await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
-      await new Promise((resolve) => setTimeout(resolve, 20)); // let the second request reach the cache
-      release(answerFor());
-      const [a, b] = await both;
+      const getOrCompute = vi.spyOn(forecastCache, 'getOrCompute');
+      try {
+        const both = Promise.all([post(body()), post(body())]);
+        // Both requests are at the cache while the one model call is still unanswered: the second
+        // cannot be a hit (nothing is stored yet), so it has to join the call in flight.
+        await vi.waitFor(() => expect(getOrCompute).toHaveBeenCalledTimes(2));
+        expect(create).toHaveBeenCalledTimes(1);
+        release(answerFor());
+        const [a, b] = await both;
+        expect(create).toHaveBeenCalledTimes(1);
+        expect((await a.json()).source).toBe('ai');
+        expect((await b.json()).source).toBe('ai');
+      } finally {
+        getOrCompute.mockRestore();
+      }
+    });
+
+    it('treats an absent rates and the default inflation spelled out as the same request', async () => {
+      create.mockResolvedValue(answerFor());
+      await post(body());
+      await post(body({ rates: { inflationAnnual: resolveRates().inflationAnnual } }));
       expect(create).toHaveBeenCalledTimes(1);
-      expect((await a.json()).source).toBe('ai');
-      expect((await b.json()).source).toBe('ai');
     });
 
     it('calls the model again when a number, the rates, the scenarios or the model change', async () => {
