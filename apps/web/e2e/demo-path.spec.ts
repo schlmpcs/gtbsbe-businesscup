@@ -122,7 +122,7 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   await ownGuess;
 
   // ----- 3. Closest life (S6), from today's homes -----
-  await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S6) }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S5 }).click();
   await expect(page).toHaveURL(/\/me\/closest$/);
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
   const chosen = stored(page, 'closest_life_chosen');
@@ -131,7 +131,7 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   await chosen;
 
   // ----- 4. Sliders (S7): the month and the 10-year number follow -----
-  await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S7) }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S6 }).click();
   await expect(page).toHaveURL(/\/me\/sliders$/);
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
@@ -147,11 +147,11 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   const viewed = stored(page, 'forecast_viewed');
   await page.getByRole('link', { name: ladder.shell.futureCta }).click();
   await expect(page).toHaveURL(/\/future$/);
-  await expect(h1(page)).toHaveText(forecast.future.title);
-  const chart = page.getByRole('figure', { name: forecast.future.chartTitle });
+  await expect(h1(page)).toHaveText(forecast.future.title(10));
+  const chart = page.getByRole('figure', { name: forecast.future.chartTitle(10) });
   await expect(chart.locator('.recharts-line-curve').first()).toBeVisible();
   await expect(chart.locator('.recharts-area-area').first()).toBeVisible();
-  await expect(page.getByTestId('in10y').getByText(/^Likely between −?\$[\d,]+ and −?\$[\d,]+$/)).toBeVisible();
+  await expect(page.getByTestId('at-horizon').getByText(/^Likely between −?\$[\d,]+ and −?\$[\d,]+$/)).toBeVisible();
   await expect(page.getByTestId('moves').getByRole('article').first()).toBeVisible();
   await viewed;
 

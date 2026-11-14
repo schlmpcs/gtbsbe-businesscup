@@ -12,7 +12,7 @@
 // or Do Not Track. It turns itself off for the page if the route does not exist (404/405/501).
 // Events carry no personal data: names and props are typed (ClientFunnelEvent) and the server
 // refuses anything else (EventsRequestSchema).
-import { EVENTS_BATCH_MAX, type ClientEventEnvelope, type ClientFunnelEvent } from '@lifeguessr/types';
+import { EVENTS_BATCH_MAX, type ClientEventEnvelope, type ClientFunnelEvent, type ToolId } from '@lifeguessr/types';
 import { useEffect, useRef } from 'react';
 import { eventsSource } from '@/lib/config';
 import { getAnonId, newUuid } from '@/state/anonId';
@@ -182,3 +182,8 @@ export function resetEventsForTests(next?: EventTransport | null): void {
 
 /** Tests: what is waiting to be sent. */
 export const queuedEventsForTests = (): readonly ClientEventEnvelope[] => queue;
+
+/** Record opening a tool once per page session, using the existing privacy-aware transport. */
+export function trackTool(tool: ToolId): void {
+  track({name:'tool_opened',props:{tool}}, {once:`tool:${tool}`});
+}

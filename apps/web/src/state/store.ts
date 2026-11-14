@@ -1,16 +1,20 @@
 // The app's client state (Zustand), persisted to localStorage: the Profile, where it came from,
-// the user's own guess, statement history (category totals only), the wishlist and the committed
-// Next Move. The anonymous id lives separately (./anonId).
+// the user's own guess, statement history (category totals only), the wishlist, the committed
+// Next Move and the forecast horizon picked on S10. The anonymous id lives separately (./anonId).
 //
 // Persistence uses `skipHydration`: the server render and the first client render both see the
 // defaults, then `useHydrated()` (./hydration) loads the saved state, so React never sees a
 // hydration mismatch. Screen hooks report `status: 'loading'` until then.
 import { applyPatch } from '@lifeguessr/engine';
 import {
-  CategoryTotalsSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema, PurchaseSchema, CostCategorySchema,
-  type CategoryTotals, type CostCategory, type Money, type Move, type Profile, type ProfilePatch, type Purchase,
+  CategoryTotalsSchema, HorizonYearsSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema, PurchaseSchema, CostCategorySchema,
+  type CategoryTotals, type CostCategory, type HorizonYears, type Money, type Move, type Profile, type ProfilePatch,
+  type Purchase,
 } from '@lifeguessr/types';
 import { z } from 'zod';
+import { GoalSchema, type Goal } from '@lifeguessr/types';
+import { ToolsStateSchema, type ToolsState } from '@lifeguessr/types';
+import { restoreTools } from './tools';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { cloneProfileDemo } from '@/fixtures';
@@ -26,6 +30,8 @@ export type ProfileOrigin = 'demo' | 'closestLife' | 'user';
 export type WishlistItem = { id: string; purchase: Purchase; addedAt: string /* ISO timestamp */ };
 
 export type AppData = {
+  goal: Goal | null;
+  tools: ToolsState;
   profile: Profile;
   profileOrigin: ProfileOrigin;
   /** S5: the user's guess of their own monthly cost (null until they guess). */
@@ -39,9 +45,24 @@ export type AppData = {
   wishlist: WishlistItem[];
   /** The Next Move the user committed to (its id is also `profile.committedMoveId`). */
   committedMove: Move | null;
+  /**
+   * The year S1 and S10 show the forecast and the move gains at (picked on S10). Client state only: it
+   * is not part of the Profile and never reaches the forecast request.
+   */
+  horizonYears: HorizonYears;
+  /**
+   * The user asked to look around with the sample life ("Try with sample data", /future?sample=1).
+   * The profile is then the demo fixture (profile.demo.json). It counts as active only while the
+   * profile is still the demo one (`isSampleActive`): any edit makes the life the user's own.
+   */
+  isSample: boolean;
 };
 
 export type AppActions = {
+  setGoal: (goal:Goal) => void;
+  clearGoal: () => void;
+  setTool: <K extends keyof ToolsState>(key: K, value: ToolsState[K]) => void;
+  clearTool: (key: keyof ToolsState) => void;
   /** Replace the whole profile (e.g. restored from the server session). */
   setProfile: (profile: Profile, origin: ProfileOrigin) => void;
   setSelfGuess: (guess: Money) => void;
@@ -63,6 +84,14 @@ export type AppActions = {
   uncommitMove: () => void;
   /** The user did a move: its patch enters the profile and it joins doneMoveIds. */
   markMoveDone: (move: Move) => void;
+  setHorizonYears: (years: HorizonYears) => void;
+  /**
+   * Look around with the sample life: the demo fixture becomes the profile, flagged `isSample`. Only
+   * when the user has no profile of their own (origin 'demo'); returns whether it was loaded.
+   */
+  loadSample: () => boolean;
+  /** Stop showing the sample life as such ("Use mine"); the profile is left as it is. */
+  clearSample: () => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -73,6 +102,8 @@ export const APP_STORE_KEY = 'lifeguessr.app';
 
 export function initialAppData(): AppData {
   return {
+    goal: null,
+    tools: {},
     profile: cloneProfileDemo(),
     profileOrigin: 'demo',
     selfGuess: null,
@@ -81,7 +112,14 @@ export function initialAppData(): AppData {
     subscriptionsDetected: false,
     wishlist: [],
     committedMove: null,
+    horizonYears: 10,
+    isSample: false,
   };
+}
+
+/** The sample life is on screen: loaded on request and not yet replaced by the user's own numbers. */
+export function isSampleActive(s: Pick<AppData, 'isSample' | 'profileOrigin'>): boolean {
+  return s.isSample && s.profileOrigin === 'demo';
 }
 
 function newId(): string {
@@ -103,6 +141,8 @@ const WishlistItemSchema = z.object({ id: z.string().min(1), purchase: PurchaseS
 
 /** Saved state is validated field by field; a field that fails keeps its default. */
 const persistedFields = {
+  goal: GoalSchema.nullable(),
+  tools: z.unknown().transform(restoreTools),
   profile: ProfileSchema,
   profileOrigin: z.enum(['demo', 'closestLife', 'user']),
   selfGuess: z.number().positive().nullable(),
@@ -111,6 +151,8 @@ const persistedFields = {
   subscriptionsDetected: z.boolean(),
   wishlist: z.array(WishlistItemSchema),
   committedMove: MoveSchema.nullable(),
+  horizonYears: HorizonYearsSchema,
+  isSample: z.boolean(),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -187,6 +229,17 @@ export const useAppStore = create<AppState>()(
           delete profile.committedMoveId;
           return { profile, committedMove: null };
         }),
+      setHorizonYears: (years) => set({ horizonYears: HorizonYearsSchema.parse(years) }),
+      loadSample: () => {
+        if (get().profileOrigin !== 'demo') return false;
+        set({ profile: cloneProfileDemo(), profileOrigin: 'demo', committedMove: null, isSample: true });
+        return true;
+      },
+      clearSample: () => set({ isSample: false }),
+      setGoal: goal => set({goal:GoalSchema.parse(goal)}),
+      clearGoal: () => set({goal:null}),
+      setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
+      clearTool: key => set(s=>{const tools={...s.tools};delete tools[key];return {tools};}),
       reset: () => set(initialAppData()),
     }),
     {
@@ -195,6 +248,8 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => safeStateStorage),
       skipHydration: true,
       partialize: (s): AppData => ({
+        goal: s.goal,
+        tools: s.tools,
         profile: s.profile,
         profileOrigin: s.profileOrigin,
         selfGuess: s.selfGuess,
@@ -203,6 +258,8 @@ export const useAppStore = create<AppState>()(
         subscriptionsDetected: s.subscriptionsDetected,
         wishlist: s.wishlist,
         committedMove: s.committedMove,
+        horizonYears: s.horizonYears,
+        isSample: s.isSample,
       }),
       merge: mergePersisted,
     },

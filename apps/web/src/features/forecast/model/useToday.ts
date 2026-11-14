@@ -1,10 +1,10 @@
-// S1 Today: month-end card (engine monthEnd), You in 10 years (the AI forecast, else rules), the
-// committed / top move and the daily game call to action.
+// S1 Today: month-end card (engine monthEnd), You in N years (the AI forecast, else rules, at the
+// horizon picked on S10), the committed / top move and the daily game call to action.
 import { monthEnd, monthEndHistoryMonths, type CurrentMonth } from '@lifeguessr/engine';
 import { useMemo } from 'react';
 import { localMonthDay } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
-import { useAppReady, useAppStore, useGameStore } from '@/state';
+import { isSampleActive, useAppReady, useAppStore, useGameStore } from '@/state';
 import { shownForecast } from './forecastAnswer';
 import type { Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
 import { toMoveVM, useNextMoves } from './useNextMoves';
@@ -18,11 +18,14 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
   const statementMonths = useAppStore((s) => s.statementMonths);
   const committedMove = useAppStore((s) => s.committedMove);
   const markMoveDone = useAppStore((s) => s.markMoveDone);
+  const isSample = useAppStore(isSampleActive);
+  const isSampleFlag = useAppStore((s) => s.isSample);
+  const selfGuess = useAppStore((s) => s.selfGuess);
   const gameDate = useGameStore((s) => s.date);
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);
   const nextMoves = useNextMoves(profile);
-  const { forecast } = nextMoves;
+  const { forecast, horizonYears } = nextMoves;
   const now = opts.now;
 
   const monthEndVM: Loadable<MonthEndVM> = useMemo(() => {
@@ -58,8 +61,8 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     };
   }, [profile, statementMonths, now]);
 
-  // The 10-year number in today's dollars, from the answer (S10 can also show nominal; S1 never does).
-  const shown = useMemo(() => shownForecast(forecast, true), [forecast]);
+  // The number at the picked year in today's dollars, from the answer (S10 can also show nominal; S1 never does).
+  const shown = useMemo(() => shownForecast(forecast, true, horizonYears), [forecast, horizonYears]);
 
   const rankedMoves = nextMoves.moves.status === 'ready' ? nextMoves.moves.data : NO_MOVES;
   // The committed move as ranked now (current number and label) when it is on the list, else as stored.
@@ -72,18 +75,34 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     nextMoves.moves.status === 'ready' ? { status: 'ready', data: nextMoves.moves.data[0] ?? null } : nextMoves.moves;
 
   const played = cards.filter((c) => reveals[c.id]).length;
+  // First visit: nothing of the user's yet (no profile, no guess, no statement, no move, no sample
+  // asked for) and no home played. The screen then explains the app and shows no numbers.
+  const firstVisit =
+    ready &&
+    profileOrigin === 'demo' &&
+    !isSampleFlag &&
+    selfGuess === null &&
+    statementMonths.length === 0 &&
+    committedMove === null &&
+    profile.doneMoveIds.length === 0 &&
+    played === 0 &&
+    Object.keys(reveals).length === 0;
 
   return {
     status: ready ? 'ready' : 'loading',
+    firstVisit,
+    isSample,
     profileOrigin,
     isDemoProfile: profileOrigin === 'demo',
     monthEnd: monthEndVM,
     forecastStatus: shown.status,
     forecastError: shown.error,
     source: shown.source,
-    in10y: shown.in10y,
-    in10yBandIsZero: shown.band.isZero,
-    in10yBandKind: shown.band.kind,
+    horizonYears,
+    horizonReady: nextMoves.horizonReady,
+    atHorizon: shown.atHorizon,
+    bandIsZero: shown.band.isZero,
+    bandKind: shown.band.kind,
     isRefreshing: forecast.status === 'ready' && forecast.isRefreshing,
     committedMove: committed,
     markCommittedDone: () => {

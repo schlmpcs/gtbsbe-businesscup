@@ -255,12 +255,17 @@ export type StatementUploadVM = {
    * statement history kept in this browser; `savedProfileToServer` is true when the profile (which
    * holds the category averages and take-home pay) is also saved to /api/session.
    */
-  whatWeKeep: { months: string[]; categories: CostCategory[]; takeHomePay: boolean; savedProfileToServer: boolean };
+  whatWeKeep: { avatarPublished?: boolean; months: string[]; categories: CostCategory[]; takeHomePay: boolean; savedProfileToServer: boolean };
   /**
    * Read a CSV statement in the browser and categorize it (T6/T7), ending in `submitTotals`.
    * null when no reader is available: the screen then shows the file picker as unavailable.
    */
   readFile: ((file: File) => void) | null;
+  /**
+   * "Try with sample statement": the sample statement fixture, read through the same pipeline as
+   * `readFile` (parsed and masked in the browser, then categorized). Ends in review like a file.
+   */
+  trySample: () => void;
   /** The seam for T6/T7: CategoryTotals from /api/statement/categorize. Validated, then reviewed. */
   submitTotals: (totals: CategoryTotals[]) => void;
   /** Merge the pending months into the profile as measured values. */

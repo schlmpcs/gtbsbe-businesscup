@@ -22,8 +22,11 @@ import { m002ProEntitlements } from './002_pro_entitlements';
 import { m003Game } from './003_game';
 import { m004FunnelEvents } from './004_funnel_events';
 import { m005ProDemoCheckout } from './005_pro_demo_checkout';
+import { m006Goals } from './006_goals';
+import { m007Duel } from './007_duel';
+import { m008Avatars } from './008_avatars';
 import type { Migration } from './types';
 
 export type { Migration } from './types';
 
-export const MIGRATIONS: readonly Migration[] = [m001Sessions, m002ProEntitlements, m003Game, m004FunnelEvents, m005ProDemoCheckout];
+export const MIGRATIONS: readonly Migration[] = [m001Sessions, m002ProEntitlements, m003Game, m004FunnelEvents, m005ProDemoCheckout, m006Goals, m007Duel, m008Avatars];

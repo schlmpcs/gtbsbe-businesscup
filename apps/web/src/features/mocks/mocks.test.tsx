@@ -47,15 +47,18 @@ describe('S13 decision', () => {
     expect(await screen.findByRole('heading', { level: 1, name: d.title })).toBeTruthy();
     expect(screen.getByRole('region', { name: d.keep.title })).toBeTruthy();
     expect(screen.getByRole('region', { name: d.lease.title })).toBeTruthy();
+    // A preview, but a free tool: no Pro link on it.
     const note = screen.getByRole('note', { name: mocks.preview.sticker });
-    expect(within(note).getByRole('link', { name: mocks.preview.cta }).getAttribute('href')).toBe('/pro');
+    expect(within(note).getByText(mocks.preview.note)).toBeTruthy();
+    expect(within(note).queryByRole('link')).toBeNull();
+    expect(screen.queryByText(/\bPRO\b/i)).toBeNull();
     const r = evaluateDecision(cloneProfileDemo(), leaseScenarioSample, true);
     const score = screen.getByLabelText(d.scoreLabel);
     expect(within(score).getByText(formatMoney(r.betterBy10y, { signed: true }))).toBeTruthy();
     // The two 10-year numbers come from the rules engine, whatever S10 shows: labeled so.
     expect(screen.getByTestId('decide-forecast-source').textContent).toBe(forecast.source.rules);
-    // The other decisions are coming soon.
-    expect(screen.getByText(d.next.wedding)).toBeTruthy();
+    // No "coming soon" chips for decisions that aren't built.
+    expect(screen.queryByText(/coming soon/i)).toBeNull();
   });
 
   it('editing the lease updates the result; an emptied field is flagged', async () => {
@@ -112,16 +115,44 @@ describe('S14 check-in', () => {
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([card.id]);
   });
 
-  it('“I did it” stays disabled until the forecast answer for the current profile is in', async () => {
+  it('words each suggested move’s gain with the picked year', async () => {
+    useAppStore.getState().setHorizonYears(3);
+    render(<Checkin />);
+    const section = await screen.findByTestId('checkin-move');
+    const gains = await within(section).findAllByText(/^\+\$[\d,]+ in 3 years$/);
+    expect(gains.length).toBeGreaterThan(0);
+    expect(within(section).queryByText(/in 10 years/)).toBeNull();
+  });
+
+  it('shows the committed move’s gain at the picked year while it is ranked, and at 10 years when it is not', async () => {
+    useAppStore.getState().setHorizonYears(3);
+    const ranked = rankMoves(cloneProfileDemo(), { rates })[0]!;
+    useAppStore.getState().commitMove(ranked);
+    const first = render(<Checkin />);
+    const rankedSection = await screen.findByTestId('checkin-move');
+    await waitFor(() => expect(within(rankedSection).getByTestId('forecast-source')).toBeTruthy()); // measured by the ranking now
+    expect(within(rankedSection).getByText(/^\+\$[\d,]+ in 3 years$/)).toBeTruthy();
+    first.unmount();
+
+    // Not in the ranking: its number is the 10-year one frozen at commit time, and says so.
+    useAppStore.getState().commitMove({ ...ranked, id: 'cutCategory:gone', kind: 'cutCategory', effect10y: 1234 });
+    render(<Checkin />);
+    const storedSection = await screen.findByTestId('checkin-move');
+    expect(within(storedSection).getByText('+$1,234 in 10 years')).toBeTruthy();
+    expect(within(storedSection).queryByTestId('forecast-source')).toBeNull();
+  });
+
+  it('“I did it” is usable at once: the rules forecast for the current profile is on screen while the answer is on its way', async () => {
     let release: (() => void) | undefined;
     mockForecastRoute((body) => new Promise<ForecastBundle>((resolve) => (release = () => resolve(rulesAnswer(body)))));
     useAppStore.getState().commitMove(rankMoves(cloneProfileDemo(), { rates })[0]!);
     render(<Checkin />);
     const done = await screen.findByRole('button', { name: c.move.done });
-    expect(done).toBeDisabled();
+    expect(done).toBeEnabled();
+    expect(within(screen.getByTestId('checkin-move')).getByTestId('forecast-source').textContent).toBe(forecast.source.rules);
     await waitFor(() => expect(release).toBeDefined());
     await act(async () => release?.());
-    await waitFor(() => expect(screen.getByRole('button', { name: c.move.done })).toBeEnabled());
+    expect(screen.getByRole('button', { name: c.move.done })).toBeEnabled();
   });
 
   it('“not yet” keeps the committed move', async () => {

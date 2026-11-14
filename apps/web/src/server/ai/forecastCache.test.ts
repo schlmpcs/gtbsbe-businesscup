@@ -310,6 +310,30 @@ describe('createForecastCache', () => {
       await cache.getOrCompute('k', compute);
       expect(compute).toHaveBeenCalledTimes(2);
     });
+
+    it('keeps an answer stored with its own ttlMs for that long (Infinity: for as long as the process runs)', async () => {
+      let t = 0;
+      const cache = createForecastCache({ ttlMs: 100, now: () => t });
+      const compute = vi.fn(async () => aiBundle());
+      await cache.getOrCompute('warm', compute, { ttlMs: Number.POSITIVE_INFINITY });
+      await cache.getOrCompute('short', compute, { ttlMs: 10 });
+      t = 50;
+      await cache.getOrCompute('short', compute); // past its own 10, though inside the cache's 100
+      t = 10 * 24 * 3_600_000;
+      await cache.getOrCompute('warm', compute);
+      expect(compute).toHaveBeenCalledTimes(3); // warm once, short twice
+    });
+
+    it('lets a hit keep its stored lifetime: a later ttlMs does not change it', async () => {
+      let t = 0;
+      const cache = createForecastCache({ ttlMs: 100, now: () => t });
+      const compute = vi.fn(async () => aiBundle());
+      await cache.getOrCompute('k', compute);
+      await cache.getOrCompute('k', compute, { ttlMs: Number.POSITIVE_INFINITY }); // a hit
+      t = 100;
+      await cache.getOrCompute('k', compute);
+      expect(compute).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('size limit', () => {

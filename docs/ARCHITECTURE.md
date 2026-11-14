@@ -67,7 +67,7 @@ lifeguessr/
 
 | ID | Screen | Route | Feature folder | Build |
 | --- | --- | --- | --- | --- |
-| S1 | Today (month-end card, You in 10 years, play) | `/` | forecast | Real (drift flags need ≥ 3 uploaded months; before that the card shows the projection only) |
+| S1 | Today (first visit: Play / Try with sample data, no numbers; then month-end card, You in N years (the year picked on S10), play) | `/` | forecast | Real (drift flags need ≥ 3 uploaded months; before that the card shows the projection only) |
 | S2 | Game: explore the home (house scene, tap rooms for clues) + guess | `/play` | game | Real (falls back to a static card if the scene isn't ready) |
 | S3 | Reveal | `/play` (state) | game | Real |
 | S4 | Streamer mode | `/play?stream=1` | game | Real |
@@ -75,8 +75,8 @@ lifeguessr/
 | S6 | Closest life | `/me/closest` | ladder | Real |
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
 | S8 | Balance sheet | `/me/balance` | ladder | Real |
-| S9 | Statement upload + "What we keep" (+ "connect your bank app", coming soon) | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: Mock) |
-| S10 | You in 10 years + Next Moves | `/future` | forecast | Real |
+| S9 | Statement upload + "What we keep" + "Try with sample statement" | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: not shown until built) |
+| S10 | You in N years + Next Moves (a picker: 1, 3, 5 or 10 years, default 10; the headline, range, chart and the moves' gains and ranking read that year; S1's forecast card and the S14 check-in follow it) | `/future` | forecast | Real |
 | S11 | Can I Afford It? | `/afford` | afford | Real |
 | S12 | Loan Lab | `/loan` | loan | Real |
 | S13 | Decision (car example) | `/decide` | mocks | Mock |
@@ -172,6 +172,7 @@ export type LoanInput = { amount: Money; apr: Rate; termMonths: number;
   fees?: Money; downPayment?: Money; extraPayment?: Money };
   // financed principal = amount − downPayment + fees (fees are rolled into the loan)
 export type ForecastSource = 'ai' | 'rules';
+export type HorizonYears = 1 | 3 | 5 | 10;   // the S10 picker's years (`FORECAST_HORIZONS`); default 10
 export type YearAnchor = { year: number; low: Money; mid: Money; high: Money }; // what the model returns: years 1–10, nominal
 export type ForecastBundle = {            // /api/ai/forecast response; nominal dollars (todaysDollars: false)
   source: ForecastSource; model?: string;
@@ -187,7 +188,9 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
 export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
   debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
 // move.source = the forecast its effect10y came from; the server words the sentence by it.
-export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult };
+// horizon = the S10 picker's year and the move's effect there (`move.effect10y` cannot say it); absent = 10 years.
+export type ExplainRequest = { move?: Move & { source?: ForecastSource }; loanResult?: ExplainLoanResult;
+  horizon?: { years: HorizonYears; effect: Money } };
 export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence
@@ -222,7 +225,7 @@ export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: 
 | `applyPatch` | Amir | `(p: Profile, patch: ProfilePatch) => Profile` |
 | `rankMoves` | Amir | `(p: Profile, opts?: { rates?: Partial<ForecastRates>; subscriptionsDetected?: boolean }) => Move[]` (level 1, top 3; `effect10y` in today's dollars; the committed move is the one with `id === p.committedMoveId`) |
 | `moveCandidates` / `rankCandidates` | Amir | `(p: Profile, opts?: RankMovesOptions) => MoveCandidate[]` / `(p: Profile, candidates: MoveCandidate[], effectOf: (c: MoveCandidate) => Money) => Move[]`. `rankMoves` is both with the rules forecast as `effectOf`; the AI path supplies `effectOf` from the bundle. `MoveCandidate = Omit<Move, 'effect10y'>`. |
-| `anchorIssues` / `anchorsToForecast` / `deflateForecast` / `forecastSanityIssues` / `scenarioEffectIssues` / `rulesBundle` / `forecastFacts` | Amir | Pure helpers for the AI forecast: check the model's `YearAnchor[]`, expand it to a nominal `Forecast` (month 0 = today's balance sheet), convert a `Forecast` to today's dollars, compare a forecast and a move's effect with the rules forecast, wrap the rules forecast as a `ForecastBundle` (the fallback), and strip a `Profile` to what the model sees. See ENGINEERING.md → AI forecast. |
+| `anchorIssues` / `anchorsToForecast` / `deflateForecast` / `pointAt` / `forecastSanityIssues` / `scenarioEffectIssues` / `rulesBundle` / `forecastFacts` | Amir | Pure helpers for the AI forecast: check the model's `YearAnchor[]`, expand it to a nominal `Forecast` (month 0 = today's balance sheet), convert a `Forecast` to today's dollars, read its point at a year (`pointAt`), compare a forecast and a move's effect (at 1, 3, 5 or 10 years) with the rules forecast, wrap the rules forecast as a `ForecastBundle` (the fallback), and strip a `Profile` to what the model sees. See ENGINEERING.md → AI forecast. |
 | `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
 | `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
 | `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
@@ -241,14 +244,16 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `GET /api/daily` | Aibek | → `{ ok, date, cards, progress? }`: today's 5 `PublicCard`s, no answers (`dailyCards(dayNumber(date))`; date = calendar date in `America/New_York`, DST-aware, so the set rolls over at US midnight, not mid-evening). With the `x-anon-id` header, `progress` = the clues the server recorded and the guesses it scored for this player today, so a cleared browser shows what will be counted. |
 | `POST /api/daily/clue` | Aibek | `{ anonId, cardId, clue, date? }` → `ClueReveal`; the server records the opened clue first (once per clue; not after the guess). `date` is the set's date from `/api/daily`: yesterday's set stays open 30 minutes after midnight, then 409 `day_over`. 404 `not_in_set` for a card outside that day's set. |
 | `POST /api/daily/guess` | Aibek | `{ anonId, cardId, guess, date? }` → `GuessReveal` + `{ guess, replayed }`. The server scores with `costOfLife` + `scoreGuess` using the clues it recorded, never a count or score from the client; one guess per card per anonId per day (UNIQUE in migration 3). A repeat answers the stored result (`replayed: true`, the amount scored then), never a second score. Stored with a random 128-bit `resultId`. |
+| `POST /api/daily/hint` | Amir | `{ anonId, date, round }` (strict; `date` required) → `DuelHint { A, B }` + `{ recorded }`: one more fact on both cards of the duel round (each life's neighborhood tier, from the shared builder so the fixture and server texts match). The server records the hint first (`store.duel.openHint`), and `/api/daily/pick` scores 900 instead of 1,000 from that record; the client sends no count or score (400). One hint per round: asking twice, or after the pick, answers the same text with `recorded: false` and changes nothing. 409 `day_over` (carries `today`) past the grace period, 413, 429 (`Retry-After`), 503 when the store is down. |
 | `GET /api/leaderboard` | Aibek | query `date` (default today), `limit` (1–100, default 50) (+ own `anonId` in a header) → `{ ok, date, players, entries, rank, todayStats }`, summed from stored guesses. Ties on points share a rank; handles are made up from a hash (no id, no PII). The client never sends a score. |
 | `GET /api/share` | Aibek | query `resultId, format` (`9x16` default, `1x1`) → PNG (1080×1920 or 1080×1080, `next/og`) from a stored result, so share cards can't be faked; cached as immutable |
 | `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → `{ ok: true, ...SessionState }`. `anonId` = `crypto.randomUUID()` (a UUID, required). `{ anonId }` alone loads; each field sent replaces the saved one whole. 402 `not_paid` when the save would add to the wishlist without Pro; 503 `unavailable` when the store is down or not configured. `GET /api/session` with the `x-anon-id` header loads too. |
-| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed', classes?: { label, class: StatementClass }[] /* how each distinct masked label was sorted; additive, filled by M4 */ }`; keyword rules without an API key; nothing stored |
+| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed', classes?: { label, class: StatementClass }[] /* how each distinct masked label was sorted */ }`; keyword rules without an API key; nothing stored |
+| `GET /api/statement/sample` | Amir | → `text/csv`: `packages/data/fixtures/statement.sample.csv`, prerendered at build. S9's "Try with sample statement" reads it as a File through the same browser path as an upload |
 | `POST /api/events` | Aibek | `{ anonId, events: [{ id, name, props? }] }` (1–25) → `{ ok: true, accepted }`. Names from `CLIENT_EVENT_NAMES`; props are small enums and counts only (`EventsRequestSchema`), so no personal data; `id` = the browser's UUID per event, so a resent batch is stored once. The browser batches them (`src/lib/events.ts`, on with `NEXT_PUBLIC_EVENTS_SOURCE=api`, off under GPC / Do Not Track); the Pro routes record `checkout_started`, `pro_purchased`, `pro_demo_purchased` and `pro_promo_redeemed` themselves. 503 when the store is down. |
 | `GET /api/events/funnel` | Aibek | query `days` (1–90, default 7) → `FunnelReport`: distinct anonymous ids per event and per `FUNNEL_STEPS` step (with how many went through every earlier step, and the conversion), plus clues per home, blind-guess, finish and share rates. Aggregates only. |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
-| `POST /api/ai/explain` | Amir | `ExplainRequest { move? (optional `source: 'ai' \| 'rules'` words the sentence), loanResult? }` → `{ text, source }` (2 sentences, no new numbers; a debt load with no take-home pay is `null`) |
+| `POST /api/ai/explain` | Amir | `ExplainRequest { move? (optional `source: 'ai' \| 'rules'` words the sentence), loanResult?, horizon? { years: 1 \| 3 \| 5 \| 10, effect } (the sentence is about the move's gain at that year; ignored without a move) }` → `{ text, source }` (2 sentences, no new numbers; a debt load with no take-home pay is `null`) |
 | `POST /api/ai/forecast` | Amir | `{ profile, rates?, scenarios?: { id, patch }[] }` → `ForecastBundle` (nominal dollars). Validated in code, cached, falls back to the rules forecast (`source: 'rules'`). Has its own rate limiter so it cannot use up the parse and explain budget. |
 | `GET /api/pro/status` | Amir | header `x-anon-id` → `{ status: ProStatus, checkoutAvailable, demo: { enabled, code? } }` |
 | `POST /api/pro/checkout` | Amir | `{ plan }` → `{ url }`, a Stripe Checkout Session in test mode to redirect to |
@@ -299,7 +304,8 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - The server receives only `StatementItem`s: merchant label, amount, month and day of month. The day lets the server detect subscriptions and yearly charges. It returns totals; raw items are not stored.
 - Labels pass through the LLM provider for categorizing: only the distinct masked labels, each marked money in or out, never amounts or dates. The provider (Anthropic) does not train on API data. Zero data retention is not enabled on the account, so the "What we keep" panel must not claim it; it says only that the labels go to the provider to be sorted and that we don't store them. Without an API key, keyword rules on the server sort them instead.
 - Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The store keeps only its SHA-256 hash, so a leaked row cannot be turned back into an ID that loads the profile. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
-- Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
+- Tool state (the micro-tools' local slices) lives only in browser localStorage and never enters a session or the database. The subscription audit's `audit` field is the one place it keeps more than category totals: the masked merchant labels, amounts and charge dates of the last statement's findings, so "only category totals are persisted" describes what our server stores, not this browser copy. Copy that lists what stays in the browser (the S9 "What we keep" panel, the kit showcase) must not say that nothing but totals is kept there.
+- Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is not shown (dead buttons are hidden).
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
 - Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test`, `demo_checkout` or `demo`), when, and the Stripe test Checkout Session ID for a Stripe test payment. No card data or email ever reaches our server: the simulated checkout has no card field, and the Stripe test checkout page belongs to Stripe.
 - The forecast request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers to the model provider, which does not train on API data. Zero data retention is not enabled, so no copy claims it; the "What we keep" panel says only that these numbers (no names or account numbers) go to the provider, which does not train on API data.

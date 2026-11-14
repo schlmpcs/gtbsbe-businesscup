@@ -7,6 +7,10 @@ export * from './assumptions';
 export * from './errors';
 export { costOfLife, cardToProfile } from './cost';
 export { scoreGuess } from './score';
+export {
+  dailyDuelPairs, scoreDuelPick, duelCategoryLines, duelMultiplier, duelRoundPoints, duelDifference, duelGap, duelBlindSpot,
+  DUEL_ROUND_COUNT, type DuelCandidate, type DuelPair, type DuelPickScore, type DuelLessonId,
+} from './duel';
 export { forecast, applyPatch, type ForecastOptions } from './forecast';
 export {
   simulate, forecastMonths, resolveRates, monthlyRate, inflationAnnualOf, cardMinPaymentFor,
@@ -15,7 +19,7 @@ export {
   type ScheduledPurchase, type Scenario,
 } from './simulate';
 export {
-  anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, scenarioEffectIssues,
+  anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, pointAt, scenarioEffectIssues,
 } from './anchors';
 export { forecastFacts, rulesBundle, type ForecastFacts } from './bundle';
 export {
@@ -31,6 +35,9 @@ export {
   type DecorRoom, type SpriteId,
 } from './scene';
 export {
-  loan, compareLoans, payoffOrder, amortize, amortizedPayment, MAX_SIMULATION_MONTHS,
+  loan, compareLoans, payoffOrder, payoffPlan, comparePayoff, extraToFinishBy, amortize, amortizedPayment, MAX_SIMULATION_MONTHS,
   type Amortization, type LoanOptions,
 } from './loan/index';
+export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
+export { overpayingCheck, type OverpayingInput } from './overpaying';
+export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';

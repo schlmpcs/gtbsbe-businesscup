@@ -1,5 +1,7 @@
 // Server-only: funnel events in process memory (tests, and `pnpm dev` without STORE_URL). Same rules
 // as Postgres (./events.ts). Bounded, so a long dev session cannot grow it without end.
+import { TOOL_IDS } from '@lifeguessr/types';
+import { TOOL_COMPLETIONS } from './events';
 import { anonKey } from './anonKey';
 import {
   buildFunnelReport, maskOf, propsOf, uniqueById, type EventStore, type GuessStats, type MaskCount,
@@ -42,12 +44,12 @@ export function createMemoryEventStore(opts: { now?: () => Date; max?: number } 
 
       const namesById = new Map<string, Set<string>>();
       for (const r of inWindow) {
-        if (maskOf([r.name]) === 0) continue;
+        if (maskOf([r.name]) === 0n) continue;
         const names = namesById.get(r.anonKey) ?? new Set<string>();
         names.add(r.name);
         namesById.set(r.anonKey, names);
       }
-      const counts = new Map<number, number>();
+      const counts = new Map<bigint, number>();
       for (const names of namesById.values()) {
         const mask = maskOf(names);
         counts.set(mask, (counts.get(mask) ?? 0) + 1);
@@ -62,7 +64,12 @@ export function createMemoryEventStore(opts: { now?: () => Date; max?: number } 
         guesses.cluesOpened += opened;
         if (opened === 0) guesses.blind++;
       }
-      return buildFunnelReport(window, masks, guesses);
+      const tools = TOOL_IDS.map(tool=>{
+        const opened = new Set(inWindow.filter(r=>r.name==='tool_opened' && r.props.tool===tool).map(r=>r.anonKey));
+        const completed = new Set(inWindow.filter(r=>r.name===TOOL_COMPLETIONS[tool]).map(r=>r.anonKey));
+        return {tool,opened:opened.size,completed:completed.size,converted:[...opened].filter(id=>completed.has(id)).length};
+      });
+      return buildFunnelReport(window, masks, guesses, tools);
     },
   };
 }

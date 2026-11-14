@@ -36,7 +36,7 @@ function Marker({ label, gauge, max, hollow }: { label: string; gauge: DebtLoadG
   );
 }
 
-/** Debt load today → with the selected offer, on one green / yellow / red bar in a black score bar (Figma S12). */
+/** Debt load today → with the selected offer, on one green / yellow / red bar, in a white card (Design v3 S12). */
 export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gauge']; selectedName: string | null }) {
   const headingId = useId();
   const { before, after, max, isEstimate } = gauge;
@@ -49,27 +49,27 @@ export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gaug
   ] as const;
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-lg rounded-xl bg-ink px-xl py-xl text-on-primary sm:px-2xl">
+    <section aria-labelledby={headingId} className="flex flex-col gap-lg rounded-xl bg-surface px-xl py-xl shadow-md sm:px-2xl">
       <div className="grid grid-cols-1 items-center gap-xl lg:grid-cols-[2fr_3fr]">
         <div className="flex min-w-0 flex-col gap-xs">
-          <h2 id={headingId} className="flex items-center gap-sm text-sm font-semibold text-on-primary/60">
+          <h2 id={headingId} className="flex items-center gap-sm font-display text-2xl font-extrabold leading-tight">
             {t.gauge.title}
-            {isEstimate && <EstimateTag className="border-on-primary/60 text-on-primary/60" />}
+            {isEstimate && <EstimateTag />}
           </h2>
           <p className="font-display text-4xl font-extrabold leading-tight tabular-nums sm:text-display sm:leading-display">
             <span className={ZONE_TEXT[before.zone]}>{formatRate(before.value)}</span>
             {showAfter && (
               <>
                 {' '}
-                <span aria-hidden="true" className="text-on-primary/60">
+                <span aria-hidden="true" className="text-text-muted">
                   {t.gauge.arrow}
                 </span>{' '}
                 <span className={ZONE_TEXT[after.zone]}>{formatRate(after.value)}</span>
               </>
             )}
           </p>
-          <p className="text-sm text-on-primary/60">{showAfter ? t.gauge.caption(selectedName) : t.gauge.captionToday}</p>
-          {!showAfter && <p className="text-sm text-on-primary/80">{t.gauge.noOffer}</p>}
+          <p className="text-sm text-text-muted">{showAfter ? t.gauge.caption(selectedName) : t.gauge.captionToday}</p>
+          {!showAfter && <p className="text-sm text-text-muted">{t.gauge.noOffer}</p>}
         </div>
 
         <div className="flex min-w-0 flex-col gap-sm">
@@ -89,7 +89,7 @@ export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gaug
             <span className="text-warning">{segments[1].label}</span>
             <span className="text-primary">{segments[2].label}</span>
           </div>
-          <div className="flex flex-wrap gap-x-lg gap-y-xs text-xs text-on-primary/80">
+          <div className="flex flex-wrap gap-x-lg gap-y-xs text-xs text-text-muted">
             <span className="flex items-center gap-xs">
               <span aria-hidden="true" className="size-md rounded-full border-2 border-on-primary bg-ink" />
               {t.gauge.before}
@@ -103,7 +103,7 @@ export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gaug
           </div>
         </div>
       </div>
-      <details className="text-xs text-on-primary/60">
+      <details className="text-xs text-text-muted">
         <summary className="cursor-pointer font-medium">{t.gauge.howTitle}</summary>
         <p className="mt-xs">
           {t.gauge.hint} {t.gauge.guidance(formatRate(yellow), formatRate(red))}

@@ -20,6 +20,9 @@ import {
   type ServerFunnelEvent,
   ForecastBundleSchema, ForecastPointSchema, ForecastSchema, YearAnchorSchema,
   type Forecast, type ForecastBundle, type ForecastPoint, type ForecastSource, type YearAnchor,
+  FORECAST_HORIZONS, HorizonYearsSchema, type ExplainRequest, type HorizonYears, type Money,
+  DuelHintRequestSchema, DuelPickRequestSchema, type DuelHintSchema, PickResultSchema, PublicDuelSchema,
+  type DuelHint, type DuelHintRequest, type DuelPickRequest, type PickResult, type PublicDuel,
 } from './index';
 
 // These assertions are checked by `pnpm typecheck` (tsc covers test files): a contract change
@@ -326,13 +329,17 @@ describe('Funnel event contracts', () => {
     for (const name of CLIENT_EVENT_NAMES) {
       expect(ClientEventEnvelopeSchema.options.some((o) => o.shape.name.value === name)).toBe(true);
     }
-    // The funnel is made of known events; the Postgres funnel query gives each name one bit of an int.
+    // Postgres bigint reserves its sign bit.
     for (const step of FUNNEL_STEPS) expect(FUNNEL_EVENT_NAMES).toContain(step);
-    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(31);
+    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(63);
   });
 
   it('accepts the events the app sends', () => {
     const events: ClientEventEnvelope[] = [
+      { id, name: 'duel_picked', props: { round: 1, correct: true } },
+      { id, name: 'hint_opened', props: { round: 2 } },
+      { id, name: 'challenge_copied' },
+      { id, name: 'own_guess_started' },
       { id, name: 'play_started' },
       { id, name: 'clue_opened', props: { home: 1, clue: 'kitchen' } },
       { id, name: 'home_guessed', props: { home: 3, cluesOpened: 0 } },
@@ -344,6 +351,8 @@ describe('Funnel event contracts', () => {
       { id, name: 'afford_checked', props: { verdict: 'wait' } },
       { id, name: 'loan_compared', props: { offers: 3 } },
       { id, name: 'paywall_viewed' },
+      { id, name: 'sample_loaded' },
+      { id, name: 'forecast_horizon_changed', props: { years: 3 } },
     ];
     expect(EventsRequestSchema.safeParse({ anonId, events }).success).toBe(true);
   });
@@ -359,6 +368,10 @@ describe('Funnel event contracts', () => {
     ['a fractional count', { id, name: 'home_guessed', props: { home: 1, cluesOpened: 1.5 } }],
     ['an amount where a count goes', { id, name: 'loan_compared', props: { offers: 28_000 } }],
     ['an id that is not a UUID', { id: 'abc', name: 'forecast_viewed' }],
+    ['a horizon outside the picker', { id, name: 'forecast_horizon_changed', props: { years: 7 } }],
+    ['a horizon event without props', { id, name: 'forecast_horizon_changed' }],
+    ['a horizon given as a string', { id, name: 'forecast_horizon_changed', props: { years: '3' } }],
+    ['a field beside the horizon', { id, name: 'forecast_horizon_changed', props: { years: 3, from: 10 } }],
   ])('refuses %s', (_why, ev) => {
     expect(ClientEventEnvelopeSchema.safeParse(ev).success).toBe(false);
   });
@@ -369,5 +382,86 @@ describe('Funnel event contracts', () => {
     expect(EventsRequestSchema.safeParse({ anonId, events: batch(EVENTS_BATCH_MAX + 1) }).success).toBe(false);
     expect(EventsRequestSchema.safeParse({ anonId, events: [] }).success).toBe(false);
     expect(EventsRequestSchema.safeParse({ anonId, events: batch(1), extra: true }).success).toBe(false);
+  });
+});
+
+describe('Forecast horizon contracts', () => {
+  const id = '6b1d4c55-0b7e-4a4e-9a51-0c4b1f2f9d10';
+
+  it('lists the picker horizons, and the type, schema and constant agree', () => {
+    expect(FORECAST_HORIZONS).toEqual([1, 3, 5, 10]);
+    expectTypeOf<HorizonYears>().toEqualTypeOf<(typeof FORECAST_HORIZONS)[number]>();
+    expectTypeOf<HorizonYears>().toEqualTypeOf<1 | 3 | 5 | 10>();
+    expectTypeOf<z.infer<typeof HorizonYearsSchema>>().toEqualTypeOf<HorizonYears>();
+  });
+
+  it.each(FORECAST_HORIZONS)('accepts %i years', (years) => {
+    expect(HorizonYearsSchema.safeParse(years).success).toBe(true);
+  });
+
+  it.each([0, 2, 4, 7, 15, -1, 3.5, '10', null, undefined])('refuses %j years', (years) => {
+    expect(HorizonYearsSchema.safeParse(years).success).toBe(false);
+  });
+
+  it('carries the shown horizon and its effect on an explain request, as an optional field', () => {
+    expectTypeOf<NonNullable<ExplainRequest['horizon']>>().toEqualTypeOf<{ years: HorizonYears; effect: Money }>();
+    expectTypeOf<{ loanResult: NonNullable<ExplainRequest['loanResult']> }>().toExtend<ExplainRequest>();
+  });
+
+  it('accepts the horizon event with a picker value', () => {
+    for (const years of FORECAST_HORIZONS) {
+      const ev = { id, name: 'forecast_horizon_changed', props: { years } };
+      expect(ClientEventEnvelopeSchema.safeParse(ev).success).toBe(true);
+    }
+  });
+
+  it('is a client event and not a funnel step', () => {
+    expect(CLIENT_EVENT_NAMES).toContain('forecast_horizon_changed');
+    expect(FUNNEL_EVENT_NAMES).toContain('forecast_horizon_changed');
+    expect(FUNNEL_STEPS).not.toContain('forecast_horizon_changed' as never);
+  });
+});
+
+describe('Duel contracts', () => {
+  const anonId = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
+  const card = (letter: 'A' | 'B') => ({
+    letter, household: '2 adults · 1 kid · 3 bedrooms', metro: 'Columbus, OH', caption: 'Plays bass on Sundays.',
+    facts: ['1 car', 'Daycare', 'Cooks at home', 'Rents'], art: 'layout/3bed', composite: true as const,
+  });
+  const source = { name: 'HUD Fair Market Rents', year: 2025 };
+  const result: PickResult = {
+    resultId: 'r-1', correct: true, points: 900, totals: { A: 3200.5, B: 4740 },
+    breakdown: {
+      A: [{ category: 'rentUtilities', amount: 1500, sources: [source], isEstimate: false }],
+      B: [{ category: 'childcare', amount: 1140, sources: [source], isEstimate: false }],
+    },
+    decidedBy: { category: 'childcare', A: 0, B: 1140 }, lesson: 'Childcare often costs more than rent.', crowd: null,
+  };
+
+  it('match the contract types', () => {
+    expectTypeOf<z.infer<typeof PublicDuelSchema>>().toExtend<PublicDuel>();
+    expectTypeOf<PublicDuel>().toExtend<z.input<typeof PublicDuelSchema>>();
+    expectTypeOf<z.infer<typeof PickResultSchema>>().toExtend<PickResult>();
+    expectTypeOf<PickResult>().toExtend<z.input<typeof PickResultSchema>>();
+    expectTypeOf<z.infer<typeof DuelHintSchema>>().toExtend<DuelHint>();
+    expectTypeOf<z.infer<typeof DuelPickRequestSchema>>().toExtend<DuelPickRequest>();
+    expectTypeOf<DuelPickRequest>().toExtend<z.input<typeof DuelPickRequestSchema>>();
+    expectTypeOf<z.infer<typeof DuelHintRequestSchema>>().toExtend<DuelHintRequest>();
+  });
+
+  it('accept a duel and a pick result', () => {
+    expect(PublicDuelSchema.safeParse({ date: '2026-11-14', round: 1, kind: 'life', cards: [card('A'), card('B')] }).success).toBe(true);
+    expect(PickResultSchema.safeParse(result).success).toBe(true);
+    expect(PickResultSchema.safeParse({ ...result, crowd: { pickedA: 131, total: 214 } }).success).toBe(true);
+  });
+
+  it('refuse a sixth round, a third card, a missing composite flag and loose requests', () => {
+    expect(PublicDuelSchema.safeParse({ date: '2026-11-14', round: 6, kind: 'life', cards: [card('A'), card('B')] }).success).toBe(false);
+    expect(PublicDuelSchema.safeParse({ date: '2026-11-14', round: 1, kind: 'life', cards: [card('A'), card('B'), card('A')] }).success).toBe(false);
+    expect(PublicDuelSchema.safeParse({ date: '2026-11-14', round: 1, kind: 'life', cards: [{ ...card('A'), composite: false }, card('B')] }).success).toBe(false);
+    expect(DuelPickRequestSchema.safeParse({ anonId, date: '2026-11-14', round: 2, choice: 'B' }).success).toBe(true);
+    expect(DuelPickRequestSchema.safeParse({ anonId, date: '2026-11-14', round: 2, choice: 'C' }).success).toBe(false);
+    expect(DuelPickRequestSchema.safeParse({ anonId, date: '2026-11-14', round: 2, choice: 'A', guess: 1 }).success).toBe(false);
+    expect(DuelHintRequestSchema.safeParse({ anonId, date: '14/11/2026', round: 2 }).success).toBe(false);
   });
 });

@@ -9,8 +9,11 @@
 //   times reached "forecast" once. Each id is reduced to the set of event names it sent in the
 //   window, as a bit mask (bit i = FUNNEL_EVENT_NAMES[i]); the stores return how many ids sent
 //   each set, and buildFunnelReport derives every number from those counts.
+// - The mask is 64 bits: a bigint here, a Postgres bigint in the query. Bit 63 is the sign bit of a
+//   Postgres bigint, so FUNNEL_EVENT_NAMES holds at most 63 names (packages/types/schemas.test.ts).
+//   Nothing persisted holds a mask: it is built per query.
 import {
-  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelEvent, type FunnelEventName, type FunnelReport,
+  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, TOOL_IDS, type ToolId, type FunnelEvent, type FunnelEventName, type FunnelReport,
 } from '@lifeguessr/types';
 
 /** One event to store: its id (a UUID; the browser's, or a fresh one for server events) and body. */
@@ -19,8 +22,8 @@ export type StoredEvent = FunnelEvent & { id: string };
 /** The report window, both ends included. */
 export type FunnelWindow = { from: Date; to: Date };
 
-/** How many anonymous ids sent exactly the set of events `mask` stands for. */
-export type MaskCount = { mask: number; users: number };
+/** How many anonymous ids sent exactly the set of events `mask` (64 bits) stands for. */
+export type MaskCount = { mask: bigint; users: number };
 
 /** The `home_guessed` events in the window: how many, clues opened in total, how many with none. */
 export type GuessStats = { guesses: number; cluesOpened: number; blind: number };
@@ -33,14 +36,14 @@ export interface EventStore {
 }
 
 /** The bit of `name` in a mask; 0 for a name this build does not know (e.g. written by a newer one). */
-export function eventBit(name: string): number {
+export function eventBit(name: string): bigint {
   const i = (FUNNEL_EVENT_NAMES as readonly string[]).indexOf(name);
-  return i < 0 ? 0 : 1 << i;
+  return i < 0 ? 0n : 1n << BigInt(i);
 }
 
 /** The mask of a set of event names. */
-export function maskOf(names: Iterable<string>): number {
-  let mask = 0;
+export function maskOf(names: Iterable<string>): bigint {
+  let mask = 0n;
   for (const name of names) mask |= eventBit(name);
   return mask;
 }
@@ -57,15 +60,16 @@ export const propsOf = (event: FunnelEvent): Record<string, unknown> => ('props'
 const ratio = (part: number, whole: number): number | null => (whole > 0 ? part / whole : null);
 
 /** Everything GET /api/events/funnel reports, from the per-id event sets and the guess counts. */
-export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCount[], guesses: GuessStats): FunnelReport {
-  const rows = masks.filter((m) => m.mask !== 0 && m.users > 0);
+export type ToolCount = { tool: ToolId; opened: number; completed: number; converted: number };
+export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCount[], guesses: GuessStats, tools: readonly ToolCount[] = []): FunnelReport {
+  const rows = masks.filter((m) => m.mask !== 0n && m.users > 0);
   /** Distinct ids that sent every event in `need`. */
-  const withAll = (need: number) => rows.reduce((sum, m) => ((m.mask & need) === need ? sum + m.users : sum), 0);
+  const withAll = (need: bigint) => rows.reduce((sum, m) => ((m.mask & need) === need ? sum + m.users : sum), 0);
   const bit = (name: FunnelEventName) => eventBit(name);
 
   const events = Object.fromEntries(FUNNEL_EVENT_NAMES.map((name) => [name, withAll(bit(name))])) as Record<FunnelEventName, number>;
 
-  let need = 0;
+  let need = 0n;
   let previous: number | null = null;
   const steps = FUNNEL_STEPS.map((name) => {
     need |= bit(name);
@@ -83,6 +87,11 @@ export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCoun
     users: rows.reduce((sum, m) => sum + m.users, 0),
     steps,
     events,
+    tools: {
+      opened: Object.fromEntries(TOOL_IDS.map(id=>[id,tools.find(t=>t.tool===id)?.opened??0])) as Record<ToolId,number>,
+      completed: Object.fromEntries(TOOL_IDS.map(id=>[id,tools.find(t=>t.tool===id)?.completed??0])) as Record<ToolId,number>,
+      rates: Object.fromEntries(TOOL_IDS.map(id=>{const t=tools.find(t=>t.tool===id);return [id,ratio(t?.converted??0,t?.opened??0)];})) as Record<ToolId,number|null>,
+    },
     game: {
       players,
       finished,
@@ -100,3 +109,6 @@ export function buildFunnelReport(window: FunnelWindow, masks: readonly MaskCoun
 export function lastDays(days: number, now: Date = new Date()): FunnelWindow {
   return { from: new Date(now.getTime() - days * 86_400_000), to: now };
 }
+
+/** Completion markers for the independent tool funnels. */
+export const TOOL_COMPLETIONS = { subscriptions: 'subs_revealed', overpaying: 'overpaying_checked', payoff: 'payoff_planned' } as const;

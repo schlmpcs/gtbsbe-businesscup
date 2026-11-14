@@ -12,7 +12,7 @@ export function ExtraPayment({
 }: Pick<LoanLabVM, 'extra' | 'setExtraPayment'> & { selectedName: string | null }) {
   if (!extra || !selectedName) {
     return (
-      <Card title={t.extra.title} tone="muted">
+      <Card title={t.extra.title}>
         <p className="text-sm text-text-muted">{t.extra.noOffer}</p>
       </Card>
     );
@@ -52,7 +52,7 @@ export function ExtraPayment({
             <dt className="text-sm text-text-muted">{t.extra.payoff}</dt>
             <dd
               className={cx(
-                'font-display text-2xl font-extrabold tabular-nums',
+                'font-display text-3xl font-extrabold tabular-nums',
                 extra.payoffMonth === null ? 'text-negative' : changed ? 'text-positive' : 'text-text',
               )}
             >
@@ -63,7 +63,7 @@ export function ExtraPayment({
           </div>
           <div className="flex flex-col gap-xs">
             <dt className="text-sm text-text-muted">{t.extra.interest}</dt>
-            <dd className={cx('font-display text-2xl font-extrabold tabular-nums', saved ? 'text-positive' : 'text-text')}>
+            <dd className={cx('font-display text-3xl font-extrabold tabular-nums', saved ? 'text-positive' : 'text-text')}>
               <Money value={extra.totalInterest} />
             </dd>
           </div>

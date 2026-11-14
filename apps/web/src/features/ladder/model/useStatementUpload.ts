@@ -1,9 +1,11 @@
+import { usePublishedAvatar } from '@/features/avatar/model/usePublishedAvatar';
 // S9 Statement upload: screen state around the T6/T7 pipeline (features/upload parses the CSV in
 // the browser and calls /api/statement/categorize). Its output, CategoryTotals[], enters here via
 // `submitTotals`, is shown for review, and on `apply` becomes measured spending in the profile.
 import { CategoryTotalsSchema, COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { readStatementFile as defaultReadStatementFile, StatementFileError } from '@/features/upload/model/readStatementFile';
+import { fetchSampleStatement as defaultFetchSampleStatement } from '@/features/upload/model/sampleStatement';
 import { sessionSource } from '@/lib/config';
 import { track } from '@/lib/events';
 import { toVMError } from '@/lib/model/errors';
@@ -27,11 +29,15 @@ function monthVM(m: CategoryTotals): StatementMonthVM {
 export type StatementUploadOptions = {
   /** The T6/T7 pipeline (swappable in tests). */
   readStatementFile?: typeof defaultReadStatementFile;
+  /** Downloads the sample statement fixture as a File (swappable in tests). */
+  fetchSampleStatement?: typeof defaultFetchSampleStatement;
 };
 
 export function useStatementUpload(opts: StatementUploadOptions = {}): StatementUploadVM {
   const readStatementFile = opts.readStatementFile ?? defaultReadStatementFile;
+  const fetchSampleStatement = opts.fetchSampleStatement ?? defaultFetchSampleStatement;
   const ready = useAppReady();
+  const avatarPublished = usePublishedAvatar(ready);
   const statementMonths = useAppStore((s) => s.statementMonths);
   const applyStatementTotals = useAppStore((s) => s.applyStatementTotals);
 
@@ -55,7 +61,8 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
     setPending([...parsed.data].sort((a, b) => a.month.localeCompare(b.month)));
   }, []);
 
-  const readFile = useCallback((file: File) => {
+  /** Read a statement file (the user's, or the downloaded sample) through the one pipeline. */
+  const read = useCallback((source: File | ((signal: AbortSignal) => Promise<File>)) => {
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;
@@ -64,21 +71,29 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
     setPending(null);
     setApplied(false);
     setLastRead(null);
-    readStatementFile(file, { anonId: getAnonId(), signal: controller.signal }).then(
-      ({ months, summary }) => {
-        if (controller.signal.aborted) return;
-        setReading(false);
-        const { convention: _convention, ...shown } = summary;
-        setLastRead(shown);
-        submitTotals(months);
-      },
-      (err: unknown) => {
-        if (controller.signal.aborted) return;
-        setReading(false);
-        setError(err instanceof StatementFileError ? { kind: 'unreadable', reason: err.problem } : toVMError(err));
-      },
-    );
+    const readOne = (file: File) => readStatementFile(file, { anonId: getAnonId(), signal: controller.signal });
+    (typeof source === 'function' ? source(controller.signal).then(readOne) : readOne(source))
+      .then(
+        ({ months, summary }) => {
+          if (controller.signal.aborted) return;
+          setReading(false);
+          const { convention: _convention, ...shown } = summary;
+          setLastRead(shown);
+          submitTotals(months);
+        },
+        (err: unknown) => {
+          if (controller.signal.aborted) return;
+          setReading(false);
+          setError(err instanceof StatementFileError ? { kind: 'unreadable', reason: err.problem } : toVMError(err));
+        },
+      );
   }, [readStatementFile, submitTotals]);
+
+  const readFile = useCallback((file: File) => read(file), [read]);
+  const trySample = useCallback(
+    () => read((signal) => fetchSampleStatement({ signal })),
+    [read, fetchSampleStatement],
+  );
 
   const apply = useCallback(() => {
     if (!pending) return;
@@ -106,9 +121,10 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
       months,
       categories: months.length > 0 ? ([...COST_CATEGORIES] as CostCategory[]) : [],
       takeHomePay: kept.some((m) => (m.detectedPay ?? 0) > 0),
+      ...(avatarPublished && {avatarPublished}),
       savedProfileToServer: sessionSource() === 'api',
     };
-  }, [history, pending, statementMonths]);
+  }, [history, pending, statementMonths, avatarPublished]);
 
   const status: StatementUploadVM['status'] = !ready
     ? 'loading'
@@ -131,6 +147,7 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
     hasDriftHistory: history.length >= DRIFT_HISTORY_MONTHS,
     whatWeKeep,
     readFile,
+    trySample,
     submitTotals,
     apply,
     discard,

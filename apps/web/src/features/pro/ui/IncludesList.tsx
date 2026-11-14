@@ -1,42 +1,29 @@
-import { useId } from 'react';
 import { pro as copy } from '@/copy';
+import { Card } from '@/ui-kit';
 
 function Check() {
   return (
-    <span aria-hidden="true" className="font-bold">
+    <span
+      aria-hidden="true"
+      className="inline-flex size-xl shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary"
+    >
       ✓
     </span>
   );
 }
 
-/** What Pro unlocks in this build, then what is planned (dimmer, so nothing is oversold). White on the orange band. */
+/** What Pro unlocks in this build, and nothing more (no "coming soon" list, so nothing is oversold). */
 export function IncludesList() {
-  const headingId = useId();
-  const comingId = useId();
   return (
-    <section aria-labelledby={headingId} className="flex w-full flex-col items-center gap-md text-left">
-      <h2 id={headingId} className="text-xl font-bold">
-        {copy.includes.title}
-      </h2>
-      <ul className="flex flex-col gap-xs font-semibold">
+    <Card title={copy.includes.title} className="w-full text-left">
+      <ul className="flex flex-col gap-sm">
         {copy.includes.now.map((item) => (
-          <li key={item} className="flex gap-sm">
+          <li key={item} className="flex items-center gap-md">
             <Check />
             {item}
           </li>
         ))}
       </ul>
-      <h3 id={comingId} className="text-sm font-bold uppercase tracking-wide">
-        {copy.includes.comingTitle}
-      </h3>
-      <ul aria-labelledby={comingId} className="grid gap-x-xl gap-y-xs text-on-primary/80 sm:grid-cols-2">
-        {copy.includes.coming.map((item) => (
-          <li key={item} className="flex gap-sm">
-            <Check />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </section>
+    </Card>
   );
 }

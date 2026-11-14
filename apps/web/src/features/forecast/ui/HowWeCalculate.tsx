@@ -1,6 +1,6 @@
 // "How we calculate" (S10): every engine assumption behind the forecast and the moves, with its
 // source or an "our assumption" tag. Values arrive from the view-model; here they are only formatted.
-import { forecast as t } from '@/copy';
+import { forecast as t, goal, avatar } from '@/copy';
 import { cx, formatMoney, formatRate, SourceNote } from '@/ui-kit';
 import type { AssumptionValue, AssumptionVM, ForecastSource, HowWeCalculateVM } from '../model/types';
 import { AssumptionTag } from './shared';
@@ -51,6 +51,9 @@ function introText(source: ForecastSource | null): string {
   return source === 'ai' ? t.how.introAi : t.how.intro;
 }
 
+/** Anchor id of the panel, for the "How we calculate →" link under the headline number. */
+export const HOW_WE_CALCULATE_ID = 'how-we-calculate';
+
 export function HowWeCalculate({
   vm,
   source,
@@ -61,8 +64,12 @@ export function HowWeCalculate({
   className?: string;
 }) {
   return (
-    <details className={cx('group rounded-xl bg-surface p-lg shadow-md', className)} data-testid="how-we-calculate">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md text-lg font-bold">
+    <details
+      id={HOW_WE_CALCULATE_ID}
+      className={cx('group scroll-mt-xl rounded-xl bg-surface p-xl shadow-md', className)}
+      data-testid="how-we-calculate"
+    >
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-display text-2xl font-extrabold">
         <h2>{t.how.title}</h2>
         <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
           ▾
@@ -72,6 +79,8 @@ export function HowWeCalculate({
       <div className="mt-md flex flex-col gap-lg">
         <Group title={t.how.forecastTitle} items={vm.forecast} />
         <Group title={t.how.movesTitle} items={vm.moves} />
+        <p className="text-sm text-text-muted">{goal.rules}</p>
+        <p className="text-sm text-text-muted">{avatar.rules}</p>
       </div>
     </details>
   );

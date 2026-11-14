@@ -56,7 +56,7 @@ function ParsedPurchase({ purchase, inferred }: { purchase: Purchase; inferred: 
       {rows.map((r) => (
         <div key={r.path} className="contents">
           <dt className="text-text-muted">{r.label}</dt>
-          <dd className={cx('font-medium tabular-nums', isInferred(r.path) && 'rounded-sm bg-surface-strong px-xs')}>
+          <dd className={cx('font-medium tabular-nums', isInferred(r.path) && 'rounded-sm bg-primary-soft px-xs')}>
             {r.value}
             {isInferred(r.path) && <span className="ml-xs text-xs font-normal text-text-muted">({t.parse.guessed})</span>}
           </dd>
@@ -77,7 +77,7 @@ export function PurchaseParse({ parse }: { parse: ParseConfirmVM<Purchase> }) {
           e.preventDefault();
           parse.submit();
         }}
-        className="flex flex-col gap-sm rounded-lg bg-surface-strong p-md sm:flex-row sm:items-center sm:p-lg"
+        className="flex flex-col gap-sm rounded-lg bg-bg p-sm sm:flex-row sm:items-center"
       >
         <label htmlFor={inputId} className="sr-only">
           {t.parse.label}
@@ -89,16 +89,16 @@ export function PurchaseParse({ parse }: { parse: ParseConfirmVM<Purchase> }) {
           value={parse.text}
           onChange={(e) => parse.setText(e.target.value)}
           placeholder={t.parse.placeholder}
-          className="min-w-0 flex-1 rounded-md bg-transparent px-sm py-sm text-xl placeholder:text-text-muted sm:text-2xl"
+          className="min-w-0 flex-1 rounded-md bg-transparent px-sm py-sm text-lg font-semibold placeholder:font-normal placeholder:text-text-muted"
         />
-        <Button type="submit" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
+        <Button type="submit" variant="dark" disabled={busy || parse.text.trim() === ''} aria-busy={busy || undefined}>
           {busy ? t.parse.parsing : t.parse.submit}
         </Button>
       </form>
 
       <div aria-live="polite">
         {parse.status === 'confirming' && parse.parsed && (
-          <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg border-2 border-border bg-surface p-lg">
+          <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg bg-bg p-lg">
             <h3 className="text-base font-bold">{t.parse.confirmTitle}</h3>
             <ParsedPurchase purchase={parse.parsed} inferred={parse.inferred} />
             <Row>
@@ -110,7 +110,7 @@ export function PurchaseParse({ parse }: { parse: ParseConfirmVM<Purchase> }) {
           </section>
         )}
         {parse.status === 'error' && (
-          <div role="alert" className="flex flex-col gap-sm rounded-lg border-2 border-border bg-surface p-lg">
+          <div role="alert" className="flex flex-col gap-sm rounded-lg bg-bg p-lg">
             <p className="text-sm">{errorText(parse.error)}</p>
             <Row>
               <Button variant="ghost" size="sm" onClick={parse.cancel}>

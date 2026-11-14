@@ -12,13 +12,11 @@ import { leaseScenarioFixture, leaseScenarioSample, LeaseScenarioSchema, type Le
 import { runEngine } from '@/lib/model/errors';
 import { areaRates, displayForecast } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
-import { SCREEN_ROUTES } from '@/lib/screens';
-import { useAppReady, useAppStore, usePro } from '@/state';
-import type { DecideResultVM, DecideVM, DecisionKind, LeaseField, LeaseForm } from './types';
+import { useAppReady, useAppStore } from '@/state';
+import type { DecideResultVM, DecideVM, LeaseField, LeaseForm } from './types';
 
 const HORIZON_YEARS = 10;
 const LEASE_FIELDS: readonly LeaseField[] = ['monthly', 'termMonths', 'dueAtSigning', 'running'];
-export const NEXT_DECISIONS: readonly DecisionKind[] = ['moving', 'kid', 'jobOffer', 'wedding'];
 
 const sampleForm = (): LeaseForm => ({ ...leaseScenarioSample });
 
@@ -96,7 +94,6 @@ export function useDecide(opts: { now?: Date } = {}): DecideVM {
   const ready = useAppReady();
   const profile = useAppStore((s) => s.profile);
   const isDemoProfile = useAppStore((s) => s.profileOrigin) === 'demo';
-  const isPro = usePro().isPro;
   const [form, setForm] = useState<LeaseForm>(sampleForm);
   const [edited, setEdited] = useState<ReadonlySet<LeaseField>>(new Set());
 
@@ -134,7 +131,5 @@ export function useDecide(opts: { now?: Date } = {}): DecideVM {
     setLease,
     resetLease,
     result,
-    nextDecisions: [...NEXT_DECISIONS],
-    pro: { isPro, href: SCREEN_ROUTES.S15 },
   };
 }

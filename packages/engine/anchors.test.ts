@@ -5,7 +5,7 @@ import type { Forecast, ForecastPoint, Profile, YearAnchor } from '@lifeguessr/t
 import { areaByZip, cloneProfileDemo, profileDemo } from '@lifeguessr/data/fixtures';
 import { aiForecastSanity, assumptions } from './assumptions';
 import {
-  anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, scenarioEffectIssues,
+  anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, pointAt, scenarioEffectIssues,
 } from './anchors';
 import { applyPatch, forecast } from './forecast';
 import { inflationAnnualOf } from './simulate';
@@ -24,7 +24,7 @@ function validAnchors(): YearAnchor[] {
 describe('aiForecastSanity', () => {
   it('holds the guard values, is marked as an assumption, and stays out of the user-facing list', () => {
     expect(aiForecastSanity.value).toEqual({
-      relative: 0.5, floorMonths: 12, bandMaxRatio: 3, effectRatioMin: 0.25, effectRatioMax: 4, effectFloor: 1_000,
+      relative: 0.25, floorMonths: 12, bandMaxRatio: 3, effectRatioMin: 1 / 3, effectRatioMax: 3, effectFloor: 1_000,
     });
     expect(aiForecastSanity.assumption).toBe(true);
     expect(Object.keys(assumptions)).not.toContain('aiForecastSanity');
@@ -168,6 +168,31 @@ describe('anchorsToForecast', () => {
     expect(() => anchorsToForecast(bad, TODAY)).toThrow(RangeError);
     expect(() => anchorsToForecast(validAnchors(), Number.NaN)).toThrow(RangeError);
     expect(() => anchorsToForecast(validAnchors(), Number.POSITIVE_INFINITY)).toThrow(RangeError);
+  });
+});
+
+describe('pointAt', () => {
+  const f = anchorsToForecast(validAnchors(), TODAY);
+
+  it('returns the year-end point, month 12 × years', () => {
+    expect(pointAt(f, 1)).toBe(f.points[12]);
+    expect(pointAt(f, 3)).toBe(f.points[36]);
+    expect(pointAt(f, 10)).toBe(f.points[120]);
+  });
+
+  it.each([['0', 0], ['1.5', 1.5], ['-1', -1], ['NaN', Number.NaN], ['Infinity', Number.POSITIVE_INFINITY]])(
+    'throws RangeError for years = %s (not a positive integer)',
+    (_label, years) => {
+      expect(() => pointAt(f, years)).toThrow(RangeError);
+    },
+  );
+
+  it('throws RangeError when the forecast has no point that far out', () => {
+    expect(f.points).toHaveLength(121);
+    expect(() => pointAt(f, 11)).toThrow(RangeError);
+    const short: Forecast = { points: f.points.slice(0, 61), in10y: f.in10y, todaysDollars: false }; // months 0..60
+    expect(() => pointAt(short, 5)).not.toThrow();
+    expect(() => pointAt(short, 6)).toThrow(RangeError);
   });
 });
 
@@ -358,9 +383,12 @@ describe('forecastSanityIssues', () => {
       expect(forecastSanityIssues(flatRef, flatRef, measured.takeHomePay.value)).toEqual([]);
     });
 
-    it('accepts a candidate band no wider than the tolerance', () => {
-      const half = (tolerance * 0.9) / 2;
-      const banded = remap(flatRef, (p) => ({ mid: p.mid, low: p.mid - half, high: p.mid + half }));
+    it('accepts a candidate band no wider than the tolerance, which grows with the year (12 months of pay at year 10)', () => {
+      // 90% of the floor at each year: the floor is tolerance × year / 10, so the band widens with month / 120.
+      const banded = remap(flatRef, (p) => {
+        const half = (tolerance * 0.9 * (p.month / 120)) / 2;
+        return { mid: p.mid, low: p.mid - half, high: p.mid + half };
+      });
       expect(forecastSanityIssues(banded, flatRef, measured.takeHomePay.value)).toEqual([]);
     });
 
@@ -414,18 +442,56 @@ describe('forecastSanityIssues: the tolerance at the extremes of net worth', () 
     const points = Array.from({ length: 121 }, (_, month) => ({ month, mid, low: mid - half, high: mid + half }));
     return { points, in10y: points[120]!, todaysDollars: false };
   };
-  const pay = 5_000; // the floor tolerance is 12 × 5,000 = $60,000
+  /** A net worth that grows in a straight line from 0 to `mid` at month 120: the same share of the floor at every year. */
+  const ramp = (mid: number): Forecast => {
+    const points = Array.from({ length: 121 }, (_, month) => ({ month, mid: (mid * month) / 120, low: (mid * month) / 120, high: (mid * month) / 120 }));
+    return { points, in10y: points[120]!, todaysDollars: false };
+  };
+  const pay = 5_000; // the floor tolerance is 12 × 5,000 = $60,000 at year 10, $6,000 per year of the horizon
 
-  it('near zero the tolerance is a year of pay, so a sensible answer passes and a runaway one fails', () => {
-    expect(forecastSanityIssues(flat(40_000), flat(0), pay)).toEqual([]);
-    expect(forecastSanityIssues(flat(-40_000), flat(-10), pay)).toEqual([]);
-    expect(forecastSanityIssues(flat(300_000), flat(0), pay).length).toBeGreaterThan(0);
-    expect(forecastSanityIssues(flat(-300_000), flat(0), pay).length).toBeGreaterThan(0);
+  it('near zero the tolerance is a year of pay at year 10, so a sensible answer passes and a runaway one fails', () => {
+    // $40,000 off at year 10 and proportionally less before: inside the $6,000 × year floor at every year.
+    expect(forecastSanityIssues(ramp(40_000), flat(0), pay)).toEqual([]);
+    expect(forecastSanityIssues(ramp(-40_000), flat(-10), pay)).toEqual([]);
+    expect(forecastSanityIssues(ramp(300_000), flat(0), pay).length).toBeGreaterThan(0);
+    expect(forecastSanityIssues(ramp(-300_000), flat(0), pay).length).toBeGreaterThan(0);
+  });
+
+  it('the floor in months of pay scales with the year: 1.2 months at year 1, 12 at year 10', () => {
+    // Reference: net worth 0 and no band, so the relative part of the tolerance is 0 and the floor decides.
+    // The candidate is $10,000 (2 × pay) off, at one year-end point only; every other point equals the reference.
+    const offAt = (month: number): Forecast => {
+      const f = flat(0);
+      const points = f.points.map((p) => (p.month === month ? { ...p, mid: 2 * pay, low: 2 * pay, high: 2 * pay } : p));
+      return { points, in10y: points[120]!, todaysDollars: false };
+    };
+    // Year 1: floor = 1.2 × 5,000 = $6,000 < $10,000
+    const year1 = forecastSanityIssues(offAt(12), flat(0), pay);
+    expect(year1).toHaveLength(1);
+    expect(year1[0]).toMatch(/^year 1:.*above the plausible upper bound \$6,000/);
+    // Year 2: floor $12,000, year 10: floor $60,000
+    expect(forecastSanityIssues(offAt(24), flat(0), pay)).toEqual([]);
+    expect(forecastSanityIssues(offAt(120), flat(0), pay)).toEqual([]);
+  });
+
+  it('the band limit follows the same year-scaled floor', () => {
+    // A $10,000-wide band around a zero reference: over the year-1 floor ($6,000), under the year-10 one ($60,000).
+    const bandAt = (month: number): Forecast => {
+      const f = flat(0);
+      const points = f.points.map((p) => (p.month === month ? { ...p, low: -5_000, high: 5_000 } : p));
+      return { points, in10y: points[120]!, todaysDollars: false };
+    };
+    expect(forecastSanityIssues(bandAt(12), flat(0), pay).join('\n')).toMatch(/year 1:.*band/);
+    expect(forecastSanityIssues(bandAt(120), flat(0), pay)).toEqual([]);
   });
 
   it('far from zero the tolerance is relative to the size, for a negative net worth as for a positive one', () => {
     expect(forecastSanityIssues(flat(600_000), flat(500_000), pay)).toEqual([]);
     expect(forecastSanityIssues(flat(-600_000), flat(-500_000), pay)).toEqual([]);
+    // ±25% of |rules mid| (= $125,000 here): just inside passes, just outside does not
+    expect(forecastSanityIssues(flat(620_000), flat(500_000), pay)).toEqual([]);
+    expect(forecastSanityIssues(flat(630_000), flat(500_000), pay).length).toBeGreaterThan(0);
+    expect(forecastSanityIssues(flat(370_000), flat(500_000), pay).length).toBeGreaterThan(0);
     expect(forecastSanityIssues(flat(-1_200_000), flat(-500_000), pay).length).toBeGreaterThan(0);
     expect(forecastSanityIssues(flat(1_200_000), flat(500_000), pay).length).toBeGreaterThan(0);
   });
@@ -454,7 +520,8 @@ describe('scenarioEffectIssues', () => {
       ['+$5,900 (inside the $1,000 floor)', 5_900],
       ['+$4,100 (inside the floor, below)', 4_100],
       ['+$7,500 (ratio 1.5)', 7_500],
-      ['+$19,000 (ratio 3.8)', 19_000],
+      ['+$14,000 (ratio 2.8)', 14_000],
+      ['+$1,800 (ratio 0.36)', 1_800],
     ])('accepts an AI effect of %s', (_label, effect) => {
       expect(scenarioEffectIssues(pair(effect), reference)).toEqual([]);
     });
@@ -463,7 +530,9 @@ describe('scenarioEffectIssues', () => {
       ['$0 (scenario equal to base)', 0],
       ['−$5,000 (wrong sign)', -5_000],
       ['+$25,000 (5×)', 25_000],
+      ['+$16,000 (3.2×)', 16_000],
       ['+$1,000 (a fifth)', 1_000],
+      ['+$1,500 (0.3×)', 1_500],
       ['NaN', Number.NaN],
       ['Infinity', Number.POSITIVE_INFINITY],
     ])('rejects an AI effect of %s', (_label, effect) => {
@@ -548,6 +617,85 @@ describe('scenarioEffectIssues', () => {
       const real = (effect: number) => ({ base: inReal(at120(base)), scenario: inReal(at120(base + effect)) });
       expect(scenarioEffectIssues(real(5_900), real(5_000))).toEqual([]);
       expect(scenarioEffectIssues(real(25_000), real(5_000)).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('at another horizon (years)', () => {
+    /** A forecast whose only meaningful value is the point at the end of `years`. */
+    const atYear = (years: number, mid: number): Forecast => {
+      const points = Array.from({ length: 121 }, (_, month) => ({ month, mid: month === 12 * years ? mid : 0, low: 0, high: 0 }));
+      return { points, in10y: points[120]!, todaysDollars: false };
+    };
+    const pairAt = (years: number, effect: number) => ({ base: atYear(years, base), scenario: atYear(years, base + effect) });
+    const reference1 = pairAt(1, 1_077); // the floor at year 1 is 1,000 × 1 / 10 = $100
+
+    it('accepts an AI effect inside the scaled floor and inside the ratio range', () => {
+      expect(scenarioEffectIssues(pairAt(1, 1_150), reference1, undefined, 1)).toEqual([]); // |73| ≤ $100
+      expect(scenarioEffectIssues(pairAt(1, 1_200), reference1, undefined, 1)).toEqual([]); // |123| is outside the floor, the ratio 1.11 is inside the range
+    });
+
+    it('rejects a too-small effect, naming the year and the ratio', () => {
+      const issues = scenarioEffectIssues(pairAt(1, 300), reference1, undefined, 1);
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toContain('1-year effect');
+      expect(issues[0]).toContain('0.3 times');
+    });
+
+    it('rejects a wrong-sign effect, naming the year', () => {
+      const issues = scenarioEffectIssues(pairAt(1, -50), reference1, undefined, 1);
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toMatch(/^1-year effect -\$50 has the wrong sign/);
+    });
+
+    it('the same $300 against a $1,077 effect passes at 10 years: the $1,000 floor covers it', () => {
+      expect(scenarioEffectIssues(pairAt(10, 300), pairAt(10, 1_077))).toEqual([]);
+      expect(scenarioEffectIssues(pairAt(10, 300), pairAt(10, 1_077), undefined, 10)).toEqual([]);
+    });
+
+    it('reads the point at month 12 × years and ignores the others (3 and 5 years)', () => {
+      const ref3 = pairAt(3, 5_000);
+      expect(scenarioEffectIssues(pairAt(3, 5_250), ref3, undefined, 3)).toEqual([]); // floor $300
+      expect(scenarioEffectIssues(pairAt(3, 25_000), ref3, undefined, 3)[0]).toMatch(/^3-year effect /);
+      // The 10-year point is 0 in both pairs: a 3-year check at years = 10 sees no effect at all.
+      expect(scenarioEffectIssues(pairAt(3, 5_000), ref3, undefined, 10)).toEqual([]);
+    });
+
+    it('scales the floor with the horizon: $500 at 5 years, $100 at 1, $1,000 at 10', () => {
+      const ref5 = pairAt(5, 5_000);
+      expect(scenarioEffectIssues(pairAt(5, 5_450), ref5, undefined, 5)).toEqual([]);
+      const strict = { ...aiForecastSanity.value, effectRatioMax: 1.05 }; // 5,450 / 5,000 = 1.09: only the floor can accept it
+      expect(scenarioEffectIssues(pairAt(5, 5_450), ref5, strict, 5)).toEqual([]); // |450| ≤ $500
+      expect(scenarioEffectIssues(pairAt(5, 5_550), ref5, strict, 5)).toHaveLength(1); // |550| > $500
+      expect(scenarioEffectIssues(pairAt(1, 1_000 + 90), pairAt(1, 1_000), strict, 1)).toEqual([]); // |90| ≤ $100
+      expect(scenarioEffectIssues(pairAt(1, 1_000 + 110), pairAt(1, 1_000), strict, 1)).toHaveLength(1); // |110| > $100
+    });
+
+    it('every message starts with the year of the check', () => {
+      const messages = [
+        scenarioEffectIssues(pairAt(3, Number.NaN), pairAt(3, 5_000), undefined, 3),
+        scenarioEffectIssues(pairAt(3, 0), pairAt(3, 5_000), undefined, 3),
+        scenarioEffectIssues(pairAt(3, -5_000), pairAt(3, 5_000), undefined, 3),
+        scenarioEffectIssues(pairAt(3, 25_000), pairAt(3, 5_000), undefined, 3),
+        scenarioEffectIssues(pairAt(3, 5_000), pairAt(3, 0.5), undefined, 3),
+      ];
+      for (const issues of messages) {
+        expect(issues).toHaveLength(1);
+        expect(issues[0]).toMatch(/^3-year effect/);
+      }
+    });
+
+    it('a candidate with no point that far out is an issue, a reference without one is a programmer error', () => {
+      const short = (years: number, effect: number) => {
+        const f = pairAt(years, effect); // months 0..36
+        return { base: { ...f.base, points: f.base.points.slice(0, 37) }, scenario: { ...f.scenario, points: f.scenario.points.slice(0, 37) } };
+      };
+      expect(scenarioEffectIssues(short(3, 5_000), pairAt(3, 5_000), undefined, 3)).toEqual([]);
+      expect(scenarioEffectIssues(short(3, 5_000), pairAt(5, 5_000), undefined, 5)[0]).toMatch(/^5-year effect/);
+      expect(() => scenarioEffectIssues(pairAt(5, 5_000), short(5, 5_000), undefined, 5)).toThrow(RangeError);
+    });
+
+    it.each([0, 1.5, -3, Number.NaN])('throws RangeError for years = %s', (years) => {
+      expect(() => scenarioEffectIssues(pairAt(10, 5_000), pairAt(10, 5_000), undefined, years)).toThrow(RangeError);
     });
   });
 

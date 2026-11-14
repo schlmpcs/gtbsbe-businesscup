@@ -27,15 +27,21 @@ const moveSentence: Record<MoveKind, (category?: CostCategory) => string> = {
   reshopInsurance: () => 'This move compares car insurance quotes to lower your premium.',
 };
 
-/** Second sentence of a move explanation: the 10-year effect, worded by where the number came from. */
+/** "1 year", "3 years": how a horizon of whole years is written (also used by the forecast screen). */
+export const yearsPhrase = (years: number): string => (years === 1 ? '1 year' : `${years} years`);
+
+/** Second sentence of a move explanation: the effect after `years`, worded by where the number came from. */
 const moveEffect = {
   simulation: {
-    gain: (amount: string) => `In our simulation it adds about ${amount} to your net worth in 10 years.`,
-    loss: (amount: string) => `In our simulation it lowers your net worth by about ${amount} in 10 years.`,
+    gain: (amount: string, years: number) => `In our simulation it adds about ${amount} to your net worth in ${yearsPhrase(years)}.`,
+    loss: (amount: string, years: number) =>
+      `In our simulation it lowers your net worth by about ${amount} in ${yearsPhrase(years)}.`,
   },
   ai: {
-    gain: (amount: string) => `Our AI estimate is that it adds about ${amount} to your net worth in 10 years.`,
-    loss: (amount: string) => `Our AI estimate is that it lowers your net worth by about ${amount} in 10 years.`,
+    gain: (amount: string, years: number) =>
+      `Our AI estimate is that it adds about ${amount} to your net worth in ${yearsPhrase(years)}.`,
+    loss: (amount: string, years: number) =>
+      `Our AI estimate is that it lowers your net worth by about ${amount} in ${yearsPhrase(years)}.`,
   },
 } as const;
 
@@ -46,18 +52,20 @@ export const ai = {
   moveSummary: (kind: MoveKind, category?: CostCategory) => moveSentence[kind](category),
   explain: {
     /**
-     * `source` says where the 10-year number came from: 'ai' (the model's estimate, checked against
-     * our rules) is named as such; 'rules' or none is the deterministic simulation.
+     * `effect` is the move's change in net worth after `years` (10 unless the screen shows another
+     * horizon). `source` says where it came from: 'ai' (the model's estimate, checked against our
+     * rules) is named as such; 'rules' or none is the deterministic simulation.
      */
     move: (
       kind: MoveKind,
       category: CostCategory | undefined,
-      effect10y: string,
+      effect: string,
       positive: boolean,
-      source?: ForecastSource,
+      source: ForecastSource | undefined,
+      years: number,
     ) => {
       const sentences = source === 'ai' ? moveEffect.ai : moveEffect.simulation;
-      return `${moveSentence[kind](category)} ${positive ? sentences.gain(effect10y) : sentences.loss(effect10y)}`;
+      return `${moveSentence[kind](category)} ${positive ? sentences.gain(effect, years) : sentences.loss(effect, years)}`;
     },
     loan: (monthly: string, totalInterest: string, payoff: string | null) =>
       `This loan costs ${monthly} a month and ${totalInterest} in interest in total. ${

@@ -183,7 +183,7 @@ describe('useCheckin (S14)', () => {
       patch: { debts: card.patch.debts!.map((d) => ({ ...d, extraPayment: (d.extraPayment ?? 0) + 50 })) },
     };
     act(() => useAppStore.getState().commitMove(stored));
-    await waitFor(() => expect(result.current.move.committed?.id).toBe(card.id));
+    await waitFor(() => expect(result.current.move.committed).toMatchObject({ id: card.id, source: 'ai' }));
     const { committed, progress } = result.current.move;
     expect(committed).toMatchObject({ id: card.id, source: 'ai', isCommitted: true });
     expect(committed?.effect10y).not.toBe(1); // the current ranked number, not the stored one
@@ -199,27 +199,40 @@ describe('useCheckin (S14)', () => {
     const stored = { ...rankMoves(cloneProfileDemo(), { rates })[0]!, id: 'cutCategory:gone', kind: 'cutCategory' as const };
     act(() => useAppStore.getState().commitMove(stored));
     await waitFor(() => expect(result.current.move.committed?.id).toBe('cutCategory:gone'));
-    expect(result.current.move.committed).toMatchObject({ source: null, effect10y: stored.effect10y });
+    // Its number is the frozen 10-year one, and it says so (the screen's year may be another).
+    expect(result.current.move.committed).toMatchObject({
+      source: null, effect10y: stored.effect10y, effect: stored.effect10y, horizonYears: 10,
+    });
   });
 
-  it('"I did it" waits for the forecast answer, like S1', async () => {
+  it('measures the suggestions, and the committed move while it is ranked, at the picked year', async () => {
+    useAppStore.getState().setHorizonYears(3);
+    const { result } = await ready();
+    const { suggestions } = result.current.move;
+    expect(suggestions.status).toBe('ready');
+    const listed = suggestions.status === 'ready' ? suggestions.data : [];
+    expect(listed.length).toBeGreaterThan(0);
+    expect(listed.map((m) => m.horizonYears)).toEqual(listed.map(() => 3));
+
+    act(() => result.current.move.commit(listed[0]!.id));
+    await waitFor(() => expect(result.current.move.committed).toMatchObject({ id: listed[0]!.id, horizonYears: 3, effect: listed[0]!.effect }));
+    expect(result.current.move.committed?.effect10y).not.toBe(result.current.move.committed?.effect); // 10 years apart
+  });
+
+  it('"I did it" works at once, like S1: the rules forecast for this profile is on screen while the answer is on its way', async () => {
     let release: (() => void) | undefined;
     mockForecastRoute((body) => new Promise<ForecastBundle>((resolve) => (release = () => resolve(rulesAnswer(body)))));
     const { result } = renderHook(() => useCheckin({ now: NOW }));
     await waitForReady(result);
     await waitFor(() => expect(release).toBeDefined());
-    expect(result.current.move.actionsDisabled).toBe(true);
+    expect(result.current.move.actionsDisabled).toBe(false);
     const first = rankMoves(cloneProfileDemo(), { rates })[0]!;
     act(() => useAppStore.getState().commitMove(first));
-    act(() => result.current.move.markDone());
-    expect(useAppStore.getState().profile.doneMoveIds).toEqual([]);
-    expect(result.current.move.answer).toBe('none');
-
-    await act(async () => release?.());
-    await waitFor(() => expect(result.current.move.actionsDisabled).toBe(false));
+    expect(result.current.move.committed).toMatchObject({ id: first.id, source: 'rules' });
     act(() => result.current.move.markDone());
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([first.id]);
     expect(result.current.move.answer).toBe('done');
+    await act(async () => release?.());
   });
 
   it('links the preview note to Pro', async () => {

@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import {
   applyPatch, cardAprDefault, deflateForecast, estimateSpread, forecast, hasEstimates, inflationAnnualFallback,
-  inflationAnnualOf, monthEnd, moveCandidates, rankMoves, returnAnnualNominal,
+  inflationAnnualOf, monthEnd, moveCandidates, pointAt, rankMoves, returnAnnualNominal, type MoveCandidate,
 } from '@lifeguessr/engine';
 import type * as Engine from '@lifeguessr/engine';
 import {
-  COST_CATEGORIES, type CostCategory, type Forecast, type ForecastBundle, type ForecastSource, type Move, type Profile,
+  COST_CATEGORIES, FORECAST_HORIZONS, type CostCategory, type Forecast, type ForecastBundle, type ForecastSource, type HorizonYears,
+  type Move, type Profile,
 } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,7 +20,8 @@ import { howWeCalculate } from './howWeCalculate';
 import { useFuture } from './useFuture';
 import { FORECAST_DEBOUNCE_MS } from './useForecastBundle';
 import { useMoveExplain } from './useMoveExplain';
-import { moveTarget } from './useNextMoves';
+import type { ForecastAnswer, MoveVM } from './types';
+import { moveTarget, rankAnswer } from './useNextMoves';
 import { useToday } from './useToday';
 
 // The local rules engine can be made to fail, for the "route down and engine down" screens.
@@ -85,7 +87,7 @@ describe('useFuture (S10)', () => {
     await waitForReady(result);
     const expected = forecast(cloneProfileDemo(), 10, { todaysDollars: true, rates });
     expect(result.current.status).toBe('ready');
-    expect(result.current.in10y).toEqual(expected.in10y);
+    expect(result.current.atHorizon).toEqual(expected.in10y);
     expect(result.current.points).toHaveLength(121);
     expect(result.current.yearly.map((p) => p.month)).toEqual([0, 12, 24, 36, 48, 60, 72, 84, 96, 108, 120]);
     expect(result.current.band.isZero).toBe(false);
@@ -96,7 +98,7 @@ describe('useFuture (S10)', () => {
     expect(result.current.band.estimatedFields).toContainEqual({ field: 'debtMinPayment', debtId: 'card-1' });
 
     act(() => result.current.setTodaysDollars(false));
-    expect(result.current.in10y).toEqual(forecast(cloneProfileDemo(), 10, { rates }).in10y);
+    expect(result.current.atHorizon).toEqual(forecast(cloneProfileDemo(), 10, { rates }).in10y);
     act(() => result.current.setTodaysDollars(true));
     expect(route.calls).toHaveLength(1); // the toggle only changes the dollars
   });
@@ -130,7 +132,7 @@ describe('useFuture (S10)', () => {
     if (result.current.moves.status !== 'ready') return;
     expect(result.current.moves.data.find((m) => m.id === first.id)?.isCommitted).toBe(true);
     expect(result.current.committedPreview?.moveId).toBe(first.id);
-    expect(result.current.committedPreview!.in10y.mid).toBeGreaterThan(result.current.in10y.mid);
+    expect(result.current.committedPreview!.point.mid).toBeGreaterThan(result.current.atHorizon.mid);
     expect(route.calls).toHaveLength(1); // the preview was part of the answer: no new request
 
     act(() => result.current.markDone(first.id));
@@ -162,14 +164,32 @@ describe('useFuture (S10)', () => {
     await waitForSettled(result);
   });
 
-  it('does not commit or mark done while the numbers on screen are the previous profile’s, and does again once they are current', async () => {
+  it('keeps the moves usable on a profile change: the numbers on screen are the new profile’s rules forecast', async () => {
+    const { result } = renderHook(() => useFuture());
+    await waitForReady(result);
+    act(() => useAppStore.getState().setSpending('eatingOut', 100));
+    expect(result.current.isRefreshing).toBe(true);
+    expect(result.current.forecast).toMatchObject({ status: 'ready', source: 'rules', isStale: false });
+    expect(result.current.actionsDisabled).toBe(false);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    const expected = rankMoves(useAppStore.getState().profile, { rates });
+    expect(result.current.moves.data.map((m) => m.id)).toEqual(expected.map((m) => m.id)); // the new profile's ranking
+    const id = result.current.moves.data[0]!.id;
+    act(() => result.current.commit(id));
+    expect(useAppStore.getState().profile.committedMoveId).toBe(id);
+    await waitForSettled(result);
+  });
+
+  it('does not commit or mark done while the numbers on screen are the previous profile’s (the local engine failed), and does again once they are current', async () => {
     const { result } = renderHook(() => useFuture());
     await waitForReady(result);
     expect(result.current.actionsDisabled).toBe(false);
     if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
     const [first, second] = result.current.moves.data;
 
+    control.rulesFails = true; // no rules forecast for the new profile: the previous answer stays up
     act(() => useAppStore.getState().setSpending('eatingOut', 100));
+    control.rulesFails = false;
     expect(result.current.isRefreshing).toBe(true);
     expect(result.current.forecast).toMatchObject({ status: 'ready', isStale: true }); // the previous profile's answer
     expect(result.current.actionsDisabled).toBe(true);
@@ -215,36 +235,39 @@ describe('useFuture (S10)', () => {
     expect(useAppStore.getState().profile.committedMoveId).toBe(id);
   });
 
-  it('keeps the moves disabled until the first answer arrives', async () => {
+  it('shows the rules forecast and its ranked moves at once, usable, while the first answer is on its way', async () => {
     let release!: (b: ForecastBundle) => void;
     route = mockForecastRoute(() => new Promise<ForecastBundle>((resolve) => (release = resolve)));
     const { result } = renderHook(() => useFuture());
     await waitFor(() => expect(route.calls).toHaveLength(1));
-    expect(result.current.actionsDisabled).toBe(true);
+    expect(result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true, actionsDisabled: false });
+    expect(result.current.atHorizon).toEqual(forecast(cloneProfileDemo(), 10, { todaysDollars: true, rates }).in10y);
+    expect(result.current.moves.status === 'ready' && result.current.moves.data.every((m) => m.source === 'rules')).toBe(true);
     act(() => release(aiAnswer(route.calls[0])));
-    await waitFor(() => expect(result.current.actionsDisabled).toBe(false));
+    await waitFor(() => expect(result.current.source).toBe('ai'));
+    expect(result.current).toMatchObject({ isRefreshing: false, actionsDisabled: false });
   });
 
-  it('keeps the band as the shown numbers have it while a refresh is under way, then follows the new answer', async () => {
+  it('keeps the band as the shown numbers have it: the new rules forecast at once, then the new answer', async () => {
     // One estimated input: the rules band is the width of that one estimate.
     const oneEstimate: Profile = { ...measured(cloneProfileDemo()), cash: { ...cloneProfileDemo().cash, isEstimate: true } };
     useAppStore.setState({ profile: oneEstimate });
     const { result } = renderHook(() => useFuture());
     await waitForReady(result);
     expect(result.current.band).toEqual({ isZero: false, kind: 'inputs', estimatedFields: [{ field: 'cash' }] });
-    const shownBand = result.current.in10y.high - result.current.in10y.low;
+    const shownBand = result.current.atHorizon.high - result.current.atHorizon.low;
     expect(shownBand).toBeGreaterThan(1);
 
     act(() => useAppStore.getState().setField('cash', oneEstimate.cash.value)); // typed in: now exact
     expect(hasEstimates(useAppStore.getState().profile)).toBe(false);
     expect(result.current.isRefreshing).toBe(true);
-    // The numbers on screen still have their band, so the flags still describe it.
-    expect(result.current.in10y.high - result.current.in10y.low).toBe(shownBand);
-    expect(result.current.band).toEqual({ isZero: false, kind: 'inputs', estimatedFields: [{ field: 'cash' }] });
+    // The numbers on screen are already the exact profile's rules forecast: no band, and the flags say so.
+    expect(result.current.atHorizon.high - result.current.atHorizon.low).toBeLessThan(1);
+    expect(result.current.band).toEqual({ isZero: true, kind: 'inputs', estimatedFields: [] });
 
     await waitForSettled(result);
     expect(result.current.band).toEqual({ isZero: true, kind: 'inputs', estimatedFields: [] });
-    expect(result.current.in10y.high - result.current.in10y.low).toBeLessThan(1);
+    expect(result.current.atHorizon.high - result.current.atHorizon.low).toBeLessThan(1);
   });
 
   it('ranks by the order of the AI answer, labeled as the AI estimate', async () => {
@@ -273,28 +296,31 @@ describe('useFuture (S10)', () => {
       { month: '2026-10', totals: totals({ ...Object.fromEntries(COST_CATEGORIES.map((c) => [c, cloneProfileDemo().spending[c].value])), subscriptions: 120 }), oneOffs: [] },
     ]));
     expect(useAppStore.getState().subscriptionsDetected).toBe(true);
-    // New candidate, new patches: until its answer arrives the screen shows the previous ranking, as it was.
+    // New candidate, new patches: at once the rules ranking of the new candidates, all from one answer.
     expect(result.current.isRefreshing).toBe(true);
-    expect({ kinds: kinds(), effects: effects() }).toEqual(before);
-    expect(effects().every(Number.isFinite)).toBe(true);
+    const rulesNow = rankMoves(useAppStore.getState().profile, { rates, subscriptionsDetected: true });
+    expect(kinds()).toEqual(rulesNow.map((m) => m.kind));
+    expect(effects()).toEqual(rulesNow.map((m) => m.effect10y));
+    expect({ kinds: kinds(), effects: effects() }).not.toEqual(before);
 
-    await waitFor(() => {
-      expect(rankMoves(useAppStore.getState().profile, { rates, subscriptionsDetected: true }).map((m) => m.kind)).toEqual(kinds());
-    }, AFTER_CHANGE);
-    expect(result.current.isRefreshing).toBe(false);
+    await waitForSettled(result);
+    expect(kinds()).toEqual(rulesNow.map((m) => m.kind)); // the route's answer (rules here) for the same candidates
     expect(kinds()).toContain('cancelSubscriptions');
   });
 
-  it('keeps the previous answer while a refresh is under way, then switches', async () => {
+  it('moves the numbers at once with the rules forecast while a refresh is under way, then takes the answer', async () => {
+    route = mockForecastRoute((body) => aiAnswer(body, { baseShift: 5_000 }));
     const { result } = renderHook(() => useFuture());
-    await waitForReady(result);
-    const before = result.current.in10y;
+    await waitFor(() => expect(result.current.source).toBe('ai'));
+    const before = result.current.atHorizon;
     act(() => useAppStore.getState().setSpending('eatingOut', 100));
-    expect(result.current.isRefreshing).toBe(true);
-    expect(result.current.status).toBe('ready');
-    expect(result.current.in10y).toEqual(before);
+    expect(result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true });
+    const rulesNow = forecast(useAppStore.getState().profile, 10, { todaysDollars: true, rates }).in10y;
+    expect(result.current.atHorizon).toEqual(rulesNow);
+    expect(result.current.atHorizon).not.toEqual(before);
     await waitForSettled(result);
-    expect(result.current.in10y.mid).toBeGreaterThan(before.mid);
+    expect(result.current.source).toBe('ai');
+    expect(result.current.atHorizon.mid).toBeGreaterThan(rulesNow.mid); // the model's answer (here: rules + $5,000)
   });
 
   it('asks again for a committed move whose stored patch no longer matches its candidate, and previews it', async () => {
@@ -308,12 +334,14 @@ describe('useFuture (S10)', () => {
     expect(result.current.committedPreview).toBeNull();
 
     act(() => useAppStore.getState().commitMove(stale));
-    await waitFor(() => expect(result.current.committedPreview?.moveId).toBe(stale.id), AFTER_CHANGE);
+    expect(result.current.committedPreview?.moveId).toBe(stale.id); // at once, from the rules forecast
+    await waitFor(() => expect(route.calls).toHaveLength(2), AFTER_CHANGE);
+    await waitForSettled(result);
     const asked = route.calls.at(-1) as { scenarios: { id: string; patch: unknown }[] };
     expect(asked.scenarios.filter((s) => s.id.startsWith('committed:'))).toEqual([{ id: `committed:${stale.id}`, patch: stale.patch }]);
     expect(route.calls).toHaveLength(2); // one request for the commit, not one per render
     const deflator = (1 + rates.inflationAnnual) ** 10;
-    expect(result.current.committedPreview!.in10y.mid - result.current.in10y.mid).toBeCloseTo(77_777 / deflator, 6);
+    expect(result.current.committedPreview!.point.mid - result.current.atHorizon.mid).toBeCloseTo(77_777 / deflator, 6);
   });
 
   it('sends no committed scenario, and shows no preview, once the committed move’s debt is gone', async () => {
@@ -349,7 +377,7 @@ describe('useFuture (S10)', () => {
     const { result } = renderHook(() => useFuture());
     await waitForReady(result);
     expect(result.current.band).toEqual({ isZero: false, kind: 'model', estimatedFields: [] });
-    expect(result.current.in10y.high - result.current.in10y.low).toBeGreaterThan(1);
+    expect(result.current.atHorizon.high - result.current.atHorizon.low).toBeGreaterThan(1);
   });
 
   it('band.isZero is true when the model gave a single number, even with estimated inputs', async () => {
@@ -365,7 +393,7 @@ describe('useFuture (S10)', () => {
     const { result } = renderHook(() => useFuture());
     await waitForReady(result);
     expect(result.current.source).toBe('rules');
-    expect(result.current.in10y).toEqual(forecast(cloneProfileDemo(), 10, { todaysDollars: true, rates }).in10y);
+    expect(result.current.atHorizon).toEqual(forecast(cloneProfileDemo(), 10, { todaysDollars: true, rates }).in10y);
   });
 
   it('is an error when the route and the local engine both fail', async () => {
@@ -394,13 +422,15 @@ describe('useToday (S1)', () => {
       });
       expect(result.current.monthEnd.data.takeHome).toEqual({ value: 5200, isEstimate: false });
     }
-    expect(result.current.in10y).toEqual(forecast(cloneProfileDemo(), 10, { todaysDollars: true, rates }).in10y);
-    expect(result.current.in10yBandIsZero).toBe(false);
-    expect(result.current.in10yBandKind).toBe('inputs');
+    expect(result.current.atHorizon).toEqual(forecast(cloneProfileDemo(), 10, { todaysDollars: true, rates }).in10y);
+    expect(result.current.bandIsZero).toBe(false);
+    expect(result.current.bandKind).toBe('inputs');
     expect(result.current.source).toBe('rules');
     expect(result.current.forecastError).toBeNull();
     const top = rankMoves(cloneProfileDemo(), { rates })[0]!;
-    expect(result.current.topMove).toEqual({ status: 'ready', data: { ...top, isCommitted: false, target: moveTarget(top), source: 'rules' } });
+    expect(result.current.topMove).toEqual({
+      status: 'ready', data: { ...top, isCommitted: false, target: moveTarget(top), source: 'rules', effect: top.effect10y, horizonYears: 10 },
+    });
     expect(result.current.committedMove).toBeNull();
     expect(result.current.game).toEqual({ date: null, played: 0, total: 0, finished: false, homes: [] });
   });
@@ -419,22 +449,51 @@ describe('useToday (S1)', () => {
     });
   });
 
-  it('shows the month-end card while the forecast is still on its way', async () => {
+  it('is a first visit until the user has a profile, a guess, a played home or the sample life', async () => {
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    expect(result.current.firstVisit).toBe(true);
+    expect(result.current.isSample).toBe(false);
+
+    act(() => void useAppStore.getState().loadSample());
+    expect(result.current.firstVisit).toBe(false);
+    expect(result.current.isSample).toBe(true);
+    expect(result.current.isDemoProfile).toBe(true);
+
+    act(() => useAppStore.getState().clearSample());
+    expect(result.current.firstVisit).toBe(true);
+    act(() => useAppStore.getState().setSelfGuess(3000));
+    expect(result.current.firstVisit).toBe(false);
+  });
+
+  it('is not a first visit once a home was played today', async () => {
+    const card = (id: string, metro: string) => ({ id, metro, layout: '1bed' as const, caption: '', decor: [] });
+    act(() => {
+      useGameStore.getState().startDay('2026-11-14', [card('a', 'Austin, TX'), card('b', 'Boise, ID')]);
+      useGameStore.setState({ reveals: { a: {} as never } });
+    });
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    expect(result.current.firstVisit).toBe(false);
+  });
+
+  it('shows the month-end card and the rules forecast at once while the model’s answer is on its way', async () => {
     let release!: (b: ForecastBundle) => void;
     route = mockForecastRoute(() => new Promise<ForecastBundle>((resolve) => (release = resolve)));
     const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
     await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(result.current.monthEnd.status).toBe('ready');
-    expect(result.current.forecastStatus).toBe('loading');
-    expect(result.current.source).toBeNull();
-    expect(result.current.in10y).toEqual({ month: 120, low: 0, mid: 0, high: 0 });
-    expect(result.current.topMove).toEqual({ status: 'loading' });
+    expect(result.current.forecastStatus).toBe('ready');
+    expect(result.current.source).toBe('rules');
+    expect(result.current.isRefreshing).toBe(true);
+    expect(result.current.atHorizon.mid).toBeGreaterThan(0);
+    expect(result.current.topMove.status).toBe('ready');
 
     act(() => release(aiAnswer(route.calls[0])));
     await waitFor(() => expect(result.current.forecastStatus).toBe('ready'));
     expect(result.current.source).toBe('ai');
-    expect(result.current.in10yBandKind).toBe('model');
-    expect(result.current.in10y.mid).toBeGreaterThan(0);
+    expect(result.current.bandKind).toBe('model');
+    expect(result.current.atHorizon.mid).toBeGreaterThan(0);
   });
 
   it('reports a forecast error, not a blank screen, when the route and the local engine both fail', async () => {
@@ -449,7 +508,7 @@ describe('useToday (S1)', () => {
     expect(result.current.topMove).toEqual({ status: 'error', error: { kind: 'unknown', message: 'engine broke' } });
   });
 
-  it('does not mark the committed move done while the forecast is refreshing', async () => {
+  it('does not mark the committed move done while the numbers on screen are the previous profile’s (the local engine failed)', async () => {
     const { result } = renderHook(() => useToday());
     await waitFor(() => expect(result.current.forecastStatus).toBe('ready'));
     if (result.current.topMove.status !== 'ready' || !result.current.topMove.data) throw new Error('no move');
@@ -457,7 +516,9 @@ describe('useToday (S1)', () => {
     act(() => useAppStore.getState().commitMove({ id: move.id, kind: move.kind, level: move.level, category: move.category, effect10y: move.effect10y, patch: move.patch }));
     expect(result.current.actionsDisabled).toBe(false);
 
+    control.rulesFails = true; // no rules forecast for the new profile: the previous answer stays up
     act(() => useAppStore.getState().setSpending('rentUtilities', 1500));
+    control.rulesFails = false;
     expect(result.current.actionsDisabled).toBe(true);
     act(() => result.current.markCommittedDone());
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([]);
@@ -591,7 +652,201 @@ describe('useToday (S1)', () => {
     act(() => useAppStore.getState().commitMove(stored));
     expect(result.current.committedMove).toEqual({
       ...stored, isCommitted: true, target: { kind: 'spendingTo', category: 'rentUtilities', monthly: 1 }, source: null,
+      effect: 4321, horizonYears: 10, // its frozen number is a 10-year one
     });
+  });
+});
+
+describe('rankAnswer: Next Moves at the chosen year', () => {
+  const profile = cloneProfileDemo();
+  const base = forecast(profile, 10, { rates }); // nominal, as a bundle has it
+  /** The base moved up by `gain(month)` dollars (nominal). */
+  const lifted = (gain: (month: number) => number): Forecast => {
+    const points = base.points.map((p) => ({ ...p, low: p.low + gain(p.month), mid: p.mid + gain(p.month), high: p.high + gain(p.month) }));
+    return { points, in10y: points[120]!, todaysDollars: false };
+  };
+  const cut = (category: CostCategory): MoveCandidate => ({
+    id: `cutCategory:${category}`, kind: 'cutCategory', level: 1, category, patch: { spending: { [category]: 1 } },
+  });
+  // Nominal gains at 1 year / 10 years: A 120 / 1,200 (builds up), B 600 / 600 (all in the first year),
+  // C 0 / 540 (starts after a year), E 480 / 480, D 10 / 100 (small at both).
+  const A = cut('eatingOut');
+  const B: MoveCandidate = { id: 'payCardFirst:card-1', kind: 'payCardFirst', level: 1, patch: { debts: [{ id: 'card-1', extraPayment: 100 }] } };
+  const C = cut('other');
+  const E: MoveCandidate = { id: 'cancelSubscriptions', kind: 'cancelSubscriptions', level: 1, patch: { spending: { subscriptions: 0 } } };
+  const D = cut('groceries');
+  const gains: Record<string, (m: number) => number> = {
+    [A.id]: (m) => 10 * m,
+    [B.id]: (m) => 50 * Math.min(m, 12),
+    [C.id]: (m) => 5 * Math.max(0, m - 12),
+    [E.id]: (m) => 40 * Math.min(m, 12),
+    [D.id]: (m) => (10 * m) / 12,
+  };
+  const candidates = [A, B, C, E, D];
+  const scenarios = Object.fromEntries(candidates.map((c) => [c.id, lifted(gains[c.id]!)]));
+  const answer: ForecastAnswer = { profile, candidates, bundle: { source: 'ai', model: 'test-model', base, scenarios } };
+  const ids = (years: HorizonYears, committedMoveId?: string) =>
+    rankAnswer(answer, { doneMoveIds: [], ...(committedMoveId ? { committedMoveId } : {}) }, years).map((r) => r.move.id);
+  /** The effect the screen shows: scenario − base at that year, today's dollars. */
+  const effectAt = (id: string, years: HorizonYears) =>
+    pointAt(deflateForecast(scenarios[id]!, rates.inflationAnnual), years).mid - pointAt(deflateForecast(base, rates.inflationAnnual), years).mid;
+
+  it('ranks by the gain at the chosen year: the one that builds up wins at 10 years, the quick one at 1', () => {
+    expect(ids(10)).toEqual([A.id, B.id, C.id]);
+    expect(ids(1)).toEqual([B.id, E.id, A.id]);
+  });
+
+  it('drops a move worth less than $1 at the chosen year, and keeps it where it is worth more', () => {
+    expect(ids(1)).not.toContain(C.id);
+    expect(ids(10)).toContain(C.id);
+  });
+
+  it('keeps the committed move in the third slot at either year when it ranks lower', () => {
+    expect(ids(10, D.id)).toEqual([A.id, B.id, D.id]);
+    expect(ids(1, D.id)).toEqual([B.id, E.id, D.id]);
+  });
+
+  it('puts the chosen year’s effect on `effect` and keeps the 10-year effect on the move', () => {
+    for (const years of FORECAST_HORIZONS) {
+      for (const { move, effect } of rankAnswer(answer, { doneMoveIds: [] }, years)) {
+        expect(effect).toBeCloseTo(effectAt(move.id, years), 6);
+        expect(move.effect10y).toBeCloseTo(effectAt(move.id, 10), 6);
+        expect(move).not.toHaveProperty('effect'); // a plain Move: this is what commitMove stores
+      }
+    }
+    const [b] = rankAnswer(answer, { doneMoveIds: [] }, 1);
+    expect(b!.effect).not.toBeCloseTo(b!.move.effect10y, 0); // 600 nominal at both years, deflated by 1 vs 10 years
+  });
+});
+
+describe('the horizon (picked on S10, S1 follows)', () => {
+  const rulesNow = () => forecast(useAppStore.getState().profile, 10, { todaysDollars: true, rates });
+  /** The rules effect of a move at a year, today's dollars (what the local rules answer holds). */
+  const rulesEffect = (move: Pick<Move, 'patch'>, years: HorizonYears) =>
+    pointAt(forecast(applyPatch(useAppStore.getState().profile, move.patch), 10, { todaysDollars: true, rates }), years).mid -
+    pointAt(rulesNow(), years).mid;
+
+  it('starts at the remembered 10 years and offers 1, 3, 5 and 10', async () => {
+    const { result } = renderHook(() => useFuture());
+    await waitForReady(result);
+    expect(result.current.horizonYears).toBe(10);
+    expect(result.current.horizons).toEqual([1, 3, 5, 10]);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    for (const m of result.current.moves.data) {
+      expect(m.horizonYears).toBe(10);
+      expect(m.effect).toBe(m.effect10y);
+    }
+  });
+
+  it('switching asks nothing new; while the model’s answer is on its way it reads the rules answer at the new year', async () => {
+    let release!: (b: ForecastBundle) => void;
+    route = mockForecastRoute(() => new Promise<ForecastBundle>((resolve) => (release = resolve)));
+    const { result } = renderHook(() => useFuture());
+    await waitFor(() => expect(route.calls).toHaveLength(1));
+    expect(result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true, horizonYears: 10 });
+    const tenYear = result.current.moves.status === 'ready' ? result.current.moves.data : [];
+
+    act(() => result.current.setHorizonYears(3));
+    expect(useAppStore.getState().horizonYears).toBe(3);
+    expect(result.current).toMatchObject({ status: 'ready', source: 'rules', isRefreshing: true, horizonYears: 3 });
+    const rules = rulesNow();
+    expect(result.current.atHorizon).toEqual(rules.points[36]);
+    expect(result.current.points).toEqual(rules.points.slice(0, 37));
+    expect(result.current.yearly.map((p) => p.month)).toEqual([0, 12, 24, 36]);
+    expect(result.current.today).toEqual(rules.points[0]);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    const moves = result.current.moves.data;
+    expect(moves.length).toBeGreaterThan(0);
+    for (const m of moves) {
+      expect(m).toMatchObject({ horizonYears: 3, source: 'rules' });
+      expect(m.effect).toBeCloseTo(rulesEffect(m, 3), 6);
+      expect(m.effect10y).toBeCloseTo(rulesEffect(m, 10), 6);
+      expect(m.effect10y).toBe(tenYear.find((t) => t.id === m.id)?.effect10y);
+    }
+    expect(moves.map((m) => m.effect)).toEqual([...moves.map((m) => m.effect)].sort((a, b) => b - a));
+    expect(route.calls).toHaveLength(1);
+
+    act(() => release(aiAnswer(route.calls[0], { baseShift: 5_000 })));
+    await waitFor(() => expect(result.current.source).toBe('ai'));
+    expect(result.current.atHorizon.month).toBe(36);
+    expect(result.current.atHorizon.mid).toBeGreaterThan(rules.points[36]!.mid); // the model's answer at 3 years
+    expect(route.calls).toHaveLength(1);
+  });
+
+  it('reads the committed preview and the compare line at the chosen year', async () => {
+    const { result } = renderHook(() => useFuture());
+    await waitForReady(result);
+    if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+    const first = result.current.moves.data[0]!;
+    act(() => result.current.commit(first.id));
+    act(() => result.current.setCompareOn(true));
+    act(() => result.current.setHorizonYears(5));
+    const withFirst = forecast(applyPatch(cloneProfileDemo(), first.patch), 10, { todaysDollars: true, rates });
+    expect(result.current.committedPreview).toEqual({ moveId: first.id, point: withFirst.points[60] });
+    expect(result.current.withMove?.moveId).toBe(first.id);
+    expect(result.current.withMove?.point).toEqual(withFirst.points[60]);
+    expect(result.current.withMove?.points).toEqual(withFirst.points.slice(0, 61));
+
+    act(() => result.current.setTodaysDollars(false));
+    const nominal = forecast(applyPatch(cloneProfileDemo(), first.patch), 10, { rates });
+    expect(result.current.committedPreview?.point).toEqual(nominal.points[60]);
+    expect(result.current.atHorizon).toEqual(forecast(cloneProfileDemo(), 10, { rates }).points[60]);
+    expect(route.calls).toHaveLength(1);
+  });
+
+  it('S1 reads the year in the store: its number and its top move follow it', async () => {
+    act(() => useAppStore.getState().setHorizonYears(1));
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitFor(() => expect(result.current.forecastStatus).toBe('ready'));
+    expect(result.current.horizonYears).toBe(1);
+    expect(result.current.atHorizon).toEqual(rulesNow().points[12]);
+    if (result.current.topMove.status !== 'ready' || !result.current.topMove.data) throw new Error('no move');
+    const top = result.current.topMove.data;
+    expect(top.horizonYears).toBe(1);
+    expect(top.effect).toBeCloseTo(rulesEffect(top, 1), 6);
+    expect(top.effect10y).toBeCloseTo(rulesEffect(top, 10), 6);
+
+    act(() => useAppStore.getState().setHorizonYears(10));
+    expect(result.current.horizonYears).toBe(10);
+    expect(result.current.atHorizon).toEqual(rulesNow().in10y);
+    if (result.current.topMove.status !== 'ready' || !result.current.topMove.data) throw new Error('no move');
+    expect(result.current.topMove.data).toMatchObject({ id: rankMoves(cloneProfileDemo(), { rates })[0]!.id, horizonYears: 10 });
+    expect(result.current.topMove.data.effect).toBe(result.current.topMove.data.effect10y);
+    expect(route.calls).toHaveLength(1);
+  });
+
+  it('an explanation belongs to the year it was asked at: hidden at another, back on return, kept per year; the request names the year', async () => {
+    const explain = vi.fn(async () => ({ text: 'Two sentences. About the move.', source: 'template' as const }));
+    const { result } = renderHook(() => useFuture({ explain }));
+    await waitForReady(result);
+    const movesNow = () => {
+      if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
+      return result.current.moves.data;
+    };
+    const at10 = movesNow()[0]!;
+    act(() => result.current.explain(at10.id));
+    await waitFor(() => expect(result.current.explanations[at10.id]?.status).toBe('ready'));
+    expect((explain.mock.calls[0] as unknown[])[0]).toEqual({ move: at10, horizon: { years: 10, effect: at10.effect } });
+
+    act(() => result.current.setHorizonYears(3));
+    expect(result.current.explanations[at10.id]).toBeUndefined();
+    act(() => result.current.setHorizonYears(10));
+    expect(result.current.explanations[at10.id]?.status).toBe('ready');
+
+    act(() => result.current.setHorizonYears(3));
+    const at3 = movesNow().find((m) => m.id === at10.id)!;
+    act(() => result.current.explain(at3.id));
+    await waitFor(() => expect(result.current.explanations[at3.id]?.status).toBe('ready'));
+    expect(explain).toHaveBeenCalledTimes(2);
+    expect((explain.mock.calls[1] as unknown[])[0]).toEqual({ move: at3, horizon: { years: 3, effect: at3.effect } });
+    expect(at3.effect).not.toBe(at10.effect);
+
+    // Asking at 3 years kept the 10-year sentence: both come back without a new request.
+    act(() => result.current.setHorizonYears(10));
+    expect(result.current.explanations[at10.id]?.status).toBe('ready');
+    act(() => result.current.setHorizonYears(3));
+    expect(result.current.explanations[at3.id]?.status).toBe('ready');
+    expect(explain).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -609,11 +864,11 @@ describe('useFuture compare with a move (S10 toggle)', () => {
     const top = applyPatch(cloneProfileDemo(), ranked[0]!.patch);
     expect(result.current.withMove?.moveId).toBe(ranked[0]!.id);
     expect(result.current.withMove?.points).toHaveLength(121);
-    expect(result.current.withMove?.in10y).toEqual(forecast(top, 10, { todaysDollars: true, rates }).in10y);
-    expect(result.current.withMove!.in10y.mid).toBeGreaterThan(result.current.in10y.mid);
+    expect(result.current.withMove?.point).toEqual(forecast(top, 10, { todaysDollars: true, rates }).in10y);
+    expect(result.current.withMove!.point.mid).toBeGreaterThan(result.current.atHorizon.mid);
 
     act(() => result.current.setTodaysDollars(false));
-    expect(result.current.withMove?.in10y).toEqual(forecast(top, 10, { rates }).in10y);
+    expect(result.current.withMove?.point).toEqual(forecast(top, 10, { rates }).in10y);
 
     act(() => result.current.commit(ranked[1]!.id));
     expect(result.current.compareMove?.id).toBe(ranked[1]!.id);
@@ -640,8 +895,8 @@ describe('useFuture compare with a move (S10 toggle)', () => {
     const inflation = rates.inflationAnnual;
     const expected = deflateForecast(served.scenarios[top.id]!, inflation);
     expect(result.current.withMove?.points).toHaveLength(121);
-    expect(result.current.withMove?.in10y).toEqual(expected.in10y);
-    expect(result.current.withMove?.in10y).not.toEqual(
+    expect(result.current.withMove?.point).toEqual(expected.in10y);
+    expect(result.current.withMove?.point).not.toEqual(
       forecast(applyPatch(cloneProfileDemo(), top.patch), 10, { todaysDollars: true, rates }).in10y,
     );
     expect(result.current.withMove?.points).toEqual(expected.points);
@@ -676,18 +931,16 @@ describe('useFuture "Why?" (POST /api/ai/explain)', () => {
       status: 'ready', data: { text: 'Two sentences. About the move.', fromAi: false },
     });
     expect(explain).toHaveBeenCalledTimes(1);
-    expect((explain.mock.calls[0] as unknown[])[0]).toEqual({ move });
+    expect((explain.mock.calls[0] as unknown[])[0]).toEqual({ move, horizon: { years: 10, effect: move.effect } });
     expect(move.source).toBe('rules');
     // The server words the sentence by this: the default route is the rules forecast.
     expect(((explain.mock.calls[0] as unknown[])[0] as { move: { source: unknown } }).move.source).toBe('rules');
 
-    // A profile change moves the numbers, but not until the new answer is here: until then the
-    // move on screen is the same one and so is its sentence.
+    // A profile change moves the numbers at once (the new profile's rules forecast): the sentence
+    // was about the old number, so it goes with it.
     act(() => useAppStore.getState().setSpending('rentUtilities', 1500));
     expect(result.current.isRefreshing).toBe(true);
-    expect(result.current.explanations[move.id]).toEqual({
-      status: 'ready', data: { text: 'Two sentences. About the move.', fromAi: false },
-    });
+    expect(result.current.explanations[move.id]).toBeUndefined();
     await waitFor(() => expect(result.current.isRefreshing).toBe(false), AFTER_CHANGE);
     if (result.current.moves.status !== 'ready') throw new Error('moves not ready');
     expect(result.current.moves.data.find((m) => m.id === move.id)?.effect10y).not.toBe(move.effect10y);
@@ -697,7 +950,9 @@ describe('useFuture "Why?" (POST /api/ai/explain)', () => {
   it('does not reuse a sentence written for another source of the same number', async () => {
     const explain = vi.fn(async () => ({ text: 'Two sentences. About the move.', source: 'template' as const }));
     const move = { id: 'cutCategory:other', kind: 'cutCategory' as const, level: 1 as const, effect10y: 1234, patch: { spending: { other: 360 } } };
-    const listed = (source: ForecastSource) => ({ moves: [{ ...move, source }] });
+    const listed = (source: ForecastSource): { moves: MoveVM[] } => ({
+      moves: [{ ...move, source, effect: 1234, horizonYears: 10, isCommitted: false, target: null }],
+    });
     const { result, rerender } = renderHook(({ moves }) => useMoveExplain(moves, explain), { initialProps: listed('rules') });
     act(() => result.current.explain(move.id));
     await waitFor(() => expect(result.current.explanations[move.id]?.status).toBe('ready'));
