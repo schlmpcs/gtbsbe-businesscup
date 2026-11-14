@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { common, pro as copy } from '@/copy';
 import { Button, cx, Sticker } from '@/ui-kit';
-import type { PaywallError, PaywallVM } from '../model/types';
+import type { CheckoutMode, PaywallError, PaywallVM } from '../model/types';
 import { FULL_BLEED_PRIMARY, ON_ARENA } from './arena';
 import { CheckoutBlock, TestCardNote } from './CheckoutBlock';
 import { DemoCheckoutBlock } from './DemoCheckoutBlock';
@@ -12,6 +12,9 @@ import { ProActive } from './ProActive';
 import { PromoCodeForm } from './PromoCodeForm';
 
 export type PaywallProps = PaywallVM;
+
+/** The badge over the offer. Only a mode that is really on may be named; 'off' covers "not known yet" too. */
+const BADGE: Record<CheckoutMode, string> = { stripe: copy.demoBadge.stripe, demo: copy.demoBadge.demo, off: copy.demoBadge.neutral };
 
 const errorIn = (error: PaywallError | null, ...where: PaywallError['where'][]) => (error && where.includes(error.where) ? error : null);
 
@@ -33,7 +36,7 @@ export function Paywall(vm: PaywallProps) {
     <div className="mt-lg flex flex-col gap-xl">
       <div className={cx(FULL_BLEED_PRIMARY, ON_ARENA, 'flex flex-col items-center gap-xl py-2xl text-center sm:py-3xl')}>
         <Sticker tone="ink" tilt={-2}>
-          {vm.checkoutMode === 'demo' ? copy.demoBadge.demo : copy.demoBadge.stripe}
+          {BADGE[vm.checkoutMode]}
         </Sticker>
 
         {offer && (

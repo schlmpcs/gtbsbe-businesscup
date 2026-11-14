@@ -7,6 +7,8 @@ export const pro = {
   demoBadge: {
     stripe: 'Demo · Stripe test mode, no real charge',
     demo: 'Demo · simulated checkout, nothing is charged',
+    /** While the server has not said which checkout is on, and when none is: true of every mode. */
+    neutral: 'Demo · no real charge',
   },
   headline: 'Keep playing your future.',
   loading: 'Checking your Pro status…',

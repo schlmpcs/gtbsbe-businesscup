@@ -79,6 +79,26 @@ describe('Paywall', () => {
     expect(screen.getByRole('button', { name: copy.promo.button })).toBeEnabled();
   });
 
+  describe('the demo badge names only the checkout that is really on', () => {
+    it.each([
+      ['stripe', copy.demoBadge.stripe],
+      ['demo', copy.demoBadge.demo],
+    ] as const)('%s mode', (checkoutMode, text) => {
+      render(<Paywall {...vm({ checkoutMode })} />);
+      expect(screen.getByText(text)).toBeInTheDocument();
+    });
+
+    it.each([
+      ['loading', { view: 'loading' }],
+      ['an offer with no checkout on', { view: 'offer', checkoutMode: 'off' }],
+    ] as const)('%s: neutral wording, never Stripe or simulated', (_, overrides) => {
+      render(<Paywall {...vm({ ...overrides, checkoutMode: 'off' })} />);
+      expect(screen.getByText(copy.demoBadge.neutral)).toBeInTheDocument();
+      expect(screen.queryByText(copy.demoBadge.stripe)).not.toBeInTheDocument();
+      expect(screen.queryByText(copy.demoBadge.demo)).not.toBeInTheDocument();
+    });
+  });
+
   it('while a request runs every control is off', () => {
     render(<Paywall {...vm({ busy: 'promo' })} />);
     expect(checkoutButton()).toBeDisabled();
