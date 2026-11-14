@@ -12,6 +12,7 @@
 // Time: each call has a timeout and no SDK retry, and the whole request has a deadline that also
 // covers the retry, so the user waits a bounded time. The model sees `forecastFacts(profile)`
 // only: numbers and estimate flags, no ZIP, no move ids (CLAUDE.md rule 6).
+import { createHash } from 'node:crypto';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import {
   anchorIssues, anchorsToForecast, estimateSpread, forecastFacts, forecastSanityIssues, resolveRates,
@@ -19,6 +20,7 @@ import {
 } from '@lifeguessr/engine';
 import type { Forecast, ForecastBundle, Money, Rate, YearAnchor } from '@lifeguessr/types';
 import { z } from 'zod';
+import { canonicalJson } from '@/lib/canonicalJson';
 import { formatMoney } from '@/lib/format';
 import { devLog, forecastModel, responseText, type LlmClient } from './client';
 import { BASE_FORECAST_ID, type ForecastRequest } from './schemas';
@@ -26,6 +28,8 @@ import { BASE_FORECAST_ID, type ForecastRequest } from './schemas';
 /**
  * Version of the prompt and its payload. Bump it whenever `forecastPrompt` changes what the model
  * is told or sees, so cached answers from an older prompt are not served for the new one.
+ * `PROMPT_FINGERPRINT` is a safety net under it for the system prompt and the output schema (it
+ * does not cover the request text built in `forecastPrompt` or `retryContent`: bump for those).
  */
 export const PROMPT_VERSION = 2;
 
@@ -84,6 +88,21 @@ Rules:
 - Return a forecast for the id "base" (the situation as given) and one for every scenario id listed, each id exactly once and no other ids. A scenario is the same person with its patch applied from today on. Work out what each patch changes in income, spending, debt interest and payments, and retirement saving, and let its forecast end where that change leads, compared with "base". A scenario that helps ends higher than "base"; do not copy "base" for a scenario unless its patch changes nothing.
 - Use the simulator's assumptions given in the request for inflation, take-home pay growth, and returns on cash and retirement.
 - Reply with JSON only, matching the schema.`;
+
+/**
+ * sha256 of the text the model gets whatever the request is: the system prompt and the structured-output
+ * format (the schema with its field descriptions). The key order inside the format does not matter.
+ */
+export function promptFingerprint(system: string, outputFormat: unknown): string {
+  return createHash('sha256').update(canonicalJson({ system, outputFormat })).digest('hex');
+}
+
+/**
+ * Fingerprint of the system prompt and the output format this process sends, computed once at load.
+ * It is part of every cache key (`forecastKey`) next to `PROMPT_VERSION`, so editing either text
+ * without a bump still stops cached answers of the old text from being served.
+ */
+export const PROMPT_FINGERPRINT: string = promptFingerprint(SYSTEM, forecastOutputFormat());
 
 /** A rate as the decimal the data uses, with the percent next to it for the reader: `0.0345 (3.45%)`. */
 const rateText = (rate: Rate): string => `${rate} (${+(rate * 100).toFixed(2)}%)`;

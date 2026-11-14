@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
 import { forecastFacts, resolveRates } from '@lifeguessr/engine';
 import type { ForecastBundle } from '@lifeguessr/types';
 import { canonicalJson } from '@/lib/canonicalJson';
-import { PROMPT_VERSION } from './forecast';
+import { PROMPT_FINGERPRINT, PROMPT_VERSION } from './forecast';
 import type { ForecastRequest } from './schemas';
 
 const byId = (a: { id: string }, b: { id: string }): number => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -22,7 +22,8 @@ const byId = (a: { id: string }, b: { id: string }): number => (a.id < b.id ? -1
 /**
  * The cache key of a request: a sha256 hex digest of the canonical JSON of what the model is shown
  * (`forecastFacts` of the profile, the scenarios, the rates as `forecastPrompt` resolves them) with
- * the model id and `PROMPT_VERSION`. The scenarios are sorted by id first: the bundle is keyed by
+ * the model id, `PROMPT_VERSION` and `PROMPT_FINGERPRINT` (a hash of the system prompt and the output
+ * schema, so an edit to either without a version bump does not serve old answers). The scenarios are sorted by id first: the bundle is keyed by
  * id, so the order a client lists them in must not split the cache. The rates are resolved first,
  * so a request that leaves them out and one that spells out the defaults, which make the same
  * prompt, share a key.
@@ -35,6 +36,7 @@ export function forecastKey(req: ForecastRequest, model: string): string {
     rates: resolveRates(req.rates),
     model,
     promptVersion: PROMPT_VERSION,
+    promptFingerprint: PROMPT_FINGERPRINT,
   });
   return createHash('sha256').update(canonical).digest('hex');
 }

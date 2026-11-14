@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import { forecastModel, type LlmClient } from './client';
 import {
-  FORECAST_CALL_TIMEOUT_MS, FORECAST_DEADLINE_MS, FORECAST_MIN_RETRY_MS, PROMPT_VERSION,
-  forecastOutputFormat, forecastPrompt, forecastWithModel,
+  FORECAST_CALL_TIMEOUT_MS, FORECAST_DEADLINE_MS, FORECAST_MIN_RETRY_MS, PROMPT_FINGERPRINT, PROMPT_VERSION,
+  forecastOutputFormat, forecastPrompt, forecastWithModel, promptFingerprint,
 } from './forecast';
 import { type ForecastRequest } from './schemas';
 import { DEMO_SCENARIOS, goodAnswer, goodReply, forecastReply, reply, type WireForecast } from './testUtils';
@@ -574,6 +574,41 @@ describe('forecastPrompt', () => {
 
   it('is versioned so cache keys can follow it', () => {
     expect(PROMPT_VERSION).toBe(2);
+  });
+});
+
+describe('prompt fingerprint', () => {
+  const format = () => structuredClone(forecastOutputFormat()) as { type: string; schema: Record<string, unknown> };
+
+  it('is a sha256 hex digest of the system prompt and the output format the call sends', () => {
+    expect(PROMPT_FINGERPRINT).toMatch(/^[0-9a-f]{64}$/);
+    expect(PROMPT_FINGERPRINT).toBe(promptFingerprint(forecastPrompt(request()).system, forecastOutputFormat()));
+  });
+
+  it('does not depend on the request or on the order the schema keys were built in', () => {
+    const { system } = forecastPrompt(request());
+    expect(promptFingerprint(forecastPrompt(request({ scenarios: [] })).system, forecastOutputFormat()))
+      .toBe(PROMPT_FINGERPRINT);
+    const f = format();
+    const reordered = { schema: Object.fromEntries(Object.entries(f.schema).reverse()), type: f.type };
+    expect(promptFingerprint(system, reordered)).toBe(PROMPT_FINGERPRINT);
+  });
+
+  it('changes when the system prompt is edited', () => {
+    const { system } = forecastPrompt(request());
+    expect(promptFingerprint(`${system} `, forecastOutputFormat())).not.toBe(PROMPT_FINGERPRINT);
+    expect(promptFingerprint(system.replace('Rules:', 'Rule:'), forecastOutputFormat())).not.toBe(PROMPT_FINGERPRINT);
+  });
+
+  it('changes when the wire schema, or a field description in it, is edited', () => {
+    const { system } = forecastPrompt(request());
+    const renamed = format();
+    renamed.schema.description = 'a new description';
+    expect(promptFingerprint(system, renamed)).not.toBe(PROMPT_FINGERPRINT);
+    const text = JSON.stringify(forecastOutputFormat());
+    const edited = JSON.parse(text.replace('Low end of the range', 'Lowest value of the range')) as typeof renamed;
+    expect(text).not.toBe(JSON.stringify(edited)); // the description really is in the format
+    expect(promptFingerprint(system, edited)).not.toBe(PROMPT_FINGERPRINT);
   });
 });
 
