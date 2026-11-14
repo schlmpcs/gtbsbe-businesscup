@@ -4,9 +4,9 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 
 ## Hour 0 (together)
 
-- [ ] Agree stack defaults (ARCHITECTURE.md) or swaps
-- [ ] Merge `packages/types` contracts; agree units (rates as decimals, monthly vs balance per field)
-- [ ] Commit fixtures to `packages/data/fixtures/`: `areaData.sample.json`, `cards.sample.json`, `profile.demo.json`, `statement.sample.csv`, `loanOffers.sample.json`
+- [x] Agree stack defaults (ARCHITECTURE.md) or swaps
+- [x] Merge `packages/types` contracts; agree units (rates as decimals, monthly vs balance per field)
+- [x] Commit fixtures to `packages/data/fixtures/`: `areaData.sample.json`, `cards.sample.json`, `profile.demo.json`, `statement.sample.csv`, `loanOffers.sample.json`
 - [ ] LLM provider and key (with a no-training / zero-retention option); Supabase or Vercel KV
 - [ ] Agree which Figma frames come first (S1, S2 house scene, S3, S10, S12)
 - [ ] Agree the sprite id list for the house kit (layouts, props per clue, decor) with the designer, and size T12
@@ -31,7 +31,7 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 
 | Done | ID | Task | Hours | Depends on | Done when |
 | --- | --- | --- | --- | --- | --- |
-| [ ] | T1 | Monorepo, lint (incl. UI import rule), Vitest, CI, Vercel, env | 0.5 | — | Live URL by hour 1 |
+| [x] | T1 | Monorepo, lint (incl. UI import rule), Vitest, CI, Vercel, env (Vercel pending: no account access yet) | 0.5 | — | Live URL by hour 1 |
 | [ ] | T2 | Data pipeline (HUD, Census, BLS, childcare) → `areas.json` for ~60 ZIPs + refresh | 2.5 | Contracts | JSON committed, every value has a Source |
 | [ ] | T3 | Engine: `loan`, `compareLoans`, debt load, extra payments, payoff order | 1.5 | Contracts | Amortization matches the formula in tests; `payoffMonth: null` when the payment doesn't cover interest |
 | [ ] | T4 | Sessions: anon ID, save Profile + wishlist | 1 | T1 | Reload keeps profile without sign-up |

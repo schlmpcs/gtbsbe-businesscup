@@ -21,8 +21,8 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 - Tailwind reading CSS variables from `tokens.css`, which is generated from `tokens.json` (Figma variables export).
 - Zustand (or React context) for client state; local storage holds the anonymous ID and a profile cache.
 - Vitest (engine) and Playwright (one end-to-end demo path).
-- Supabase Postgres or Vercel KV for sessions, leaderboard and events.
-- One server-side LLM client; responses validated with zod.
+- A self-hosted store on the team's own server for sessions, leaderboard and events (T4/T5; connection via `STORE_URL`).
+- One server-side LLM client: Anthropic Claude (`ANTHROPIC_API_KEY`, model in `ANTHROPIC_MODEL`); responses validated with zod.
 - Charts: one wrapper component (e.g. Recharts or visx) behind `<ForecastChart>` so restyling stays local.
 
 ## Folder structure (owner in brackets)
