@@ -66,5 +66,5 @@ export { budgetRows, budgetRowsForYear } from './budget';                       
 export { cashFlowSummary } from './cashFlow';                                                  // MP9
 export {
   baselineScenario, duplicateScenario, compareScenarios, planMoveEffects, previewEvent,
-  MAX_SCENARIOS, BASELINE_SCENARIO_ID, BASELINE_SCENARIO_NAME, COMPARE_TIE,
-} from './scenarios';                                                                          // MP6
+  MAX_SCENARIOS, BASELINE_SCENARIO_ID, BASELINE_SCENARIO_NAME, COMPARE_TIE, type PlanMoveEffectsOptions,
+} from './scenarios';                                                                         // MP6

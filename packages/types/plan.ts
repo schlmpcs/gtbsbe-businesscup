@@ -139,7 +139,7 @@ export type PlanMoveEffect = {
   moveId: string;
   effectAtRetirement: Money;         // change in PlanKpis.netWorthAtRetirement
   effectAtEnd: Money;                // change in PlanKpis.netWorthAtEnd
-  successRateDelta?: Rate;           // change in Monte Carlo successRate, same seed (MP5); absent until then
+  successRateDelta?: Rate;           // change in Monte Carlo successRate, same seed; top 3 only, when Monte Carlo settings are given
 };
 /** previewEvent (MP6): the plan with the event on vs without it, for the event panel. */
 export type EventPreview = {
