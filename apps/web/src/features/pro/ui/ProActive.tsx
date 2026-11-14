@@ -18,24 +18,24 @@ export function ProActive({ pro, justUnlocked, continueHref }: Props) {
   }, [justUnlocked]);
 
   return (
-    <Card>
-      <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold leading-tight">
+    <Card className="w-full text-left text-ink">
+      <h2 ref={headingRef} tabIndex={-1} className="text-3xl font-extrabold leading-tight">
         {justUnlocked ? copy.active.successTitle : copy.active.title}
       </h2>
       {justUnlocked && <p className="mt-sm">{copy.active.successBody}</p>}
       <dl className="mt-md grid grid-cols-[auto_1fr] gap-x-lg gap-y-xs text-sm">
-        <dt className="text-text-muted">{copy.active.sourceLabel}</dt>
+        <dt className="text-ink/60">{copy.active.sourceLabel}</dt>
         <dd>{copy.active.sources[pro.source]}</dd>
         {pro.plan && (
           <>
-            <dt className="text-text-muted">{copy.active.planLabel}</dt>
+            <dt className="text-ink/60">{copy.active.planLabel}</dt>
             <dd>{copy.plans.names[pro.plan]}</dd>
           </>
         )}
-        <dt className="text-text-muted">{copy.active.sinceLabel}</dt>
+        <dt className="text-ink/60">{copy.active.sinceLabel}</dt>
         <dd>{pro.sinceLabel}</dd>
       </dl>
-      <a href={continueHref} className={cx(buttonClassName({ fullWidth: true }), 'mt-lg')}>
+      <a href={continueHref} className={cx(buttonClassName({ variant: 'dark', size: 'lg', fullWidth: true }), 'mt-lg')}>
         {copy.active.continue}
       </a>
     </Card>

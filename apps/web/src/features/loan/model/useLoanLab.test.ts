@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { compareLoans, loan } from '@lifeguessr/engine';
+import { compareLoans, loan, payoffOrder } from '@lifeguessr/engine';
 import type { LoanInput } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,7 +7,7 @@ import { cloneProfileDemo, loanOffersSample } from '@/fixtures';
 import { areaRates } from '@/lib/model/profile';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
 import { resetClientState, waitForReady } from '@/test/clientState';
-import { DEBT_LOAD_GAUGE_MAX, MAX_OFFERS, useLoanLab } from './useLoanLab';
+import { DEBT_LOAD_GAUGE_MAX, MAX_OFFERS, NEW_LOAN_DEBT_ID, useLoanLab } from './useLoanLab';
 
 beforeEach(resetClientState);
 
@@ -76,5 +76,33 @@ describe('useLoanLab (S12)', () => {
     expect(result.current.offers).toHaveLength(1);
     act(() => result.current.parse.confirm());
     expect(result.current.offers.map((o) => o.input)).toEqual([loanOffersSample[0], parsed]);
+  });
+
+  it('payoff order: your debts plus the selected offer, highest APR first (engine payoffOrder)', async () => {
+    const { result } = renderHook(() => useLoanLab());
+    await waitForReady(result);
+    const plan = result.current.payoffPlan!;
+    const offer = loanOffersSample[0]!;
+    const profile = cloneProfileDemo();
+    const principal = offer.amount - (offer.downPayment ?? 0) + (offer.fees ?? 0);
+    const expected = payoffOrder(
+      [
+        ...profile.debts,
+        {
+          id: NEW_LOAN_DEBT_ID,
+          kind: 'personal',
+          balance: principal,
+          apr: offer.apr,
+          minPayment: { value: result.current.offers[0]!.result!.monthly, isEstimate: false },
+        },
+      ],
+      0,
+      'avalanche',
+    );
+    expect(plan.steps.map((s) => s.id)).toEqual(expected.order);
+    expect(plan.steps[0]!.kind).toBe('card'); // the card has the highest APR
+    expect(plan.steps.filter((s) => s.isNew).map((s) => s.balance)).toEqual([principal]);
+    expect(plan.payoffMonth).toBe(expected.payoffMonth);
+    expect(plan.totalInterest).toBeCloseTo(expected.totalInterest, 6);
   });
 });

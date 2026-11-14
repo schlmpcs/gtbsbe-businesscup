@@ -1,27 +1,14 @@
 'use client';
 
 import { loan as t } from '@/copy';
-import { Card, cx, formatRate, Money } from '@/ui-kit';
+import { cx, formatRate, Money, Sticker } from '@/ui-kit';
 import type { ReactNode } from 'react';
 import type { LoanLabVM, LoanOfferVM, LoanResult } from '../model/types';
 
-function Badge({ children, tone = 'positive' }: { children: ReactNode; tone?: 'positive' | 'negative' }) {
-  return (
-    <span
-      className={cx(
-        'inline-flex rounded-full px-sm text-xs font-semibold leading-normal',
-        tone === 'positive' ? 'bg-surface text-positive' : 'bg-surface text-negative',
-      )}
-    >
-      {children}
-    </span>
-  );
-}
+type MetricRow = { key: string; label: string; hint?: string; cell: (r: LoanResult) => ReactNode };
 
-type Row = { key: string; label: string; hint?: string; cell: (r: LoanResult) => ReactNode };
-
-const ROWS: Row[] = [
-  { key: 'monthly', label: t.compare.rows.monthly, cell: (r) => <Money value={r.monthly} /> },
+/** The rows under the big monthly payment on each tile (label left, value right). */
+const ROWS: MetricRow[] = [
   { key: 'totalInterest', label: t.compare.rows.totalInterest, cell: (r) => <Money value={r.totalInterest} /> },
   { key: 'totalCost', label: t.compare.rows.totalCost, hint: t.compare.totalCostHint, cell: (r) => <Money value={r.totalCost} /> },
   {
@@ -37,83 +24,121 @@ const ROWS: Row[] = [
   { key: 'debtLoad', label: t.compare.rows.debtLoad, cell: (r) => formatRate(r.debtLoadAfter) },
 ];
 
+/** Slight decorative tilts, like the tiles in the Figma frame. */
+const TILTS = [-0.6, 0.5, -0.3];
+
 function placeholder(offer: LoanOfferVM): string {
   return offer.invalidFields.length > 0 ? t.compare.invalid : t.compare.failed;
 }
 
 export type OfferCompareProps = Pick<LoanLabVM, 'offers' | 'selectedOfferId' | 'selectOffer'>;
 
-/** Up to 3 offers side by side: monthly, interest, total cost, payoff and debt load. */
+/**
+ * Up to 3 offers side by side (Figma S12): one tile per offer with the monthly payment in huge type,
+ * then interest, total cost, payoff and debt load. It is a real table (one row per offer) laid out
+ * as tiles, so screen readers still get the row and column headers.
+ */
 export function OfferCompare({ offers, selectedOfferId, selectOffer }: OfferCompareProps) {
   const never = offers.filter((o) => o.result !== null && o.result.payoffMonth === null);
   const name = (o: LoanOfferVM) => t.offerName(offers.indexOf(o) + 1);
 
   return (
-    <Card title={t.compare.title}>
+    <section aria-label={t.compare.title} className="flex flex-col gap-lg">
       {never.length > 0 && (
-        <div role="alert" className="mb-md flex flex-col gap-xs rounded-md border border-negative p-md text-sm text-negative">
+        <div role="alert" className="flex flex-col gap-xs rounded-lg border-2 border-negative bg-surface p-md text-sm text-negative">
           {never.map((o) => (
             <p key={o.id}>{t.neverPaysOff(name(o))}</p>
           ))}
         </div>
       )}
-      <div className="overflow-x-auto">
-        <table className="w-full table-fixed text-sm" data-testid="loan-compare">
-          <caption className="sr-only">{t.compare.caption}</caption>
-          <thead>
-            <tr>
-              <th scope="col" className="w-1/4 py-xs pr-sm text-left text-xs font-medium text-text-muted">
-                <span className="sr-only">{t.compare.metric}</span>
-              </th>
-              {offers.map((o) => {
-                const selected = o.id === selectedOfferId;
-                return (
-                  <th key={o.id} scope="col" className="py-xs pr-xs text-right align-bottom font-medium">
-                    <div className="flex flex-col items-end gap-xs">
-                      <button
-                        type="button"
-                        aria-pressed={selected}
-                        aria-label={t.compare.select(name(o))}
-                        onClick={() => selectOffer(o.id)}
-                        className={cx(
-                          'rounded-sm px-xs py-xs text-sm font-semibold',
-                          selected ? 'bg-primary text-on-primary' : 'text-primary hover:bg-surface',
-                        )}
-                      >
-                        {name(o)}
-                      </button>
-                      {o.isLowestCost && <Badge>{t.compare.lowestCost}</Badge>}
-                      {o.isLowestMonthly && <Badge>{t.compare.lowestMonthly}</Badge>}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
+      <table className="block w-full" data-testid="loan-compare">
+        <caption className="sr-only">{t.compare.caption}</caption>
+        <thead className="sr-only">
+          <tr>
+            <th scope="col">{t.compare.metric}</th>
+            <th scope="col">{t.compare.rows.monthly}</th>
             {ROWS.map((row) => (
-              <tr key={row.key} className="border-t border-border">
-                <th scope="row" className="py-sm pr-sm text-left align-top text-xs font-normal text-text-muted">
-                  {row.label}
-                  {row.hint && <span className="sr-only">. {row.hint}</span>}
-                </th>
-                {offers.map((o) => (
-                  <td
-                    key={o.id}
+              <th key={row.key} scope="col">
+                {row.label}
+                {row.hint && <span>. {row.hint}</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="grid grid-cols-1 gap-xl pt-lg md:grid-cols-2 lg:grid-cols-3">
+          {offers.map((o, i) => {
+            const selected = o.id === selectedOfferId;
+            return (
+              <tr
+                key={o.id}
+                style={{ transform: `rotate(${TILTS[i % TILTS.length]}deg)` }}
+                className={cx(
+                  'relative flex min-w-0 flex-col gap-md rounded-xl border-2 bg-surface p-xl transition-shadow',
+                  o.isLowestCost ? 'border-positive' : 'border-transparent',
+                  selected ? 'shadow-lg' : 'shadow-md',
+                )}
+              >
+                <th scope="row" className="flex flex-col items-start gap-sm text-left font-normal">
+                  {(o.isLowestCost || o.isLowestMonthly) && (
+                    <span className="absolute -top-lg right-lg flex flex-col items-end gap-xs">
+                      {o.isLowestCost && (
+                        <Sticker tone="positive" tilt={-4} className="px-md py-xs text-sm">
+                          {t.compare.lowestCost}
+                        </Sticker>
+                      )}
+                      {o.isLowestMonthly && (
+                        <Sticker tone="ink" tilt={3}>
+                          {t.compare.lowestMonthly}
+                        </Sticker>
+                      )}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={t.compare.select(name(o))}
+                    onClick={() => selectOffer(o.id)}
                     className={cx(
-                      'py-sm pr-xs text-right align-top tabular-nums',
-                      o.id === selectedOfferId && 'font-semibold',
+                      'rounded-full border-2 px-md py-xs text-sm font-bold transition-colors',
+                      selected ? 'border-ink bg-ink text-on-primary' : 'border-border text-text hover:border-text',
                     )}
                   >
-                    {o.result ? row.cell(o.result) : <span className="text-xs text-text-muted">{placeholder(o)}</span>}
+                    {name(o)}
+                  </button>
+                  <span className="text-lg font-semibold">{t.compare.offerTerms(o.input.termMonths, formatRate(o.input.apr))}</span>
+                </th>
+                {o.result ? (
+                  <>
+                    <td className="flex flex-wrap items-baseline gap-x-sm">
+                      <span className="font-display text-display font-extrabold leading-display tabular-nums">
+                        <Money value={o.result.monthly} />
+                      </span>
+                      <span aria-hidden="true" className="text-text-muted">
+                        {t.compare.perMonth}
+                      </span>
+                    </td>
+                    {ROWS.map((row) => (
+                      <td key={row.key} className="flex items-baseline justify-between gap-md text-sm">
+                        <span aria-hidden="true" className="text-text-muted">
+                          {row.label}
+                        </span>
+                        <span className={cx('text-right tabular-nums', selected ? 'font-bold' : 'font-semibold')}>
+                          {row.cell(o.result!)}
+                        </span>
+                      </td>
+                    ))}
+                  </>
+                ) : (
+                  <td colSpan={ROWS.length + 1} className="rounded-lg bg-surface-strong p-md text-sm text-text-muted">
+                    {placeholder(o)}
                   </td>
-                ))}
+                )}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-sm text-xs text-text-muted">{t.compare.totalCostHint}</p>
-    </Card>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="text-xs text-text-muted">{t.compare.totalCostHint}</p>
+    </section>
   );
 }

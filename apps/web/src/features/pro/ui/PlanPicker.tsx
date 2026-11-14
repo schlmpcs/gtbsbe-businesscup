@@ -1,6 +1,7 @@
 import { pro as copy } from '@/copy';
-import { cx, EstimateTag, Money } from '@/ui-kit';
+import { cx, EstimateTag, Money, Sticker } from '@/ui-kit';
 import type { PaywallPlanVM, ProPlan } from '../model/types';
+import { tilt } from './arena';
 
 type Props = {
   plans: PaywallPlanVM[];
@@ -8,45 +9,49 @@ type Props = {
   disabled: boolean;
 };
 
-/** The two plans as a native radio group, so arrow keys and screen readers work as usual. */
+const PLAN_TILT: Record<ProPlan, number> = { yearly: -2, monthly: 2 };
+
+/** The two plans as white tiles over a native radio group, so arrow keys and screen readers work as usual. */
 export function PlanPicker({ plans, onSelect, disabled }: Props) {
   return (
-    <fieldset disabled={disabled} className="flex flex-col gap-sm">
-      <legend className="mb-sm flex flex-wrap items-center gap-sm text-sm font-medium">
+    <fieldset disabled={disabled} className="flex w-full flex-col items-center gap-lg">
+      <legend className="mb-lg flex flex-wrap items-center justify-center gap-sm text-sm font-semibold">
         {copy.plans.legend}
         {plans.some((p) => p.isEstimate) && <EstimateTag />}
       </legend>
-      {plans.map((plan) => (
-        <label
-          key={plan.id}
-          className={cx(
-            'flex cursor-pointer items-center gap-md rounded-md border p-md',
-            plan.selected ? 'border-primary bg-surface' : 'border-border bg-bg',
-          )}
-        >
-          <input
-            type="radio"
-            name="pro-plan"
-            value={plan.id}
-            checked={plan.selected}
-            onChange={() => onSelect(plan.id)}
-            className="size-4 accent-primary"
-          />
-          <span className="flex flex-1 flex-wrap items-baseline justify-between gap-sm">
-            <span className="flex items-center gap-sm font-semibold">
-              {copy.plans.names[plan.id]}
-              {plan.id === 'yearly' && (
-                <span className="rounded-full bg-primary px-sm text-xs font-medium text-on-primary">{copy.plans.yearlyBadge}</span>
-              )}
+      <div className="grid w-full gap-xl sm:grid-cols-2">
+        {plans.map((plan) => (
+          <label
+            key={plan.id}
+            style={tilt(PLAN_TILT[plan.id])}
+            className={cx(
+              'relative flex cursor-pointer flex-col items-start gap-xs rounded-xl border-4 bg-surface p-xl text-left text-ink shadow-lg',
+              'has-focus-visible:outline-4 has-focus-visible:outline-offset-4 has-focus-visible:outline-ink has-disabled:cursor-not-allowed has-disabled:opacity-70',
+              plan.selected ? 'border-ink' : 'border-transparent',
+            )}
+          >
+            <input
+              type="radio"
+              name="pro-plan"
+              value={plan.id}
+              checked={plan.selected}
+              onChange={() => onSelect(plan.id)}
+              className="sr-only"
+            />
+            {plan.id === 'yearly' && (
+              <Sticker tone="ink" tilt={-4} className="absolute -top-md right-xl shadow-md">
+                {copy.plans.yearlyBadge}
+              </Sticker>
+            )}
+            <span className="text-lg font-bold">{copy.plans.names[plan.id]}</span>
+            <span className="flex flex-wrap items-baseline gap-sm">
+              <Money value={plan.amount} cents className="font-display text-5xl font-extrabold leading-tight" />
+              <span className="text-sm text-ink/60">{copy.plans.per[plan.interval]}</span>
             </span>
-            <span>
-              <Money value={plan.amount} cents className="text-lg font-semibold" />{' '}
-              <span className="text-sm text-text-muted">{copy.plans.per[plan.interval]}</span>
-            </span>
-          </span>
-        </label>
-      ))}
-      <p className="text-xs text-text-muted">{copy.plans.priceNote}</p>
+          </label>
+        ))}
+      </div>
+      <p className="text-xs">{copy.plans.priceNote}</p>
     </fieldset>
   );
 }

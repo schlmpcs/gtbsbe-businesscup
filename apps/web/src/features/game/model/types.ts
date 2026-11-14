@@ -106,6 +106,8 @@ export type RevealVM = {
   total: { low: Money; mid: Money; high: Money };
   /** Where the guess landed against the range. */
   direction: 'low' | 'in' | 'high';
+  /** How far the guess was from the most likely cost (|guess − total.mid|, per month). */
+  missBy: Money;
   result: GuessResult;
   /** Points for a guess in range with no clues opened (the per-home maximum). */
   maxPoints: number;
@@ -143,6 +145,18 @@ export type SummaryVM = {
   mostSurprising: { cardId: string; resultId: string; shareImage: { story: string; square: string } | null } | null;
 };
 
+/** One home in today's strip: its points once guessed, and whether it is the one on screen. */
+export type DayHomeVM = { cardId: string; points: number | null; current: boolean };
+
+/** Today's running score (the score bar and the strip of homes on S2/S3). */
+export type DayVM = {
+  /** Points for a guess in range with no clues opened (the per-home maximum). */
+  maxPerHome: number;
+  /** Points scored so far today. */
+  totalPoints: number;
+  homes: DayHomeVM[];
+};
+
 /** S4: streamer mode extras. */
 export type StreamerVM = {
   countdown: { total: number; secondsLeft: number; running: boolean };
@@ -170,6 +184,8 @@ export type PlayVM = {
   date: string | null;
   phase: PlayPhase;
   progress: { index: number; total: number; guessed: number };
+  /** Today's running score and the strip of homes. */
+  day: DayVM;
   /** The current home (also present during its reveal). Null on the summary. */
   card: ExploreCardVM | null;
   reveal: RevealVM | null;
