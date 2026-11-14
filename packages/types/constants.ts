@@ -63,7 +63,7 @@ export const CLIENT_EVENT_NAMES = [
   'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared',
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
-  'paywall_viewed',
+  'paywall_viewed', 'sample_loaded',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 /** Events only the server records (the Pro routes). */
 export const SERVER_EVENT_NAMES = [

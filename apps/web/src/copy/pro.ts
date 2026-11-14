@@ -20,17 +20,10 @@ export const pro = {
     priceNote: 'Demo prices.',
   },
 
+  /** Only what Pro unlocks in this build (no promises of unbuilt features). */
   includes: {
     title: 'What Pro includes',
-    now: ['A wishlist in Can I Afford It?'],
-    comingTitle: 'Coming to Pro',
-    coming: [
-      'Your life saved across devices',
-      'Monthly check-ins',
-      'Decision journal',
-      'Loan Lab history',
-      'Move levels',
-    ],
+    now: ['Save purchases to a wishlist in Can I Afford It?'],
   },
 
   checkout: {

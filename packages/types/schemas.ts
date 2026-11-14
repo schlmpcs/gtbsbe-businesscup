@@ -356,6 +356,7 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   withProps('afford_checked', { verdict: z.enum(['fits', 'wait', 'no']) }),
   withProps('loan_compared', { offers: z.number().int().min(1).max(3) }),
   bare('paywall_viewed'),
+  bare('sample_loaded'),
 ]);
 
 /** POST /api/events: 1–EVENTS_BATCH_MAX events for one anonymous id. */

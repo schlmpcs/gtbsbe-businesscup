@@ -10,6 +10,7 @@ const screens = SCREEN_IDS.map((id) => ({ id, href: SCREEN_ROUTES[id] }));
 
 const links: TodayLinks = {
   play: SCREEN_ROUTES.S2,
+  sample: `${SCREEN_ROUTES.S10}?sample=1`,
   future: SCREEN_ROUTES.S10,
   afford: SCREEN_ROUTES.S11,
   loan: SCREEN_ROUTES.S12,

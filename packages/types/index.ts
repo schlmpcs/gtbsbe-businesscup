@@ -189,7 +189,8 @@ export type ClientFunnelEvent =
   | { name: 'move_committed'; props: { kind: MoveKind } }
   | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
   | { name: 'loan_compared'; props: { offers: number } }
-  | { name: 'paywall_viewed' };
+  | { name: 'paywall_viewed' }
+  | { name: 'sample_loaded' };
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =
   | { name: 'checkout_started'; props: { plan: ProPlan } }

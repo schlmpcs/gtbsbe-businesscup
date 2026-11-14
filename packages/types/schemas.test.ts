@@ -344,6 +344,7 @@ describe('Funnel event contracts', () => {
       { id, name: 'afford_checked', props: { verdict: 'wait' } },
       { id, name: 'loan_compared', props: { offers: 3 } },
       { id, name: 'paywall_viewed' },
+      { id, name: 'sample_loaded' },
     ];
     expect(EventsRequestSchema.safeParse({ anonId, events }).success).toBe(true);
   });

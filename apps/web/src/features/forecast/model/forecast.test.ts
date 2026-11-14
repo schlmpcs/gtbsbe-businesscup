@@ -419,6 +419,34 @@ describe('useToday (S1)', () => {
     });
   });
 
+  it('is a first visit until the user has a profile, a guess, a played home or the sample life', async () => {
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    expect(result.current.firstVisit).toBe(true);
+    expect(result.current.isSample).toBe(false);
+
+    act(() => void useAppStore.getState().loadSample());
+    expect(result.current.firstVisit).toBe(false);
+    expect(result.current.isSample).toBe(true);
+    expect(result.current.isDemoProfile).toBe(true);
+
+    act(() => useAppStore.getState().clearSample());
+    expect(result.current.firstVisit).toBe(true);
+    act(() => useAppStore.getState().setSelfGuess(3000));
+    expect(result.current.firstVisit).toBe(false);
+  });
+
+  it('is not a first visit once a home was played today', async () => {
+    const card = (id: string, metro: string) => ({ id, metro, layout: '1bed' as const, caption: '', decor: [] });
+    act(() => {
+      useGameStore.getState().startDay('2026-11-14', [card('a', 'Austin, TX'), card('b', 'Boise, ID')]);
+      useGameStore.setState({ reveals: { a: {} as never } });
+    });
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    expect(result.current.firstVisit).toBe(false);
+  });
+
   it('shows the month-end card while the forecast is still on its way', async () => {
     let release!: (b: ForecastBundle) => void;
     route = mockForecastRoute(() => new Promise<ForecastBundle>((resolve) => (release = resolve)));

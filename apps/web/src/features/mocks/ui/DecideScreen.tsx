@@ -192,7 +192,7 @@ export function DecideScreen({ vm, Link }: { vm: DecideVM; Link: LinkComponent }
   return (
     <main className="mx-auto flex w-full max-w-(--container-7xl) flex-col gap-2xl px-lg py-xl">
       <header className="flex flex-col items-center gap-md text-center">
-        <PreviewBadge pro={vm.pro} Link={Link} />
+        <PreviewBadge Link={Link} />
         <Sticker tone="ink">{t.eyebrow}</Sticker>
         <h1 className="text-4xl leading-display sm:text-display lg:text-[calc(var(--text-display)*1.4)]">
           {vm.isDemoProfile ? t.title : t.titleOwn}
@@ -213,15 +213,6 @@ export function DecideScreen({ vm, Link }: { vm: DecideVM; Link: LinkComponent }
           <LeaseEditor vm={vm} />
         </>
       )}
-
-      <div className="flex flex-wrap items-center justify-center gap-sm">
-        <span className="text-text-muted">{t.nextTitle}</span>
-        {vm.nextDecisions.map((d) => (
-          <span key={d} className="rounded-full border-2 border-border bg-surface px-lg py-sm font-medium">
-            {t.next[d]}
-          </span>
-        ))}
-      </div>
     </main>
   );
 }

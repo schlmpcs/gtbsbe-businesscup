@@ -39,7 +39,7 @@ const checkoutButton = () => screen.getByRole('button', { name: copy.checkout.bu
 const statusRegion = () => screen.getByRole('status');
 
 describe('Paywall', () => {
-  it('offer: demo label, tagged prices, what is gated vs coming, test card, promo and disclaimer', () => {
+  it('offer: demo label, tagged prices (yearly first and preselected), only what Pro unlocks, test card, promo and disclaimer', () => {
     render(<Paywall {...vm()} />);
     expect(screen.getByText(copy.demoBadge.stripe)).toBeInTheDocument();
     const plans = screen.getByRole('group', { name: new RegExp(copy.plans.legend) });
@@ -49,7 +49,9 @@ describe('Paywall', () => {
 
     const includes = screen.getByRole('region', { name: copy.includes.title });
     expect(within(includes).getByText(copy.includes.now[0])).toBeInTheDocument();
-    expect(within(includes).getByRole('heading', { name: copy.includes.comingTitle })).toBeInTheDocument();
+    expect(within(includes).getAllByRole('listitem')).toHaveLength(copy.includes.now.length);
+    expect(within(includes).queryByText(/coming/i)).not.toBeInTheDocument();
+    expect(within(plans).getAllByRole('radio').map((r) => (r as HTMLInputElement).value)).toEqual(['yearly', 'monthly']);
 
     expect(checkoutButton()).toBeEnabled();
     expect(screen.getByText(copy.checkout.testCardNumber)).toBeInTheDocument();
