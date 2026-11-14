@@ -1,4 +1,4 @@
-import { rulesBundle } from '@lifeguessr/engine';
+import { resolveRates, rulesBundle } from '@lifeguessr/engine';
 import { ForecastBundleSchema } from '@lifeguessr/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
@@ -6,6 +6,7 @@ import {
   aiRateLimiter, AI_RATE_LIMITS, checkAiRateLimit, checkForecastRateLimit, forecastRateLimiter,
   FORECAST_RATE_LIMITS,
 } from '@/server/ai/http';
+import { forecastCache } from '@/server/ai/forecastCache';
 import { MAX_FORECAST_BODY_BYTES, MAX_FORECAST_MONEY } from '@/server/ai/schemas';
 import { DEMO_SCENARIOS, goodReply, postRequest } from '@/server/ai/testUtils';
 import { POST } from './route';
@@ -30,6 +31,7 @@ const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 beforeEach(() => {
   create.mockReset();
   warn.mockClear();
+  forecastCache.clear();
   aiRateLimiter.reset();
   forecastRateLimiter.reset();
   vi.stubEnv('ANTHROPIC_API_KEY', 'test-key');
@@ -67,6 +69,122 @@ describe('POST /api/ai/forecast', () => {
     const json = await (await post(body())).json();
     expect(json.model).toBe('claude-opus-5');
     expect(create.mock.calls[0]![0].model).toBe('claude-opus-5');
+  });
+
+  describe('cache', () => {
+    it('answers the same body twice from one model call', async () => {
+      create.mockResolvedValue(answerFor());
+      const first = await (await post(body())).json();
+      const second = await (await post(body())).json();
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(second).toEqual(first);
+      expect(second.source).toBe('ai');
+    });
+
+    it('still sends no-store to the browser on a cached answer', async () => {
+      create.mockResolvedValue(answerFor());
+      await post(body());
+      expect((await post(body())).headers.get('cache-control')).toBe('no-store');
+    });
+
+    it('treats the same scenarios listed in another order as the same request', async () => {
+      create.mockResolvedValue(answerFor());
+      await post(body());
+      const res = await post(body({ scenarios: [...SCENARIOS].reverse() }));
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(Object.keys((await res.json()).scenarios).sort()).toEqual(['cut-eating', 'pay-card']);
+    });
+
+    it('ignores what the model never sees: zip, the committed move and the done moves', async () => {
+      create.mockResolvedValue(answerFor());
+      await post(body());
+      const profile = cloneProfileDemo();
+      profile.zip = profile.zip === '10001' ? '94105' : '10001';
+      profile.committedMoveId = 'payCardFirst:card-1';
+      profile.doneMoveIds = ['cancelSubscriptions'];
+      await post(body({ profile }));
+      expect(create).toHaveBeenCalledTimes(1);
+    });
+
+    it('makes one model call for two identical requests that are in flight together', async () => {
+      let release!: (value: ReturnType<typeof answerFor>) => void;
+      create.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+      const getOrCompute = vi.spyOn(forecastCache, 'getOrCompute');
+      try {
+        const both = Promise.all([post(body()), post(body())]);
+        // Both requests are at the cache while the one model call is still unanswered: the second
+        // cannot be a hit (nothing is stored yet), so it has to join the call in flight.
+        await vi.waitFor(() => expect(getOrCompute).toHaveBeenCalledTimes(2));
+        expect(create).toHaveBeenCalledTimes(1);
+        release(answerFor());
+        const [a, b] = await both;
+        expect(create).toHaveBeenCalledTimes(1);
+        expect((await a.json()).source).toBe('ai');
+        expect((await b.json()).source).toBe('ai');
+      } finally {
+        getOrCompute.mockRestore();
+      }
+    });
+
+    it('treats an absent rates and the default inflation spelled out as the same request', async () => {
+      create.mockResolvedValue(answerFor());
+      await post(body());
+      await post(body({ rates: { inflationAnnual: resolveRates().inflationAnnual } }));
+      expect(create).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls the model again when a number, the rates, the scenarios or the model change', async () => {
+      create.mockResolvedValue(answerFor());
+      await post(body());
+      expect(create).toHaveBeenCalledTimes(1);
+
+      const spending = cloneProfileDemo();
+      spending.spending.eatingOut.value += 1;
+      await post(body({ profile: spending }));
+      expect(create).toHaveBeenCalledTimes(2);
+
+      create.mockResolvedValue(goodReply({ profile: cloneProfileDemo(), scenarios: SCENARIOS, rates: { inflationAnnual: 0.04 } }));
+      await post(body({ rates: { inflationAnnual: 0.04 } }));
+      expect(create).toHaveBeenCalledTimes(3);
+
+      create.mockResolvedValue(answerFor([SCENARIOS[0]!]));
+      await post(body({ scenarios: [SCENARIOS[0]] }));
+      expect(create).toHaveBeenCalledTimes(4);
+
+      create.mockResolvedValue(answerFor());
+      vi.stubEnv('ANTHROPIC_FORECAST_MODEL', 'claude-opus-5');
+      const other = await (await post(body())).json();
+      expect(create).toHaveBeenCalledTimes(5);
+      expect(other.model).toBe('claude-opus-5');
+    });
+
+    it('does not keep a rules fallback: every request tries the model again', async () => {
+      create.mockRejectedValue(new Error('overloaded'));
+      expect((await (await post(body())).json()).source).toBe('rules');
+      const perRequest = create.mock.calls.length;
+      expect(perRequest).toBeGreaterThan(0);
+      expect((await (await post(body())).json()).source).toBe('rules');
+      expect(create).toHaveBeenCalledTimes(2 * perRequest);
+    });
+
+    it('serves the AI answer once the provider is back, then keeps it', async () => {
+      create.mockRejectedValueOnce(new Error('overloaded'));
+      expect((await (await post(body())).json()).source).toBe('rules');
+      create.mockResolvedValue(answerFor());
+      const calls = create.mock.calls.length;
+      expect((await (await post(body())).json()).source).toBe('ai');
+      expect((await (await post(body())).json()).source).toBe('ai');
+      expect(create).toHaveBeenCalledTimes(calls + 1);
+    });
+
+    it('does not keep the rules answer given for lack of a key', async () => {
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      expect((await (await post(body())).json()).source).toBe('rules');
+      vi.stubEnv('ANTHROPIC_API_KEY', 'test-key');
+      create.mockResolvedValue(answerFor());
+      expect((await (await post(body())).json()).source).toBe('ai');
+      expect(create).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('accepts a body without scenarios and forecasts only the base', async () => {
@@ -162,6 +280,7 @@ describe('POST /api/ai/forecast', () => {
     ['payCardFirst:card-1', 'a real payCardFirst id'],
     ['cutCategory:eatingOut', 'a real cutCategory id'],
     ['cancelSubscriptions', 'a real cancelSubscriptions id'],
+    ['committed:payCardFirst:card-1', 'a real committed id'],
     ['a'.repeat(96), 'the longest allowed id'],
   ])('accepts the scenario id %s (%s)', async (id) => {
     vi.stubEnv('ANTHROPIC_API_KEY', '');
@@ -170,13 +289,13 @@ describe('POST /api/ai/forecast', () => {
     expect(Object.keys((await res.json()).scenarios)).toEqual([id]);
   });
 
-  it('accepts the longest real id: committed:<move id> with a UUID debt id', async () => {
+  it('accepts committed:<move id> with a long debt id, though the app makes `<kind>-<n>` ids', async () => {
     vi.stubEnv('ANTHROPIC_API_KEY', '');
-    const uuid = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
+    const longDebtId = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
     const profile = cloneProfileDemo();
-    profile.debts[0]!.id = uuid;
-    const id = `committed:payCardFirst:${uuid}`;
-    const res = await post(body({ profile, scenarios: [{ id, patch: { debts: [{ id: uuid, extraPayment: 250 }] } }] }));
+    profile.debts[0]!.id = longDebtId;
+    const id = `committed:payCardFirst:${longDebtId}`;
+    const res = await post(body({ profile, scenarios: [{ id, patch: { debts: [{ id: longDebtId, extraPayment: 250 }] } }] }));
     expect(res.status).toBe(200);
     expect(Object.keys((await res.json()).scenarios)).toEqual([id]);
   });

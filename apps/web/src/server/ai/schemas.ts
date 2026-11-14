@@ -132,10 +132,12 @@ export const BASE_FORECAST_ID = 'base';
 /**
  * What a scenario id or a debt id may look like in a forecast request. Both are written into the
  * model's prompt inside quotes, so free text (a quote, a line break, an instruction) must not get
- * through. The real ones fit: `payCardFirst:<debt id>`, `cutCategory:<category>` and
- * `committed:<move id>` (a debt id is a UUID, 36 characters, so the longest today is
- * `committed:payCardFirst:<uuid>`, 59). 96 leaves room for a longer move kind
- * (`committed:cancelSubscriptions:<uuid>` is 66).
+ * through. The real ones fit: `payCardFirst:<debt id>`, `cutCategory:<category>`,
+ * `cancelSubscriptions` and `committed:<move id>`. The app names a debt `<kind>-<n>` (`card-1`,
+ * `profileOps.newDebtId`), so the longest id it makes today is `committed:cutCategory:rentUtilities`
+ * (35 characters). 96 is far beyond that, and leaves room for a debt id of up to 73 characters
+ * inside `committed:payCardFirst:` (a 96-character debt id makes a 119-character scenario id,
+ * which this pattern rejects).
  */
 export const FORECAST_ID_PATTERN = /^[A-Za-z0-9:_.-]{1,96}$/;
 const FORECAST_ID_MESSAGE = 'an id may only contain letters, digits and : _ . - (1 to 96 characters)';
