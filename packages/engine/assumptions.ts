@@ -950,3 +950,16 @@ export const debtTermMonthsDefault = {
     '(studentaid.gov). mortgage: 30-year fixed (Freddie Mac PMMS benchmark). bnpl: pay-in-4 over 6 weeks. ' +
     'Not yet listed in `assumptions` (the "How we calculate" map).',
 } satisfies Assumption<Record<'auto' | 'student' | 'personal' | 'bnpl' | 'mortgage', number>>;
+
+// MP3: per-group growth in simulate() / plan() (#163) -------------------------------------------
+
+/**
+ * Yearly value change of a vehicle: the default growth of the `vehicle` asset group in the plan (a
+ * car loses about 15% of its value a year). An account's own `growth` or the scenario's
+ * `assumptions.growth.vehicle` replaces it.
+ */
+export const vehicleDepreciationAnnual = {
+  value: -0.15 as Rate,
+  assumption: true,
+  note: 'Rule-of-thumb depreciation for a typical car, not a valuation. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<Rate>;

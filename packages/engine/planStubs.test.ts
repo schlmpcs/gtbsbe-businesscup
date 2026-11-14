@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import * as engine from './index';
 
 const stubs: [name: keyof typeof engine, task: string][] = [
-  ['plan', 'MP3'],
   ['monteCarlo', 'MP5'],
 ];
 

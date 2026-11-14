@@ -19,7 +19,8 @@
     "tokens": "node scripts/tokens.mjs",
     "tokens:check": "node scripts/tokens.mjs --check",
     "check:bundle": "node scripts/check-client-bundle.mjs",
-    "data:refresh": "pnpm --filter @lifeguessr/data refresh"
+    "data:refresh": "pnpm --filter @lifeguessr/data refresh",
+    "fixtures:plan": "node scripts/fixtures-plan.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
