@@ -1,7 +1,7 @@
 // S10 You in 10 years + Next Moves: the headline number with its range, the forecast chart with the
 // range band, a comparison with a move, the ranked moves and "How we calculate".
 import { forecast as t } from '@/copy';
-import { Art, buttonClassName, Card, cx, EstimateTag, ForecastChart, formatMoney, Money, Stack, Sticker } from '@/ui-kit';
+import { Art, buttonClassName, Card, cx, EstimateTag, ForecastChart, Money, Stack, Sticker } from '@/ui-kit';
 import type { FutureVM } from '../model/types';
 import { HowWeCalculate } from './HowWeCalculate';
 import { NextMoves } from './NextMoves';
@@ -33,7 +33,6 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
         <div className={cx(FULL_BLEED_PRIMARY, 'py-2xl sm:py-3xl')}>
           <header className={cx(ON_ARENA, 'mb-xl')}>
             <h1 className="text-sm font-bold uppercase tracking-wide">{f.title}</h1>
-            <p className="mt-xs max-w-(--container-xl) text-text-muted">{f.intro}</p>
           </header>
 
           {loading ? (
@@ -53,7 +52,7 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
 
         <div className="flex flex-col gap-xl lg:flex-row lg:items-start">
           <HowWeCalculate vm={vm.howWeCalculate} className="lg:flex-1" />
-          <Link href={links.today} className={cx(buttonClassName({ variant: 'primary', size: 'lg' }), 'lg:min-w-sm')}>
+          <Link href={links.today} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'lg:min-w-sm')}>
             {f.backCta}
             <span aria-hidden="true">→</span>
           </Link>
@@ -108,9 +107,6 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
             {vm.compareMove && (
               <Toggle checked={vm.compareOn} onChange={vm.setCompareOn}>
                 {f.compareToggle(compareTitle)}
-                <span className="block text-xs text-text-muted">
-                  {vm.compareMove.isCommitted ? f.compareCommittedNote : f.compareTopNote}
-                </span>
               </Toggle>
             )}
           </div>
@@ -120,8 +116,14 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
             compare={vm.withMove ? { label: f.withMoveLabel(compareTitle), points: vm.withMove.points } : undefined}
             showBand={!vm.band.isZero}
           />
-          <div className="mt-md rounded-md bg-surface-strong p-md text-sm" data-testid="band-note">
-            <p className="font-semibold">{t.band.label}</p>
+          {/* The band's label stays visible as the summary; what it means opens on tap. */}
+          <details className="group mt-md rounded-md bg-surface-strong p-md text-sm" data-testid="band-note">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-semibold">
+              <span>{t.band.label}</span>
+              <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
+                ▾
+              </span>
+            </summary>
             <p className="mt-xs text-text-muted">{vm.band.isZero ? t.band.zero : t.band.explain}</p>
             {!vm.band.isZero && vm.band.estimatedFields.length > 0 && (
               <>
@@ -138,17 +140,15 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
                 </Link>
               </>
             )}
-          </div>
+          </details>
         </Card>
       </Stack>
 
-      {/* Decoration only: the illustration carries no number; the sticker's amount is the VM's. */}
+      {/* Decoration only: the illustration and its sticker carry no number. */}
       <div className="relative mx-auto w-full max-w-(--container-md) pb-xl lg:mt-3xl">
         <Art name="future" framed tilt={3} />
         <Sticker tone="ink" tilt={4} className="absolute bottom-0 left-md text-sm shadow-lg">
-          {vm.compareMove
-            ? f.artSticker(formatMoney(vm.compareMove.effect10y, { signed: true }), vm.compareMove.isCommitted)
-            : f.artStickerNone}
+          {f.artSticker}
         </Sticker>
       </div>
     </div>

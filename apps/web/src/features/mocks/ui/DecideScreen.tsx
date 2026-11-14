@@ -6,7 +6,7 @@
 import type { ReactNode } from 'react';
 import { mocks } from '@/copy';
 import {
-  Art, Button, Card, cx, EstimateTag, Field, formatMoney, Money, NumberInput, Scoreboard, Sticker, type ArtName,
+  Art, Button, Card, EstimateTag, Field, formatMoney, Money, NumberInput, Scoreboard, Sticker, type ArtName,
 } from '@/ui-kit';
 import type { DecideResultVM, DecideVM, LeaseField } from '../model/types';
 import { PreviewBadge } from './PreviewBadge';
@@ -18,18 +18,15 @@ function PathTile({
   title,
   art,
   rows,
-  effect,
-  horizonYear,
   tilt,
   footnote,
 }: {
   title: string;
   art: ArtName;
   rows: { label: string; value: ReactNode }[];
-  effect: number;
-  horizonYear: number;
   tilt: number;
-  footnote?: string;
+  /** Collapsed under the rows: a summary label and the text. */
+  footnote?: { title: string; body: string };
 }) {
   return (
     <Card as="section" aria-label={title} className="flex min-w-0 flex-col gap-lg p-md sm:p-lg" style={{ transform: `rotate(${tilt}deg)` }}>
@@ -44,19 +41,12 @@ function PathTile({
             </div>
           ))}
         </dl>
-        <p className="flex flex-wrap items-baseline gap-x-sm">
-          <span
-            className={cx(
-              'font-display text-4xl font-extrabold leading-tight tabular-nums sm:text-display sm:leading-display',
-              effect >= 0 ? 'text-positive' : 'text-primary',
-            )}
-          >
-            <Money value={effect} signed />
-          </span>
-          <span className="text-text-muted">{t.byYear(horizonYear)}</span>
-          <span className="sr-only">{t.vsOther}</span>
-        </p>
-        {footnote && <p className="text-xs text-text-muted">{footnote}</p>}
+        {footnote && (
+          <details className="text-xs text-text-muted">
+            <summary className="cursor-pointer font-medium">{footnote.title}</summary>
+            <p className="mt-xs">{footnote.body}</p>
+          </details>
+        )}
       </div>
     </Card>
   );
@@ -78,8 +68,6 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
         title={demo ? t.keep.title : t.keep.titleOwn}
         art="austin"
         tilt={-1}
-        horizonYear={vm.horizonYear}
-        effect={r.keepAdvantage10y}
         rows={[
           {
             label: t.keep.loanLeft,
@@ -98,7 +86,6 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
               </span>
             ),
           },
-          ...(keep.loanLeft > 0 ? [{ label: t.keep.afterPayoff, value: t.keep.afterPayoffValue(formatMoney(keep.loanPayment)) }] : []),
         ]}
       />
       <div
@@ -111,9 +98,7 @@ function Paths({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
         title={demo ? t.lease.title : t.lease.titleOwn}
         art="loan"
         tilt={1}
-        horizonYear={vm.horizonYear}
-        effect={-r.keepAdvantage10y}
-        footnote={t.lease.assumption(r.lease.signings)}
+        footnote={{ title: t.lease.assumptionTitle, body: t.lease.assumption(r.lease.signings) }}
         rows={[
           { label: t.lease.lease, value: est('monthly', t.lease.leaseValue(formatMoney(f.monthly ?? 0), t.months(f.termMonths ?? 0))) },
           { label: t.lease.dueAtSigning, value: est('dueAtSigning', <Money value={f.dueAtSigning ?? 0} />) },
@@ -231,7 +216,6 @@ export function DecideScreen({ vm, Link }: { vm: DecideVM; Link: LinkComponent }
         {vm.nextDecisions.map((d) => (
           <span key={d} className="rounded-full border-2 border-border bg-surface px-lg py-sm font-medium">
             {t.next[d]}
-            <span className="sr-only"> ({t.nextSoon})</span>
           </span>
         ))}
       </div>

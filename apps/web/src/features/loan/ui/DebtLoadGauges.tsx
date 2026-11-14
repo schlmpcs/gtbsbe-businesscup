@@ -103,9 +103,12 @@ export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gaug
           </div>
         </div>
       </div>
-      <p className="text-xs text-on-primary/60">
-        {t.gauge.hint} {t.gauge.guidance(formatRate(yellow), formatRate(red))}
-      </p>
+      <details className="text-xs text-on-primary/60">
+        <summary className="cursor-pointer font-medium">{t.gauge.howTitle}</summary>
+        <p className="mt-xs">
+          {t.gauge.hint} {t.gauge.guidance(formatRate(yellow), formatRate(red))}
+        </p>
+      </details>
     </section>
   );
 }

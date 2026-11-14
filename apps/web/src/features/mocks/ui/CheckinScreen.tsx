@@ -37,17 +37,8 @@ function Score({ vm }: { vm: CheckinVM }) {
   const items: ScoreboardItem[] = [
     { id: 'projected', value: <Money value={month.result.data.projectedSpend} />, label: month.inProgress || !month.month ? t.projected : t.spent },
   ];
-  if (compare) {
-    items.push(
-      { id: 'average', value: <Money value={compare.average} />, label: t.average },
-      {
-        id: 'difference',
-        value: <Money value={compare.difference} signed />,
-        label: compare.difference > 0 ? t.over : t.under,
-        tone: compare.difference > 0 ? 'primary' : 'positive',
-      },
-    );
-  }
+  // The difference is the headline, so the bar shows only the two totals behind it.
+  if (compare) items.push({ id: 'average', value: <Money value={compare.average} />, label: t.average });
   const p = move.progress?.status === 'ready' ? move.progress.data : null;
   if (p?.kind === 'cardPayoff') items.push({ id: 'progress', value: formatRate(p.share, 0), label: t.progress, tone: 'positive' });
   return (
@@ -196,7 +187,6 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
         <Sticker tone="positive">{m.sticker}</Sticker>
         <span className="text-xl font-bold">{m.noneTitle}</span>
       </div>
-      <p className="text-sm text-text-muted">{m.noneBody}</p>
       {move.suggestions.status === 'ready' ? (
         move.suggestions.data.length === 0 ? (
           <p className="text-sm text-text-muted">{m.noMoves}</p>

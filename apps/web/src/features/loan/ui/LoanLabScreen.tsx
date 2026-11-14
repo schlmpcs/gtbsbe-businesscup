@@ -50,7 +50,6 @@ export function LoanLabScreen({ vm }: { vm: LoanLabVM }) {
         <div className="flex flex-col items-start gap-lg lg:items-end">
           {input && (
             <ul aria-label={t.terms.label} className="flex flex-wrap gap-sm lg:justify-end">
-              {Number.isFinite(input.amount) && <li className={chip}>{t.terms.price(formatMoney(input.amount))}</li>}
               <li className={chip}>{t.terms.down(formatMoney(input.downPayment ?? 0))}</li>
               <li className={chip}>{t.terms.fees(formatMoney(input.fees ?? 0))}</li>
             </ul>
@@ -73,7 +72,6 @@ export function LoanLabScreen({ vm }: { vm: LoanLabVM }) {
                 extra={vm.extra}
                 setExtraPayment={vm.setExtraPayment}
                 selectedName={selectedName}
-                selectedMonthly={selected?.result?.monthly ?? null}
               />
               <PayoffOrder plan={vm.payoffPlan} selectedName={selectedName} />
             </div>

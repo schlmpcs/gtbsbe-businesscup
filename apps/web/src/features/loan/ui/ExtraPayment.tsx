@@ -9,8 +9,7 @@ export function ExtraPayment({
   extra,
   setExtraPayment,
   selectedName,
-  selectedMonthly,
-}: Pick<LoanLabVM, 'extra' | 'setExtraPayment'> & { selectedName: string | null; selectedMonthly: number | null }) {
+}: Pick<LoanLabVM, 'extra' | 'setExtraPayment'> & { selectedName: string | null }) {
   if (!extra || !selectedName) {
     return (
       <Card title={t.extra.title} tone="muted">
@@ -27,7 +26,6 @@ export function ExtraPayment({
     <Card
       title={t.extra.title}
       headingLevel={2}
-      action={selectedMonthly !== null ? <span className="text-sm text-text-muted">{t.extra.onTopOf(formatMoney(selectedMonthly))}</span> : undefined}
       className="flex flex-col gap-lg"
     >
       <Slider

@@ -77,7 +77,6 @@ export function SummaryView({ summary, shareStatus, onShare, guessOwnHref, large
           <p className={cx('font-display font-extrabold leading-tight', large ? 'text-4xl' : 'text-3xl')}>
             {t.summary.bridge(summary.guessedLow, summary.played)}
           </p>
-          <p className="text-sm text-text-muted">{t.summary.bridgeDetail(summary.inRange, summary.guessedHigh)}</p>
           <a href={guessOwnHref} className={buttonClassName({ variant: 'dark', size: 'lg', fullWidth: true })}>
             {t.summary.cta}
           </a>

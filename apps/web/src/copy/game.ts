@@ -99,9 +99,9 @@ export const game = {
   },
   multiplier: {
     label: 'Score multiplier',
-    /** "Opening a room costs 10% of your points." */
-    cost: (pct: string) => `Opening a room costs ${pct} of your points.`,
-    floor: 'Your multiplier is at its floor: more rooms are free now.',
+    /** "Each room costs 10% of your points." */
+    cost: (pct: string) => `Each room costs ${pct} of your points.`,
+    floor: 'More rooms are free now.',
   },
 
   // ----- S2/S3: today's strip and score bar -----
@@ -115,13 +115,13 @@ export const game = {
   },
   score: {
     label: 'Your score',
-    maxPerHome: 'max for this home',
-    multiplier: (opened: number) => `multiplier, ${plural(opened, 'room', 'rooms')} peeked`,
-    total: 'your total today',
+    maxPerHome: 'max this home',
+    multiplier: (opened: number) => `multiplier · ${plural(opened, 'room', 'rooms')}`,
+    total: 'today',
   },
   clues: {
     heading: 'Look around',
-    intro: 'Tap a room to see a clue. Each one lowers your score multiplier.',
+    intro: 'Tap a room for a clue.',
     rooms: {
       garage: 'Garage',
       kidsRoom: 'Kids’ room',
@@ -168,9 +168,9 @@ export const game = {
 
   // ----- S2: the guess -----
   guess: {
-    heading: 'What does their month cost?',
+    heading: 'Guess their month',
     slider: 'Monthly cost of living',
-    hint: 'Rent, car, childcare, food and the rest, per month.',
+    hint: 'Rent, car, kids, food and the rest.',
     input: 'Or type it',
     inputSuffix: '/mo',
     perMonth: 'a month',
@@ -180,7 +180,7 @@ export const game = {
 
   // ----- S4: streamer -----
   streamer: {
-    countdown: 'Lock in before the timer',
+    countdown: 'Locks in at zero',
     live: 'Live',
     guessLabel: 'Streamer’s guess',
     realCost: 'Real cost',
@@ -192,7 +192,6 @@ export const game = {
     start: 'Start countdown',
     pause: 'Pause',
     reset: 'Reset',
-    autoLock: 'At zero your guess locks in.',
     lockedIn: 'Locked in. Revealing…',
   },
 
@@ -203,17 +202,13 @@ export const game = {
     perMonth: 'a month',
     eyebrow: (progress: string, metro: string) => `${progress} · ${metro}`,
     pointsSticker: (points: string) => `+${points} points`,
-    missedBy: (amount: string) => `Missed by ${amount}`,
+    /** Sticker when the guess is outside the range: "$800 too low". */
+    missed: { low: (amount: string) => `${amount} too low`, high: (amount: string) => `${amount} too high` },
     inRangeSticker: 'In range',
     sourceShort: (name: string, year: number) => `${name} · ${year}`,
     actualHint: 'Most likely, per month',
     range: (low: string, high: string) => `Typical range ${low} to ${high}`,
     yourGuess: 'Your guess',
-    direction: {
-      low: 'You guessed low.',
-      in: 'In range!',
-      high: 'You guessed high.',
-    },
     scaleLabel: (guess: string, low: string, high: string) =>
       `Your guess ${guess} against the typical range ${low} to ${high}`,
     scaleRange: 'Typical range',
@@ -225,12 +220,12 @@ export const game = {
     surprise: (category: string, share: string) => `${category} was ${share} of their month.`,
     breakdownHeading: 'Where the money goes',
     breakdownLabel: 'Monthly costs by category',
-    sourcesHeading: 'Where these numbers come from',
+    sourcesHeading: 'Sources',
     whoLivedHere: 'Who lived here',
     next: 'Next home →',
     finish: 'See your results →',
-    shareCard: 'Share card (9:16)',
-    shareCardSquare: 'Share card (square)',
+    shareCard: 'Story card',
+    shareCardSquare: 'Square card',
   },
 
   // ----- after 5 homes -----
@@ -241,8 +236,7 @@ export const game = {
     tileResult: { green: 'in range', yellow: '500 points or more', red: 'under 500 points' },
     total: 'Total',
     bridge: (low: number, played: number) => `You guessed low on ${low} of ${played}.`,
-    bridgeDetail: (inRange: number, high: number) => `In range on ${inRange}, high on ${high}.`,
-    cta: 'Now guess your own life →',
+    cta: 'Now guess your own →',
     share: 'Share',
     shareStatus: {
       idle: '',
@@ -252,7 +246,7 @@ export const game = {
       failed: 'Couldn’t share. Copy the text below.',
     },
     shareTextLabel: 'Text to share',
-    clipCard: 'Clip card of your most surprising home (9:16)',
+    clipCard: 'Clip card: your biggest surprise',
   },
 
   /** The spoiler-free share grid (PRODUCT.md → Game design): 🟩 in range, 🟨 500+ points, 🟥 below. */

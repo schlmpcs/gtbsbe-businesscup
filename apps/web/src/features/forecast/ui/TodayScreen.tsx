@@ -1,4 +1,4 @@
-// S1 Today: You in 10 years, the daily game, this month, the move to make, and the planning tools.
+// S1 Today: the daily game, You in 10 years, this month, the move to make, and the planning tools.
 // Presentational: everything comes from TodayVM; links come from the route page.
 import { common, forecast as t, screenTitles, type ScreenId } from '@/copy';
 import {
@@ -11,12 +11,10 @@ import {
   formatMoney,
   formatMonth,
   Money,
-  Scoreboard,
   Stack,
   Stat,
   Sticker,
   type ArtName,
-  type ScoreboardItem,
 } from '@/ui-kit';
 import type { MonthEndVM, MoveVM, TodayHomeVM, TodayVM } from '../model/types';
 import { ErrorNote, moveDetail, moveTitle, RangeText, Skeleton, tilt, type LinkComponent } from './shared';
@@ -47,21 +45,15 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl">
       <Stack gap="3xl">
         <header className="flex flex-col items-center gap-lg text-center">
-          <div className="flex flex-wrap items-center justify-center gap-sm">
-            <Sticker tone="ink">{t.today.kicker}</Sticker>
-            <span className="text-sm text-text-muted">{t.today.kickerNote}</span>
-          </div>
+          <Sticker tone="ink">{t.today.kicker}</Sticker>
           <h1 className="font-display text-display leading-display font-extrabold sm:text-8xl sm:leading-display lg:text-9xl lg:leading-display">
             {t.today.title}
           </h1>
-          <p className="max-w-(--container-xl) text-lg text-text-muted">{t.today.intro}</p>
         </header>
 
         {ready && vm.game.homes.length > 0 && <HomesRow homes={vm.game.homes} />}
 
         <PlayCard vm={vm} href={links.play} Link={Link} />
-
-        {ready && <DayScore vm={vm} />}
 
         {ready && vm.isDemoProfile && (
           <Card tone="muted" data-testid="sample-note" className="flex flex-wrap items-center justify-between gap-md">
@@ -84,8 +76,7 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
                   hint={t.today.future.hint}
                 />
                 <RangeText point={vm.in10y} isZero={vm.in10yBandIsZero} />
-                {!vm.in10yBandIsZero && <p className="text-xs text-text-muted">{t.band.label}</p>}
-                <Link href={links.future} className={cx(buttonClassName({ variant: 'primary' }), 'mt-sm self-start')}>
+                <Link href={links.future} className={cx(buttonClassName({ variant: 'secondary' }), 'mt-sm self-start')}>
                   {t.today.future.cta}
                 </Link>
               </Stack>
@@ -126,21 +117,25 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
         </section>
 
         <nav aria-label={t.today.allScreens}>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">{t.today.allScreens}</h2>
-          <ul className="mt-sm flex flex-wrap gap-xs">
-            {screens.map(({ id, href }) => (
-              <li key={id}>
-                <Link
-                  href={href}
-                  data-screen={id}
-                  className="inline-flex items-baseline gap-xs rounded-full border border-border bg-surface px-md py-xs text-xs hover:bg-surface-strong"
-                >
-                  <span className="font-mono text-text-muted">{id}</span>
-                  <span>{screenTitles[id]}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <details>
+            <summary className="min-h-11 cursor-pointer text-sm font-semibold uppercase tracking-wide text-text-muted">
+              {t.today.allScreens}
+            </summary>
+            <ul className="mt-sm flex flex-wrap gap-xs">
+              {screens.map(({ id, href }) => (
+                <li key={id}>
+                  <Link
+                    href={href}
+                    data-screen={id}
+                    className="inline-flex items-baseline gap-xs rounded-full border border-border bg-surface px-md py-xs text-xs hover:bg-surface-strong"
+                  >
+                    <span className="font-mono text-text-muted">{id}</span>
+                    <span>{screenTitles[id]}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
         </nav>
       </Stack>
     </main>
@@ -209,31 +204,13 @@ function PlayCard({ vm, href, Link }: { vm: TodayVM; href: string; Link: LinkCom
   return (
     <Card tone="arena" data-testid="play" className="flex flex-col items-center gap-lg text-center sm:p-3xl">
       <h2 className="font-display text-4xl font-extrabold leading-display sm:text-6xl sm:leading-display">{t.today.play.title}</h2>
-      <p className="max-w-(--container-lg) text-lg text-text-muted">{finished ? t.today.play.done : t.today.play.pitch}</p>
+      {finished && <p className="max-w-(--container-lg) text-lg text-text-muted">{t.today.play.done}</p>}
       <Link href={href} className={cx(buttonClassName({ variant: 'dark', size: 'lg' }), 'w-full sm:w-auto sm:min-w-sm')}>
         {label}
         <span aria-hidden="true">→</span>
       </Link>
     </Card>
   );
-}
-
-/** The black score bar, filled only with numbers the view-model has. */
-function DayScore({ vm }: { vm: TodayVM }) {
-  const s = t.today.score;
-  const items: ScoreboardItem[] = [];
-  if (vm.game.total > 0) {
-    items.push({ id: 'played', value: s.playedValue(vm.game.played, vm.game.total), label: s.played, tone: 'primary' });
-  }
-  items.push({ id: 'in10y', value: formatMoney(vm.in10y.mid, { compact: true }), label: s.in10y });
-  if (vm.monthEnd.status === 'ready') {
-    items.push({ id: 'month', value: formatMoney(vm.monthEnd.data.projectedSpend, { compact: true }), label: s.month });
-  }
-  const move = vm.committedMove ?? (vm.topMove.status === 'ready' ? vm.topMove.data : null);
-  if (move) {
-    items.push({ id: 'move', value: formatMoney(move.effect10y, { signed: true, compact: true }), label: s.move, tone: 'positive' });
-  }
-  return <Scoreboard label={s.label} items={items} />;
 }
 
 function MonthEnd({ data, uploadHref, Link }: { data: MonthEndVM; uploadHref: string; Link: LinkComponent }) {

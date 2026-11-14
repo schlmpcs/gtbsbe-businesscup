@@ -31,7 +31,6 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
           step={guess.step}
           scale="log"
           formatValue={(v) => formatMoney(v)}
-          hint={t.sliderHint}
           onValueChange={vm.setGuess}
         />
         <Button size="lg" fullWidth onClick={vm.submit} disabled={isSaved}>
@@ -42,7 +41,6 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
             {t.saved}
           </span>
         )}
-        {!bridge && <p className="text-center text-sm text-text-muted">{t.bridgeNone}</p>}
       </div>
 
       {bridge && (
@@ -67,23 +65,23 @@ function Comparison({ comparison: c }: { comparison: SelfGuessComparisonVM }) {
   return (
     <Card title={t.compareTitle} style={{ transform: 'rotate(-0.5deg)' }}>
       <div className="flex flex-col gap-lg">
-        <div className="grid gap-xl sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-xl">
           <div className="flex flex-col gap-xs">
             <span className="text-sm font-medium text-text-muted">{t.yourGuess}</span>
-            <span className="font-display text-4xl font-extrabold leading-display tabular-nums sm:text-display">
+            <span className="font-display text-4xl font-extrabold leading-display tabular-nums">
               {formatMoney(c.guess)}
+              <span className="text-base font-normal text-text-muted">{t.perMonth}</span>
             </span>
-            <span className="text-sm text-text-muted">{t.perMonth}</span>
           </div>
           <div className="flex flex-col gap-xs">
             <span className="flex flex-wrap items-center gap-sm text-sm font-medium text-text-muted">
               {t.ourEstimate}
               {c.isEstimate && <EstimateTag />}
             </span>
-            <span className="font-display text-4xl font-extrabold leading-display text-primary tabular-nums sm:text-display">
+            <span className="font-display text-4xl font-extrabold leading-display text-primary tabular-nums">
               {formatMoney(c.estimate)}
+              <span className="text-base font-normal text-text-muted">{t.perMonth}</span>
             </span>
-            <span className="text-sm text-text-muted">{t.perMonth}</span>
           </div>
         </div>
         <p
@@ -96,7 +94,7 @@ function Comparison({ comparison: c }: { comparison: SelfGuessComparisonVM }) {
         >
           {verdict}
         </p>
-        <p className="text-sm text-text-muted">{t.basis[c.basis]}</p>
+        <p className="text-xs text-text-muted">{t.basis[c.basis]}</p>
       </div>
     </Card>
   );
