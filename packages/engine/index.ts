@@ -25,6 +25,7 @@ export {
 export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordOptions } from './afford';
 export { monthEnd, type CurrentMonth } from './month';
 export { statementTotals, merchantKey, type ClassifiedStatementItem } from './statement';
+export { detectSubscriptions, auditTotals, type DetectSubscriptionsOptions } from './subscriptions';
 export {
   sceneOf, carSprite, takeoutSprite, CAR_PRICE_BANDS, TAKEOUT_BUCKETS, CLUE_COST_CATEGORIES, LAYOUT_COST_CATEGORY,
   LAYOUTS, LAYOUT_BEDROOMS, KID_SPRITES, DECOR_SPRITE_IDS, DECOR_ROOMS, SPRITE_IDS,
