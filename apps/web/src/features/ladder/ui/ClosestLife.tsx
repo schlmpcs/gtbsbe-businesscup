@@ -1,54 +1,66 @@
 // S6 Closest life (Design v3, Figma 202:1931): pick one of today's lives (or a sample life) as the
-// starting profile. White cards in a grid, built to scan: a house cutout (picked by household shape,
-// decorative only, never the same picture on two neighbouring cards), the household as the headline
+// starting profile. White cards in a grid, built to scan: a house cutout that matches the household
+// (studio, 1-bed apartment, family house, with or without a car; decorative only), the household as the headline
 // ("1 adult · studio"), the metro as one muted line, a big "$X / month". The chosen card gets an
 // orange inset border and a "That's me" sticker; the others a small source tag. The full household,
 // the car, the range and the cost lines with sources sit under "Costs & sources". The orange CTA
-// ("Start from this life →") is disabled until a life is picked.
+// ("Start from this life →") starts from the selected card: the nearest to the guess is preselected
+// (JF13), with 1–2 chips per card (car, childcare, area tier) that explain the price.
 import { common, ladder } from '@/copy';
-import { Art, BarBreakdown, Button, cx, EstimateTag, formatMoney, Sticker, Tag, type ArtName } from '@/ui-kit';
-import type { ClosestLifeVM, LadderProgressVM, LifeCandidateVM } from '../model/types';
+import { Art, BarBreakdown, Button, buttonClassName, cx, EstimateTag, formatMoney, Sticker, Tag, type ArtName } from '@/ui-kit';
+import type { ClosestLifeVM, DifferentiatorVM, LadderProgressVM, LifeCandidateVM } from '../model/types';
 import { LadderShell } from './LadderShell';
 
 const t = ladder.closest;
 
-const HOME_ART = ['home-apartment', 'home-suburb', 'home-family', 'home-large'] as const satisfies readonly ArtName[];
-
-/** Decorative house cutout by household shape (never data). */
-function artFor(c: Pick<LifeCandidateVM, 'kids' | 'bedrooms'>): ArtName {
+/**
+ * Decorative house cutout that matches the household facts (never data): a studio or a 1-bed
+ * apartment, a family house with kids, a bigger house for 4 bedrooms, with or without a car.
+ */
+export function artFor(c: Pick<LifeCandidateVM, 'kids' | 'bedrooms' | 'carPrice'>): ArtName {
+  const car = c.carPrice !== null;
   if (c.bedrooms >= 4) return 'home-large';
-  if (c.kids.length > 0) return 'home-family';
-  return c.bedrooms <= 1 ? 'home-apartment' : 'home-suburb';
+  if (c.kids.length > 0) return car ? 'home-family' : 'home-cottage';
+  if (c.bedrooms === 0) return car ? 'home-apartment' : 'home-studio';
+  if (c.bedrooms === 1) return car ? 'home-apartment' : 'home-apartment-nocar';
+  return car ? 'home-suburb' : 'home-cottage';
 }
 
-/**
- * One picture per card, in list order. When the household rule gives a card the same picture as the
- * card before it, rotate through the other home pictures by the card's index so neighbours differ.
- */
-export function artsFor(candidates: readonly Pick<LifeCandidateVM, 'kids' | 'bedrooms'>[]): ArtName[] {
-  const arts: ArtName[] = [];
-  candidates.forEach((c, i) => {
-    const prev = arts[i - 1];
-    let art: ArtName = artFor(c);
-    for (let k = 0; art === prev && k < HOME_ART.length; k++) art = HOME_ART[(i + k) % HOME_ART.length]!;
-    arts.push(art);
-  });
-  return arts;
+function chipText(d: DifferentiatorVM): string {
+  const c = t.differentiator;
+  switch (d.kind) {
+    case 'car':
+      return c.car(formatMoney(d.amount));
+    case 'noCar':
+      return c.noCar;
+    case 'childcare':
+      return c.childcare(formatMoney(d.amount));
+    case 'pricierArea':
+      return c.pricierArea(formatMoney(d.amount));
+    case 'cheaperArea':
+      return c.cheaperArea(formatMoney(d.amount));
+  }
 }
 
 export type ClosestLifeProps = { vm: ClosestLifeVM; progress: LadderProgressVM };
 
 export function ClosestLife({ vm, progress }: ClosestLifeProps) {
   const chosen = vm.candidates.find((c) => c.cardId === vm.chosenCardId);
-  const arts = artsFor(vm.candidates);
+  const selectedId = vm.selectedCardId;
+  const step = progress.rungs.findIndex((r) => r.screen === 'S6');
+  const nextHref = progress.rungs[step + 1]?.href ?? progress.futureHref;
   return (
     <LadderShell
       screen="S6"
       progress={progress}
       loading={vm.status === 'loading'}
-      // Picking a card is this screen's action: the CTA waits for it.
+      // A sensible default is always selected: the CTA starts from it (and saves it) in one tap.
       primary={
-        chosen ? undefined : (
+        chosen ? undefined : selectedId ? (
+          <a href={nextHref} onClick={() => vm.choose(selectedId)} className={buttonClassName({ size: 'lg' })}>
+            {ladder.shell.cta.S6}
+          </a>
+        ) : (
           <Button size="lg" disabled>
             {ladder.shell.cta.S6}
           </Button>
@@ -59,23 +71,21 @@ export function ClosestLife({ vm, progress }: ClosestLifeProps) {
         <p className="-mt-md text-sm text-text-muted">{t.sortedByGuess(formatMoney(vm.selfGuess))}</p>
       )}
       <ul aria-label={t.listLabel} className="grid grid-cols-1 gap-xl pt-sm sm:grid-cols-2 lg:grid-cols-3">
-        {vm.candidates.map((c, i) => (
+        {vm.candidates.map((c) => (
           <li key={c.cardId} className="min-w-0">
             <Candidate
               candidate={c}
-              art={arts[i]!}
-              chosen={c.cardId === vm.chosenCardId}
+              art={artFor(c)}
+              selected={c.cardId === selectedId}
               onChoose={() => vm.choose(c.cardId)}
             />
           </li>
         ))}
       </ul>
-      {chosen && (
-        <p className="flex flex-wrap items-center gap-sm text-sm text-text-muted">
-          <EstimateTag />
-          {t.chosenNote}
-        </p>
-      )}
+      <p className="flex flex-wrap items-center gap-sm text-sm text-text-muted">
+        <EstimateTag />
+        {chosen ? t.chosenNote : t.preselectedNote}
+      </p>
     </LadderShell>
   );
 }
@@ -83,12 +93,12 @@ export function ClosestLife({ vm, progress }: ClosestLifeProps) {
 function Candidate({
   candidate: c,
   art,
-  chosen,
+  selected: chosen,
   onChoose,
 }: {
   candidate: LifeCandidateVM;
   art: ArtName;
-  chosen: boolean;
+  selected: boolean;
   onChoose: () => void;
 }) {
   return (
@@ -144,6 +154,15 @@ function Candidate({
           </p>
         ) : (
           <p className="text-sm text-text-muted">{t.unavailable}</p>
+        )}
+        {c.differentiators.length > 0 && (
+          <ul aria-label={t.differentiatorsLabel} className="flex flex-wrap gap-xs pt-xs">
+            {c.differentiators.map((d) => (
+              <li key={d.kind}>
+                <Tag className="bg-bg">{chipText(d)}</Tag>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

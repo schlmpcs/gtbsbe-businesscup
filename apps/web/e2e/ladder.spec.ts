@@ -43,8 +43,11 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   // One task per step: no 10-year strip, and the CTA waits for a pick.
   await loaded(page);
   await expect(page.getByTestId('ladder-in10y')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: ladder.shell.cta.S6 })).toBeDisabled();
+  // The first (nearest) life is preselected: the CTA is live before any tap (JF13).
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
+  await expect(choose).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: ladder.shell.cta.S6 })).toBeEnabled();
+  await expect(page.getByText(ladder.closest.preselectedNote)).toBeVisible();
   await choose.click();
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText(ladder.closest.chosenNote)).toBeVisible();
@@ -79,10 +82,12 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   await expect(page).toHaveURL(/\/me\/balance$/);
   const debtLoad = page.getByRole('meter', { name: ladder.balance.debtLoadLabel });
   const loadBefore = await debtLoad.getAttribute('aria-valuenow');
-  await page.getByRole('button', { name: ladder.balance.addDebt }).click();
+  // Confirm, not type (JF17): tap the kind, type the balance; the APR comes prefilled (then edited here).
+  await page.getByRole('button', { name: ladder.balance.addKindLabel(ladder.balance.debtKinds.student) }).click();
   const form = page.getByRole('form', { name: ladder.balance.formTitleAdd });
-  await form.getByLabel(ladder.balance.kindLabel).selectOption({ label: ladder.balance.debtKinds.student });
+  await expect(form.getByRole('radio', { name: ladder.balance.debtKinds.student })).toBeChecked();
   await form.getByLabel(ladder.balance.balanceLabel).fill('20000');
+  await expect(form.getByLabel(ladder.balance.aprLabel)).not.toHaveValue('');
   await form.getByLabel(ladder.balance.aprLabel).fill('5');
   await form.getByRole('button', { name: ladder.balance.save }).click();
   await expect(form).toBeHidden();

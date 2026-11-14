@@ -143,6 +143,16 @@ export const ladder = {
       return `${people}, ${kidText}, ${home}`;
     },
     car: (price: string) => `Car worth ${price}`,
+    /** Chips that explain a card's price at a glance (JF13). */
+    differentiatorsLabel: 'Why this price',
+    differentiator: {
+      car: (perMonth: string) => `Car ${perMonth}/mo`,
+      noCar: 'No car',
+      childcare: (perMonth: string) => `Childcare ${perMonth}/mo`,
+      pricierArea: (rent: string) => `Pricier area · rent ${rent}`,
+      cheaperArea: (rent: string) => `Cheaper area · rent ${rent}`,
+    },
+    preselectedNote: 'Picked the closest one for you. Tap another to switch.',
     noCar: 'No car',
     monthlyRange: (low: string, high: string) => `Range ${low} to ${high}`,
     costsToggle: 'Costs & sources',
@@ -236,6 +246,19 @@ export const ladder = {
     minPaymentLabel: 'Minimum payment',
     minPaymentPerMonth: (amount: string) => `${amount}/mo minimum`,
     minPaymentHint: 'Leave empty to estimate.',
+    minPaymentEstimated: (amount: string) => `Estimated ${amount}/mo. Type yours if you know it.`,
+    aprPrefilledHint: 'A typical rate for this kind. Type yours.',
+    addKindLabel: (kind: string) => `New debt: ${kind}`,
+    detected: {
+      sticker: 'Found in your statement',
+      text: (amount: string, months: number) =>
+        `${amount}/mo goes to card or loan payments${months > 1 ? ` (average of ${months} months)` : ''}. What is it?`,
+      balanceLabel: 'How much is left to pay?',
+      note: 'We keep this payment as yours and prefill a typical rate. Edit it after.',
+      confirm: 'Add it',
+      dismiss: 'Not a debt',
+      label: 'Debt payments found in your statement',
+    },
     edit: 'Edit',
     editLabel: (kind: string) => `Edit ${kind.toLowerCase()}`,
     remove: 'Remove',
