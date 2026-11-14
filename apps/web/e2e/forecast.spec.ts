@@ -96,7 +96,7 @@ test('Home shows the house (10-year number with its range) and links to /play, /
 
 test('You in 10 years (the default) shows the chart with the labelled range band and 1–3 moves', async ({ page }) => {
   await page.goto('/future');
-  await page.getByTestId('chart-disclosure').locator('summary').click(); // JF16: behind a disclosure
+  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
   const chart = page.getByRole('figure', { name: t.future.chartTitle(10) });
   await expect(chart.locator('.recharts-surface')).toBeVisible();
   await expect(chart.locator('.recharts-line-curve').first()).toBeVisible();
@@ -178,7 +178,7 @@ test('picking 3 years re-reads the same forecast: the headline and the moves cha
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title(3));
   await expect(headline.getByText(t.future.headline(3))).toBeVisible();
   await expect(amount).not.toHaveText(atTen);
-  await page.getByTestId('chart-disclosure').locator('summary').click(); // JF16: behind a disclosure
+  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
   await expect(page.getByRole('figure', { name: t.future.chartTitle(3) })).toBeVisible();
   const first = page.getByTestId('moves').getByRole('article').first();
   await expect(first.getByText(t.moves.effectLabel(3))).toBeVisible();
@@ -220,7 +220,7 @@ test('Coming up: adding a kid from the shortcut moves the headline, and the even
   const before = (await amount.textContent()) ?? '';
   expect(before).toMatch(/\$/);
 
-  await page.getByTestId('events-disclosure').locator('summary').click(); // JF16: behind a disclosure
+  await page.getByTestId('events-disclosure-summary').click(); // JF16: behind a disclosure
   const card = page.getByRole('region', { name: le.title });
   await expect(card.getByText(le.empty)).toBeVisible();
   await card.getByRole('button', { name: le.shortcuts.kid, exact: true }).click();
@@ -236,7 +236,7 @@ test('Coming up: adding a kid from the shortcut moves the headline, and the even
   await noSideScroll(page);
 
   await page.reload();
-  await page.getByTestId('events-disclosure').locator('summary').click(); // JF16: behind a disclosure
+  await page.getByTestId('events-disclosure-summary').click(); // JF16: behind a disclosure
   await expect(page.getByRole('region', { name: le.title }).getByTestId('life-event')).toContainText(
     le.label({ kind: 'spending', preset: 'kid' }),
   );

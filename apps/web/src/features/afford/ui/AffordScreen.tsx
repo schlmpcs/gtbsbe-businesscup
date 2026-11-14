@@ -45,6 +45,7 @@ export function AffordScreen({ vm }: { vm: AffordVM }) {
                 <PurchaseExamples setLabel={vm.setLabel} setAmount={vm.setAmount} />
                 <PurchaseForm
                   form={vm.form}
+                  loanEstimate={vm.loanEstimate}
                   invalidFields={vm.invalidFields}
                   setLabel={vm.setLabel}
                   setAmount={vm.setAmount}

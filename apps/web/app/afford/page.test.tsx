@@ -66,15 +66,21 @@ describe('/afford (S11)', () => {
     expect(screen.getByText(t.result.failsOn.cushion(t.result.cushionMonths(1)))).toBeTruthy();
   });
 
-  it('paying with a loan asks for its terms and flags the missing APR', async () => {
+  it('paying with a loan starts on typical terms, tagged estimate: a verdict with no typing and no errors', async () => {
     const user = await renderReady();
-    await user.type(screen.getByRole('textbox', { name: t.form.amount }), '2000');
+    await user.type(screen.getByRole('textbox', { name: t.form.label }), 'Car');
+    await user.type(screen.getByRole('textbox', { name: t.form.amount }), '28000');
     await user.click(screen.getByRole('radio', { name: t.form.payWithOptions.loan }));
-    expect(screen.getByText(t.form.errors['loan.apr']!)).toBeTruthy();
-    expect(screen.getByText(t.form.fixFields)).toBeTruthy();
-    await user.type(screen.getByRole('textbox', { name: t.form.apr }), '9.9');
-    await user.type(screen.getByRole('textbox', { name: t.form.termMonths }), '24');
     await waitFor(() => expect(verdict()).toBeTruthy());
+    expect(screen.queryByText(t.form.fixFields)).toBeNull();
+    expect(screen.queryByText(t.form.errors['loan.apr']!)).toBeNull();
+    expect(screen.getAllByText(t.form.loanTypical.auto)).toHaveLength(2); // the APR and the term
+    // A field the user empties is theirs: then it is flagged.
+    await user.clear(screen.getByRole('textbox', { name: t.form.apr }));
+    expect(screen.getByText(t.form.errors['loan.apr']!)).toBeTruthy();
+    await user.type(screen.getByRole('textbox', { name: t.form.apr }), '9.9');
+    await waitFor(() => expect(verdict()).toBeTruthy());
+    expect(screen.getAllByText(t.form.loanTypical.auto)).toHaveLength(1); // only the term is still typical
   });
 
   it('free text is shown for confirmation before it fills the form; Pro saves it to the wishlist', async () => {

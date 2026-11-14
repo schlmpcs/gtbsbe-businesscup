@@ -37,7 +37,10 @@ const MOVES_ID = 'next-moves';
 function Disclosure({ title, testId, children }: { title: string; testId?: string; children: ReactNode }) {
   return (
     <details className="group rounded-xl bg-surface p-lg shadow-md" data-testid={testId}>
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-display text-xl font-extrabold">
+      <summary
+        className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-display text-xl font-extrabold"
+        data-testid={testId && `${testId}-summary`}
+      >
         <span>{title}</span>
         <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
           ▾
