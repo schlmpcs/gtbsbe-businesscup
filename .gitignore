@@ -19,5 +19,7 @@ test-results/
 
 # Local only
 .claude/worktrees/
+# Server-side data files (the Pro entitlement store, PRO_DATA_DIR)
+.data/
 graphify-out/
 docs/lifeguessr-docs.zip

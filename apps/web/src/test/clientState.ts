@@ -2,14 +2,15 @@
 import { act, cleanup, waitFor } from '@testing-library/react';
 import { expect } from 'vitest';
 import { createLocalSessionAdapter } from '@/lib/api/session';
-import { initialAppData, initialGameData, setSessionAdapter, useAppStore, useGameStore } from '@/state';
+import { initialAppData, initialGameData, resetProStore, setSessionAdapter, useAppStore, useGameStore } from '@/state';
 
-/** Empty localStorage, default stores, session sync off. Call in beforeEach. */
+/** Empty localStorage, default stores (Pro included), session sync off. Call in beforeEach. */
 export function resetClientState(): void {
   cleanup();
   localStorage.clear();
   useAppStore.setState(initialAppData());
   useGameStore.setState(initialGameData());
+  resetProStore();
   setSessionAdapter(createLocalSessionAdapter());
 }
 

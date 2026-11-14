@@ -18,6 +18,7 @@ export {
 export { formatMoney, formatRate, type FormatMoneyOptions } from './format';
 export { Gauge, gaugeZone, type GaugeProps, type GaugeThresholds, type GaugeZone } from './Gauge';
 export { Row, Stack, type Gap, type LayoutProps, type RowProps } from './Layout';
+export { LockNotice, type LockNoticeProps } from './LockNotice';
 export { Money, Percent, type MoneyProps, type PercentProps } from './Money';
 export { NumberInput, type NumberInputProps } from './NumberInput';
 export { Sheet, type SheetProps } from './Sheet';

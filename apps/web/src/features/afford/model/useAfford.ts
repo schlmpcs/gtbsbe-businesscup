@@ -8,7 +8,8 @@ import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
-import { useAppReady, useAppStore } from '@/state';
+import { SCREEN_ROUTES } from '@/lib/screens';
+import { useAppReady, useAppStore, usePro } from '@/state';
 import type { AffordFormVM, AffordHorizonVM, AffordResultVM, AffordVM } from './types';
 
 const HORIZONS = [1, 12, 60, 120] as const;
@@ -74,6 +75,7 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
   const wishlist = useAppStore((s) => s.wishlist);
   const addPurchase = useAppStore((s) => s.addToWishlist);
   const removeFromWishlist = useAppStore((s) => s.removeFromWishlist);
+  const wishlistLocked = !usePro().isPro;
   const [form, setForm] = useState<AffordFormVM>(EMPTY_AFFORD_FORM);
 
   const { purchase, invalid } = useMemo(() => purchaseFromForm(form), [form]);
@@ -106,7 +108,10 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
 
   const parse = useParseConfirm('purchase', (p: Purchase) => setForm(formFromPurchase(p)), { parse: opts.parse });
 
-  const addToWishlist = useCallback(() => (purchase ? addPurchase(purchase) : null), [purchase, addPurchase]);
+  const addToWishlist = useCallback(
+    () => (purchase && !wishlistLocked ? addPurchase(purchase) : null),
+    [purchase, wishlistLocked, addPurchase],
+  );
   const loadFromWishlist = useCallback(
     (id: string) => {
       const item = useAppStore.getState().wishlist.find((w) => w.id === id);
@@ -128,6 +133,8 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
     result,
     parse,
     wishlist,
+    wishlistLocked,
+    proHref: SCREEN_ROUTES.S15,
     addToWishlist,
     removeFromWishlist,
     loadFromWishlist,
