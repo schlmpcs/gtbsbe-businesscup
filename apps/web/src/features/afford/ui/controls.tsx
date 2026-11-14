@@ -1,57 +1,11 @@
 'use client';
 
-// Small form controls S11 needs that the kit doesn't have yet: a segmented radio group, a text box
-// and a loading skeleton. Presentational only.
+// Small form controls S11 needs that the kit doesn't have yet: a text box and a loading skeleton.
+// The segmented radio group moved to the kit (Choice); re-exported here for the afford files.
 import { cx, useFieldControl } from '@/ui-kit';
 import type { InputHTMLAttributes } from 'react';
 
-export type ChoiceOption<T extends string> = { value: T; label: string };
-
-/** A row of radio buttons styled as segments. Arrow keys move between them (native radio group). */
-export function Choice<T extends string>({
-  legend,
-  name,
-  value,
-  options,
-  onChange,
-  hint,
-}: {
-  legend: string;
-  name: string;
-  value: T;
-  options: readonly ChoiceOption<T>[];
-  onChange: (value: T) => void;
-  hint?: string;
-}) {
-  return (
-    <fieldset className="flex min-w-0 flex-col gap-sm">
-      <legend className="mb-sm text-sm text-text-muted">{legend}</legend>
-      <div className="flex flex-wrap gap-sm">
-        {options.map((o) => (
-          <label
-            key={o.value}
-            className={cx(
-              'cursor-pointer rounded-full border-2 border-border bg-surface px-lg py-sm text-base font-medium leading-normal transition-colors',
-              'hover:border-text has-checked:border-ink has-checked:bg-ink has-checked:text-on-primary',
-              'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus',
-            )}
-          >
-            <input
-              type="radio"
-              className="sr-only"
-              name={name}
-              value={o.value}
-              checked={value === o.value}
-              onChange={() => onChange(o.value)}
-            />
-            {o.label}
-          </label>
-        ))}
-      </div>
-      {hint && <p className="text-xs text-text-muted">{hint}</p>}
-    </fieldset>
-  );
-}
+export { Choice, type ChoiceOption } from '@/ui-kit';
 
 /** A single-line text box that picks up its label, hint and error from the surrounding <Field>. */
 export function TextInput({

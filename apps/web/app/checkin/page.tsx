@@ -1,9 +1,10 @@
 'use client';
 
-// S14 Monthly check-in (T11 mock): the view-model (fixtures + engine) feeds the screen.
-import { useCheckin } from '@/features/mocks/model/useMocks';
+// S14 Monthly check-in (`/checkin`): thin route. The view-model hook feeds the presentational screen.
+import Link from 'next/link';
+import { useCheckin } from '@/features/mocks/model/useCheckin';
 import { CheckinScreen } from '@/features/mocks/ui/CheckinScreen';
 
 export default function CheckinPage() {
-  return <CheckinScreen vm={useCheckin()} />;
+  return <CheckinScreen vm={useCheckin()} Link={Link} />;
 }

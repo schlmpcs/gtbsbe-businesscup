@@ -75,7 +75,7 @@ exports[`sceneOf: snapshot of every fixture card > sample-01-single-nocar-cheap 
     },
   },
   "public": {
-    "caption": "One-bedroom, bus pass, cooks almost every night.",
+    "caption": "Night-shift nurse who reads three books a week.",
     "decor": [
       {
         "room": "living",
@@ -180,7 +180,7 @@ exports[`sceneOf: snapshot of every fixture card > sample-02-single-nocar-mid 1`
     },
   },
   "public": {
-    "caption": "Studio off Greenville Ave, bikes to work, knows every taco spot.",
+    "caption": "Junior designer, plays in a Sunday soccer league.",
     "decor": [
       {
         "room": "living",
@@ -315,7 +315,7 @@ exports[`sceneOf: snapshot of every fixture card > sample-03-couple-toddler 1`] 
     },
   },
   "public": {
-    "caption": "Two parents, one toddler, one used sedan.",
+    "caption": "Moved here for a hospital job and stayed for the weather.",
     "decor": [
       {
         "room": "living",
@@ -462,7 +462,7 @@ exports[`sceneOf: snapshot of every fixture card > sample-04-family-schoolage-ca
     },
   },
   "public": {
-    "caption": "Suburban family of four, two kids in after-school care, a new SUV.",
+    "caption": "Has lived on the same street for nine years.",
     "decor": [
       {
         "room": "living",
@@ -587,7 +587,7 @@ exports[`sceneOf: snapshot of every fixture card > sample-05-single-luxury-car 1
     },
   },
   "public": {
-    "caption": "One-bedroom in Highland Park, German coupe, dinner out most nights.",
+    "caption": "Sales manager who runs a marathon every spring.",
     "decor": [
       {
         "room": "living",
@@ -730,7 +730,7 @@ exports[`sceneOf: snapshot of every fixture card > sample-06-family-infant-presc
     },
   },
   "public": {
-    "caption": "Four bedrooms, a baby and a preschooler, both in daycare.",
+    "caption": "Grows tomatoes out back and hosts game night on Fridays.",
     "decor": [
       {
         "room": "living",

@@ -1,0 +1,65 @@
+Extract of Table 5 ("Average Premiums and Expenditures 2019-2023: Combined Average Premium"), page 25 of
+NAIC, 2022/2023 Auto Insurance Database Report, (c) 2025 National Association of Insurance Commissioners.
+Source PDF: https://content.naic.org/sites/default/files/publication-aut-pb-auto-insurance-database.pdf
+PDF sha256: 34759655ce8e5387b48d523ebab89f9cd8f29d3f67c6d391838398b7d2659b78 (downloaded 2026-11-14)
+Extracted with `pdftotext -layout`; the table lines below are unchanged. Values are annual US dollars
+per insured car-year. Combined average premium = liability + collision + comprehensive (roughly
+"full coverage"). refresh.py reads the 2023 column.
+
+                                                   Table 5
+
+                       Average Premiums and Expenditures 2019-2023
+                                        Combined Average Premium
+STATE                               2023              2022              2021            2020              2019
+Alabama                          1,268.71          1,128.18         1,084.76         1,078.53          1,094.34
+Alaska                           1,262.49          1,154.53         1,119.20         1,112.75          1,141.81
+Arizona                          1,504.59          1,285.84         1,198.49         1,169.15          1,201.08
+Arkansas                         1,296.46          1,133.16         1,089.41         1,078.31          1,098.95
+California                       1,417.94          1,252.41         1,213.15         1,216.16          1,219.43
+Colorado                         1,655.30          1,446.22         1,347.34         1,329.96          1,338.84
+Connecticut                      1,508.21          1,377.39         1,340.97         1,326.79          1,349.73
+Delaware                         1,569.21          1,388.80         1,350.51         1,346.83          1,387.16
+District of Columbia             1,818.28          1,628.40         1,559.11         1,541.98          1,582.85
+Florida                          1,993.81          1,663.66         1,512.07         1,469.92          1,558.62
+Georgia                          1,746.32          1,514.42         1,432.32         1,426.38          1,436.55
+Hawaii                             998.04            951.75           926.91           919.40            955.50
+Idaho                              981.01            880.16           848.03           832.94            849.71
+Illinois                         1,256.58          1,080.34         1,001.63           997.18          1,018.50
+Indiana                          1,031.86           905.02            858.09           863.29           878.16
+Iowa                             1,010.40           898.06            841.64           822.17           823.53
+Kansas                           1,181.69          1,052.06           990.26           966.92            999.76
+Kentucky                         1,208.29          1,077.96         1,040.05         1,059.44          1,096.30
+Louisiana                        1,982.65          1,743.25         1,682.47         1,684.76          1,763.87
+Maine                              926.02            831.22           792.14           789.47            788.94
+Maryland                         1,601.63          1,389.10         1,304.04         1,309.95          1,348.08
+Massachusetts                    1,413.49          1,256.62         1,254.88         1,248.44          1,261.84
+Michigan                         1,572.77          1,450.02         1,450.52         1,535.56          1,622.75
+Minnesota                        1,223.48          1,062.68           986.15           972.91            991.33
+Mississippi                      1,394.52          1,232.43         1,172.82         1,148.95          1,150.84
+Missouri                         1,322.55          1,145.11         1,064.59         1,042.81          1,073.65
+Montana                          1,183.66          1,079.36         1,035.21         1,031.50          1,039.97
+Nebraska                         1,183.88          1,049.78           982.80           956.86            974.13
+Nevada                           1,600.12          1,413.99         1,369.16         1,365.05          1,419.65
+New Hampshire                    1,032.01            921.80           886.42           879.28            899.12
+New Jersey                       1,693.39          1,520.89         1,473.54         1,442.96          1,504.97
+New Mexico                       1,301.12          1,148.99         1,072.61         1,088.32          1,122.73
+New York                         1,895.99          1,676.16         1,624.27         1,550.99          1,577.48
+North Carolina                   1,096.56            990.66           926.90           901.33            888.94
+North Dakota                       961.28           871.05            824.85           843.17           861.32
+Ohio                             1,037.61           912.86            856.54           866.17           890.41
+Oklahoma                         1,324.15          1,171.76         1,093.70         1,087.42          1,117.75
+Oregon                           1,268.47          1,087.61         1,024.45         1,030.37          1,077.93
+Pennsylvania                     1,273.46          1,117.83         1,068.33         1,079.42          1,104.41
+Rhode Island                     1,709.69          1,577.02         1,587.25         1,549.19          1,550.64
+South Carolina                   1,516.71          1,332.24         1,266.32         1,246.61          1,248.82
+South Dakota                     1,157.70          1,022.42           960.15           924.17            932.68
+Tennessee                        1,211.72          1,061.27         1,001.13           987.96          1,004.15
+Texas                            1,726.91          1,469.27         1,343.03         1,302.63          1,370.28
+Utah                             1,284.60          1,127.57         1,044.43         1,028.38          1,051.23
+Vermont                            957.80            854.38           846.12           852.57            859.35
+Virginia                         1,238.13          1,055.56           960.50           944.70            966.99
+Washington                       1,234.68          1,125.03         1,109.99         1,115.80          1,154.97
+West Virginia                    1,227.39          1,098.61         1,064.12         1,064.14          1,096.10
+Wisconsin                          999.99            876.11           823.98           816.23            840.82
+Wyoming                          1,180.01          1,056.29           997.31           977.46            985.35
+Countrywide                      1,438.60          1,257.31         1,189.16         1,176.81          1,207.71

@@ -9,6 +9,7 @@ next-env.d.ts
 .turbo/
 *.tsbuildinfo
 coverage/
+__pycache__/
 playwright-report/
 test-results/
 
