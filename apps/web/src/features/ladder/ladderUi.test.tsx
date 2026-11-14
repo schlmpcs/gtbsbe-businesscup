@@ -86,6 +86,17 @@ describe('StatementUpload (S9)', () => {
     expect(screen.getByRole('region', { name: ladder.upload.keep.title })).toHaveTextContent(ladder.upload.keep.forecastSent);
   });
 
+  it('does not call the profile “not stored” when the same panel says it is saved on our server', () => {
+    const vm = uploadVM({
+      whatWeKeep: { months: ['2026-10'], categories: [...COST_CATEGORIES], takeHomePay: true, savedProfileToServer: true },
+    });
+    render(<StatementUpload vm={vm} progress={progress} />);
+    const keep = screen.getByRole('region', { name: ladder.upload.keep.title });
+    expect(keep).toHaveTextContent(ladder.upload.keep.server);
+    expect(ladder.upload.keep.forecastSent).not.toMatch(/not stored/i);
+    expect(ladder.upload.keep.forecastSent).toMatch(/provider does not keep them|provider.*(does not|doesn’t) keep/i);
+  });
+
   it('with a reader: the picker hands the file over', async () => {
     const readFile = vi.fn();
     render(<StatementUpload vm={uploadVM({ readFile })} progress={progress} />);
