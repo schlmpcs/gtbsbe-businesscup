@@ -3,6 +3,7 @@
 import { MOVE_LEVELS, moveCandidates, movesLevel, rankCandidates, type MoveCandidate } from '@lifeguessr/engine';
 import type { CostCategory, ForecastSource, Money, Move, MoveKind, Profile } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
+import { track } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
@@ -86,7 +87,9 @@ export function useNextMoves(profile: Profile): NextMovesVM {
     (id: string) => {
       if (actionsDisabled) return;
       const move = find(id);
-      if (move) commitMove(move);
+      if (!move) return;
+      commitMove(move);
+      track({ name: 'move_committed', props: { kind: move.kind } });
     },
     [actionsDisabled, find, commitMove],
   );

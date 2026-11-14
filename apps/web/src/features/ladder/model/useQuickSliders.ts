@@ -2,6 +2,7 @@
 // month and the 10-year number updating live. Free text can fill them via /api/ai/parse.
 import { COST_CATEGORIES, type Money, type Profile, type ProfilePatch, type Rate } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
+import { track } from '@/lib/events';
 import { displayForecast, thisMonth } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
@@ -53,6 +54,8 @@ export function parsedRowsOf(patch: ProfilePatch, inferred: readonly string[], p
   return rows;
 }
 
+const adjusted = () => track({ name: 'sliders_adjusted' }, { once: 'sliders_adjusted' });
+
 export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM {
   const ready = useAppReady();
   const profile = useAppStore((s) => s.profile);
@@ -65,7 +68,9 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
     () =>
       SPENDING_SLIDERS.map(({ category, max, step }) => {
         const { value, isEstimate } = profile.spending[category];
-        const top = Math.max(max, Math.ceil((value * SLIDER_HEADROOM) / step) * step);
+        // A fixed range, unless a value from outside the slider (statement, typed words) is past it:
+        // then the track gets headroom so the thumb is not pinned at the end.
+        const top = value > max ? Math.ceil((value * SLIDER_HEADROOM) / step) * step : max;
         return { ...linearSliderVM(value, 0, top, step), category, isEstimate };
       }),
     [profile.spending],
@@ -73,21 +78,36 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
 
   const setSpending = useCallback(
     (category: SpendingSliderVM['category'], value: Money) => {
-      const slider = sliders.find((s) => s.category === category);
-      setSpendingAction(category, slider ? snap(value, 0, slider.max, slider.step) : Math.max(0, value));
+      const cfg = SPENDING_SLIDERS.find((s) => s.category === category);
+      if (!cfg) {
+        setSpendingAction(category, Math.max(0, value));
+      } else {
+        // The slider never raises its own range: past the fixed max it can only go back down. Without
+        // this, dragging to the end grew the headroom and every drag multiplied the value by 1.5.
+        const ceiling = Math.max(cfg.max, profile.spending[category].value);
+        setSpendingAction(category, snap(value, 0, ceiling, cfg.step));
+      }
+      adjusted();
     },
-    [sliders, setSpendingAction],
+    [profile.spending, setSpendingAction],
   );
 
   const setSavingsShare = useCallback(
-    (share: Rate) => setField('retirementShare', snap(share, 0, SAVINGS_SHARE_MAX, SAVINGS_SHARE_STEP)),
+    (share: Rate) => {
+      setField('retirementShare', snap(share, 0, SAVINGS_SHARE_MAX, SAVINGS_SHARE_STEP));
+      adjusted();
+    },
     [setField],
   );
 
   const month = useMemo(() => thisMonth(profile), [profile]);
+  const monthlyCost = month.spending + month.debtPayments;
   const in10y = useMemo(() => displayForecast(profile).in10y, [profile]);
 
-  const parse = useParseConfirm('life', (patch: ProfilePatch) => applyUserPatch(patch), {
+  const parse = useParseConfirm('life', (patch: ProfilePatch) => {
+    applyUserPatch(patch);
+    adjusted();
+  }, {
     parse: opts.parse,
     debts: profile.debts,
   });
@@ -107,8 +127,9 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
       debtPayments: month.debtPayments,
       surplus: month.surplus,
     },
-    monthlyCost: month.spending + month.debtPayments,
+    monthlyCost,
     selfGuess,
+    guessGap: selfGuess === null ? null : monthlyCost - selfGuess,
     in10y,
     in10ySource: 'rules',
     setSpending,

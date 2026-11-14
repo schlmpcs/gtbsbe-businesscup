@@ -1,5 +1,6 @@
-// Ladder S5–S9 (Y9): build a profile end to end in a real browser, on phone and desktop.
+// Ladder S5–S9 (Y9, T6/T7): build a profile end to end in a real browser, on phone and desktop.
 // closest life → sliders → balance sheet (add a debt) → /future, with the forecast updating.
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { common } from '../src/copy/common';
 import { forecast } from '../src/copy/forecast';
@@ -20,6 +21,7 @@ test.afterEach(() => {
 });
 
 const rung = (page: Page, screen: string) => page.locator(`[data-rung="${screen}"]`);
+const SAMPLE_STATEMENT = fileURLToPath(new URL('../../../packages/data/fixtures/statement.sample.csv', import.meta.url));
 const range = (page: Page) => page.getByTestId('ladder-range');
 
 /** The saved app state (Zustand persist in localStorage). */
@@ -122,13 +124,46 @@ test('S5: guess your own month, then see it next to our estimate', async ({ page
   await expect(rung(page, 'S5')).toHaveAttribute('data-done', 'true');
 });
 
-test('S9: the picker explains it is not on yet, and "What we keep" is shown', async ({ page }) => {
+test('S9: upload the sample statement, review its months, and use them', async ({ page }) => {
   await page.goto('/me/upload');
-  await expect(page.getByLabel(ladder.upload.pickerLabel)).toBeDisabled();
-  await expect(page.getByText(ladder.upload.pickerUnavailable)).toBeVisible();
   const keep = page.getByRole('region', { name: ladder.upload.keep.title });
   await expect(keep).toContainText(ladder.upload.keep.none);
   await expect(keep).toContainText(ladder.upload.keep.neverTitle);
+  await expect(keep).toContainText(ladder.upload.keep.sentTitle);
+
+  // Watch what leaves the browser: only masked labels, amounts, months and days.
+  const sent = page.waitForRequest((r) => r.url().endsWith('/api/statement/categorize') && r.method() === 'POST');
+  await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
+  const body = (await sent).postDataJSON() as { items: { label: string; amount: number; month: string; day: number }[] };
+  expect(body.items).toHaveLength(170);
+  expect(Object.keys(body.items[0]!).sort()).toEqual(['amount', 'day', 'label', 'month']);
+  expect(JSON.stringify(body)).not.toMatch(/Tom Becker|Maria Lopez|Daniel Kim|PRIYA SHAH|Jake Morris/i);
+
+  const review = page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') });
+  await expect(review).toBeVisible();
+  await expect(page.getByTestId('statement-read')).toContainText('Read 170 transactions from Jul 1, 2026 to Nov 12, 2026.');
+  await expect(review).toContainText(ladder.upload.detectedPay('$4,800'));
+  await expect(keep).toContainText(ladder.upload.keep.payFound);
+
+  await page.getByRole('button', { name: ladder.upload.apply }).click();
+  await expect(page.getByText(ladder.upload.applied)).toBeVisible();
+  await expect(page.getByText(ladder.upload.history(['2026-07', '2026-08', '2026-09', '2026-10', '2026-11']))).toBeVisible();
+  await expect(rung(page, 'S9')).toHaveAttribute('data-done', 'true');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('lifeguessr.app') ?? 'null') as {
+    state: { statementMonths: { month: string; oneOffs: unknown[] }[]; profile: { takeHomePay: { isEstimate: boolean } } };
+  } | null);
+  expect(saved?.state.statementMonths.map((m) => m.month)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10', '2026-11']);
+  expect(saved?.state.statementMonths.every((m) => m.oneOffs.length === 0)).toBe(true); // one-off labels are not kept
+  expect(saved?.state.profile.takeHomePay.isEstimate).toBe(false);
+});
+
+test('S9: a file without transaction columns gets a clear error', async ({ page }) => {
+  await page.goto('/me/upload');
+  await page.getByLabel(ladder.upload.pickerLabel).setInputFiles({
+    name: 'notes.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Age\nAnn,30\n'),
+  });
+  // Next.js has its own (empty) role="alert" route announcer, so pick ours by its text.
+  await expect(page.getByRole('alert').filter({ hasText: ladder.upload.errors.unreadable.noColumns })).toBeVisible();
 });
 
 for (const route of ['/me/guess', '/me/closest', '/me/sliders', '/me/balance', '/me/upload']) {

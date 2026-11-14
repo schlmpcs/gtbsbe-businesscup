@@ -1,16 +1,25 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
-  type AREA_TIERS, type CLUE_IDS, COST_CATEGORIES, type DEBT_KINDS, type KID_AGES, type MOVE_KINDS,
-  type PRO_ERROR_CODES, type PRO_PLANS, PRO_PRICES, type PRO_SOURCES,
-  type AreaDataSchema, type CategoryTotalsSchema, ForecastBundleSchema, ForecastPointSchema, ForecastSchema,
-  type LifeCardSchema, LoanInputSchema, ProfilePatchSchema,
+  type AREA_TIERS, type CATEGORIZED_BY, type CLUE_IDS, COST_CATEGORIES, type DEBT_KINDS, type KID_AGES,
+  MAX_STATEMENT_ITEMS, type MOVE_KINDS, type PRO_ERROR_CODES, type PRO_PLANS, PRO_PRICES, type PRO_SOURCES,
+  type SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
+  AnonIdSchema, SessionRequestSchema, SessionResponseSchema, type SessionStateSchema,
+  StatementCategorizeRequestSchema, StatementCategorizeResponseSchema,
+  type StatementCategorizeRequest, type StatementCategorizeResponse, type StatementClass,
+  type AreaDataSchema, CategoryTotalsSchema, type LifeCardSchema, LoanInputSchema, ProfilePatchSchema,
   ProConfirmRequestSchema, ProDemoUnlockRequestSchema, ProErrorResponseSchema, type ProStatusSchema,
-  ProStatusResponseSchema, ProfileSchema, PurchaseSchema, StatementItemSchema, YearAnchorSchema,
-  type AreaData, type CategoryTotals, type ClueId, type CostCategory, type Debt, type Forecast,
-  type ForecastBundle, type ForecastPoint, type ForecastSource, type KidAge, type LifeCard, type LoanInput,
-  type MoveKind, type ProErrorCode, type ProPlan, type ProSource,
-  type ProStatus, type Profile, type ProfilePatch, type Purchase, type StatementItem, type YearAnchor,
+  ProStatusResponseSchema, ProfileSchema, PurchaseSchema, StatementItemSchema,
+  type AreaData, type CategoryTotals, type ClueId, type CostCategory, type Debt, type KidAge,
+  type LifeCard, type LoanInput, type MoveKind, type ProErrorCode, type ProPlan, type ProSource,
+  type ProStatus, type Profile, type ProfilePatch, type Purchase, type StatementItem,
+  type SessionErrorCode, type SessionState,
+  CLIENT_EVENT_NAMES, ClientEventEnvelopeSchema, EVENTS_BATCH_MAX, type EVENTS_ERROR_CODES, EventsRequestSchema,
+  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelReportSchema, type SERVER_EVENT_NAMES,
+  type ClientEventEnvelope, type ClientFunnelEvent, type EventsErrorCode, type EventsRequest, type FunnelReport,
+  type ServerFunnelEvent,
+  ForecastBundleSchema, ForecastPointSchema, ForecastSchema, YearAnchorSchema,
+  type Forecast, type ForecastBundle, type ForecastPoint, type ForecastSource, type YearAnchor,
 } from './index';
 
 // These assertions are checked by `pnpm typecheck` (tsc covers test files): a contract change
@@ -43,6 +52,11 @@ describe('schemas match the contracts', () => {
     expectTypeOf<YearAnchor>().toExtend<z.input<typeof YearAnchorSchema>>();
     expectTypeOf<z.infer<typeof ForecastBundleSchema>>().toExtend<ForecastBundle>();
     expectTypeOf<ForecastBundle>().toExtend<z.input<typeof ForecastBundleSchema>>();
+    expectTypeOf<z.infer<typeof StatementCategorizeRequestSchema>>().toExtend<StatementCategorizeRequest>();
+    expectTypeOf<StatementCategorizeRequest>().toExtend<z.input<typeof StatementCategorizeRequestSchema>>();
+    expectTypeOf<z.infer<typeof StatementCategorizeResponseSchema>>().toExtend<StatementCategorizeResponse>();
+    expectTypeOf<z.infer<typeof SessionStateSchema>>().toExtend<SessionState>();
+    expectTypeOf<SessionState>().toExtend<z.input<typeof SessionStateSchema>>();
   });
 
   it('value lists cover every union member', () => {
@@ -55,9 +69,39 @@ describe('schemas match the contracts', () => {
     expectTypeOf<ProPlan>().toEqualTypeOf<(typeof PRO_PLANS)[number]>();
     expectTypeOf<ProSource>().toEqualTypeOf<(typeof PRO_SOURCES)[number]>();
     expectTypeOf<ProErrorCode>().toEqualTypeOf<(typeof PRO_ERROR_CODES)[number]>();
+    expectTypeOf<StatementClass>().toEqualTypeOf<(typeof STATEMENT_CLASSES)[number]>();
+    expectTypeOf<StatementCategorizeResponse['categorizedBy']>().toEqualTypeOf<(typeof CATEGORIZED_BY)[number]>();
+    expectTypeOf<SessionErrorCode>().toEqualTypeOf<(typeof SESSION_ERROR_CODES)[number]>();
     expect(new Set(COST_CATEGORIES).size).toBe(COST_CATEGORIES.length);
+    expect(new Set(STATEMENT_CLASSES).size).toBe(STATEMENT_CLASSES.length);
     expectTypeOf<ForecastBundle['source']>().toEqualTypeOf<ForecastSource>();
     expectTypeOf<z.infer<typeof ForecastBundleSchema>['source']>().toEqualTypeOf<ForecastSource>();
+  });
+});
+
+describe('statement contracts', () => {
+  const item = { label: 'KROGER #', amount: 42.5, month: '2026-02', day: 28 };
+
+  it('accepts masked lines and rejects days the month does not have', () => {
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [item] }).success).toBe(true);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, day: 29 }] }).success).toBe(false);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, month: '2024-02', day: 29 }] }).success).toBe(true);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, month: '2026-13' }] }).success).toBe(false);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, label: '' }] }).success).toBe(false);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [{ ...item, amount: Number.NaN }] }).success).toBe(false);
+  });
+
+  it('caps the number of lines and needs at least one', () => {
+    expect(StatementCategorizeRequestSchema.safeParse({ items: [] }).success).toBe(false);
+    const many = Array.from({ length: MAX_STATEMENT_ITEMS + 1 }, () => item);
+    expect(StatementCategorizeRequestSchema.safeParse({ items: many }).success).toBe(false);
+  });
+
+  it('shapes the reply', () => {
+    const totals = Object.fromEntries(COST_CATEGORIES.map((c) => [c, 0]));
+    const month = { month: '2026-02', totals, oneOffs: [], detectedPay: 4_800 };
+    expect(StatementCategorizeResponseSchema.safeParse({ ok: true, months: [month], categorizedBy: 'rules' }).success).toBe(true);
+    expect(StatementCategorizeResponseSchema.safeParse({ ok: true, months: [month], categorizedBy: 'llm' }).success).toBe(false);
   });
 });
 
@@ -122,6 +166,17 @@ describe('schemas reject the mistakes they exist for', () => {
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-10', day: 3 }).success).toBe(true);
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-13', day: 3 }).success).toBe(false);
     expect(StatementItemSchema.safeParse({ label: 'KROGER', amount: 54.1, month: '2026-10', day: 32 }).success).toBe(false);
+  });
+
+  it('checks a month’s lastDay against the length of that month', () => {
+    const m = { month: '2026-11', totals: Object.fromEntries(COST_CATEGORIES.map((c) => [c, 0])), oneOffs: [] };
+    expect(CategoryTotalsSchema.safeParse(m).success).toBe(true); // optional: older saved data has none
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 30 }).success).toBe(true);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 31 }).success).toBe(false); // November has 30 days
+    expect(CategoryTotalsSchema.safeParse({ ...m, month: '2028-02', lastDay: 29 }).success).toBe(true); // leap year
+    expect(CategoryTotalsSchema.safeParse({ ...m, month: '2026-02', lastDay: 29 }).success).toBe(false);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 0 }).success).toBe(false);
+    expect(CategoryTotalsSchema.safeParse({ ...m, lastDay: 2.5 }).success).toBe(false);
   });
 
   it('accepts purchases paid with cash, card or a loan', () => {
@@ -199,5 +254,102 @@ describe('forecast schemas', () => {
     expect(YearAnchorSchema.safeParse({ year: 3, low: Number.NaN, mid: 0, high: 10 }).success).toBe(false);
     expect(YearAnchorSchema.safeParse({ year: 3, low: '1', mid: 0, high: 10 }).success).toBe(false);
     expect(YearAnchorSchema.safeParse({ year: 2.5, low: 0, mid: 0, high: 10 }).success).toBe(false);
+  });
+});
+
+describe('Session contracts', () => {
+  const anonId = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
+  const purchase: Purchase = { label: 'Laptop', amount: 1_400, recurring: false, payWith: 'card' };
+
+  it('accepts a crypto.randomUUID() id, lower-cased, and nothing else', () => {
+    expect(AnonIdSchema.parse(anonId.toUpperCase())).toBe(anonId);
+    for (const bad of ['', 'anon-00000001', `${anonId}x`, '0f8e2b4c1d2e4f5a9b8c7d6e5f4a3b2c', 'javascript:alert(1)']) {
+      expect(AnonIdSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it('takes { anonId } alone (a load) and refuses unknown fields', () => {
+    expect(SessionRequestSchema.safeParse({ anonId }).success).toBe(true);
+    expect(SessionRequestSchema.safeParse({ anonId, statementMonths: [] }).success).toBe(false);
+    expect(SessionRequestSchema.safeParse({ profile: undefined }).success).toBe(false);
+  });
+
+  it(`caps the wishlist at ${SESSION_WISHLIST_MAX} purchases`, () => {
+    const wishlist = (n: number) => Array.from({ length: n }, () => purchase);
+    expect(SessionRequestSchema.safeParse({ anonId, wishlist: wishlist(SESSION_WISHLIST_MAX) }).success).toBe(true);
+    expect(SessionRequestSchema.safeParse({ anonId, wishlist: wishlist(SESSION_WISHLIST_MAX + 1) }).success).toBe(false);
+  });
+
+  it('describes a reply with or without a saved profile', () => {
+    expect(SessionResponseSchema.safeParse({ ok: true, wishlist: [], revision: 0, updatedAt: null }).success).toBe(true);
+    expect(SessionResponseSchema.safeParse({
+      ok: true, wishlist: [purchase], revision: 3, updatedAt: '2026-11-14T10:00:00.000Z',
+    }).success).toBe(true);
+    expect(SessionResponseSchema.safeParse({ ok: true, wishlist: [], revision: -1, updatedAt: null }).success).toBe(false);
+  });
+});
+
+describe('Funnel event contracts', () => {
+  const anonId = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
+  const id = '6b1d4c55-0b7e-4a4e-9a51-0c4b1f2f9d10';
+
+  it('match the contract types, and the name lists cover every member', () => {
+    expectTypeOf<z.infer<typeof ClientEventEnvelopeSchema>>().toExtend<ClientEventEnvelope>();
+    expectTypeOf<ClientEventEnvelope>().toExtend<z.input<typeof ClientEventEnvelopeSchema>>();
+    expectTypeOf<z.infer<typeof EventsRequestSchema>>().toExtend<EventsRequest>();
+    expectTypeOf<EventsRequest>().toExtend<z.input<typeof EventsRequestSchema>>();
+    expectTypeOf<z.infer<typeof FunnelReportSchema>>().toExtend<FunnelReport>();
+    expectTypeOf<FunnelReport>().toExtend<z.input<typeof FunnelReportSchema>>();
+    expectTypeOf<ClientFunnelEvent['name']>().toEqualTypeOf<(typeof CLIENT_EVENT_NAMES)[number]>();
+    expectTypeOf<ServerFunnelEvent['name']>().toEqualTypeOf<(typeof SERVER_EVENT_NAMES)[number]>();
+    expectTypeOf<EventsErrorCode>().toEqualTypeOf<(typeof EVENTS_ERROR_CODES)[number]>();
+    expect(new Set(FUNNEL_EVENT_NAMES).size).toBe(FUNNEL_EVENT_NAMES.length);
+    // Every client name has a schema (the discriminated union refuses any other name).
+    for (const name of CLIENT_EVENT_NAMES) {
+      expect(ClientEventEnvelopeSchema.options.some((o) => o.shape.name.value === name)).toBe(true);
+    }
+    // The funnel is made of known events; the Postgres funnel query gives each name one bit of an int.
+    for (const step of FUNNEL_STEPS) expect(FUNNEL_EVENT_NAMES).toContain(step);
+    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(31);
+  });
+
+  it('accepts the events the app sends', () => {
+    const events: ClientEventEnvelope[] = [
+      { id, name: 'play_started' },
+      { id, name: 'clue_opened', props: { home: 1, clue: 'kitchen' } },
+      { id, name: 'home_guessed', props: { home: 3, cluesOpened: 0 } },
+      { id, name: 'game_finished', props: { homes: 5 } },
+      { id, name: 'result_shared', props: { via: 'copy' } },
+      { id, name: 'closest_life_chosen', props: { fromToday: true } },
+      { id, name: 'statement_applied', props: { months: 5 } },
+      { id, name: 'move_committed', props: { kind: 'payCardFirst' } },
+      { id, name: 'afford_checked', props: { verdict: 'wait' } },
+      { id, name: 'loan_compared', props: { offers: 3 } },
+      { id, name: 'paywall_viewed' },
+    ];
+    expect(EventsRequestSchema.safeParse({ anonId, events }).success).toBe(true);
+  });
+
+  it.each([
+    ['an unknown name', { id, name: 'page_view' }],
+    ['a server-only event', { id, name: 'pro_purchased', props: { plan: 'yearly' } }],
+    ['free text in props', { id, name: 'clue_opened', props: { home: 1, clue: 'kitchen', note: 'Jane Doe, 12 Elm St' } }],
+    ['props on an event without them', { id, name: 'play_started', props: { email: 'a@b.co' } }],
+    ['a field beside the event', { id, name: 'forecast_viewed', label: 'Zelle to Jane' }],
+    ['a value outside its enum', { id, name: 'result_shared', props: { via: 'email' } }],
+    ['a home out of range', { id, name: 'home_guessed', props: { home: 0, cluesOpened: 1 } }],
+    ['a fractional count', { id, name: 'home_guessed', props: { home: 1, cluesOpened: 1.5 } }],
+    ['an amount where a count goes', { id, name: 'loan_compared', props: { offers: 28_000 } }],
+    ['an id that is not a UUID', { id: 'abc', name: 'forecast_viewed' }],
+  ])('refuses %s', (_why, ev) => {
+    expect(ClientEventEnvelopeSchema.safeParse(ev).success).toBe(false);
+  });
+
+  it(`takes 1 to ${EVENTS_BATCH_MAX} events and nothing besides anonId and events`, () => {
+    const batch = (n: number) => Array.from({ length: n }, () => ({ id, name: 'forecast_viewed' as const }));
+    expect(EventsRequestSchema.safeParse({ anonId, events: batch(EVENTS_BATCH_MAX) }).success).toBe(true);
+    expect(EventsRequestSchema.safeParse({ anonId, events: batch(EVENTS_BATCH_MAX + 1) }).success).toBe(false);
+    expect(EventsRequestSchema.safeParse({ anonId, events: [] }).success).toBe(false);
+    expect(EventsRequestSchema.safeParse({ anonId, events: batch(1), extra: true }).success).toBe(false);
   });
 });

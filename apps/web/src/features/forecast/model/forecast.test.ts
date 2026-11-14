@@ -10,8 +10,9 @@ import {
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api/http';
-import { areaByZip, cloneProfileDemo } from '@/fixtures';
-import { useAppStore } from '@/state';
+import { getArea } from '@lifeguessr/data/areas';
+import { cloneProfileDemo } from '@/fixtures';
+import { useAppStore, useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute, rulesAnswer } from '@/test/forecastApi';
 import { howWeCalculate } from './howWeCalculate';
@@ -43,7 +44,7 @@ beforeEach(() => {
   route = mockForecastRoute();
 });
 
-const rates = { inflationAnnual: inflationAnnualOf(areaByZip('75206')) };
+const rates = { inflationAnnual: inflationAnnualOf(getArea('75206')) };
 const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
 const AFTER_CHANGE = { timeout: FORECAST_DEBOUNCE_MS + 1_000 };
@@ -401,7 +402,21 @@ describe('useToday (S1)', () => {
     const top = rankMoves(cloneProfileDemo(), { rates })[0]!;
     expect(result.current.topMove).toEqual({ status: 'ready', data: { ...top, isCommitted: false, target: moveTarget(top), source: 'rules' } });
     expect(result.current.committedMove).toBeNull();
-    expect(result.current.game).toEqual({ date: null, played: 0, total: 0, finished: false });
+    expect(result.current.game).toEqual({ date: null, played: 0, total: 0, finished: false, homes: [] });
+  });
+
+  it('lists today’s homes in play order with which ones were guessed', async () => {
+    const card = (id: string, metro: string) => ({ id, metro, layout: '1bed' as const, caption: '', decor: [] });
+    act(() => {
+      useGameStore.getState().startDay('2026-11-14', [card('a', 'Austin, TX'), card('b', 'Boise, ID')]);
+      useGameStore.setState({ reveals: { a: {} as never } });
+    });
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    expect(result.current.game).toEqual({
+      date: '2026-11-14', played: 1, total: 2, finished: false,
+      homes: [{ id: 'a', metro: 'Austin, TX', played: true }, { id: 'b', metro: 'Boise, ID', played: false }],
+    });
   });
 
   it('shows the month-end card while the forecast is still on its way', async () => {
@@ -480,6 +495,72 @@ describe('useToday (S1)', () => {
     if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
     expect(result.current.monthEnd.data.historyMonths).toBe(2);
     expect(result.current.monthEnd.data.fromStatement).toBe(true);
+    expect(result.current.monthEnd.data.noAverage).toBe('history');
+  });
+
+  it('3 past months and no rows this month: the history is enough, only this month is missing', async () => {
+    useAppStore.getState().applyStatementTotals([
+      { month: '2026-08', totals: totals({ groceries: 450 }), oneOffs: [] },
+      { month: '2026-09', totals: totals({ groceries: 500 }), oneOffs: [] },
+      { month: '2026-10', totals: totals({ groceries: 550 }), oneOffs: [] },
+    ]);
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
+    const profile = useAppStore.getState().profile;
+    expect(result.current.monthEnd.data).toMatchObject({
+      // The engine's contract without a current month: the profile's monthly spend (here measured
+      // from the statements: groceries = mean of 450, 500, 550), no comparison, no drift flags.
+      projectedSpend: monthEnd(profile, []).projectedSpend,
+      vsAverage: null,
+      drifts: [],
+      historyMonths: 3,
+      fromStatement: false,
+      noAverage: 'thisMonth',
+      month: '2026-11',
+      asOfDay: null,
+    });
+    expect(profile.spending.groceries).toEqual({ value: 500, isEstimate: false });
+  });
+
+  it('projects this month as of the statement’s last line, not today', async () => {
+    const history = [
+      { month: '2026-08', totals: totals({ groceries: 500, eatingOut: 200 }), oneOffs: [] },
+      { month: '2026-09', totals: totals({ groceries: 500, eatingOut: 200 }), oneOffs: [] },
+      { month: '2026-10', totals: totals({ groceries: 500, eatingOut: 200 }), oneOffs: [] },
+    ];
+    const current = { month: '2026-11', totals: totals({ groceries: 160, eatingOut: 70 }), oneOffs: [], lastDay: 8 };
+    useAppStore.getState().applyStatementTotals([...history, current]);
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
+    const profile = useAppStore.getState().profile;
+    const asOf8 = monthEnd(profile, history, { month: '2026-11', day: 8, totals: current.totals });
+    const asOf14 = monthEnd(profile, history, { month: '2026-11', day: 14, totals: current.totals });
+    expect(result.current.monthEnd.data).toMatchObject({
+      projectedSpend: asOf8.projectedSpend, vsAverage: asOf8.vsAverage, fromStatement: true, noAverage: null, asOfDay: 8,
+    });
+    // (160 + 70) / 8 × 30 = $862.50 for the two daily categories, not (160 + 70) / 14 × 30 ≈ $492.86.
+    expect(result.current.monthEnd.data.projectedSpend - asOf14.projectedSpend).toBeCloseTo(862.5 - (230 / 14) * 30, 6);
+  });
+
+  it('without the statement’s last day (older saved data), falls back to today as the as-of day', async () => {
+    useAppStore.getState().applyStatementTotals([{ month: '2026-11', totals: totals({ groceries: 140 }), oneOffs: [] }]);
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
+    const profile = useAppStore.getState().profile;
+    expect(result.current.monthEnd.data.asOfDay).toBe(14);
+    expect(result.current.monthEnd.data.projectedSpend)
+      .toBe(monthEnd(profile, [], { month: '2026-11', day: 14, totals: totals({ groceries: 140 }) }).projectedSpend);
+  });
+
+  it('a statement month later than today is not this month', async () => {
+    useAppStore.getState().applyStatementTotals([{ month: '2026-12', totals: totals({ groceries: 140 }), oneOffs: [], lastDay: 3 }]);
+    const { result } = renderHook(() => useToday({ now: new Date(2026, 10, 14) }));
+    await waitForReady(result);
+    if (result.current.monthEnd.status !== 'ready') throw new Error('monthEnd not ready');
+    expect(result.current.monthEnd.data).toMatchObject({ fromStatement: false, historyMonths: 0, noAverage: 'history', asOfDay: null });
   });
 
   it('marks the committed move done, showing its current number and source while it is ranked', async () => {
@@ -651,7 +732,7 @@ describe('useFuture "Why?" (POST /api/ai/explain)', () => {
 
 describe('howWeCalculate', () => {
   it('lists the forecast and moves assumptions with their sources or assumption flags', () => {
-    const area = areaByZip('75206');
+    const area = getArea('75206');
     const vm = howWeCalculate({ zip: '75206' });
     expect(vm.forecast.map((a) => a.id)).toEqual([
       'inflation', 'incomeGrowth', 'returnAnnualNominal', 'cashYieldAnnual', 'cardAprDefault', 'cardMinPayment',

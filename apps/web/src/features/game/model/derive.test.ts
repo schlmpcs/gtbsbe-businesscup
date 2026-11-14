@@ -1,9 +1,10 @@
 import { costOfLife } from '@lifeguessr/engine';
 import type { LifeCard, Source } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
-import { areaByZip, cardsSample } from '@/fixtures';
+import { areaByZip } from '@/fixtures';
+import { cardsSample } from '@/fixtures/cards';
 import { GUESS_MAX, GUESS_MIN } from './constants';
-import { aggregateCategories, buildReveal, cardFacts, clueCostOf, clueFacts, clueMultiplier, revealScale } from './derive';
+import { aggregateCategories, buildDay, buildReveal, cardFacts, clueCostOf, clueFacts, clueMultiplier, revealScale } from './derive';
 import type { CostItemVM } from './types';
 
 const SRC_A: Source = { name: 'A', year: 2025 };
@@ -84,6 +85,7 @@ describe('aggregateCategories', () => {
       expect(new Set(reveal.categories.map((c) => c.category)).size).toBe(reveal.categories.length);
       expect(reveal.surprise?.category).toBe(reveal.categories[0]!.category);
       expect(reveal.maxPoints).toBe(1000);
+      expect(reveal.missBy).toBeCloseTo(Math.abs(2000 - cost.total.mid), 9);
     }
   });
 });
@@ -104,5 +106,16 @@ describe('revealScale', () => {
     expect(s.max).toBe(20_000);
     expect(s.high).toBe(1);
     expect(s.guess).toBeLessThan(s.low);
+  });
+});
+
+describe('buildDay', () => {
+  it('adds up the points of guessed homes and marks the current one', () => {
+    const cards = cardsSample.slice(0, 3).map((c) => ({ id: c.id }) as never);
+    const reveal = (points: number) => ({ result: { points } }) as never;
+    const day = buildDay(cards, { [cardsSample[0]!.id]: reveal(840), [cardsSample[1]!.id]: reveal(310) }, 2);
+    expect(day.maxPerHome).toBe(1000);
+    expect(day.totalPoints).toBe(1150);
+    expect(day.homes.map((h) => [h.points, h.current])).toEqual([[840, false], [310, false], [null, true]]);
   });
 });

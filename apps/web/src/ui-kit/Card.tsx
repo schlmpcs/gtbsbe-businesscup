@@ -8,14 +8,22 @@ export type CardProps = Omit<HTMLAttributes<HTMLElement>, 'title'> & {
   headingLevel?: 2 | 3 | 4;
   /** Content on the right of the heading row (a tag, a small button). */
   action?: ReactNode;
-  /** Muted fill instead of the bordered default. */
-  tone?: 'default' | 'muted';
+  /** default = white tile; muted = flat warm fill; arena = orange highlight for the big moments (Figma). */
+  tone?: 'default' | 'muted' | 'arena';
   /** Render as another element (default section when titled, else div). */
   as?: ElementType;
   children?: ReactNode;
 };
 
-/** A bordered surface that groups related content. */
+// On the orange arena every text color inside switches to white, so children need no changes.
+const TONE = {
+  default: 'bg-surface shadow-md',
+  muted: 'bg-surface-strong',
+  arena:
+    'bg-primary text-on-primary shadow-lg [&_.text-text]:text-on-primary [&_.text-text-muted]:text-on-primary/80 [&_.text-positive]:text-on-primary [&_.text-warning]:text-on-primary [&_.text-negative]:text-on-primary',
+} as const;
+
+/** A white tile (Figma: rounded 24, soft shadow) that groups related content. */
 export function Card({ title, headingLevel = 2, action, tone = 'default', as, className, children, ...rest }: CardProps) {
   const headingId = useId();
   const Tag = as ?? (title ? 'section' : 'div');
@@ -24,8 +32,8 @@ export function Card({ title, headingLevel = 2, action, tone = 'default', as, cl
     <Tag
       aria-labelledby={title ? headingId : undefined}
       className={cx(
-        'rounded-lg p-lg',
-        tone === 'muted' ? 'bg-surface' : 'border border-border bg-bg shadow-sm',
+        'rounded-xl p-xl',
+        TONE[tone],
         className,
       )}
       {...rest}
@@ -33,7 +41,7 @@ export function Card({ title, headingLevel = 2, action, tone = 'default', as, cl
       {(title || action) && (
         <div className="mb-md flex items-start justify-between gap-md">
           {title && (
-            <Heading id={headingId} className="text-lg font-semibold leading-tight">
+            <Heading id={headingId} className="text-xl font-bold leading-tight">
               {title}
             </Heading>
           )}

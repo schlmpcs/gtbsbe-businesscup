@@ -21,18 +21,19 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 - Tailwind reading CSS variables from `tokens.css`, which is generated from `tokens.json` (Figma variables export).
 - Zustand (or React context) for client state; local storage holds the anonymous ID and a profile cache.
 - Vitest (engine) and Playwright (one end-to-end demo path).
-- A self-hosted store on the team's own server for sessions, leaderboard and events (T4/T5; connection via `STORE_URL`).
+- A self-hosted Postgres store on the team's own server for sessions, Pro entitlements, leaderboard and events (T4; `STORE_URL`, `pg` driver, server code in `apps/web/src/server/store/`).
 - One server-side LLM client: Anthropic Claude (`ANTHROPIC_API_KEY`, model in `ANTHROPIC_MODEL`); responses validated with zod. It also produces the 10-year forecast for the demo (`/api/ai/forecast`, optional `ANTHROPIC_FORECAST_MODEL`); the rules engine is the fallback.
 - Charts: one wrapper component (e.g. Recharts or visx) behind `<ForecastChart>` so restyling stays local.
 
 ## Deployment
 
-Production runs on the team's own server, not on Vercel. The files are in `deploy/` (runbook: `deploy/README.md`); the server side is not set up yet.
+Production runs on the team's own server, not on Vercel. The files are in `deploy/` (runbook: `deploy/README.md`). It is live: a push to `main` that passes CI is deployed automatically.
 
 - **Public URL:** the Tailscale Funnel host that PawCoach used. PawCoach has been removed from the server, and LifeGuessr takes over the host's root `/`, so it needs no sub-path and no Next.js `basePath`. Funnel terminates HTTPS on the host (port 443) and proxies to the app on loopback port 3000. Other apps on that host keep their own routes (for example `/ember`) and must not be touched.
-- **Runtime:** a Docker image (`deploy/Dockerfile`, Next.js standalone build) and `deploy/compose.yaml`, with an `.env` beside it on the server, never in the repo. The app port is published on `127.0.0.1` only, so Funnel is the only way in from outside. The store for sessions, leaderboard and events (`STORE_URL`) lives on the same server, in the `/data` volume.
-- **CI/CD:** CI (lint, typecheck, test, build, Playwright e2e) runs on GitHub-hosted runners for every PR and push. `.github/workflows/deploy.yml` then deploys `main` by running `deploy/deploy.sh` on a self-hosted runner on the server: build there, health check on `/api/health`, automatic rollback to the previous image. Rules for that runner are in `deploy/README.md`.
-- **Open items:** the server owner has to approve installing the runner and creating `~/lifeguessr/.env`. The server address and Funnel hostname stay out of this repo, which becomes public; they live in the team's private notes.
+- **Runtime:** a Docker image (`deploy/Dockerfile`, Next.js standalone build) and `deploy/compose.yaml`, with an `.env` beside it on the server, never in the repo. The app port is published on `127.0.0.1` only, so Funnel is the only way in from outside.
+- **Store:** a `postgres` service (`postgres:17-alpine`) in the same compose project, with no published port (the compose network only), its data in the named volume `pgdata`, a healthcheck and a 512 MB cap. The app starts after it is healthy and gets `STORE_URL` from compose, built from `STORE_PASSWORD` in the server's `.env` (required: compose and `remote.sh` stop the deploy when it is missing). The app runs its schema migrations itself on first use (see Store below).
+- **CI/CD:** CI (lint, typecheck, test with a Postgres service, build, Playwright e2e against a real store, and a dry run of `deploy/deploy.sh` with the whole compose stack on the CI runner) runs on GitHub-hosted runners for every PR and push. `.github/workflows/deploy.yml` then deploys `main` by running `deploy/deploy.sh` on a self-hosted runner on the server: build there, make sure `postgres` is healthy, back it up (`pg_dump`, newest 14 kept), recreate only the app container, check `/api/health` (container liveness, then `store.status: "ok"` from the new image), automatic rollback to the previous image when either fails. A deploy never recreates the database volume. Rules for that runner are in `deploy/README.md`.
+- **Server notes:** the runner has its own user on the server and keeps the app's `.env` in that user's home. Its clock must be right (`deploy/README.md`). The server address and Funnel hostname stay out of this repo, which becomes public; they live in the team's private notes.
 - **No PR previews:** without Vercel there are no per-PR preview deploys.
 
 ## Folder structure (owner in brackets)
@@ -74,7 +75,7 @@ lifeguessr/
 | S6 | Closest life | `/me/closest` | ladder | Real |
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
 | S8 | Balance sheet | `/me/balance` | ladder | Real |
-| S9 | Statement upload + "What we keep" | `/me/upload` | upload (logic) + ladder (ui) | Real |
+| S9 | Statement upload + "What we keep" (+ "connect your bank app", coming soon) | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: Mock) |
 | S10 | You in 10 years + Next Moves | `/future` | forecast | Real |
 | S11 | Can I Afford It? | `/afford` | afford | Real |
 | S12 | Loan Lab | `/loan` | loan | Real |
@@ -180,6 +181,13 @@ export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Mone
   payoffMonth: number | null;    // null = the payment never covers the interest
   debtLoadBefore: Rate; debtLoadAfter: Rate; effect10y: Money;
   schedule: { month: number; interest: Money; principal: Money; balance: Money }[] };
+  // debtLoad = required debt payments / take-home pay; Infinity when there are payments but no pay.
+
+// POST /api/ai/explain. JSON has no Infinity: a debt load with no take-home pay is sent as null.
+export type ExplainLoanResult = Omit<LoanResult, 'schedule' | 'debtLoadBefore' | 'debtLoadAfter'> & {
+  debtLoadBefore: Rate | null; debtLoadAfter: Rate | null };   // null = no take-home pay
+export type ExplainRequest = { move?: Move; loanResult?: ExplainLoanResult };
+export type ExplainResponse = { text: string; source: 'ai' | 'template' };
 
 export type Purchase = { label: string; amount: Money;   // amount per occurrence
   recurring: false | 'monthly' | 'yearly';
@@ -194,7 +202,11 @@ export type Transaction = { date: string; description: string; amount: Money };
 // The only statement data that leaves the browser. month = 'YYYY-MM'; label has names masked.
 export type StatementItem = { label: string; amount: Money; month: string; day: number };
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
-  oneOffs: { label: string; amount: Money }[]; detectedPay?: Money };
+  oneOffs: { label: string; amount: Money }[]; detectedPay?: Money;
+  lastDay?: number };            // day of the month's latest statement line (how far the statement goes)
+
+// POST /api/session (T4). revision counts saves (0 = nothing saved); updatedAt is ISO 8601 UTC.
+export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
 ```
 
 ## Engine API (pure, no I/O)
@@ -211,8 +223,8 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 | `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
 | `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
 | `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
-| `loan` | Aibek | `(p: Profile, l: LoanInput) => LoanResult` |
-| `compareLoans` | Aibek | `(p: Profile, ls: LoanInput[]) => LoanResult[]` |
+| `loan` | Aibek | `(p: Profile, l: LoanInput, opts?: { rates?: Partial<ForecastRates> }) => LoanResult` (`effect10y` in today's dollars, like moves) |
+| `compareLoans` | Aibek | `(p: Profile, ls: LoanInput[], opts?: { rates?: Partial<ForecastRates> }) => LoanResult[]` (same order as `ls`) |
 | `payoffOrder` | Aibek | `(debts: Debt[], extra: Money, method: 'avalanche' \| 'snowball') => { order: string[] /* debt ids */; payoffMonth: number \| null; totalInterest: Money }` |
 
 All assumptions (inflation, returns, thresholds) live in `packages/engine/assumptions.ts` with a `Source` or an `assumption: true` flag. The UI shows them in a "How we calculate" panel.
@@ -225,16 +237,17 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 
 | Route | Owner | In → out |
 | --- | --- | --- |
-| `GET /api/daily` | Aibek | → today's 5 `PublicCard`s, no answers (seed = calendar date in `America/New_York`, so the set rolls over at US midnight, not mid-evening) |
-| `POST /api/daily/clue` | Aibek | `{ anonId, cardId, clue }` → `ClueReveal`; the server records the opened clue |
-| `POST /api/daily/guess` | Aibek | `{ anonId, cardId, guess }` → `GuessReveal`. The server scores with `costOfLife` + `scoreGuess` using the clues it recorded; one guess per card per anonId per day. |
-| `GET /api/leaderboard` | Aibek | query `date` (+ own `anonId` in a header) → `{ rank, todayStats }`, summed from stored guesses. The client never sends a score. |
-| `GET /api/share` | Aibek | query `resultId, format` → PNG (9:16 or 1:1) from a stored result, so share cards can't be faked |
-| `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → saved state. `anonId` = `crypto.randomUUID()`. |
-| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` → `CategoryTotals[]` (one per month) |
-| `POST /api/events` | Aibek | `{ anonId, name, props? }` → ok |
+| `GET /api/daily` | Aibek | → `{ ok, date, cards, progress? }`: today's 5 `PublicCard`s, no answers (`dailyCards(dayNumber(date))`; date = calendar date in `America/New_York`, DST-aware, so the set rolls over at US midnight, not mid-evening). With the `x-anon-id` header, `progress` = the clues the server recorded and the guesses it scored for this player today, so a cleared browser shows what will be counted. |
+| `POST /api/daily/clue` | Aibek | `{ anonId, cardId, clue, date? }` → `ClueReveal`; the server records the opened clue first (once per clue; not after the guess). `date` is the set's date from `/api/daily`: yesterday's set stays open 30 minutes after midnight, then 409 `day_over`. 404 `not_in_set` for a card outside that day's set. |
+| `POST /api/daily/guess` | Aibek | `{ anonId, cardId, guess, date? }` → `GuessReveal` + `{ guess, replayed }`. The server scores with `costOfLife` + `scoreGuess` using the clues it recorded, never a count or score from the client; one guess per card per anonId per day (UNIQUE in migration 3). A repeat answers the stored result (`replayed: true`, the amount scored then), never a second score. Stored with a random 128-bit `resultId`. |
+| `GET /api/leaderboard` | Aibek | query `date` (default today), `limit` (1–100, default 50) (+ own `anonId` in a header) → `{ ok, date, players, entries, rank, todayStats }`, summed from stored guesses. Ties on points share a rank; handles are made up from a hash (no id, no PII). The client never sends a score. |
+| `GET /api/share` | Aibek | query `resultId, format` (`9x16` default, `1x1`) → PNG (1080×1920 or 1080×1080, `next/og`) from a stored result, so share cards can't be faked; cached as immutable |
+| `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → `{ ok: true, ...SessionState }`. `anonId` = `crypto.randomUUID()` (a UUID, required). `{ anonId }` alone loads; each field sent replaces the saved one whole. 402 `not_paid` when the save would add to the wishlist without Pro; 503 `unavailable` when the store is down or not configured. `GET /api/session` with the `x-anon-id` header loads too. |
+| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed' }`; keyword rules without an API key; nothing stored |
+| `POST /api/events` | Aibek | `{ anonId, events: [{ id, name, props? }] }` (1–25) → `{ ok: true, accepted }`. Names from `CLIENT_EVENT_NAMES`; props are small enums and counts only (`EventsRequestSchema`), so no personal data; `id` = the browser's UUID per event, so a resent batch is stored once. The browser batches them (`src/lib/events.ts`, on with `NEXT_PUBLIC_EVENTS_SOURCE=api`, off under GPC / Do Not Track); the Pro routes record `checkout_started`, `pro_purchased` and `pro_promo_redeemed` themselves. 503 when the store is down. |
+| `GET /api/events/funnel` | Aibek | query `days` (1–90, default 7) → `FunnelReport`: distinct anonymous ids per event and per `FUNNEL_STEPS` step (with how many went through every earlier step, and the conversion), plus clues per home, blind-guess, finish and share rates. Aggregates only. |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
-| `POST /api/ai/explain` | Amir | `{ move? (optional `source: 'ai' \| 'rules'` words the sentence), loanResult? }` → `{ text }` (2 sentences, no new numbers) |
+| `POST /api/ai/explain` | Amir | `ExplainRequest { move? (optional `source: 'ai' \| 'rules'` words the sentence), loanResult? }` → `{ text, source }` (2 sentences, no new numbers; a debt load with no take-home pay is `null`) |
 | `POST /api/ai/forecast` | Amir | `{ profile, rates?, scenarios?: { id, patch }[] }` → `ForecastBundle` (nominal dollars). Validated in code, cached, falls back to the rules forecast (`source: 'rules'`). Has its own rate limiter so it cannot use up the parse and explain budget. |
 | `GET /api/pro/status` | Amir | header `x-anon-id` → `{ status: ProStatus, checkoutAvailable, demo: { enabled, code? } }` |
 | `POST /api/pro/checkout` | Amir | `{ plan }` → `{ url }`, a Stripe Checkout Session in test mode to redirect to |
@@ -247,9 +260,21 @@ No real money moves. Pro unlocks through a Stripe Checkout in **test mode** (the
 
 - **Test mode only.** `STRIPE_SECRET_KEY` is accepted only if it starts with `sk_test_` or `rk_test_`; anything else leaves checkout unavailable and the promo code still works. `/api/pro/confirm` accepts only `cs_test_…` session ids and refuses a session with `livemode: true`.
 - **No webhook.** The success URL carries the session ID; `/api/pro/confirm` fetches the session from Stripe, so nothing needs to reach the server from outside (the server is behind a Funnel route). The session is bound to the anonymous ID (`client_reference_id`) and can be claimed by one ID only.
-- **Entitlements** sit behind an `EntitlementStore` interface. The default is one JSON file in `PRO_DATA_DIR` on the server's volume, a stopgap until the shared self-hosted store (T4, `STORE_URL`) lands. A Stripe grant replaces a demo grant, never the reverse.
-- **What is gated.** Server-side routes call `requirePro(req)` (`src/server/pro/http.ts`); T4's session save should. In this build the one real gate is saving a purchase to the wishlist (S11, `wishlistLocked`), and it is enforced in the browser because the engine runs there. Items already in the wishlist stay.
+- **Entitlements** sit behind an `EntitlementStore` interface. With `STORE_URL` they live in the Postgres store (tables `pro_entitlements`, `pro_checkout_sessions`); the JSON file of the earlier builds (`PRO_DATA_DIR`) is imported once on first use. Without `STORE_URL` (dev) they stay in that file. A Stripe grant replaces a demo grant, never the reverse.
+- **What is gated.** Server-side routes call `requirePro(req)`, or `proStatusFor(anonId)` when only part of a request is gated (`src/server/pro/http.ts`). In this build the one real gate is saving a purchase to the wishlist (S11, `wishlistLocked`): the browser hides the button, and `POST /api/session` refuses (402) a save that would add a purchase to the saved wishlist without Pro. Items already in the wishlist stay and can be removed; the profile always saves.
 - **Env:** `STRIPE_SECRET_KEY`, `APP_URL` (public base URL including any sub-path, used for the return URLs), `PRO_DEMO_CODE`, `PRO_DEMO_UNLOCK` (`off` disables the code), `PRO_DATA_DIR`. Names only in `.env.example`.
+
+## Store (`apps/web/src/server/store/`)
+
+Server-only. `getStore()` returns the process-wide store: Postgres for a `postgres://` `STORE_URL`, in memory in dev and tests without one. In production (`NODE_ENV=production`) without `STORE_URL` it throws `StoreUnavailableError('not_configured')` and the store routes answer 503; it never falls back to memory there.
+
+- **Domains:** `store.sessions` (`SessionStore`: `load`, `save`), `store.game` (`GameStore`: `openClue`, `submitGuess`, `playerDay`, `findResult`, `leaderboard`; clue and guess writes for one day, player and card are serialized by a transaction-scoped advisory lock) and `store.events` (`EventStore`: `record`, `funnel`). Each domain is an interface with its rules as pure functions (`sessions.ts`) plus a Postgres and a memory implementation (`sessions.postgres.ts`, `sessions.memory.ts`) that share them. `store.db` (`Db`: `query`, `transaction`) is the Postgres connection for modules that own their tables, like Pro.
+- **Keys:** every table keys rows by `anon_key` = sha256 of the anonymous id (`anonKey()`); the raw id is never stored.
+- **Concurrency:** a session save is one transaction that locks its row (`SELECT … FOR UPDATE`), so concurrent saves for one id apply one after the other (`revision` counts them). `Db.transaction` retries on deadlock and serialization failures.
+- **Migrations:** `migrations/NNN_name.ts`, listed in `migrations/index.ts` (1 sessions, 2 Pro entitlements, 3 game clues and results, 4 funnel events; versions are applied by set, so one that lands after a higher one still runs). They run once per process before the first query, in one transaction under an advisory lock, recorded with a checksum in `schema_migrations`. An edited migration stops the store; unknown newer ones (after a rollback) are tolerated. Additive only; parameterized queries only.
+- **Errors:** connection, auth and shutdown errors become `StoreUnavailableError`; routes map it to 503 with `storeErrorResponse()` (`http.ts`). Anything else is a bug and surfaces as a 500.
+- **Health:** `GET /api/health` always answers 200 while the app serves (liveness, for the container) and reports `store: { status, backend, reason? }` (readiness, checked once by the deploy) with a 2-second timeout.
+- **Tests:** the memory store in unit tests; the Postgres tests run when `TEST_STORE_URL` is set (CI sets it), each in its own schema.
 
 ## Data flow
 
@@ -267,10 +292,11 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 
 ## Privacy design
 
-- CSVs are parsed client-side. Account numbers, the account holder's name and personal names in labels (e.g. Zelle/Venmo/transfer lines) are masked before any request.
+- CSVs are parsed client-side. Account numbers and personal names on payment-app (Zelle/Venmo/…), transfer and ACH name-field lines are masked before any request. Names on bill-pay, check-payee, "deposit from" and ACH-credit lines are not masked yet (#19), so the copy must not promise masking on every line.
 - The server receives only `StatementItem`s: merchant label, amount, month and day of month. The day lets the server detect subscriptions and yearly charges. It returns totals; raw items are not stored.
-- Labels pass through the LLM provider for categorizing. Use the provider's no-training / zero-retention option, and say so in the "What we keep" panel.
-- Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
+- Labels pass through the LLM provider for categorizing: only the distinct masked labels, each marked money in or out, never amounts or dates. The provider (Anthropic) does not train on API data. Zero data retention is not enabled on the account, so the "What we keep" panel must not claim it; it says only that the labels go to the provider to be sorted and that we don't store them. Without an API key, keyword rules on the server sort them instead.
+- Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The store keeps only its SHA-256 hash, so a leaked row cannot be turned back into an ID that loads the profile. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
+- Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
 - Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test` or `demo`), when, and the Stripe test Checkout Session ID. No card data or email ever reaches our server; the test checkout page belongs to Stripe.
-- The forecast request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers, under the same no-training / zero-retention setting. The "What we keep" panel says so too.
+- The forecast request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers to the model provider, which does not train on API data. Zero data retention is not enabled, so no copy claims it; the "What we keep" panel says only that these numbers go to the provider and that we don't store them.

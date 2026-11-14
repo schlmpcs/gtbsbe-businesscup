@@ -4,21 +4,21 @@ import type { ProPlan, ProSource } from '@lifeguessr/types';
 
 export const pro = {
   demoBadge: 'Demo · Stripe test mode, no real charge',
-  intro: 'Pro keeps your plans working for you. This build is a demo: checkout runs in Stripe test mode and no money ever moves.',
+  headline: 'Keep playing your future.',
   loading: 'Checking your Pro status…',
 
   plans: {
     legend: 'Choose a plan',
     names: { yearly: 'Yearly', monthly: 'Monthly' } satisfies Record<ProPlan, string>,
     /** Suffix after the price: "$39.99 / year". */
-    per: { year: '/ year', month: '/ month' },
+    per: { year: 'a year', month: 'a month' },
     yearlyBadge: 'Best value',
-    priceNote: 'Prices are a pricing assumption for this demo.',
+    priceNote: 'Demo prices.',
   },
 
   includes: {
     title: 'What Pro includes',
-    now: ['Save purchases to your wishlist on Can I Afford It?'],
+    now: ['A wishlist in Can I Afford It?'],
     comingTitle: 'Coming to Pro',
     coming: [
       'Your life saved across devices',
@@ -30,18 +30,17 @@ export const pro = {
   },
 
   checkout: {
-    button: 'Continue to test checkout',
-    busy: 'Opening Stripe test checkout…',
-    unavailable: 'Test checkout is not set up on this server right now. The promo code below still unlocks Pro.',
-    testCardTitle: 'Stripe test card',
+    button: 'Go to test checkout',
+    busy: 'Opening test checkout…',
+    unavailable: 'Test checkout is off here. Use the promo code.',
+    testCardTitle: 'Test card',
     testCardNumber: '4242 4242 4242 4242',
-    testCardDetails: 'Any future expiry date, any 3-digit CVC, any ZIP code.',
-    testCardNote: 'Stripe test mode accepts only test cards. A real card is declined and never charged.',
+    testCardDetails: 'Any future date, any CVC, any ZIP.',
+    testCardNote: 'Real cards are declined, never charged.',
   },
 
   promo: {
     title: 'Judges: skip checkout',
-    body: 'Use the demo promo code to unlock Pro without a card.',
     label: 'Promo code',
     button: 'Unlock with code',
     busy: 'Checking the code…',
@@ -52,7 +51,7 @@ export const pro = {
 
   active: {
     successTitle: 'You are Pro',
-    successBody: 'Saving purchases to your wishlist is now unlocked.',
+    successBody: 'Your wishlist is unlocked.',
     title: 'You already have Pro',
     sourceLabel: 'Unlocked with',
     sources: { stripe_test: 'Stripe test checkout', demo: 'Demo promo code' } satisfies Record<ProSource, string>,

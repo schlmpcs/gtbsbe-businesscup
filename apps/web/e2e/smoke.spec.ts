@@ -15,10 +15,10 @@ for (const [id, route] of Object.entries(SCREEN_ROUTES)) {
   test(`${id} renders at ${route}`, async ({ page }) => {
     const response = await page.goto(route);
     expect(response?.status()).toBe(200);
-    // Placeholder screens put the ID in the heading; real screens just need one.
     const h1 = page.getByRole('heading', { level: 1 });
     await expect(h1).toBeVisible();
-    // Built screens (S1–S12) show their title only, never an internal screen ID.
-    if (Number(id.slice(1)) <= 12) await expect(h1).not.toHaveText(/\bS\d{1,2}\b/);
+    // Built screens (S1–S14) show their title only, never an internal screen ID. S15 (/pro) keeps
+    // the placeholder-style heading with its ID.
+    if (Number(id.slice(1)) <= 14) await expect(h1).not.toHaveText(/\bS\d{1,2}\b/);
   });
 }
