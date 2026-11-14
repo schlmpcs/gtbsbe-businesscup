@@ -56,6 +56,45 @@ export type ClueReveal = { cardId: string; clue: ClueId; props: SceneProp[];
 export type GuessReveal = { resultId: string; cost: CostBreakdown; result: GuessResult;
   card: LifeCard; cluesOpened: ClueId[] };
 
+// ----- Duel game (S2/S3 "Which life costs more?", decision D-1) ------------------------------
+// Each round shows two composite lives; the player taps the one that costs more per month. The
+// browser gets no totals and no hint before it picks or asks for the hint: like the slider game,
+// the source (the server, or the fixture client in fixture mode) holds the answers and scores.
+export type DuelLetter = 'A' | 'B';
+export type DuelRound = 1 | 2 | 3 | 4 | 5;
+export type PublicDuelCard = {
+  letter: DuelLetter;
+  household: string;                  // "2 adults · 1 kid · 3 bedrooms"
+  metro: string;                      // "Columbus, OH"
+  caption: string;                    // flavor line, no cost facts
+  facts: string[];                    // 4 chips: "1 car", "Daycare", "Cooks at home", "Rents"
+  art: string;                        // house sprite id (engine SpriteId, e.g. "layout/2bed")
+  composite: true;                    // the UI shows a "Composite" label
+};
+export type PublicDuel = {
+  date: string;                       // YYYY-MM-DD, America/New_York
+  round: DuelRound;
+  kind: 'life' | 'habit';             // 'habit' = X4, after the cut line
+  cards: [PublicDuelCard, PublicDuelCard];
+};
+/** One cost category of a duel card: its cost lines added up (monthly), with every source behind them. */
+export type CategoryLine = { category: CostCategory; amount: Money; sources: Source[]; isEstimate: boolean };
+/** POST /api/daily/hint reply: one more fact per card (the neighborhood tier). */
+export type DuelHint = Record<DuelLetter, string>;
+/** POST /api/daily/pick reply. One pick per round per player; a repeat answers the stored result. */
+export type PickResult = {
+  resultId: string;                   // the player's result for the day (share + challenge link)
+  correct: boolean;
+  points: number;                     // 1000 × hint multiplier, 0 if wrong
+  totals: Record<DuelLetter, Money>;  // costOfLife(card).total.mid, per month
+  breakdown: Record<DuelLetter, CategoryLine[]>;
+  decidedBy: { category: CostCategory; A: Money; B: Money };  // biggest gap toward the costlier card (monthly)
+  lesson: string;                     // fixed template filled by code, never an LLM
+  crowd: { pickedA: number; total: number } | null;           // null when total < 20
+};
+export type DuelPickRequest = { anonId: string; date: string; round: DuelRound; choice: DuelLetter };
+export type DuelHintRequest = { anonId: string; date: string; round: DuelRound };
+
 export type Estimate<T> = { value: T; isEstimate: boolean };
 export type Debt = { id: string; kind: 'card'|'auto'|'student'|'personal'|'bnpl'|'mortgage';
   balance: Money; apr: Rate;
@@ -190,7 +229,11 @@ export type ClientFunnelEvent =
   | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
   | { name: 'loan_compared'; props: { offers: number } }
   | { name: 'paywall_viewed' }
-  | { name: 'sample_loaded' };
+  | { name: 'sample_loaded' }
+  | { name: 'duel_picked'; props: { round: DuelRound; correct: boolean } }
+  | { name: 'hint_opened'; props: { round: DuelRound } }
+  | { name: 'challenge_copied' }
+  | { name: 'own_guess_started' };
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =
   | { name: 'checkout_started'; props: { plan: ProPlan } }

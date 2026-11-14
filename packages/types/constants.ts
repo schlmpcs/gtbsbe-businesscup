@@ -1,7 +1,7 @@
 // Value lists for the unions in ./index.ts (runtime iteration, zod enums). Each `satisfies` line
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
 import type {
-  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, EventsErrorCode, FunnelEventName, KidAge, MoveKind,
+  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, KidAge, MoveKind,
   ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
 } from './index';
 
@@ -17,6 +17,11 @@ export const MOVE_KINDS = [
   'payCardFirst', 'cutCategory', 'cancelSubscriptions',
   'retirementMatch', 'hsa', 'refinance', 'negotiateRent', 'reshopInsurance',
 ] as const satisfies readonly MoveKind[];
+
+// ----- Duel game (S2/S3) -----------------------------------------------------------------------
+
+export const DUEL_LETTERS = ['A', 'B'] as const satisfies readonly DuelLetter[];
+export const DUEL_ROUNDS = [1, 2, 3, 4, 5] as const satisfies readonly DuelRound[];
 
 // ----- statements (T6/T7) ---------------------------------------------------------------------
 
@@ -63,7 +68,7 @@ export const CLIENT_EVENT_NAMES = [
   'play_started', 'clue_opened', 'home_guessed', 'game_finished', 'result_shared',
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
-  'paywall_viewed', 'sample_loaded',
+  'paywall_viewed', 'sample_loaded', 'duel_picked', 'hint_opened', 'challenge_copied', 'own_guess_started',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 /** Events only the server records (the Pro routes). */
 export const SERVER_EVENT_NAMES = [
