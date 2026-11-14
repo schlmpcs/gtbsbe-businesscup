@@ -14,6 +14,7 @@ export const tools = {
       subscriptions: { question: 'What am I still paying for?', line: 'Find the subscriptions you forgot.' },
       overpaying: { question: 'Am I overpaying?', line: 'Your bills against people near you.' },
       exact: { question: 'Are my numbers right?', line: 'Swap our estimates for your statement.' },
+      together: { question: 'How do we split it?', line: 'Plan with your partner by link: a fair split and us in 10 years.' },
     },
   },
 } as const;

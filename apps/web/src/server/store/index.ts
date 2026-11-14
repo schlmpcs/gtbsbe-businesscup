@@ -32,6 +32,9 @@ import { createPostgresEventStore } from './events.postgres';
 import type { SessionStore } from './sessions';
 import { createMemorySessionStore } from './sessions.memory';
 import { createPostgresSessionStore } from './sessions.postgres';
+import type { TogetherStore } from './together';
+import { createMemoryTogetherStore } from './together.memory';
+import { createPostgresTogetherStore } from './together.postgres';
 
 export { StoreUnavailableError, type StoreUnavailableReason } from './errors';
 export { anonKey } from './anonKey';
@@ -39,6 +42,7 @@ export type { Db, Tx } from './postgres';
 export type { SaveOptions, SaveResult, SessionState, SessionStore, SessionUpdate } from './sessions';
 export type { GameStore, Leaderboard, PlayerDay, PlayKey, StoredResult, SubmitOutcome } from './game';
 export type { EventStore, FunnelWindow, StoredEvent } from './events';
+export type { TogetherStore } from './together';
 
 export interface Store {
   readonly backend: 'postgres' | 'memory';
@@ -47,6 +51,8 @@ export interface Store {
   readonly game: GameStore;
   readonly duel: DuelStore;
   readonly events: EventStore;
+  /** Together shared plans (./together.ts). */
+  readonly together: TogetherStore;
   /** The Postgres connection, or null for the memory store. */
   readonly db: Db | null;
   /** Resolves when the store is usable (connected and migrated); throws StoreUnavailableError otherwise. */
@@ -64,6 +70,7 @@ export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
     game: createPostgresGameStore(db),
     duel: createPostgresDuelStore(db),
     events: createPostgresEventStore(db),
+    together: createPostgresTogetherStore(db),
     db,
     check: () => db.check(),
     close: () => db.close(),
@@ -79,6 +86,7 @@ export function createMemoryStore(): Store {
     game: createMemoryGameStore(),
     duel: createMemoryDuelStore(),
     events: createMemoryEventStore(),
+    together: createMemoryTogetherStore(),
     db: null,
     check: async () => {},
     close: async () => {},

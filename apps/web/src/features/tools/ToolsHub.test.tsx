@@ -13,7 +13,7 @@ const A = ({ href, className, children }: { href: string; className?: string; ch
 
 describe('ToolsHub (What if?)', () => {
   it('lists every tool as its question, each linking to its screen', () => {
-    const hrefs = { afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin', subscriptions: '/tools/subscriptions', overpaying: '/tools/overpaying', exact: '/me/upload' };
+    const hrefs = { afford: '/afford', loan: '/loan', decide: '/decide', checkin: '/checkin', subscriptions: '/tools/subscriptions', overpaying: '/tools/overpaying', exact: '/me/upload', together: '/together' };
     render(<ToolsHub hrefs={hrefs} Link={A} />);
     expect(screen.getByRole('heading', { level: 1, name: tools.hub.title })).toBeInTheDocument();
     for (const [key, href] of Object.entries(hrefs)) {

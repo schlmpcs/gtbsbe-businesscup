@@ -42,3 +42,7 @@ export {
 export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';
 export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';
+export {
+  combineProfiles, householdMonth, sharedBills, fairSplit, partnerOfProfile, profileOfPartner, SHARED_BILL_CATEGORIES,
+  type FairSplit, type HouseholdMonth,
+} from './together';
