@@ -2,7 +2,7 @@
 export const kitShowcase = {
   title: 'UI kit',
   intro: 'Every ui-kit primitive with sample props, for review and e2e. Not part of the product.',
-  sampleNote: 'Numbers come from the fixtures in packages/data/fixtures unless marked as illustrative.',
+  sampleNote: 'Numbers come from the fixtures in packages/data/fixtures and the engine; slider starting points are demo state.',
   sections: {
     buttons: 'Button',
     stats: 'Stat, EstimateTag, SourceNote, Money',
@@ -60,8 +60,8 @@ export const kitShowcase = {
   chart: {
     title: 'You in 10 years',
     main: 'Your plan',
-    compare: 'With the car loan',
-    footnote: 'Illustrative sample curve for the kit, not an engine result.',
+    compare: 'After the top move',
+    footnote: "Engine forecast of the demo profile, in today's dollars.",
   },
   breakdown: {
     profile: 'Demo profile spending (per month)',

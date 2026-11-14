@@ -203,7 +203,7 @@ export function KitShowcase() {
           title={t.chart.title}
           hideTitle
           series={{ label: t.chart.main, points: sampleForecast }}
-          compare={{ label: t.chart.compare, points: sampleForecastCompare }}
+          compare={sampleForecastCompare && { label: t.chart.compare, points: sampleForecastCompare }}
           footnote={t.chart.footnote}
         />
       </Card>

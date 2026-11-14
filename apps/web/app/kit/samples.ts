@@ -1,9 +1,9 @@
-// Sample props for the /kit showcase. Real numbers come from the canonical fixtures; the forecast curves
-// are illustrative shapes (the engine's forecast() is not wired here) and the page labels them so.
+// Sample props for the /kit showcase, all from the canonical fixtures and the engine (no hand-typed numbers).
+import { applyPatch, forecast, rankMoves } from '@lifeguessr/engine';
 import type { CostCategory } from '@lifeguessr/types';
 import { areaByZip, loanOffersSample, profileDemo } from '@/fixtures';
 import { common, kitShowcase } from '@/copy';
-import type { BarBreakdownItem, ForecastChartPoint } from '@/ui-kit';
+import type { BarBreakdownItem } from '@/ui-kit';
 
 export const demoProfile = profileDemo;
 export const demoArea = areaByZip(profileDemo.zip ?? '75206');
@@ -46,14 +46,9 @@ export const areaItems: BarBreakdownItem[] = [
   },
 ];
 
-/** An illustrative 10-year curve: a straight mid line with a band that widens with time. */
-function illustrativeCurve(start: number, perMonth: number, spreadPerMonth: number): ForecastChartPoint[] {
-  return Array.from({ length: 121 }, (_, month) => {
-    const mid = start + perMonth * month;
-    const spread = spreadPerMonth * month;
-    return { month, mid, low: mid - spread, high: mid + spread };
-  });
-}
-
-export const sampleForecast = illustrativeCurve(-6000, 520, 160);
-export const sampleForecastCompare = illustrativeCurve(-6000, 330, 140);
+/** The demo profile's 10-year forecast, and the same profile after its top-ranked move (if any). */
+export const sampleForecast = forecast(profileDemo, 10, { todaysDollars: true }).points;
+const topMove = rankMoves(profileDemo)[0];
+export const sampleForecastCompare = topMove
+  ? forecast(applyPatch(profileDemo, topMove.patch), 10, { todaysDollars: true }).points
+  : undefined;

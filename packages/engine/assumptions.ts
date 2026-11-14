@@ -96,6 +96,97 @@ export const clueFloor = {
   note: 'Tune after playtests.',
 } satisfies Assumption<number>;
 
+// ----- Y1: life cards and scoring (costOfLife, cardToProfile, scoreGuess) ----------------------
+
+/**
+ * Source shown on a cost line that rests on an assumption with no published source yet (for
+ * example eating out, which uses `avgMealPrice`). Not an Assumption itself: it labels one.
+ */
+export const assumptionSource: Source = {
+  name: 'LifeGuessr default assumption (listed under "How we calculate")',
+  year: 2026,
+};
+
+/** Source shown on the car loan payment of a life card: computed from the card's own loan terms. */
+export const lifeCardLoanSource: Source = {
+  name: "Life card's own car price, down payment, APR and term (amortized monthly payment)",
+  year: 2026,
+};
+
+/** Game: points for a guess inside the card's range; 0 at 2× off the nearest edge. */
+export const guessMaxPoints = {
+  value: 1000,
+  assumption: true,
+  note: 'Game scale from ENGINEERING.md → Guess scoring, not finance.',
+} satisfies Assumption<number>;
+
+/** Closest Life: age when the user has not given one. */
+export const ageDefault = {
+  value: 35,
+  assumption: true,
+  note: 'Middle of the 25–45 target audience. The balance sheet (S8) asks for the real age.',
+} satisfies Assumption<number>;
+
+/**
+ * Closest Life: monthly spending (all categories + debt payments) as a share of take-home pay, so
+ * take-home pay = outflow / share. A card has no income, so the default assumes the person behind
+ * it lives on their pay and saves the rest, instead of a national figure unrelated to the card.
+ */
+export const cardSpendingShareOfTakeHome = {
+  value: 0.9,
+  assumption: true,
+  note: 'Saves about 10% of take-home pay. Placeholder until T2 sources a spending/after-tax-income ratio (BLS CE).',
+} satisfies Assumption<number>;
+
+/** Closest Life: cash on hand, in months of monthly outflow (spending + debt payments). */
+export const cashBufferMonthsDefault = {
+  value: 2,
+  assumption: true,
+  note: 'Above safetyCushionMonths so a defaulted profile does not fail Can I Afford It? by construction.',
+} satisfies Assumption<number>;
+
+/** Closest Life: retirement balance when the user has not given one. */
+export const retirementBalanceDefault = {
+  value: 30_000 as Money,
+  assumption: true,
+  note: 'Placeholder between the Fed SCF 2022 median retirement balances for families under 35 and 35–44 that hold one; verify in T2.',
+} satisfies Assumption<Money>;
+
+/** Closest Life: monthly subscriptions (streaming, apps, memberships) for a household. */
+export const subscriptionsMonthlyDefault = {
+  value: 90 as Money,
+  assumption: true,
+  note: 'Placeholder; the Quick Sliders (S7) and a statement upload replace it.',
+} satisfies Assumption<Money>;
+
+/** Closest Life: monthly "other" spending (phone, clothing, personal care, household, out-of-pocket health) per adult. */
+export const otherPerAdultMonthly = {
+  value: 350 as Money,
+  assumption: true,
+  note: 'Placeholder until T2 sources it from BLS CE; a statement upload replaces it.',
+} satisfies Assumption<Money>;
+
+/** Closest Life: monthly "other" spending per child (clothing, school, activities). */
+export const otherPerKidMonthly = {
+  value: 150 as Money,
+  assumption: true,
+  note: 'Placeholder until T2 sources it from BLS CE / USDA expenditures on children.',
+} satisfies Assumption<Money>;
+
+/** The Y1 assumptions, spread into `assumptions` below. */
+export const lifeCardAssumptions = {
+  guessMaxPoints,
+  ageDefault,
+  cardSpendingShareOfTakeHome,
+  cashBufferMonthsDefault,
+  retirementBalanceDefault,
+  subscriptionsMonthlyDefault,
+  otherPerAdultMonthly,
+  otherPerKidMonthly,
+} as const;
+
+// ----- end Y1 ---------------------------------------------------------------------------------
+
 /** Average price of one meal or delivery order eaten out, per person-occasion. */
 export const avgMealPrice = {
   value: 18 as Money,
@@ -131,6 +222,46 @@ export const minForecastMonths = {
   note: 'Product rule: "You in 10 years".',
 } satisfies Assumption<number>;
 
+// ----- Y3: Next Moves (rankMoves) -------------------------------------------------------------
+
+/** Next Moves, payCardFirst: share of this month's surplus put toward the card as an extra payment. */
+export const payCardExtraShareOfSurplus = {
+  value: 0.5,
+  assumption: true,
+  note: 'Half of what is left after spending and minimum payments; the other half keeps building cash. Capped by the card balance.',
+} satisfies Assumption<number>;
+
+/** Next Moves, payCardFirst: the extra payment is rounded down to a multiple of this many dollars. */
+export const payCardExtraStep = {
+  value: 10 as Money,
+  assumption: true,
+  note: 'A round amount a person can set up ("pay $250 extra a month"); not a financial input.',
+} satisfies Assumption<Money>;
+
+/** Next Moves, cutCategory: share cut from the largest discretionary category (spec: 20%). */
+export const cutCategoryShare = {
+  value: 0.2,
+  assumption: true,
+  note: 'ENGINEERING.md → Next Moves.',
+} satisfies Assumption<number>;
+
+/** Next Moves, cancelSubscriptions: share of statement-detected subscription spend cancelled. */
+export const cancelSubscriptionsShare = {
+  value: 0.5,
+  assumption: true,
+  note: 'Cancel the ones you no longer use and keep the rest. Placeholder until sourced; the statement gives totals, not which ones are unused.',
+} satisfies Assumption<number>;
+
+/** The Y3 assumptions, spread into `assumptions` below. */
+export const movesAssumptions = {
+  payCardExtraShareOfSurplus,
+  payCardExtraStep,
+  cutCategoryShare,
+  cancelSubscriptionsShare,
+} as const;
+
+// ----- end Y3 ---------------------------------------------------------------------------------
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
@@ -145,11 +276,13 @@ export const assumptions = {
   safetyCushionMonths,
   clueCost,
   clueFloor,
+  ...lifeCardAssumptions,
   avgMealPrice,
   monthlyGallons,
   kidGroceryFactor,
   weeksPerMonth,
   minForecastMonths,
+  ...movesAssumptions,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;
