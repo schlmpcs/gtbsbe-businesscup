@@ -31,7 +31,7 @@ describe('useGuessYourself (S5)', () => {
     useGameStore.getState().setGuess(cards[0]!.id, 1000);
     useGameStore.getState().setReveal(cards[0]!.id, (await client.guess(cards[0]!.id, 1000)).reveal);
 
-    const { result } = renderHook(() => useGuessYourself());
+    const { result } = renderHook(() => useGuessYourself({ mode: 'slider' }));
     await waitForReady(result);
     expect(result.current.savedGuess).toBeNull();
     expect(result.current.bridge).toEqual({ played: 1, guessedLow: 1, guessedHigh: 0 });
@@ -40,6 +40,17 @@ describe('useGuessYourself (S5)', () => {
     act(() => result.current.submit());
     expect(useAppStore.getState().selfGuess).toBe(4570);
     expect(result.current.savedGuess).toBe(4570);
+  });
+
+  it('has no bridge line while /play is the duel (the default): a pick has no guessed amount', async () => {
+    const client = createFixtureGameClient({ persist: false });
+    const { cards } = await client.daily('2026-11-14');
+    useGameStore.getState().startDay('2026-11-14', cards);
+    useGameStore.getState().setGuess(cards[0]!.id, 1000);
+    useGameStore.getState().setReveal(cards[0]!.id, (await client.guess(cards[0]!.id, 1000)).reveal);
+    const { result } = renderHook(() => useGuessYourself());
+    await waitForReady(result);
+    expect(result.current.bridge).toBeNull();
   });
 
   it('compares the saved guess with the engine month of the current profile', async () => {

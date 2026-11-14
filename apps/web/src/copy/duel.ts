@@ -21,6 +21,14 @@ export const duel = {
     state: { current: 'now', upcoming: 'to play', green: 'right', yellow: 'right with a hint', ink: 'missed' },
   },
   challenged: 'A friend challenged you. Beat their score on today’s five.',
+  /** S1's "All screens" list when /play is the duel (S2/S3 are its states). */
+  screens: { S2: 'Which life costs more?', S3: 'Duel reveal' },
+  /** The small muted footer under the duel: what the lives are, and where the round is scored. */
+  footer: {
+    composite: 'Composite households, real local prices.',
+    /** Only while the duel plays in the browser (NEXT_PUBLIC_DUEL_SOURCE=fixtures). */
+    browser: 'Scored in your browser with our cost engine.',
+  },
 
   card: {
     life: (letter: DuelLetter) => `Life ${letter}`,

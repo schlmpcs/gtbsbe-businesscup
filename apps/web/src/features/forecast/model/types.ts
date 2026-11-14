@@ -174,11 +174,16 @@ export type TodayVM = {
   topMove: Loadable<MoveVM | null>;
   /** Daily game call to action. */
   game: {
+    /** Which game /play is: the duel (rounds; the default) or the slider (homes). Picks the copy. */
+    kind: 'duel' | 'slider';
     date: string | null;
     played: number;
     total: number;
     finished: boolean;
-    /** Today's homes in play order, once the day is loaded (empty before the first visit to /play). */
+    /**
+     * Today's homes in play order, once the day is loaded (empty before the first visit to /play).
+     * Always empty for the duel: its rounds are pairs of lives, not homes.
+     */
     homes: TodayHomeVM[];
   };
 };

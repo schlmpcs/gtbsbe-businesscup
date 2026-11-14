@@ -61,7 +61,8 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
           NEXT_PUBLIC_GAME_SOURCE: api
       # No game answers in the browser chunks of that build: no catalog card and no fixture game
-      # client (scripts/check-client-bundle.mjs).
+      # client (scripts/check-client-bundle.mjs). The duel's browser client ships on purpose (its
+      # own flag, NEXT_PUBLIC_DUEL_SOURCE, defaults to fixtures until #115/#120) on made-up cards.
       - run: pnpm check:bundle
 
   # The Playwright specs in apps/web/e2e (phone + desktop). `pnpm e2e` builds and starts the app

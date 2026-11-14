@@ -4,6 +4,7 @@ import { COST_CATEGORIES, type Money, type Profile } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { GUESS_DEFAULT, GUESS_MAX, GUESS_MIN, GUESS_STEP } from '@/features/game/model/constants';
 import { directionOf } from '@/features/game/model/derive';
+import { gameMode, type GameMode } from '@/lib/config';
 import { track } from '@/lib/events';
 import { thisMonth } from '@/lib/model/profile';
 import { logScale, logSliderVM, snap } from '@/lib/model/slider';
@@ -35,7 +36,8 @@ export function compareSelfGuess(guess: Money, profile: Profile, basis: ProfileO
   };
 }
 
-export function useGuessYourself(): GuessYourselfVM {
+export function useGuessYourself(opts: { mode?: GameMode } = {}): GuessYourselfVM {
+  const mode = opts.mode ?? gameMode();
   const ready = useAppReady();
   const savedGuess = useAppStore((s) => s.selfGuess);
   const setSelfGuess = useAppStore((s) => s.setSelfGuess);
@@ -61,7 +63,10 @@ export function useGuessYourself(): GuessYourselfVM {
     [savedGuess, profile, profileOrigin],
   );
 
+  // "You guessed low on 4 of 5" compares slider guesses with the homes' costs. The duel has no
+  // guessed amounts (a pick is A or B), so there is no honest version of that line: none.
   const bridge = useMemo(() => {
+    if (mode !== 'slider') return null;
     const played = cards.filter((c) => reveals[c.id]);
     if (played.length === 0) return null;
     const dirs = played.map((c) => directionOf(guesses[c.id] ?? Number.NaN, reveals[c.id]!.cost.total));
@@ -70,7 +75,7 @@ export function useGuessYourself(): GuessYourselfVM {
       guessedLow: dirs.filter((d) => d === 'low').length,
       guessedHigh: dirs.filter((d) => d === 'high').length,
     };
-  }, [cards, reveals, guesses]);
+  }, [mode, cards, reveals, guesses]);
 
   return {
     status: ready ? 'ready' : 'loading',

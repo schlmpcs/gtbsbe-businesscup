@@ -30,14 +30,20 @@ COPY packages packages
 # NEXT_PUBLIC_* values are written into the client bundle at build time, not read at run time, so
 # they are build arguments. deploy.sh passes the values from the server's .env. Defaults match
 # .env.example. None of them is a secret.
+# NEXT_PUBLIC_GAME_MODE: /play is the duel unless `slider` (the rollback). NEXT_PUBLIC_DUEL_SOURCE:
+# the duel plays in the browser (`fixtures`) until its server routes land (#115, #120).
 ARG NEXT_PUBLIC_GAME_SOURCE=fixtures
 ARG NEXT_PUBLIC_SESSION_SOURCE=local
 ARG NEXT_PUBLIC_EVENTS_SOURCE=off
 ARG NEXT_PUBLIC_AVATARS_ENABLED=false
+ARG NEXT_PUBLIC_GAME_MODE=duel
+ARG NEXT_PUBLIC_DUEL_SOURCE=fixtures
 ENV NEXT_PUBLIC_GAME_SOURCE=$NEXT_PUBLIC_GAME_SOURCE \
     NEXT_PUBLIC_SESSION_SOURCE=$NEXT_PUBLIC_SESSION_SOURCE \
     NEXT_PUBLIC_EVENTS_SOURCE=$NEXT_PUBLIC_EVENTS_SOURCE \
-    NEXT_PUBLIC_AVATARS_ENABLED=$NEXT_PUBLIC_AVATARS_ENABLED
+    NEXT_PUBLIC_AVATARS_ENABLED=$NEXT_PUBLIC_AVATARS_ENABLED \
+    NEXT_PUBLIC_GAME_MODE=$NEXT_PUBLIC_GAME_MODE \
+    NEXT_PUBLIC_DUEL_SOURCE=$NEXT_PUBLIC_DUEL_SOURCE
 # `public/` is optional in Next; the runner stage copies it, so make sure it exists.
 RUN mkdir -p apps/web/public && pnpm --filter web build
 

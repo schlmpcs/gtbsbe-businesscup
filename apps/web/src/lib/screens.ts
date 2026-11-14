@@ -1,5 +1,7 @@
-// Route of every screen (docs/ARCHITECTURE.md → Screens). S3 and S4 are states of /play.
+// Route of every screen (docs/ARCHITECTURE.md → Screens). S2 and S3 are states of /play (the duel
+// by default, the slider game with NEXT_PUBLIC_GAME_MODE=slider); S4 is the slider's streamer mode.
 import type { ScreenId } from '@/copy';
+import { gameMode } from './config';
 
 export const SCREEN_ROUTES = {
   S1: '/',
@@ -25,3 +27,11 @@ export const SCREEN_ROUTES = {
 export const SCREEN_IDS = (Object.keys(SCREEN_ROUTES) as ScreenId[]).sort(
   (a, b) => Number(a.slice(1)) - Number(b.slice(1)),
 );
+
+/**
+ * Screens the app links to (S1's "All screens" list). S4 Streamer mode exists only in the slider
+ * game: with the duel at /play, /play?stream=1 would silently open the duel, so it is not listed.
+ */
+export function linkedScreenIds(mode = gameMode()): ScreenId[] {
+  return SCREEN_IDS.filter((id) => id !== 'S4' || mode === 'slider');
+}
