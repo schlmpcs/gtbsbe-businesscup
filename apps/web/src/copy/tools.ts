@@ -15,6 +15,7 @@ export const tools = {
       overpaying: { question: 'Am I overpaying?', line: 'Your bills against people near you.' },
       exact: { question: 'Are my numbers right?', line: 'Swap our estimates for your statement.' },
       bills: { question: 'What is due this month?', line: 'Every bill on one calendar, on the day it is due.' },
+      together: { question: 'How do we split it?', line: 'Plan with your partner by link: a fair split and us in 10 years.' },
     },
   },
 } as const;

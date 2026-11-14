@@ -11,7 +11,7 @@ export type ToolsHubProps = {
   Link: ComponentType<{ href: string; className?: string; children?: ReactNode }>;
 };
 
-const ORDER: ToolKey[] = ['afford', 'loan', 'decide', 'checkin', 'subscriptions', 'overpaying', 'bills', 'exact'];
+const ORDER: ToolKey[] = ['afford', 'loan', 'decide', 'checkin', 'subscriptions', 'overpaying', 'bills', 'together', 'exact'];
 const ART: Record<ToolKey, ArtName> = {
   afford: 'afford-crane',
   loan: 'coins',
@@ -21,6 +21,7 @@ const ART: Record<ToolKey, ArtName> = {
   overpaying: 'home-suburb',
   bills: 'calendar',
   exact: 'little-things',
+  together: 'duel-houses',
 };
 
 export function ToolsHub({ hrefs, Link }: ToolsHubProps) {

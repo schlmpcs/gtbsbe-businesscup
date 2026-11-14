@@ -46,3 +46,7 @@ export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf 
 export { workTime, roundWorkAmount, type WorkTime, type WorkTimeUnit, type WorkTimeOptions } from './workTime';
 export { emergencyCushion, cushionBand, CUSHION_ESSENTIAL_CATEGORIES, type Cushion, type CushionBand } from './cushion';
 export { dailyMonthToDate, dailyTotalsByDay, safeToSpendToday, type SafeToSpend } from './daily';
+export {
+  combineProfiles, householdMonth, sharedBills, fairSplit, partnerOfProfile, profileOfPartner, SHARED_BILL_CATEGORIES,
+  type FairSplit, type HouseholdMonth,
+} from './together';

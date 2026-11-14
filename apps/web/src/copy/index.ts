@@ -45,3 +45,4 @@ export { cushion } from './cushion';
 export { workTime } from './workTime';
 export { spend, type SpendPresetId } from './spend';
 export { bills } from './bills';
+export { together } from './together';
