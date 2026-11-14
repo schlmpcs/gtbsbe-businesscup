@@ -4,9 +4,11 @@
 // fakes (apps/web/src/test/subscriptions.ts). This file connects the real ones:
 //   - `catalogue`   the known services (M4, `knownServices` of @lifeguessr/data/subscriptions)
 //   - `store`       the tool's slice of the app store (M2): `tools.subscriptions`, `setTool`, `clearTool`
+//   - `importedStatement` a statement already read on this page (S9), taken once (features/upload)
 //   - `track`, `trackTool`, `categorize`, `downloadRenewals`: the hook's own defaults (lib/events, lib/api/statement, lib/download)
 import { knownServices } from '@lifeguessr/data/subscriptions';
 import { useCallback, useMemo } from 'react';
+import { takeStatementRead } from '@/features/upload/model/lastStatementRead';
 import { useAppStore } from '@/state';
 import type { SubscriptionsStore, SubscriptionsToolState } from './state';
 import type { SubscriptionsDeps } from './useSubscriptions';
@@ -20,5 +22,5 @@ export function useSubscriptionsDeps(): SubscriptionsDeps {
   const clear = useCallback(() => clearTool('subscriptions'), [clearTool]);
   // One object while the saved state is the same, so nothing built from it rebuilds on every render.
   const store: SubscriptionsStore = useMemo(() => ({ state, save, clear }), [state, save, clear]);
-  return useMemo(() => ({ catalogue: knownServices, store }), [store]);
+  return useMemo(() => ({ catalogue: knownServices, store, importedStatement: takeStatementRead }), [store]);
 }

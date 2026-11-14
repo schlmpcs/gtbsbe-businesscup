@@ -101,3 +101,34 @@ test('/play is the duel: one pick shows on S1 Today as rounds, not homes, with n
   await expect(page.getByText(/today’s homes/i)).toHaveCount(0);
   await expect(page.locator('a[href*="stream=1"]')).toHaveCount(0);
 });
+
+test('a challenge link: another browser’s id shows the generic line, your own link shows your result', async ({ page }) => {
+  // The fixture duel plays in this browser, so it only knows its own day: a link from anywhere else
+  // is "a friend challenged you", and the day plays as ever.
+  await page.goto('/duel?c=fixture-duel-2026-11-14-0a1b2c3d');
+  await expect(page.getByText(t.challenge.generic)).toBeVisible();
+  await expect(page.getByText(t.round(1, 5))).toBeVisible();
+
+  // Finish the day here; the browser's log holds the id of this day's challenge link.
+  await page.goto('/duel');
+  await expect(page.getByText(t.challenge.generic)).toHaveCount(0); // no link, no line
+  for (let round = 1; round <= 5; round++) {
+    await pickA(page).click();
+    await page.getByRole('button', { name: round === 5 ? t.reveal.finish : t.reveal.next }).click();
+  }
+  await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
+  const resultId = await page.evaluate(() => (JSON.parse(localStorage.getItem('lifeguessr.fixtureDuel') ?? 'null') as { resultId: string }).resultId);
+
+  // Your own link: your result, no comparison and no "a friend challenged you".
+  await page.goto(`/duel?c=${encodeURIComponent(resultId)}`);
+  await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
+  await expect(page.getByRole('list', { name: t.summary.gridLabel }).getByRole('listitem')).toHaveCount(5);
+  await expect(page.getByRole('region', { name: t.challenge.heading })).toHaveCount(0);
+  await expect(page.getByText(t.challenge.generic)).toHaveCount(0);
+  await expectNoSideScroll(page);
+
+  // Another browser's link, now that you have a finished day: still the generic line, never a comparison.
+  await page.goto('/play?c=fixture-duel-2026-11-14-0a1b2c3d');
+  await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
+  await expect(page.getByRole('region', { name: t.challenge.heading })).toHaveCount(0);
+});

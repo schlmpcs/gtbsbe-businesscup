@@ -96,6 +96,10 @@ describe('mirrorServerDuelProgress: the duel client keeps S1 in step with the se
         calls.push(`hint ${round} ${date}`);
         return HINT;
       },
+      async challenge(resultId) {
+        calls.push(`challenge ${resultId}`);
+        return null;
+      },
     };
   }
 
@@ -142,9 +146,12 @@ describe('mirrorServerDuelProgress: the duel client keeps S1 in step with the se
     expect(stored()).toEqual({ date: DATE, rounds: [1] });
   });
 
-  it('keeps the rest of the client as it is (methods a later change adds still pass through)', async () => {
+  it('keeps the rest of the client as it is: the challenge lookup, and methods a later change adds, pass through', async () => {
     const base = Object.assign(inner([]), { extra: () => 'kept' });
     const client = mirrorServerDuelProgress(base) as typeof base;
     expect(client.extra()).toBe('kept');
+    expect(await client.challenge('0123456789abcdef0123456789abcdef', DATE)).toBeNull();
+    expect(base.calls).toEqual(['challenge 0123456789abcdef0123456789abcdef']);
+    expect(stored()).toBeNull(); // a challenge lookup is not the player's own progress
   });
 });

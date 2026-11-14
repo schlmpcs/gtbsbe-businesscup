@@ -51,9 +51,9 @@ describe('/tools/subscriptions (S21)', () => {
     expect(wiring.builds).toBe(0);
   });
 
-  it('a visit shows the tool, cold, starting on the guess, under its own heading (no screen id)', async () => {
+  it('a visit shows the tool, cold, starting on the statement upload, under its own heading (no screen id)', async () => {
     await renderPage();
-    expect(await screen.findByLabelText(t.guess.label)).toBeInTheDocument();
+    expect(await screen.findByLabelText(t.statement.pickerLabel)).toBeInTheDocument();
     const h1 = screen.getByRole('heading', { level: 1 });
     expect(h1).toHaveTextContent(t.screens.S21);
     expect(h1).not.toHaveTextContent(/\bS\d{1,2}\b/);
@@ -63,6 +63,7 @@ describe('/tools/subscriptions (S21)', () => {
   it('survives a reload on the real store: the ticks are still ticked and the gap is the same', async () => {
     const user = userEvent.setup();
     await renderPage();
+    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
     await user.type(await screen.findByLabelText(t.guess.label), '20');
     await user.click(screen.getByRole('button', { name: t.guess.next }));
     for (const name of ['Netflix', 'Spotify', 'Planet Fitness']) await user.click(screen.getByRole('checkbox', { name }));
@@ -85,6 +86,6 @@ describe('/tools/subscriptions (S21)', () => {
 
   it('only the exact ?stream=1 turns it off', async () => {
     await renderPage({ stream: '0' });
-    expect(await screen.findByLabelText(t.guess.label)).toBeInTheDocument();
+    expect(await screen.findByLabelText(t.statement.pickerLabel)).toBeInTheDocument();
   });
 });

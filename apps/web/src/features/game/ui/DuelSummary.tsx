@@ -1,7 +1,9 @@
 import { useId } from 'react';
 import { duel as t } from '@/copy';
 import { Art, Button, cx } from '@/ui-kit';
-import type { DuelCopyStatus, DuelShareStatus, DuelSummaryVM, DuelTileColor } from '../model/types';
+import type { DuelCopyStatus, DuelShareStatus, DuelSummaryVM } from '../model/types';
+import { DuelVersus, type FriendChallengeVM } from './DuelChallenge';
+import { DuelTiles } from './DuelTiles';
 
 export type DuelSummaryProps = {
   summary: DuelSummaryVM;
@@ -12,26 +14,23 @@ export type DuelSummaryProps = {
   onGuessOwn: () => void;
   /** S5 route: price your own month. */
   guessOwnHref: string;
+  /** Opened from a friend's challenge link: their score, set against yours once `comparison` is there. */
+  challenge?: FriendChallengeVM | null;
 };
 
 /** The white button of Design v3 (on the page background and on the orange card). */
 const WHITE_BUTTON =
   'inline-flex items-center justify-center gap-sm rounded-lg bg-surface px-2xl py-lg font-bold text-text shadow-md transition-colors hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-50';
 
-const TILE: Record<DuelTileColor, string> = {
-  green: 'bg-positive',
-  yellow: 'bg-warning',
-  ink: 'bg-ink',
-};
-
 /**
  * S3 Day result (Figma Design v3): the score, the five-tile grid, your blind spot, the challenge link
  * and share on the left; the orange bridge to S5 ("Price my own month") on the right.
  */
 export function DuelSummary({
-  summary, copyStatus, shareStatus, onCopyChallenge, onShare, onGuessOwn, guessOwnHref,
+  summary, copyStatus, shareStatus, onCopyChallenge, onShare, onGuessOwn, guessOwnHref, challenge = null,
 }: DuelSummaryProps) {
   const linkId = useId();
+  const comparison = challenge?.comparison ?? null;
   const fmt = (n: number) => n.toLocaleString('en-US');
   return (
     <div className="grid grid-cols-1 gap-2xl lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
@@ -48,16 +47,14 @@ export function DuelSummary({
           </p>
         </div>
 
-        <div className="flex flex-col gap-md">
-          <ol aria-label={t.summary.gridLabel} className="flex gap-sm">
-            {summary.tiles.map((tile) => (
-              <li key={tile.round} className={cx('size-[calc(var(--spacing-3xl)*1.3)] rounded-lg shadow-sm', TILE[tile.color])}>
-                <span className="sr-only">{t.summary.tileLabel(tile.round, t.summary.tile[tile.color])}</span>
-              </li>
-            ))}
-          </ol>
-          <p aria-hidden="true" className="text-sm text-text-muted">{t.summary.legend}</p>
-        </div>
+        {challenge && comparison ? (
+          <DuelVersus friend={challenge.friend} you={comparison.you} outcome={comparison.outcome} />
+        ) : (
+          <div className="flex flex-col gap-md">
+            <DuelTiles tiles={summary.tiles} label={t.summary.gridLabel} />
+            <p aria-hidden="true" className="text-sm text-text-muted">{t.summary.legend}</p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-sm rounded-xl bg-surface p-xl shadow-md">
           <p className="text-sm font-bold uppercase tracking-wide text-primary">{t.summary.blindSpotHeading}</p>

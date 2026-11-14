@@ -37,14 +37,16 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   // Against a deployment with a model key the last step may wait up to 25 s for the forecast on top of the
   // steps before it: three times the default timeout.
   test.slow();
-  // S6: start from the first life.
+  // S6: About you, then start from the month built for that household and ZIP.
   await page.goto('/me/closest');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(ladder.screens.S6);
-  // One task per step: no 10-year strip, and the CTA waits for a pick.
+  // One task per step: no 10-year strip, and the CTA waits for a ZIP we have data for.
   await loaded(page);
   await expect(page.getByTestId('ladder-in10y')).toHaveCount(0);
-  // The first (nearest) life is preselected: the CTA is live before any tap (JF13).
-  const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
+  await expect(page.getByRole('button', { name: ladder.shell.cta.S6 })).toBeDisabled();
+  await page.getByLabel(ladder.closest.about.zip).fill('75205');
+  // The life built from the answers is preselected: the CTA is live before any tap (JF13).
+  const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) });
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('link', { name: ladder.shell.cta.S6 })).toBeEnabled();
   await expect(page.getByText(ladder.closest.preselectedNote)).toBeVisible();
@@ -125,20 +127,20 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   } else {
     await expect(headlineSource).toHaveText(forecast.source.ai);
   }
-  await page.getByTestId('chart-disclosure').locator('summary').click(); // JF16: behind a disclosure
+  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
   await expect(page.getByRole('figure', { name: forecast.future.chartTitle(10) }).locator('.recharts-line-curve').first()).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);
 });
 
-test('S5: guess your own month, then see it next to our estimate', async ({ page }) => {
+test('S5: only the gut guess, with no estimate to compare it with yet', async ({ page }) => {
   await page.goto('/me/guess');
   const slider = page.getByRole('slider', { name: ladder.guess.sliderLabel });
   await slider.focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
   await page.getByRole('button', { name: ladder.guess.submit }).click();
-  await expect(page.getByRole('region', { name: ladder.guess.compareTitle })).toBeVisible();
-  await expect(page.getByTestId('guess-verdict')).not.toBeEmpty();
+  await expect(page.getByRole('link', { name: ladder.shell.cta.S5 })).toBeVisible();
+  await expect(page.getByTestId('guess-reveal')).toHaveCount(0);
   await expect(rung(page, 'S5')).toHaveAttribute('data-done', 'true');
 });
 

@@ -4,6 +4,7 @@
 // `?sample=1` ("Try with sample data" on S1) loads the sample life first.
 import Link from 'next/link';
 import { AvatarPanel } from '../_components/AvatarPanel';
+import { MixedProfileNotice } from '../_components/MixedProfileNotice';
 import { use } from 'react';
 import { useGoal } from '@/features/forecast/model/useGoal';
 import { GoalCard } from '@/features/forecast/ui/GoalCard';
@@ -21,6 +22,8 @@ export default function FuturePage({ searchParams }: { searchParams: Promise<{ s
   const goal = useGoal();
   const events = useLifeEvents();
   return (
+    <>
+    <MixedProfileNotice />
     <FutureScreen
       vm={vm}
       links={links}
@@ -28,5 +31,6 @@ export default function FuturePage({ searchParams }: { searchParams: Promise<{ s
       goal={<><GoalCard vm={goal} makeExactHref={links.makeExact} Link={Link} /><AvatarPanel forecastSeen={vm.status==='ready'} /></>}
       events={<LifeEventsCard vm={events} />}
     />
+    </>
   );
 }

@@ -1,6 +1,6 @@
 // S11 Can I Afford It?: purchase form → engine canAfford (verdict, wait, rule, with / without
 // forecasts), free text via /api/ai/parse (confirmed first), and the wishlist.
-import { canAfford, debtLoadThresholds, safetyCushionMonths, workTime } from '@lifeguessr/engine';
+import { canAfford, debtLoadThresholds, loanTermsTypical, safetyCushionMonths, workTime } from '@lifeguessr/engine';
 import { LoanInputSchema, PurchaseSchema, type ForecastPoint, type Purchase } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { afford as affordCopy } from '@/copy';
@@ -11,7 +11,10 @@ import type { Loadable } from '@/lib/model/types';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { SCREEN_ROUTES } from '@/lib/screens';
 import { useAppReady, useAppStore, useProfile, usePro } from '@/state';
-import type { AffordFormVM, AffordHorizonVM, AffordResultVM, AffordRulesVM, AffordVM, AffordWorkTimeVM } from './types';
+import { loanKindOf, withTypicalLoan } from './loanDefaults';
+import type {
+  AffordFormVM, AffordHorizonVM, AffordResultVM, AffordRulesVM, AffordVM, AffordWorkTimeVM, LoanEstimateVM,
+} from './types';
 
 const HORIZONS = [1, 12, 60, 120] as const;
 
@@ -26,11 +29,13 @@ export const EMPTY_AFFORD_FORM: AffordFormVM = {
   amount: null,
   recurring: false,
   payWith: 'cash',
-  loan: { apr: null, termMonths: null, downPayment: 0, fees: 0 },
+  // A loan starts on the typical terms for its kind (JF9), so a verdict shows before anything is typed.
+  loan: { apr: null, termMonths: null, downPayment: 0, fees: 0, typical: { apr: true, termMonths: true } },
 };
 
-/** The Purchase a form describes, or the invalid form paths. */
-export function purchaseFromForm(form: AffordFormVM): { purchase: Purchase | null; invalid: string[] } {
+/** The Purchase a form describes (loan fields not typed yet on their typical values), or the invalid form paths. */
+export function purchaseFromForm(entered: AffordFormVM): { purchase: Purchase | null; invalid: string[] } {
+  const form = withTypicalLoan(entered);
   if (form.amount === null) return { purchase: null, invalid: [] };
   const payWith: Purchase['payWith'] =
     form.payWith === 'loan'
@@ -86,6 +91,12 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
   const [form, setForm] = useState<AffordFormVM>(EMPTY_AFFORD_FORM);
 
   const { purchase, invalid } = useMemo(() => purchaseFromForm(form), [form]);
+  const shownForm = useMemo(() => withTypicalLoan(form), [form]);
+  const loanEstimate: LoanEstimateVM | null = useMemo(() => {
+    const typical = form.loan.typical;
+    if (form.payWith !== 'loan' || !typical || (!typical.apr && !typical.termMonths)) return null;
+    return { kind: loanKindOf(form.label), apr: typical.apr, termMonths: typical.termMonths, source: loanTermsTypical.source };
+  }, [form]);
 
   const result: Loadable<AffordResultVM> | null = useMemo(() => {
     if (!purchase) return null;
@@ -141,12 +152,24 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
   return {
     status: ready ? 'ready' : 'loading',
     rules: AFFORD_RULES,
-    form,
+    form: shownForm,
+    loanEstimate,
     setLabel: useCallback((label: string) => setForm((f) => ({ ...f, label })), []),
     setAmount: useCallback((amount: number | null) => setForm((f) => ({ ...f, amount })), []),
     setRecurring: useCallback((recurring: Purchase['recurring']) => setForm((f) => ({ ...f, recurring })), []),
     setPayWith: useCallback((payWith: AffordFormVM['payWith']) => setForm((f) => ({ ...f, payWith })), []),
-    setLoan: useCallback((loan: Partial<AffordFormVM['loan']>) => setForm((f) => ({ ...f, loan: { ...f.loan, ...loan } })), []),
+    // A typed APR or term replaces the typical value for good (cleared, it stays empty and is flagged).
+    setLoan: useCallback(
+      (loan: Partial<AffordFormVM['loan']>) =>
+        setForm((f) => {
+          const typical = f.loan.typical && {
+            apr: f.loan.typical.apr && !('apr' in loan),
+            termMonths: f.loan.typical.termMonths && !('termMonths' in loan),
+          };
+          return { ...f, loan: { ...f.loan, ...loan, ...(typical && { typical }) } };
+        }),
+      [],
+    ),
     purchase,
     invalidFields: invalid,
     result,

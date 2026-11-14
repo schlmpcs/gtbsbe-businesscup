@@ -5,7 +5,7 @@
 // Implement inside the module files; this barrel should not need to change.
 export * from './assumptions';
 export * from './errors';
-export { costOfLife, cardToProfile } from './cost';
+export { costOfLife, cardToProfile, lifeCardFromFacts, OWN_LIFE_CARD_ID, scaleSpendingTo } from './cost';
 export { scoreGuess } from './score';
 export {
   dailyDuelPairs, scoreDuelPick, duelCategoryLines, duelMultiplier, duelRoundPoints, duelDifference, duelGap, duelBlindSpot,

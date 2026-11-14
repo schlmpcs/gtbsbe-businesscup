@@ -4,7 +4,7 @@
 import type { coveredMetros } from '@lifeguessr/data/areas';
 import type { OverpayingInput, overpayingCheck } from '@lifeguessr/engine';
 import type {
-  AreaData, Benchmark, BenchmarkLine, ClientFunnelEvent, KidAge, Money, Source, ToolId, ToolsState,
+  AreaData, Benchmark, BenchmarkLine, ClientFunnelEvent, HouseholdFacts, KidAge, Money, Source, ToolId, ToolsState,
 } from '@lifeguessr/types';
 import type { Loadable } from '@/lib/model/types';
 
@@ -222,4 +222,9 @@ export type OverpayingOptions = {
   onStore?: (state: OverpayingToolState) => void;
   /** Engine, data and events; defaults to the real ones. */
   deps?: OverpayingDeps;
+  /**
+   * The household from "About you" (S6, `Profile.householdFacts`) and its ZIP: prefills the household
+   * (and the ZIP) whatever the profile's origin, since the person typed them. Saved inputs still win.
+   */
+  household?: { facts: HouseholdFacts; zip: string | null } | null;
 };

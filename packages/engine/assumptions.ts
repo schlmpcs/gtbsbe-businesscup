@@ -159,14 +159,26 @@ export const ageDefault = {
 } satisfies Assumption<number>;
 
 /**
- * Closest Life: monthly spending (all categories + debt payments) as a share of take-home pay, so
- * take-home pay = outflow / share. A card has no income, so the default assumes the person behind
- * it lives on their pay and saves the rest, instead of a national figure unrelated to the card.
+ * Closest Life: monthly take-home pay when the person has not given theirs. The US average income
+ * after taxes per household (consumer unit), BLS Consumer Expenditure Survey 2023: $87,869 a year ÷ 12.
+ * Always tagged as an estimate. Pay is never derived from spending (it used to be outflow ÷ 0.9,
+ * which made "left over" 10% of pay for everyone).
  */
-export const cardSpendingShareOfTakeHome = {
-  value: 0.9,
+export const takeHomePayDefault = {
+  value: (87_869 / 12) as Money,
+  source: {
+    name: 'BLS Consumer Expenditure Survey 2023, average income after taxes, all consumer units',
+    year: 2023,
+    url: 'https://www.bls.gov/news.release/archives/cesan_09252024.htm',
+  },
+  note: 'National average, not adjusted for household size or area (the 2024 CE tables publish no after-tax income). The user types theirs on S6 or a statement detects it.',
+} satisfies Assumption<Money>;
+
+/** "About you" starting life: meals or delivery orders eaten out per week when the person has not said. */
+export const eatingOutPerWeekDefault = {
+  value: 2,
   assumption: true,
-  note: 'Saves about 10% of take-home pay. Placeholder until T2 sources a spending/after-tax-income ratio (BLS CE).',
+  note: 'Placeholder; the statement or the S7 sliders replace the eating-out line.',
 } satisfies Assumption<number>;
 
 /** Closest Life: cash on hand, in months of monthly outflow (spending + debt payments). */
@@ -208,7 +220,8 @@ export const otherPerKidMonthly = {
 export const lifeCardAssumptions = {
   guessMaxPoints,
   ageDefault,
-  cardSpendingShareOfTakeHome,
+  takeHomePayDefault,
+  eatingOutPerWeekDefault,
   cashBufferMonthsDefault,
   retirementBalanceDefault,
   subscriptionsMonthlyDefault,
@@ -689,3 +702,28 @@ export const INSURANCE_TOLERANCE = 0.2;
 export const GROCERY_TOLERANCE = 0.15;
 /** Childcare varies by provider; assumed ±20% range around the county benchmark. */
 export const CHILDCARE_TOLERANCE = 0.2;
+
+// ----- JF9: typical loan terms for "Can I afford it?" (S11) -------------------------------------
+
+/** What a purchase paid with a loan is, for its typical terms: a vehicle, or anything else (a personal loan). */
+export type LoanKind = 'auto' | 'personal';
+
+/**
+ * Typical APR and term by loan kind, prefilled on S11 when the user picks "Loan" and has not typed the
+ * terms, so a verdict shows without typing. Shown with an "estimate" tag and this source; any value the
+ * user types replaces it. The terms are the ones the Federal Reserve G.19 release quotes its commercial
+ * bank rates for (72-month new car loans, 24-month personal loans); the rates are rounded to a whole percent.
+ */
+export const loanTermsTypical = {
+  value: {
+    auto: { apr: 0.08 as Rate, termMonths: 72 },
+    personal: { apr: 0.12 as Rate, termMonths: 24 },
+  },
+  assumption: true,
+  source: {
+    name: 'Federal Reserve G.19, commercial bank rates on 72-month new car loans and 24-month personal loans (rounded)',
+    year: 2025,
+    url: 'https://www.federalreserve.gov/releases/g19/current/default.htm',
+  },
+  note: 'A typical rate, not an offer. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<Record<LoanKind, { apr: Rate; termMonths: number }>>;

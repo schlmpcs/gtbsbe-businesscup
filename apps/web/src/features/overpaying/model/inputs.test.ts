@@ -91,6 +91,16 @@ describe('initialDraft', () => {
     expect(prefill).toEqual({ zip: false, amounts: { rent: null, carInsurance: null, groceries: null, childcare: null } });
   });
 
+  it('"About you" fills the household and the ZIP; a household typed in the tool still wins', () => {
+    const household = { facts: { adults: 2 as const, kids: ['toddler' as const], bedrooms: 3 as const, hasCar: true }, zip: '78704' };
+    const { draft, prefill } = initialDraft(null, undefined, household);
+    expect(draft.inputs).toMatchObject({ zip: '78704', bedrooms: 3, adults: 2, kids: { infant: 0, toddler: 1, preschool: 0, schoolAge: 0 } });
+    expect(draft.householdEntered).toBe(true);
+    expect(prefill.zip).toBe(true);
+    const typed = initialDraft(null, { zip: '10013', bedrooms: 1, adults: 1, kids: [] }, household);
+    expect(typed.draft.inputs).toMatchObject({ zip: '10013', bedrooms: 1, adults: 1 });
+  });
+
   it('caps what a damaged save could hold', () => {
     const { draft } = initialDraft(null, { bedrooms: 9, adults: 0, kids: Array(8).fill('toddler') });
     expect(draft.inputs.bedrooms).toBe(4);

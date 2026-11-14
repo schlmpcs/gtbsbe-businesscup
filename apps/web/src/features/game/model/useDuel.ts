@@ -3,7 +3,8 @@
 // the picks; this hook keeps which round is on screen (localStorage, per day) and builds the VM.
 // When the server closes the day on screen (409 `day_over` on a pick or a hint, after New York
 // midnight and its grace period), the hook loads the new day's five and says so (`newDay`), as the
-// slider's usePlay reloads its set.
+// slider's usePlay reloads its set. Opened from a challenge link (`challengeId`, /duel?c=…), it also
+// reads the friend's score from the source and sets it against the day's result (`challenge`).
 import { DUEL_ROUND_COUNT } from '@lifeguessr/engine';
 import { DUEL_ROUNDS, type DuelLetter, type DuelRound } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -12,12 +13,14 @@ import { ApiError } from '@/lib/api/http';
 import { usEasternDate } from '@/lib/dates';
 import { track, useTrackOnce } from '@/lib/events';
 import { toVMError } from '@/lib/model/errors';
-import type { VMError } from '@/lib/model/types';
+import type { Loadable, VMError } from '@/lib/model/types';
 import { readStorage, writeStorage } from '@/lib/safeStorage';
-import { createDuelClient, type DuelClient, type DuelDay, type DuelProgress } from './duelClient';
-import { buildDuelCards, buildDuelDots, buildDuelHint, buildDuelReveal, buildDuelSummary, choiceOf } from './duelDerive';
+import { createDuelClient, type DuelChallenge, type DuelClient, type DuelDay, type DuelProgress } from './duelClient';
+import {
+  buildDuelCards, buildDuelChallenge, buildDuelDots, buildDuelHint, buildDuelReveal, buildDuelSummary, choiceOf,
+} from './duelDerive';
 import { loadShareImage, shareImageOrText, type ShareOutcome } from './share';
-import type { DuelCopyStatus, DuelShareStatus, DuelVM } from './types';
+import type { ChallengeVM, DuelCopyStatus, DuelShareStatus, DuelVM } from './types';
 
 /** Which round is on screen, per day (the picks themselves live with the source). */
 export const DUEL_VIEW_KEY = 'lifeguessr.duelView';
@@ -25,8 +28,11 @@ export const DUEL_VIEW_KEY = 'lifeguessr.duelView';
 export type UseDuelOptions = {
   /** Data source override (tests). Default: NEXT_PUBLIC_DUEL_SOURCE (lib/config duelSource). */
   client?: DuelClient;
-  /** Opened from a friend's challenge link (/duel?c=…). */
-  challenged?: boolean;
+  /**
+   * The id in a challenge link (/duel?c=…): the friend's day to beat. Absent or blank = no link. Any
+   * text is accepted: an id the source does not hold shows the generic "a friend challenged you".
+   */
+  challengeId?: string;
   /** Clock override (tests). */
   now?: () => Date;
   /**
@@ -111,6 +117,25 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
       cancelled = true;
     };
   }, [client, attempt, clock]);
+
+  // The friend's score behind a challenge link, read once per link (and client).
+  const challengeId = opts.challengeId?.trim().toLowerCase() || null;
+  const [challengeRead, setChallengeRead] = useState<{ id: string; friend: DuelChallenge | null; error: VMError | null } | null>(null);
+  useEffect(() => {
+    if (!challengeId) return;
+    let cancelled = false;
+    client.challenge(challengeId, usEasternDate(clock())).then(
+      (friend) => {
+        if (!cancelled) setChallengeRead({ id: challengeId, friend, error: null });
+      },
+      (err: unknown) => {
+        if (!cancelled) setChallengeRead({ id: challengeId, friend: null, error: toVMError(err) });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [client, challengeId, clock]);
 
   const latest = loaded?.attempt === attempt ? loaded : null;
   const day = latest?.day ?? null;
@@ -217,6 +242,19 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
     [phase, date, progress.picks, origin, now, clock, client.source],
   );
 
+  // What the challenge link says: needs the link read and the day loaded (the day decides "own",
+  // "earlier" and the comparison).
+  const currentRead = challengeRead?.id === challengeId ? challengeRead : null;
+  const challenge: Loadable<ChallengeVM | null> = useMemo(() => {
+    if (!challengeId) return { status: 'ready', data: null };
+    if (!currentRead || !date) return { status: 'loading' };
+    if (currentRead.error) return { status: 'error', error: currentRead.error };
+    return {
+      status: 'ready',
+      data: buildDuelChallenge(currentRead.friend, { challengeId, date, picks: progress.picks, summary }),
+    };
+  }, [challengeId, currentRead, date, progress.picks, summary]);
+
   const copyImpl = opts.copy ?? copyToClipboard;
   const challengeUrl = summary?.challengeUrl ?? null;
   const copyChallenge = useCallback(() => {
@@ -293,7 +331,8 @@ export function useDuel(opts: UseDuelOptions = {}): DuelVM {
     pickError,
     reveal: status === 'ready' ? reveal : null,
     summary: status === 'ready' ? summary : null,
-    challenged: opts.challenged ?? false,
+    challenged: challengeId !== null,
+    challenge,
     newDay: status === 'ready' && newDay,
     pick,
     openHint,
