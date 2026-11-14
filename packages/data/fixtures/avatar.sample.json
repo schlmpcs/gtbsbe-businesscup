@@ -1,0 +1,51 @@
+{
+  "preview": {
+    "payload": {
+      "kind": "avatar",
+      "stamp": "selfReported",
+      "ageBand": "30-34",
+      "metro": "Dallas-Fort Worth, TX",
+      "netWorth": -6000,
+      "monthlyCost": 4250,
+      "rentShare": 0.4,
+      "debtTotal": 24000,
+      "facts": {
+        "hasCar": false,
+        "kids": 0,
+        "householdAdults": 1
+      }
+    },
+    "estimatedFields": [
+      "netWorth",
+      "monthlyCost",
+      "facts.hasCar",
+      "facts.kids",
+      "facts.householdAdults"
+    ],
+    "outOfBounds": []
+  },
+  "published": {
+    "status": {
+      "state": "published",
+      "publishedOn": "2026-11-14",
+      "expiresOn": "2027-02-12",
+      "stamp": "selfReported"
+    },
+    "published": {
+      "kind": "avatar",
+      "stamp": "selfReported",
+      "ageBand": "30-34",
+      "metro": "Dallas-Fort Worth, TX",
+      "netWorth": -6000,
+      "monthlyCost": 4250,
+      "rentShare": 0.4,
+      "debtTotal": 24000,
+      "facts": {
+        "hasCar": false,
+        "kids": 0,
+        "householdAdults": 1
+      },
+      "avatarId": "aaaaaaaaaaaaaaaaaaaaaa"
+    }
+  }
+}

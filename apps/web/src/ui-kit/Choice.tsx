@@ -13,12 +13,14 @@ export type ChoiceProps<T extends string> = {
   options: readonly ChoiceOption<T>[];
   onChange: (value: T) => void;
   hint?: string;
+  /** Shown but not choosable (e.g. while its value loads): keeps its place, so nothing jumps when it turns on. */
+  disabled?: boolean;
 };
 
 /** A row of radio buttons styled as segments. Arrow keys move between them (native radio group). */
-export function Choice<T extends string>({ legend, name, value, options, onChange, hint }: ChoiceProps<T>) {
+export function Choice<T extends string>({ legend, name, value, options, onChange, hint, disabled }: ChoiceProps<T>) {
   return (
-    <fieldset className="flex min-w-0 flex-col gap-sm">
+    <fieldset className="flex min-w-0 flex-col gap-sm" disabled={disabled}>
       <legend className="mb-sm text-sm text-text-muted">{legend}</legend>
       <div className="flex flex-wrap gap-sm">
         {options.map((o) => (
@@ -27,6 +29,7 @@ export function Choice<T extends string>({ legend, name, value, options, onChang
             className={cx(
               'cursor-pointer rounded-full border-2 border-border bg-surface px-lg py-sm text-base font-medium leading-normal transition-colors',
               'hover:border-text has-checked:border-ink has-checked:bg-ink has-checked:text-on-primary',
+              'has-disabled:cursor-default has-disabled:opacity-60 has-disabled:hover:border-border',
               'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus',
             )}
           >

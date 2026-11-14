@@ -44,12 +44,12 @@ export function createMemoryEventStore(opts: { now?: () => Date; max?: number } 
 
       const namesById = new Map<string, Set<string>>();
       for (const r of inWindow) {
-        if (maskOf([r.name]) === 0) continue;
+        if (maskOf([r.name]) === 0n) continue;
         const names = namesById.get(r.anonKey) ?? new Set<string>();
         names.add(r.name);
         namesById.set(r.anonKey, names);
       }
-      const counts = new Map<number, number>();
+      const counts = new Map<bigint, number>();
       for (const names of namesById.values()) {
         const mask = maskOf(names);
         counts.set(mask, (counts.get(mask) ?? 0) + 1);

@@ -347,14 +347,17 @@ export const oneOffOutlierMultiple = {
 export type AiForecastSanity = {
   /** Yearly mid may lie this share of |rules mid| outside the rules band. */
   relative: number;
-  /** The tolerance never goes below this many months of take-home pay (net worth near 0 or a zero band). */
+  /**
+   * The tolerance never goes below this many months of take-home pay (net worth near 0 or a zero band).
+   * The year-10 value: at year y the floor is floorMonths × y / 10 months (1.2 at year 1).
+   */
   floorMonths: number;
   /** The AI band may be this many times as wide as the rules band; the limit never goes below the tolerance. */
   bandMaxRatio: number;
-  /** A scenario's 10-year effect must be between these multiples of the rules effect (same sign)... */
+  /** A scenario's effect (at 1, 3, 5 or 10 years) must be between these multiples of the rules effect (same sign)... */
   effectRatioMin: number;
   effectRatioMax: number;
-  /** ...unless it is within this many dollars of it. */
+  /** ...unless it is within this many dollars of it. The year-10 value: at year y it is effectFloor × y / 10 ($100 at year 1). */
   effectFloor: Money;
 };
 

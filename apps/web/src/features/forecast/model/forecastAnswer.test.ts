@@ -1,11 +1,12 @@
-import { forecast, moveCandidates, rulesBundle } from '@lifeguessr/engine';
+import { deflateForecast, forecast, moveCandidates, rulesBundle } from '@lifeguessr/engine';
 import type { Forecast, ForecastBundle, Profile } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
+import { inflationForZip } from '@/lib/areas';
 import { areaRates } from '@/lib/model/profile';
 import {
   answerDollars, bandIsZero, bandKindOf, buildRequest, committedScenario, committedScenarioId, coversRequest,
-  forecastIsBusy, patchesEqual, shownForecast,
+  forecastIsBusy, NO_POINT, patchesEqual, shownForecast,
 } from './forecastAnswer';
 import type { ForecastAnswer, ForecastState } from './types';
 
@@ -100,11 +101,30 @@ describe('the band', () => {
 
 describe('shownForecast', () => {
   it('reads the answered base in today’s dollars or nominal, with the band of the answered profile', () => {
-    const today = shownForecast(ready('rules'), true);
+    const today = shownForecast(ready('rules'), true, 10);
     expect(today).toMatchObject({ status: 'ready', error: null, source: 'rules', band: { kind: 'inputs', isZero: false } });
     expect(today.base).toEqual(forecast(profile, 10, { todaysDollars: true, rates: areaRates(profile) }));
-    expect(today.in10y).toBe(today.base!.in10y);
-    expect(shownForecast(ready('rules'), false).base).toBe(bundle.base);
+    expect(today.atHorizon).toBe(today.base!.in10y);
+    expect(shownForecast(ready('rules'), false, 10).base).toBe(bundle.base);
+  });
+
+  it('reads the point at the chosen year, in the shown dollars', () => {
+    const deflated = deflateForecast(bundle.base, inflationForZip(profile.zip));
+    expect(shownForecast(ready('rules'), true, 3).atHorizon).toEqual(deflated.points[36]);
+    expect(shownForecast(ready('rules'), true, 3).atHorizon.month).toBe(36);
+    expect(shownForecast(ready('rules'), false, 1).atHorizon).toBe(bundle.base.points[12]);
+    expect(shownForecast(ready('rules'), true, 5).base).toEqual(deflated); // the whole forecast stays: the screen cuts it
+  });
+
+  it('measures the AI band at the chosen year', () => {
+    // A band that opens only after year 1: a single number at 1 year, a range at 10.
+    const opening = (f: Forecast): Forecast => {
+      const points = f.points.map((p) => (p.month <= 12 ? { ...p, low: p.mid, high: p.mid } : { ...p, low: p.mid - 5_000, high: p.mid + 5_000 }));
+      return { ...f, points, in10y: points[120]! };
+    };
+    const a: ForecastAnswer = { ...answer, bundle: { ...bundle, source: 'ai', base: opening(bundle.base) } };
+    expect(shownForecast(ready('ai', false, a), true, 1).band).toEqual({ kind: 'model', isZero: true });
+    expect(shownForecast(ready('ai', false, a), true, 10).band).toEqual({ kind: 'model', isZero: false });
   });
 
   it('has an AI band that follows the shown width', () => {
@@ -114,19 +134,19 @@ describe('shownForecast', () => {
     };
     const single: ForecastAnswer = { ...answer, bundle: { ...bundle, source: 'ai', base: point(bundle.base, 0) } };
     const wide: ForecastAnswer = { ...answer, bundle: { ...bundle, source: 'ai', base: point(bundle.base, 5_000) } };
-    expect(shownForecast(ready('ai', false, single), true).band).toEqual({ kind: 'model', isZero: true });
-    expect(shownForecast(ready('ai', false, wide), true).band).toEqual({ kind: 'model', isZero: false });
+    expect(shownForecast(ready('ai', false, single), true, 10).band).toEqual({ kind: 'model', isZero: true });
+    expect(shownForecast(ready('ai', false, wide), true, 10).band).toEqual({ kind: 'model', isZero: false });
   });
 
   it('loading has nothing to show; an error carries the error; a bundle that cannot be deflated is an error', () => {
-    expect(shownForecast({ status: 'loading' }, true)).toMatchObject({ status: 'loading', error: null, source: null, base: null });
+    expect(shownForecast({ status: 'loading' }, true, 10)).toMatchObject({ status: 'loading', error: null, source: null, base: null, atHorizon: NO_POINT });
     const error = { kind: 'unknown', message: 'x' } as const;
-    expect(shownForecast({ status: 'error', error }, true)).toMatchObject({ status: 'error', error, source: null, base: null });
+    expect(shownForecast({ status: 'error', error }, true, 10)).toMatchObject({ status: 'error', error, source: null, base: null });
     const broken: ForecastAnswer = { ...answer, bundle: { ...bundle, base: { ...bundle.base, todaysDollars: true } } };
-    const shown = shownForecast(ready('rules', false, broken), true);
+    const shown = shownForecast(ready('rules', false, broken), true, 10);
     expect(shown).toMatchObject({ status: 'error', base: null, source: 'rules' });
     expect(shown.error).toMatchObject({ kind: 'unknown' });
-    expect(shownForecast(ready('rules', false, broken), false).status).toBe('ready'); // nominal needs no deflation
+    expect(shownForecast(ready('rules', false, broken), false, 10).status).toBe('ready'); // nominal needs no deflation
   });
 });
 

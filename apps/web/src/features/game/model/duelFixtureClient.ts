@@ -2,19 +2,21 @@
 // real engine (costOfLife → dailyDuelPairs → scoreDuelPick), so the duel plays without a server.
 // It plays the part of the server: it holds the answers, keeps one pick per round and the hint log
 // per day (in localStorage, so a reload can neither re-pick nor drop a hint), and fills the lesson
-// from the fixed template table in @/copy. Crowd counts need many players: always null here.
+// from the fixed template table in @/copy. Crowd counts need many players: always null here. The
+// public cards and hints come from the builder the server uses too (@/lib/duel/publicDuelCard).
 //
 // It holds the answers (the cards), so only ./duelClient loads it, with a dynamic import() that an
 // API build drops (NEXT_PUBLIC_GAME_SOURCE=api). Don't import it statically from browser code; the
 // ESLint rule in eslint.config.mjs holds that.
-import { LAYOUTS, carSprite, costOfLife, dailyDuelPairs, scoreDuelPick } from '@lifeguessr/engine';
+import { costOfLife, dailyDuelPairs, scoreDuelPick } from '@lifeguessr/engine';
 import type {
-  AreaData, CostBreakdown, DuelHint, DuelLetter, DuelRound, LifeCard, PickResult, PublicDuel, PublicDuelCard,
+  AreaData, CostBreakdown, DuelHint, DuelLetter, DuelRound, LifeCard, PickResult, PublicDuel,
 } from '@lifeguessr/types';
 import { duel as t } from '@/copy/duel';
 import { duelCardsSample } from '@/fixtures/cards';
 import { ApiError } from '@/lib/api/http';
 import { areaForZip } from '@/lib/areas';
+import { hintOf, publicDuelCard } from '@/lib/duel/publicDuelCard';
 import { readStorage, writeStorage } from '@/lib/safeStorage';
 import { newUuid } from '@/state/anonId';
 import type { DuelClient, DuelProgress } from './duelClient';
@@ -29,33 +31,6 @@ type DuelLog = {
   picks: DuelProgress['picks'];
   hints: DuelProgress['hints'];
 };
-
-/** The 4 fact chips of a life: car, kids, eating out, housing. Picks words only; no cost facts. */
-export function duelFacts(card: LifeCard): string[] {
-  const car = !card.car
-    ? t.facts.noCar
-    : { 'garage/economy': t.facts.economyCar, 'garage/mid': t.facts.midCar, 'garage/luxury': t.facts.luxuryCar }[carSprite(card.car.price)];
-  const kids = card.kids.length === 0
-    ? t.facts.noKids
-    : card.kids.some((k) => k !== 'schoolAge') ? t.facts.daycare : t.facts.schoolKids;
-  const meals = card.eatingOutPerWeek;
-  const food = meals <= 1 ? t.facts.cooksAtHome : meals <= 3 ? t.facts.eatsOutSometimes : meals <= 6 ? t.facts.eatsOutOften : t.facts.eatsOutMostDays;
-  return [car, kids, food, t.facts.rents];
-}
-
-export function publicDuelCard(card: LifeCard, letter: DuelLetter): PublicDuelCard {
-  return {
-    letter,
-    household: t.household(card.adults, card.kids.length, card.bedrooms),
-    metro: card.metro,
-    caption: card.caption,
-    facts: duelFacts(card),
-    art: `layout/${LAYOUTS[card.bedrooms]}`,
-    composite: true,
-  };
-}
-
-const hintOf = (area: AreaData | null): string => (area ? t.hintFacts[area.tier] : t.hintUnknown);
 
 export function createFixtureDuelClient(
   opts: { cards?: readonly LifeCard[]; persist?: boolean; areaFor?: (zip: string) => AreaData | null } = {},
