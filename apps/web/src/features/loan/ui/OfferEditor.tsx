@@ -18,10 +18,10 @@ function OfferFields({ offer, name, onChange, onRemove }: {
   return (
     <Stack gap="md">
       <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
-        <Field label={t.edit.amount} hint={t.edit.amountHint} error={error('amount')}>
+        <Field label={t.edit.amount} error={error('amount')}>
           <NumberInput name="amount" prefix="$" value={input.amount} onValueChange={(v) => onChange(offer.id, { amount: required(v) })} />
         </Field>
-        <Field label={t.edit.apr} hint={t.edit.aprHint} error={error('apr')}>
+        <Field label={t.edit.apr} error={error('apr')}>
           <NumberInput
             name="apr"
             percent
@@ -53,11 +53,6 @@ function OfferFields({ offer, name, onChange, onRemove }: {
           <NumberInput name="fees" prefix="$" value={input.fees ?? 0} onValueChange={(v) => onChange(offer.id, { fees: v ?? 0 })} />
         </Field>
       </div>
-      {offer.result?.payoffMonth === null && (
-        <p className="rounded-md border border-negative p-md text-sm text-negative">
-          {t.neverPaysOff(name)}
-        </p>
-      )}
       <Row>
         <Button variant="ghost" size="sm" onClick={onRemove}>
           {t.edit.remove(name)}

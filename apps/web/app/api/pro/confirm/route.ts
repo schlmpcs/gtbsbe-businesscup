@@ -9,6 +9,7 @@
 // Spec: docs/ARCHITECTURE.md → Server routes; contract: ProConfirmRequestSchema.
 import { ProConfirmRequestSchema, ProPlanSchema } from '@lifeguessr/types';
 import { json, readJsonBody } from '@/server/ai/http';
+import { recordServerEvent } from '@/server/events/http';
 import { guardProRequest, MAX_PRO_BODY_BYTES, proError, storeFailure } from '@/server/pro/http';
 import { getEntitlementStore, proStatusOf } from '@/server/pro/store';
 import { getProStripe, stripeErrorFields, type CheckoutSession } from '@/server/pro/stripe';
@@ -49,6 +50,7 @@ export async function POST(req: Request): Promise<Response> {
       since: new Date().toISOString(),
     });
     if (!claim.ok) return proError(409, 'session_mismatch');
+    await recordServerEvent(gate.anonId, { name: 'pro_purchased', props: { plan: plan.data } });
     return json({ ok: true, status: proStatusOf(claim.entitlement) });
   } catch (err) {
     return storeFailure(err);

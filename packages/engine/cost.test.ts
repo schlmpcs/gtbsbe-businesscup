@@ -3,7 +3,8 @@
 //   estimateSpread 0.15, monthlyGallons 45, kidGroceryFactor 0.7, weeksPerMonth 4.33, avgMealPrice $18;
 //   Closest Life: subscriptions $90, other $350/adult + $150/kid, pay = outflow / 0.9, cash = 2 × outflow.
 import { describe, expect, it } from 'vitest';
-import { areaByZip, cardById, cardsSample } from '@lifeguessr/data/fixtures';
+import { areaByZip } from '@lifeguessr/data/fixtures';
+import { cardById, cardsSample } from '@lifeguessr/data/fixtures/cards';
 import { COST_CATEGORIES, ProfileSchema, type AreaData, type CostBreakdown, type LifeCard } from '@lifeguessr/types';
 import {
   ageDefault, assumptionSource, avgMealPrice, cardSpendingShareOfTakeHome, cashBufferMonthsDefault,

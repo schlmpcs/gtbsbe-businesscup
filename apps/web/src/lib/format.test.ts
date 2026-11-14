@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, formatRate } from './format';
+import { formatMoney, formatMonth, formatRate } from './format';
 
 describe('formatMoney', () => {
   it('rounds to whole dollars by default, with thousands separators', () => {
@@ -47,5 +47,22 @@ describe('formatRate', () => {
   it('handles negatives and non-finite values', () => {
     expect(formatRate(-0.015)).toBe('−1.5%');
     expect(formatRate(Number.NaN)).toBe('—');
+  });
+});
+
+describe('formatMonth', () => {
+  it('names a YYYY-MM month, with an optional day, whatever the local time zone', () => {
+    expect(formatMonth('2026-11')).toBe('November');
+    expect(formatMonth('2026-01', 1)).toBe('January 1');
+    expect(formatMonth('2026-11', 30)).toBe('November 30');
+    expect(formatMonth('2028-02', 29)).toBe('February 29');
+  });
+
+  it('shows a dash for a malformed month or a day outside it', () => {
+    expect(formatMonth('2026-13')).toBe('—');
+    expect(formatMonth('Nov 2026')).toBe('—');
+    expect(formatMonth('2026-11', 31)).toBe('—');
+    expect(formatMonth('2026-02', 29)).toBe('—');
+    expect(formatMonth('2026-11', 0)).toBe('—');
   });
 });

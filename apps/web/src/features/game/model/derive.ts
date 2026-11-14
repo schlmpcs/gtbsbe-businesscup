@@ -11,7 +11,7 @@ import type { GameSource } from '@/lib/config';
 import { logScale } from '@/lib/model/slider';
 import { GUESS_MAX, GUESS_MIN, YELLOW_TILE_MIN_POINTS } from './constants';
 import type {
-  CategoryCostVM, ClueFactVM, CostItemVM, RevealScaleVM, RevealVM, ShareTileColor, SummaryVM,
+  CategoryCostVM, ClueFactVM, CostItemVM, DayVM, RevealScaleVM, RevealVM, ShareTileColor, SummaryVM,
 } from './types';
 
 const UNIT_COST: CostBreakdown = { total: { low: 1, mid: 1, high: 1 }, items: [] };
@@ -130,6 +130,7 @@ export function buildReveal(r: GuessReveal, guess: Money, source: GameSource, is
     guess,
     total: { ...r.cost.total },
     direction: directionOf(guess, r.cost.total),
+    missBy: Math.abs(guess - mid),
     result: r.result,
     maxPoints: guessMaxPoints.value,
     scale: revealScale(guess, r.cost.total),
@@ -141,6 +142,16 @@ export function buildReveal(r: GuessReveal, guess: Money, source: GameSource, is
     cluesOpened: r.cluesOpened,
     shareImage: shareImageUrls(source, r.resultId),
     isLastCard,
+  };
+}
+
+/** Today's running score and strip: points per guessed home, the current one marked. */
+export function buildDay(cards: readonly PublicCard[], reveals: Record<string, GuessReveal>, index: number): DayVM {
+  const homes = cards.map((c, i) => ({ cardId: c.id, points: reveals[c.id]?.result.points ?? null, current: i === index }));
+  return {
+    maxPerHome: guessMaxPoints.value,
+    totalPoints: homes.reduce((s, h) => s + (h.points ?? 0), 0),
+    homes,
   };
 }
 

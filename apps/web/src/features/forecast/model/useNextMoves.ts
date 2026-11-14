@@ -2,6 +2,7 @@
 import { MOVE_LEVELS, movesLevel, rankMoves } from '@lifeguessr/engine';
 import type { CostCategory, Move, MoveKind, Profile } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
+import { track } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
@@ -47,7 +48,9 @@ export function useNextMoves(profile: Profile): NextMovesVM {
   const commit = useCallback(
     (id: string) => {
       const move = find(id);
-      if (move) commitMove(move);
+      if (!move) return;
+      commitMove(move);
+      track({ name: 'move_committed', props: { kind: move.kind } });
     },
     [find, commitMove],
   );
