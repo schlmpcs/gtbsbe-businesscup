@@ -138,8 +138,16 @@ export const LifeEventSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
+export const HouseholdFactsSchema = z.object({
+  adults: z.union([z.literal(1), z.literal(2)]),
+  kids: z.array(KidAgeSchema).max(20),
+  bedrooms: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  hasCar: z.boolean(),
+});
+
 export const ProfileSchema = z.object({
   household: AvatarFactsSchema.optional(),
+  householdFacts: HouseholdFactsSchema.optional(),
   age: estimate(z.number().int().min(16).max(110)),
   takeHomePay: estimate(NonNegativeMoneySchema),   // monthly
   spending: SpendingSchema,
