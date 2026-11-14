@@ -378,11 +378,11 @@ describe('useLadderProgress', () => {
     expect(result.current.rungs.map((r) => [r.screen, r.href, r.done])).toEqual([
       ['S5', '/me/guess', false],
       ['S6', '/me/closest', false],
-      ['S7', '/me/sliders', false],
+      ['S9', '/me/upload', false], // your spending: imported from a statement (or set by hand on S7)
       ['S8', '/me/balance', false], // the demo profile has measured fields, but they are a sample
-      ['S9', '/me/upload', false],
     ]);
     expect(result.current.futureHref).toBe('/future');
+    expect(result.current.byHandHref).toBe('/me/sliders');
     expect(result.current.in10ySource).toBe('rules'); // the ladder's number is the engine's preview, never the model's
 
     act(() => useAppStore.getState().setSelfGuess(4000));
@@ -399,7 +399,8 @@ describe('useLadderProgress', () => {
     expect(start.in10y.mid).toBeLessThanOrEqual(start.in10y.high);
 
     act(() => useAppStore.getState().setSpending('rentUtilities', 1600));
-    expect(result.current.rungs.find((r) => r.screen === 'S7')!.done).toBe(true);
+    // Spending set by hand (S7) completes the spending step, as a statement would.
+    expect(result.current.rungs.find((r) => r.screen === 'S9')!.done).toBe(true);
     expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
     act(() => useAppStore.getState().setField('takeHomePay', 6000));
     expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(true);
@@ -426,7 +427,7 @@ describe('useLadderProgress', () => {
       ]),
     );
     expect(result.current.rungs.every((r) => r.done)).toBe(true);
-    expect(result.current.doneCount).toBe(5);
+    expect(result.current.doneCount).toBe(4);
   });
 
   it('a fully measured profile has no band left', async () => {

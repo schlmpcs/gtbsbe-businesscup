@@ -22,8 +22,8 @@ const EVENTS_ON = process.env.NEXT_PUBLIC_EVENTS_SOURCE === 'api';
 
 /** The funnel steps this path goes through, in the order it reaches them. */
 const PATH_EVENTS = [
-  'play_started', 'hint_opened', 'duel_picked', 'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted',
-  'forecast_viewed', 'statement_applied', 'loan_compared',
+  'play_started', 'hint_opened', 'duel_picked', 'own_guess_submitted', 'closest_life_chosen', 'statement_applied',
+  'sliders_adjusted', 'forecast_viewed', 'loan_compared',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 
 let pageErrors: string[] = [];
@@ -76,7 +76,7 @@ function stored(page: Page, name: ClientFunnelEvent['name']): Promise<unknown> {
   );
 }
 
-test('demo path: 5 duels → own guess → sliders → forecast → statement → Loan Lab', async ({ page }) => {
+test('demo path: 5 duels → own guess → statement → by hand → forecast → Loan Lab', async ({ page }) => {
   test.setTimeout(120_000);
 
   // ----- 1. Play today's five duels at /play (S2 → S3 → day result) -----
@@ -126,9 +126,24 @@ test('demo path: 5 duels → own guess → sliders → forecast → statement �
   await expect(choose).toHaveAttribute('aria-pressed', 'true');
   await chosen;
 
-  // ----- 4. Sliders (S7): the month and the 10-year number follow -----
+  // ----- 4. Your spending (S9): import the sample statement, nothing to type -----
   await page.getByRole('link', { name: ladder.shell.cta.S6 }).click();
+  await expect(page).toHaveURL(/\/me\/upload$/);
+  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('aria-current', 'step');
+  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'false');
+  await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
+  await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).toBeVisible();
+  const applied = stored(page, 'statement_applied');
+  await page.getByRole('button', { name: ladder.upload.apply }).click();
+  await expect(page.getByText(ladder.upload.applied)).toBeVisible();
+  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'true');
+  await applied;
+  await expectNoSideScroll(page);
+
+  // ----- 5. Fine-tune by hand (S7, the same step): the month and the 10-year number follow -----
+  await page.getByRole('link', { name: ladder.shell.skip.byHand }).click();
   await expect(page).toHaveURL(/\/me\/sliders$/);
+  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('aria-current', 'step');
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
   const costBefore = await monthCost.textContent();
@@ -139,13 +154,11 @@ test('demo path: 5 duels → own guess → sliders → forecast → statement �
   await adjusted;
   await expectNoSideScroll(page);
 
-  // ----- 5. You in 10 years (S10), through the step CTAs: S7 → S8 → S9 → the forecast -----
+  // ----- 6. You in 10 years (S10), through the step CTAs: S7 → S8 → the forecast -----
   await page.getByRole('link', { name: ladder.shell.cta.S7 }).click();
   await expect(page).toHaveURL(/\/me\/balance$/);
-  await page.getByRole('link', { name: ladder.shell.cta.S8 }).click();
-  await expect(page).toHaveURL(/\/me\/upload$/);
   const viewed = stored(page, 'forecast_viewed');
-  await page.getByRole('link', { name: ladder.shell.cta.S9 }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.last }).click();
   await expect(page).toHaveURL(/\/future$/);
   await expect(h1(page)).toHaveText(forecast.future.title(10));
   const chart = page.getByRole('figure', { name: forecast.future.chartTitle(10) });
@@ -154,17 +167,6 @@ test('demo path: 5 duels → own guess → sliders → forecast → statement �
   await expect(page.getByTestId('at-horizon').getByText(/^Likely between −?\$[\d,]+ and −?\$[\d,]+$/)).toBeVisible();
   await expect(page.getByTestId('moves').getByRole('article').first()).toBeVisible();
   await viewed;
-
-  // ----- 6. Upload the sample statement (S9): estimates become measured, the step is done -----
-  await page.goto('/me/upload');
-  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'false');
-  await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
-  await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).toBeVisible();
-  const applied = stored(page, 'statement_applied');
-  await page.getByRole('button', { name: ladder.upload.apply }).click();
-  await expect(page.getByText(ladder.upload.applied)).toBeVisible();
-  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'true');
-  await applied;
 
   // ----- 7. Loan Lab (S12): three offers side by side, the debt-load gauge, pick another -----
   await page.goto('/loan');
