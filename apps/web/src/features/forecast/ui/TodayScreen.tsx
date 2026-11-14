@@ -201,7 +201,11 @@ function Steps({
   return (
     <ol aria-label={label} className="grid gap-xl sm:grid-cols-3">
       {items.map((title, i) => (
-        <li key={title} className="relative flex flex-col items-center gap-sm text-center">
+        <li
+          key={title}
+          // The arrow between steps is a CSS pseudo-element, so it stays out of the step's text.
+          className="relative flex flex-col items-center gap-sm text-center sm:after:absolute sm:after:top-xl sm:after:-right-lg sm:after:text-2xl sm:after:text-text-muted sm:after:content-['→'] sm:last:after:content-none"
+        >
           <div className="flex items-center gap-md">
             <span
               aria-hidden="true"
@@ -212,11 +216,6 @@ function Steps({
             <Art name={STEP_ART[i]!} className="flex h-24 w-24 items-center" />
           </div>
           <p className="text-xl font-bold">{title}</p>
-          {i < items.length - 1 && (
-            <span aria-hidden="true" className="absolute top-xl -right-lg hidden text-2xl text-text-muted sm:block">
-              →
-            </span>
-          )}
         </li>
       ))}
     </ol>
@@ -511,7 +510,9 @@ function FirstVisit({ links, screens, Link }: Omit<TodayScreenProps, 'vm'>) {
             </span>
           </div>
         </section>
-        <Steps items={f.steps} label={f.stepsLabel} />
+        <section aria-label={f.stepsLabel}>
+          <Steps items={f.steps} label={f.stepsLabel} />
+        </section>
         <AllScreens screens={screens} Link={Link} />
       </Stack>
     </main>

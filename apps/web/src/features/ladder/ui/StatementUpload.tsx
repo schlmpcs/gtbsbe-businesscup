@@ -1,18 +1,9 @@
-<<<<<<< HEAD
-// S9 Statement upload (Figma S09): the dashed orange drop tile with the file picker (read and
-// categorized by the T6/T7 pipeline behind the view-model's readFile) and "Try with sample
-// statement" (the same pipeline on the sample file), "What we keep", the review of categorized
-// months before they enter the profile, and what the statements have added so far in the black
-// score bar. "Connect your bank app" is not built, so it is not shown (dead buttons are hidden).
-import { useId } from 'react';
-=======
 // S9 Statement upload (Design v3, Figma 194:1627): "Optional" over the headline; a white card with a
 // dashed orange border (drop a CSV on it, or pick one: read and categorized by the T6/T7 pipeline
-// behind the view-model's readFile), "What we keep" on the right, then the review of categorized
+// behind the view-model's readFile, or "Try with sample statement" through the same path), "What we keep" on the right, then the review of categorized
 // months before they enter the profile. Connecting a bank app is not built, so it is not offered
 // here (decision D-7: no dead buttons in the main flow).
 import { useId, useState } from 'react';
->>>>>>> 0a3f5f2 (Design v3: onboarding ladder S5-S9 restyled)
 import { common, ladder } from '@/copy';
 import { Art, BarBreakdown, Button, Card, cx, formatMoney, Row, Stack } from '@/ui-kit';
 import type {
@@ -160,13 +151,7 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
           )}
         </Stack>
 
-<<<<<<< HEAD
-        <Stack gap="xl">
-          <WhatWeKeep keep={vm.whatWeKeep} sendsLabels={readFile !== null} />
-        </Stack>
-=======
         <WhatWeKeep keep={vm.whatWeKeep} sendsLabels={readFile !== null} />
->>>>>>> 0a3f5f2 (Design v3: onboarding ladder S5-S9 restyled)
       </div>
     </LadderShell>
   );
