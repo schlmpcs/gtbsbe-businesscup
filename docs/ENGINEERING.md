@@ -258,6 +258,8 @@ The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/st
 
 **Masking (`lib/statement/mask.ts`, run in the browser and again on the server; idempotent).** Person-to-person lines become `Zelle to [name]`, `Venmo from [name]` …; transfers become `Transfer to savings` (or `[name]` when the other side isn't an account type); ACH name fields (`INDN:`, `IND NAME:`) are masked; e-mails, 4+ digit runs (card, account, phone, store numbers), `XXXX1234` and letter-digit reference codes become `[email]`, `#`, `[ref]`. Each line sent is `{ label, amount, month, day }`.
 
+**Named counterparties (T6).** Bill-pay, online-payment-to, check-payee, deposit-from and bare ACH credit/debit descriptions are reduced to a fixed payment-kind label plus `[name]`. The entire counterparty and memo are dropped before sending; the server applies the same rule again. This deliberately masks business payees too: category words (`power`, `water`, `rent`, `gas`, `grill`, `kitchen`, `pub`) and suffixes (`CO`, `BANK`, `LLC`) do not prove a description is free of personal names. Ordinary card purchases retain their merchant. A masked business payment may need manual category correction on S9. No merchant or category allowlist bypasses this rule.
+
 **Categorizing (server, `server/statement/*`).** The distinct (direction, masked label) pairs, never amounts or dates, go to the LLM in chunks of 100 (at most 400 per request), which returns a `StatementClass` and a "typically one-off or yearly" flag per label (zod-checked; one retry with the problems listed; what is still invalid or missing uses the keyword rules). Without an API key, or when the provider fails, the keyword rules (`rules.ts`) sort everything. The response says which: `categorizedBy: 'ai' | 'rules' | 'mixed'`. Nothing is stored.
 
 **Totals (engine, `statementTotals`; whole cents).**
@@ -302,3 +304,13 @@ The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/st
 PDF upload → creator packs → leaderboard → "this life vs yours" → mockups S13–S14. Never cut the engine, the game, the forecast or Loan Lab.
 
 If the house scene isn't playable at Sync 2, ship the static card (same view-model and routes; clues become tap-to-reveal rows) and keep building the scene behind a flag.
+
+### T6 real-export acceptance (#19)
+
+Synthetic fixture tests cover the sample and debit/credit, signed-bank and credit-card layouts. They do not satisfy the two-real-export gate. With two anonymized real CSV exports stored outside this checkout, run:
+
+```sh
+REAL_STATEMENT_EXPORTS='["/absolute/path/bank.csv","/absolute/path/card.csv"]' pnpm exec vitest run apps/web/src/lib/statement/realExports.test.ts
+```
+
+The opt-in check requires two distinct files, parses them locally, and validates the masked wire items without calling an API or logging their contents. It is skipped when paths are absent. Record the bank export formats and pass/fail outcome in the PR after running it; do not call synthetic exports real. This gate is still pending until the actual files are supplied and checked.

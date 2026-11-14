@@ -60,7 +60,7 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 | [x] | D3 | Design tokens: Figma variables → `tokens.json` (colors incl. chart palette, type scale, spacing, radius, shadows) | — | `pnpm tokens` generates `tokens.css`; ui-kit restyle can start by Sync 2 |
 | [x] | D4 | S9: "connect your bank app" option next to CSV upload (Figma + disabled "coming soon" card in the UI) | D2 | Frame in Figma; card on `/me/upload` with a test; real integration is post-hackathon |
 
-`[~]` means partly done. T6 (#19): the sample and three synthetic exports parse and are tested; two anonymized real exports and masking payee names on bill-pay, check and deposit lines remain (listed on the issue).
+`[~]` means partly done. T6 (#19): the sample and three synthetic exports parse and are tested; payee/payer masking on bill-pay, check, deposit and ACH lines is fixed in PR #102 with passing CI. Two anonymized real exports still need to be supplied and parsed locally; the opt-in check is documented in ENGINEERING.md.
 
 After T8–T12, Aibek owns integration and bugs and pairs on Y14.
 
