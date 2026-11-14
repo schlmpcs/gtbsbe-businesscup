@@ -65,7 +65,7 @@ export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payo
               {vm.offers.length > 0 && <LoanVerdict offers={vm.offers} />}
               <LoanParse parse={vm.parse} canAddOffer={vm.canAddOffer} />
             </Stack>
-            <DebtLoadGauges gauge={vm.gauge} selectedName={selectedName} />
+            <DebtLoadGauges gauge={vm.gauge} leftOver={vm.leftOver} selectedName={selectedName} />
             <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-2">
               <ExtraPayment extra={vm.extra} setExtraPayment={vm.setExtraPayment} selectedName={selectedName} />
               {payoff ? null : <PayoffOrder plan={vm.payoffPlan} selectedName={selectedName} />}

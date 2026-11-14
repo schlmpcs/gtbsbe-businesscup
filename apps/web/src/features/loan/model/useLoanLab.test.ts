@@ -31,6 +31,11 @@ describe('useLoanLab (S12)', () => {
     expect(g.isEstimate).toBe(true);
     expect(g.max).toBe(DEBT_LOAD_GAUGE_MAX);
     expect(g.max).toBeGreaterThan(g.before.thresholds.red);
+
+    // Left over each month: $5,200 pay − $3,655 spending − $605.92 minimums = $939.08 today;
+    // with Offer A's $863.28 payment, $939.08 − $863.28 = $75.80.
+    expect(result.current.leftOver.before).toBeCloseTo(939.08, 2);
+    expect(result.current.leftOver.after).toBeCloseTo(75.8, 2);
   });
 
   it('extra-payment slider shortens the payoff of the selected offer', async () => {

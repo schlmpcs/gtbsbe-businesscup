@@ -6,7 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { loanOffersSample } from '@/fixtures';
 import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
-import { areaRates, debtLoadGauge } from '@/lib/model/profile';
+import { areaRates, debtLoadGauge, thisMonth } from '@/lib/model/profile';
 import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { useAppReady, useProfile } from '@/state';
@@ -79,6 +79,16 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
     const probe = runEngine(() => loan(profile, { amount: 0, apr: 0, termMonths: 1 }).debtLoadBefore);
     return debtLoadGauge(probe.status === 'ready' ? probe.data : Number.NaN);
   }, [profile]);
+
+  // What is left each month today (rules engine, month 1), and after the selected offer's payment.
+  const surplusToday = useMemo(() => {
+    const r = runEngine(() => thisMonth(profile).surplus);
+    return r.status === 'ready' ? r.data : Number.NaN;
+  }, [profile]);
+  const leftOver = useMemo(
+    () => ({ before: surplusToday, after: selected?.result ? surplusToday - selected.result.monthly : null }),
+    [surplusToday, selected],
+  );
 
   const extra = useMemo(() => {
     if (!selected?.result) return null;
@@ -163,6 +173,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
       isEstimate: profile.takeHomePay.isEstimate || profile.debts.some((d) => d.minPayment.isEstimate),
       max: DEBT_LOAD_GAUGE_MAX,
     },
+    leftOver,
     extra,
     setExtraPayment: setExtra,
     payoffPlan,

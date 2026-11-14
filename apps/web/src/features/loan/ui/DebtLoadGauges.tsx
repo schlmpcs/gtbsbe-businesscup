@@ -1,7 +1,7 @@
 'use client';
 
 import { loan as t } from '@/copy';
-import { cx, EstimateTag, formatRate } from '@/ui-kit';
+import { cx, EstimateTag, formatMoney, formatRate } from '@/ui-kit';
 import { useId, type CSSProperties } from 'react';
 import type { DebtLoadGaugeVM, LoanLabVM } from '../model/types';
 
@@ -37,7 +37,16 @@ function Marker({ label, gauge, max, hollow }: { label: string; gauge: DebtLoadG
 }
 
 /** Debt load today → with the selected offer, on one green / yellow / red bar, in a white card (Design v3 S12). */
-export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gauge']; selectedName: string | null }) {
+export function DebtLoadGauges({
+  gauge,
+  leftOver,
+  selectedName,
+}: {
+  gauge: LoanLabVM['gauge'];
+  /** Left over each month today / with the selected offer (from the view-model). */
+  leftOver?: LoanLabVM['leftOver'];
+  selectedName: string | null;
+}) {
   const headingId = useId();
   const { before, after, max, isEstimate } = gauge;
   const showAfter = after !== null && selectedName !== null;
@@ -70,6 +79,18 @@ export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gaug
           </p>
           <p className="text-sm text-text-muted">{showAfter ? t.gauge.caption(selectedName) : t.gauge.captionToday}</p>
           {!showAfter && <p className="text-sm text-text-muted">{t.gauge.noOffer}</p>}
+          {leftOver && Number.isFinite(leftOver.before) && (
+            <p data-testid="loan-left-over" className="text-base">
+              {showAfter && leftOver.after !== null ? (
+                <span className={cx('font-bold', leftOver.after < 0 ? 'text-primary' : 'text-positive')}>
+                  {leftOver.after < 0
+                    ? t.gauge.shortWith(selectedName, formatMoney(-leftOver.after))
+                    : t.gauge.leftOverWith(selectedName, formatMoney(leftOver.after))}
+                </span>
+              ) : null}{' '}
+              <span className="text-text-muted">{t.gauge.leftOverToday(formatMoney(leftOver.before))}</span>
+            </p>
+          )}
         </div>
 
         <div className="flex min-w-0 flex-col gap-sm">

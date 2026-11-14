@@ -9,7 +9,7 @@ export const goal = {
   start: 'Set goal',
   clear: 'Clear goal',
   computed:
-    'Computed from your inputs with fixed assumptions. Educational simulation, not financial advice.',
+    'Rules-based estimate from your inputs. Educational simulation, not financial advice.',
   invalid: 'Enter a positive target and a whole number of years from 1 to 30.',
   error: 'We could not calculate this goal. Check your inputs.',
   loading: 'Loading your goal…',

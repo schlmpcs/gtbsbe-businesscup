@@ -75,6 +75,11 @@ export type LoanLabVM = {
   /** Debt-load gauge: today (before) and with the selected offer (after). */
   /** `max` is the end of the dial (a display scale; loads above it pin the needle). */
   gauge: { before: DebtLoadGaugeVM; after: DebtLoadGaugeVM | null; isEstimate: boolean; max: Rate };
+  /**
+   * Left over each month (take-home pay − spending − debt payments, this month): today, and with the
+   * selected offer's payment on top (null when no valid offer is selected). Below 0 = short.
+   */
+  leftOver: { before: Money; after: Money | null };
   /** Null when no valid offer is selected. */
   extra: ExtraPaymentVM | null;
   setExtraPayment: (value: Money) => void;

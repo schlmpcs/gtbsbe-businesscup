@@ -113,6 +113,10 @@ export const loan = {
     /** Zone labels on the bar; `red` is already formatted. */
     risky: (risky: string, red: string) => `${risky} · ${red}+`,
     unknown: 'We can’t compute a debt load without a take-home pay.',
+    /** Left over each month after spending and debt payments (amounts already formatted). */
+    leftOverToday: (amount: string) => `${amount} a month left over today.`,
+    leftOverWith: (name: string, amount: string) => `With ${name}: ${amount} a month left over.`,
+    shortWith: (name: string, amount: string) => `With ${name}: ${amount} a month short.`,
   },
 
   extra: {
