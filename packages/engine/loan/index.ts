@@ -22,9 +22,12 @@
 // engine. API inputs are also validated by the zod schemas in @lifeguessr/types before they get here.
 import type { Debt, LoanInput, LoanResult, Money, Profile, Rate } from '@lifeguessr/types';
 import { forecast } from '../forecast';
-import { type ForecastRates, cardMinPaymentFor, usesCardFormula } from '../simulate';
+import { type ForecastRates } from '../simulate';
+import { requiredPayment, validateDebts } from './debts';
+import { simulatePayoff } from './payoffSimulation';
+export { validateDebts } from './debts';
+export { payoffPlan, comparePayoff, extraToFinishBy } from './payoff';
 import {
-  MAX_SIMULATION_MONTHS,
   PAID_OFF_EPSILON,
   amortize,
   amortizedPayment,
@@ -40,8 +43,6 @@ export type LoanOptions = {
   rates?: Partial<ForecastRates>;
 };
 
-const DEBT_KINDS: readonly Debt['kind'][] = ['card', 'auto', 'student', 'personal', 'bnpl', 'mortgage'];
-
 /** Throws a RangeError for a loan input the math can't use. */
 export function validateLoanInput(l: LoanInput): void {
   assertNonNegative('amount', l.amount);
@@ -53,31 +54,6 @@ export function validateLoanInput(l: LoanInput): void {
   if ((l.downPayment ?? 0) > l.amount) {
     throw new RangeError(`Invalid downPayment: ${l.downPayment} is more than the amount ${l.amount}`);
   }
-}
-
-/** Throws a RangeError for debts the math can't use (bad numbers, unknown kind, duplicate ids). */
-export function validateDebts(debts: readonly Debt[]): void {
-  const ids = new Set<string>();
-  for (const d of debts) {
-    if (typeof d.id !== 'string' || d.id === '') throw new RangeError('Invalid debt id: empty');
-    if (ids.has(d.id)) throw new RangeError(`Duplicate debt id: ${d.id}`);
-    ids.add(d.id);
-    if (!DEBT_KINDS.includes(d.kind)) throw new RangeError(`Invalid debt kind for ${d.id}: ${d.kind}`);
-    assertNonNegative(`balance of ${d.id}`, d.balance);
-    assertNonNegative(`apr of ${d.id}`, d.apr);
-    assertNonNegative(`minPayment of ${d.id}`, d.minPayment.value);
-    if (d.extraPayment !== undefined) assertNonNegative(`extraPayment of ${d.id}`, d.extraPayment);
-  }
-}
-
-/**
- * The payment a debt requires this month at `balance`: the card formula for a card whose minimum is
- * an estimate, else its stated minimum; capped at what is owed (balance + this month's interest).
- */
-function requiredPayment(d: Debt, balance: Money): Money {
-  if (balance <= PAID_OFF_EPSILON) return 0;
-  const required = usesCardFormula(d) ? cardMinPaymentFor(balance, d.apr) : d.minPayment.value;
-  return Math.min(required, balance * (1 + d.apr / 12));
 }
 
 /** Required monthly debt payments / monthly take-home pay (∞ when there is no pay but a payment). */
@@ -156,44 +132,6 @@ export function payoffOrder(
   extra: Money,
   method: 'avalanche' | 'snowball',
 ): { order: string[]; payoffMonth: number | null; totalInterest: Money } {
-  validateDebts(debts);
-  assertNonNegative('extra', extra);
-  if (method !== 'avalanche' && method !== 'snowball') throw new RangeError(`Invalid payoff method: ${String(method)}`);
-
-  const sorted = debts
-    .filter((d) => d.balance > PAID_OFF_EPSILON)
-    .sort((a, b) =>
-      method === 'avalanche' ? b.apr - a.apr || a.balance - b.balance : a.balance - b.balance || b.apr - a.apr,
-    );
-  const order = sorted.map((d) => d.id);
-  if (sorted.length === 0) return { order, payoffMonth: 0, totalInterest: 0 };
-
-  const balance = sorted.map((d) => d.balance);
-  const ownExtra = sorted.map((d) => d.extraPayment ?? 0);
-  const budget = sorted.reduce((sum, d, i) => sum + requiredPayment(d, d.balance) + ownExtra[i]!, extra);
-
-  let totalInterest = 0;
-  for (let month = 1; month <= MAX_SIMULATION_MONTHS; month++) {
-    let left = budget;
-    // Required payment (+ own extra) first, on the balance at the start of the month.
-    for (const [i, d] of sorted.entries()) {
-      if (balance[i]! <= PAID_OFF_EPSILON) continue;
-      const due = requiredPayment(d, balance[i]!) + ownExtra[i]!;
-      const interest = balance[i]! * (d.apr / 12);
-      totalInterest += interest;
-      balance[i]! += interest;
-      const pay = Math.min(due, balance[i]!, left);
-      balance[i]! -= pay;
-      left -= pay;
-    }
-    // The rest of the budget goes to the debts in order.
-    for (let i = 0; i < sorted.length && left > 0; i++) {
-      const pay = Math.min(left, balance[i]!);
-      balance[i]! -= pay;
-      left -= pay;
-    }
-    for (let i = 0; i < balance.length; i++) if (balance[i]! <= PAID_OFF_EPSILON) balance[i] = 0;
-    if (balance.every((b) => b === 0)) return { order, payoffMonth: month, totalInterest };
-  }
-  return { order, payoffMonth: null, totalInterest }; // not paid off within the simulation cap
+  const result = simulatePayoff(debts, extra, method);
+  return { order: result.order, payoffMonth: result.monthsToDebtFree, totalInterest: result.totalInterest };
 }

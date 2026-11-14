@@ -398,6 +398,10 @@ export const assumptions = {
 
 export type AssumptionId = keyof typeof assumptions;
 
+/** Solver bound: at most $1 million of additional debt payments per month. */
+export const PAYOFF_MAX_EXTRA = 1_000_000;
+/** Dollar precision of the feasible upper bound returned by the payoff solver. */
+export const PAYOFF_SOLVE_TOLERANCE = 1;
 /** Rent spread when Census quartile ratios are unavailable; an assumed range, not measured quartiles. */
 export const RENT_RANGE_FALLBACK = 0.2;
 /** Insurance premiums depend on coverage and driver details absent here; assumed ±20% range. */
