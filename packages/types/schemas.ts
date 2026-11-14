@@ -396,6 +396,10 @@ const withProps = <N extends string, P extends z.ZodRawShape>(name: N, props: P)
  */
 export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   bare('play_started'),
+  withProps('duel_picked', { round: DuelRoundSchema, correct: z.boolean() }),
+  withProps('hint_opened', { round: DuelRoundSchema }),
+  bare('challenge_copied'),
+  bare('own_guess_started'),
   withProps('clue_opened', { home: homeIndex, clue: z.enum(CLUE_IDS) }),
   withProps('home_guessed', { home: homeIndex, cluesOpened: z.number().int().min(0).max(CLUE_IDS.length) }),
   withProps('game_finished', { homes: homeIndex }),

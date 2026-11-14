@@ -17,7 +17,7 @@ ON CONFLICT (id) DO NOTHING`;
 // share each set. At most one row per distinct set, however many people and events there are.
 const MASKS = `
 SELECT mask, count(*)::int AS users
-  FROM (SELECT bit_or(1 << (array_position($1::text[], name) - 1)) AS mask
+  FROM (SELECT bit_or(1::bigint << (array_position($1::text[], name) - 1)) AS mask
           FROM funnel_events
          WHERE occurred_at >= $2 AND occurred_at <= $3 AND name = ANY($1::text[])
          GROUP BY anon_key) AS per_id

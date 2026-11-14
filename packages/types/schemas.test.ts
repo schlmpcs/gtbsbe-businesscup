@@ -330,11 +330,15 @@ describe('Funnel event contracts', () => {
     }
     // The funnel is made of known events; the Postgres funnel query gives each name one bit of an int.
     for (const step of FUNNEL_STEPS) expect(FUNNEL_EVENT_NAMES).toContain(step);
-    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(31);
+    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(63);
   });
 
   it('accepts the events the app sends', () => {
     const events: ClientEventEnvelope[] = [
+      { id, name: 'duel_picked', props: { round: 1, correct: true } },
+      { id, name: 'hint_opened', props: { round: 2 } },
+      { id, name: 'challenge_copied' },
+      { id, name: 'own_guess_started' },
       { id, name: 'play_started' },
       { id, name: 'clue_opened', props: { home: 1, clue: 'kitchen' } },
       { id, name: 'home_guessed', props: { home: 3, cluesOpened: 0 } },
