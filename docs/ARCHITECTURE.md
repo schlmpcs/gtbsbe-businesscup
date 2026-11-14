@@ -21,7 +21,7 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 - Tailwind reading CSS variables from `tokens.css`, which is generated from `tokens.json` (Figma variables export).
 - Zustand (or React context) for client state; local storage holds the anonymous ID and a profile cache.
 - Vitest (engine) and Playwright (one end-to-end demo path).
-- A self-hosted store on the team's own server for sessions, leaderboard and events (T4/T5; connection via `STORE_URL`).
+- A self-hosted Postgres store on the team's own server for sessions, Pro entitlements, leaderboard and events (T4; `STORE_URL`, `pg` driver, server code in `apps/web/src/server/store/`).
 - One server-side LLM client: Anthropic Claude (`ANTHROPIC_API_KEY`, model in `ANTHROPIC_MODEL`); responses validated with zod.
 - Charts: one wrapper component (e.g. Recharts or visx) behind `<ForecastChart>` so restyling stays local.
 
@@ -30,8 +30,9 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 Production runs on the team's own server, not on Vercel. The files are in `deploy/` (runbook: `deploy/README.md`). It is live: a push to `main` that passes CI is deployed automatically.
 
 - **Public URL:** the Tailscale Funnel host that PawCoach used. PawCoach has been removed from the server, and LifeGuessr takes over the host's root `/`, so it needs no sub-path and no Next.js `basePath`. Funnel terminates HTTPS on the host (port 443) and proxies to the app on loopback port 3000. Other apps on that host keep their own routes (for example `/ember`) and must not be touched.
-- **Runtime:** a Docker image (`deploy/Dockerfile`, Next.js standalone build) and `deploy/compose.yaml`, with an `.env` beside it on the server, never in the repo. The app port is published on `127.0.0.1` only, so Funnel is the only way in from outside. The store for sessions, leaderboard and events (`STORE_URL`) lives on the same server, in the `/data` volume.
-- **CI/CD:** CI (lint, typecheck, test, build, Playwright e2e) runs on GitHub-hosted runners for every PR and push. `.github/workflows/deploy.yml` then deploys `main` by running `deploy/deploy.sh` on a self-hosted runner on the server: build there, health check on `/api/health`, automatic rollback to the previous image. Rules for that runner are in `deploy/README.md`.
+- **Runtime:** a Docker image (`deploy/Dockerfile`, Next.js standalone build) and `deploy/compose.yaml`, with an `.env` beside it on the server, never in the repo. The app port is published on `127.0.0.1` only, so Funnel is the only way in from outside.
+- **Store:** a `postgres` service (`postgres:17-alpine`) in the same compose project, with no published port (the compose network only), its data in the named volume `pgdata`, a healthcheck and a 512 MB cap. The app starts after it is healthy and gets `STORE_URL` from compose, built from `STORE_PASSWORD` in the server's `.env` (required: compose and `remote.sh` stop the deploy when it is missing). The app runs its schema migrations itself on first use (see Store below).
+- **CI/CD:** CI (lint, typecheck, test with a Postgres service, build, Playwright e2e against a real store, and a dry run of `deploy/deploy.sh` with the whole compose stack on the CI runner) runs on GitHub-hosted runners for every PR and push. `.github/workflows/deploy.yml` then deploys `main` by running `deploy/deploy.sh` on a self-hosted runner on the server: build there, make sure `postgres` is healthy, back it up (`pg_dump`, newest 14 kept), recreate only the app container, check `/api/health` (container liveness, then `store.status: "ok"` from the new image), automatic rollback to the previous image when either fails. A deploy never recreates the database volume. Rules for that runner are in `deploy/README.md`.
 - **Server notes:** the runner has its own user on the server and keeps the app's `.env` in that user's home. Its clock must be right (`deploy/README.md`). The server address and Funnel hostname stay out of this repo, which becomes public; they live in the team's private notes.
 - **No PR previews:** without Vercel there are no per-PR preview deploys.
 
@@ -189,6 +190,9 @@ export type Transaction = { date: string; description: string; amount: Money };
 export type StatementItem = { label: string; amount: Money; month: string; day: number };
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
   oneOffs: { label: string; amount: Money }[]; detectedPay?: Money };
+
+// POST /api/session (T4). revision counts saves (0 = nothing saved); updatedAt is ISO 8601 UTC.
+export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: number; updatedAt: string | null };
 ```
 
 ## Engine API (pure, no I/O)
@@ -222,7 +226,7 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `POST /api/daily/guess` | Aibek | `{ anonId, cardId, guess }` → `GuessReveal`. The server scores with `costOfLife` + `scoreGuess` using the clues it recorded; one guess per card per anonId per day. |
 | `GET /api/leaderboard` | Aibek | query `date` (+ own `anonId` in a header) → `{ rank, todayStats }`, summed from stored guesses. The client never sends a score. |
 | `GET /api/share` | Aibek | query `resultId, format` → PNG (9:16 or 1:1) from a stored result, so share cards can't be faked |
-| `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → saved state. `anonId` = `crypto.randomUUID()`. |
+| `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → `{ ok: true, ...SessionState }`. `anonId` = `crypto.randomUUID()` (a UUID, required). `{ anonId }` alone loads; each field sent replaces the saved one whole. 402 `not_paid` when the save would add to the wishlist without Pro; 503 `unavailable` when the store is down or not configured. `GET /api/session` with the `x-anon-id` header loads too. |
 | `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` → `CategoryTotals[]` (one per month) |
 | `POST /api/events` | Aibek | `{ anonId, name, props? }` → ok |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
@@ -238,9 +242,21 @@ No real money moves. Pro unlocks through a Stripe Checkout in **test mode** (the
 
 - **Test mode only.** `STRIPE_SECRET_KEY` is accepted only if it starts with `sk_test_` or `rk_test_`; anything else leaves checkout unavailable and the promo code still works. `/api/pro/confirm` accepts only `cs_test_…` session ids and refuses a session with `livemode: true`.
 - **No webhook.** The success URL carries the session ID; `/api/pro/confirm` fetches the session from Stripe, so nothing needs to reach the server from outside (the server is behind a Funnel route). The session is bound to the anonymous ID (`client_reference_id`) and can be claimed by one ID only.
-- **Entitlements** sit behind an `EntitlementStore` interface. The default is one JSON file in `PRO_DATA_DIR` on the server's volume, a stopgap until the shared self-hosted store (T4, `STORE_URL`) lands. A Stripe grant replaces a demo grant, never the reverse.
-- **What is gated.** Server-side routes call `requirePro(req)` (`src/server/pro/http.ts`); T4's session save should. In this build the one real gate is saving a purchase to the wishlist (S11, `wishlistLocked`), and it is enforced in the browser because the engine runs there. Items already in the wishlist stay.
+- **Entitlements** sit behind an `EntitlementStore` interface. With `STORE_URL` they live in the Postgres store (tables `pro_entitlements`, `pro_checkout_sessions`); the JSON file of the earlier builds (`PRO_DATA_DIR`) is imported once on first use. Without `STORE_URL` (dev) they stay in that file. A Stripe grant replaces a demo grant, never the reverse.
+- **What is gated.** Server-side routes call `requirePro(req)`, or `proStatusFor(anonId)` when only part of a request is gated (`src/server/pro/http.ts`). In this build the one real gate is saving a purchase to the wishlist (S11, `wishlistLocked`): the browser hides the button, and `POST /api/session` refuses (402) a save that would add a purchase to the saved wishlist without Pro. Items already in the wishlist stay and can be removed; the profile always saves.
 - **Env:** `STRIPE_SECRET_KEY`, `APP_URL` (public base URL including any sub-path, used for the return URLs), `PRO_DEMO_CODE`, `PRO_DEMO_UNLOCK` (`off` disables the code), `PRO_DATA_DIR`. Names only in `.env.example`.
+
+## Store (`apps/web/src/server/store/`)
+
+Server-only. `getStore()` returns the process-wide store: Postgres for a `postgres://` `STORE_URL`, in memory in dev and tests without one. In production (`NODE_ENV=production`) without `STORE_URL` it throws `StoreUnavailableError('not_configured')` and the store routes answer 503; it never falls back to memory there.
+
+- **Domains:** `store.sessions` (`SessionStore`: `load`, `save`). Each domain is an interface with its rules as pure functions (`sessions.ts`) plus a Postgres and a memory implementation (`sessions.postgres.ts`, `sessions.memory.ts`) that share them. T5 (game) and T8 (events) add theirs the same way. `store.db` (`Db`: `query`, `transaction`) is the Postgres connection for modules that own their tables, like Pro.
+- **Keys:** every table keys rows by `anon_key` = sha256 of the anonymous id (`anonKey()`); the raw id is never stored.
+- **Concurrency:** a session save is one transaction that locks its row (`SELECT … FOR UPDATE`), so concurrent saves for one id apply one after the other (`revision` counts them). `Db.transaction` retries on deadlock and serialization failures.
+- **Migrations:** `migrations/NNN_name.ts`, listed in `migrations/index.ts` (1 sessions, 2 Pro entitlements; 3 reserved for T5, 4 for T8). They run once per process before the first query, in one transaction under an advisory lock, recorded with a checksum in `schema_migrations`. An edited migration stops the store; unknown newer ones (after a rollback) are tolerated. Additive only; parameterized queries only.
+- **Errors:** connection, auth and shutdown errors become `StoreUnavailableError`; routes map it to 503 with `storeErrorResponse()` (`http.ts`). Anything else is a bug and surfaces as a 500.
+- **Health:** `GET /api/health` always answers 200 while the app serves (liveness, for the container) and reports `store: { status, backend, reason? }` (readiness, checked once by the deploy) with a 2-second timeout.
+- **Tests:** the memory store in unit tests; the Postgres tests run when `TEST_STORE_URL` is set (CI sets it), each in its own schema.
 
 ## Data flow
 
@@ -261,7 +277,7 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - CSVs are parsed client-side. Account numbers, the account holder's name and personal names in labels (e.g. Zelle/Venmo/transfer lines) are masked before any request.
 - The server receives only `StatementItem`s: merchant label, amount, month and day of month. The day lets the server detect subscriptions and yearly charges. It returns totals; raw items are not stored.
 - Labels pass through the LLM provider for categorizing. Use the provider's no-training / zero-retention option, and say so in the "What we keep" panel.
-- Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
+- Saved profiles hold income, balances and debts keyed by an unguessable anonymous ID. The store keeps only its SHA-256 hash, so a leaked row cannot be turned back into an ID that loads the profile. The "What we keep" panel shows exactly the persisted fields (category totals and profile values).
 - Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
 - Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test` or `demo`), when, and the Stripe test Checkout Session ID. No card data or email ever reaches our server; the test checkout page belongs to Stripe.
