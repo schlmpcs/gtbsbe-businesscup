@@ -133,5 +133,57 @@ export type SessionErrorCode =
   | 'unavailable'         // the store is not configured or cannot be reached (503)
   | 'not_paid';           // the save would add to the wishlist, which is a Pro feature (402)
 
+// ----- Funnel events (T8): POST /api/events, GET /api/events/funnel -------------------------
+// What the app counts to show its funnel (docs/PRODUCT.md → Metrics to show). Names come from a
+// fixed list. Props hold only small enums, flags and counts: never text, amounts, ids or anything
+// a person typed, so an event cannot carry personal data. Stored under the hash of the anonymous id.
+// `home` is the 1-based position of a home in today's set.
+export type ClientFunnelEvent =
+  | { name: 'play_started' }
+  | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
+  | { name: 'home_guessed'; props: { home: number; cluesOpened: number } }
+  | { name: 'game_finished'; props: { homes: number } }
+  | { name: 'result_shared'; props: { via: 'share' | 'copy' } }
+  | { name: 'own_guess_submitted' }
+  | { name: 'closest_life_chosen'; props: { fromToday: boolean } }
+  | { name: 'sliders_adjusted' }
+  | { name: 'balance_sheet_edited' }
+  | { name: 'statement_applied'; props: { months: number } }
+  | { name: 'forecast_viewed' }
+  | { name: 'move_committed'; props: { kind: MoveKind } }
+  | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
+  | { name: 'loan_compared'; props: { offers: number } }
+  | { name: 'paywall_viewed' };
+/** Recorded by the server routes themselves (Pro); a browser cannot send them. */
+export type ServerFunnelEvent =
+  | { name: 'checkout_started'; props: { plan: ProPlan } }
+  | { name: 'pro_purchased'; props: { plan: ProPlan } }   // a test-mode Stripe Checkout, confirmed paid
+  | { name: 'pro_promo_redeemed' };                        // the jury promo code
+export type FunnelEvent = ClientFunnelEvent | ServerFunnelEvent;
+export type FunnelEventName = FunnelEvent['name'];
+/** One event as the browser sends it: `id` = crypto.randomUUID(), so a resent batch is stored once. */
+export type ClientEventEnvelope = ClientFunnelEvent & { id: string };
+/** POST /api/events. */
+export type EventsRequest = { anonId: string; events: ClientEventEnvelope[] };
+export type EventsErrorCode = 'bad_request' | 'too_large' | 'rate_limited' | 'unavailable';
+/**
+ * One step of the funnel: `users` = distinct anonymous ids that sent this step's event; `funnel` =
+ * those that also sent every earlier step's; `conversion` = funnel / the previous step's funnel
+ * (null for the first step, or when the previous step has nobody).
+ */
+export type FunnelStep = { name: FunnelEventName; users: number; funnel: number; conversion: number | null };
+/** GET /api/events/funnel: the funnel and the game metrics over [from, to]. Rates are null when nothing was counted. */
+export type FunnelReport = {
+  from: string; to: string;                       // ISO 8601 UTC
+  users: number;                                  // distinct anonymous ids with any event
+  steps: FunnelStep[];                            // FUNNEL_STEPS, in order
+  events: Record<FunnelEventName, number>;        // distinct anonymous ids per event
+  game: {
+    players: number; finished: number; finishRate: number | null;
+    guesses: number; cluesPerHome: number | null; blindGuessRate: number | null;  // blind = no clue opened
+    shared: number; shareRate: number | null;     // share rate = shared / finished
+  };
+};
+
 export * from './constants';
 export * from './schemas';

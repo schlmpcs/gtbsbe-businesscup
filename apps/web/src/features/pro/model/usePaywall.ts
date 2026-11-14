@@ -4,6 +4,7 @@
 import { PRO_PLANS, PRO_PRICES, ProConfirmRequestSchema, type ProPlan, type ProStatus } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getProAdapter, type ProFailure, type ProResult } from '@/lib/api/pro';
+import { useTrackOnce } from '@/lib/events';
 import { SCREEN_ROUTES } from '@/lib/screens';
 import { usePro, useProStore } from '@/state';
 import type { PaywallError, PaywallErrorKey, PaywallPlanVM, PaywallVM } from './types';
@@ -217,6 +218,8 @@ export function usePaywall({ checkoutReturn, navigate = assignLocation }: UsePay
       : status.pro
         ? justUnlocked ? 'success' : 'pro'
         : pro.known || pro.load === 'error' ? 'offer' : 'loading';
+  // Saw the offer (checkout and unlocks are recorded by the server routes themselves).
+  useTrackOnce(view === 'offer', 'paywall_viewed', { name: 'paywall_viewed' });
 
   return {
     view,

@@ -4,6 +4,7 @@
 import { CategoryTotalsSchema, COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { sessionSource } from '@/lib/config';
+import { track } from '@/lib/events';
 import type { VMError } from '@/lib/model/types';
 import { useAppReady, useAppStore } from '@/state';
 import type { StatementMonthVM, StatementUploadVM } from './types';
@@ -45,6 +46,7 @@ export function useStatementUpload(): StatementUploadVM {
   const apply = useCallback(() => {
     if (!pending) return;
     applyStatementTotals(pending);
+    track({ name: 'statement_applied', props: { months: pending.length } });
     setPending(null);
     setApplied(true);
   }, [pending, applyStatementTotals]);

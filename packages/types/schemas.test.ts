@@ -11,6 +11,10 @@ import {
   type LifeCard, type LoanInput, type MoveKind, type ProErrorCode, type ProPlan, type ProSource,
   type ProStatus, type Profile, type ProfilePatch, type Purchase, type StatementItem,
   type SessionErrorCode, type SessionState,
+  CLIENT_EVENT_NAMES, ClientEventEnvelopeSchema, EVENTS_BATCH_MAX, type EVENTS_ERROR_CODES, EventsRequestSchema,
+  FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelReportSchema, type SERVER_EVENT_NAMES,
+  type ClientEventEnvelope, type ClientFunnelEvent, type EventsErrorCode, type EventsRequest, type FunnelReport,
+  type ServerFunnelEvent,
 } from './index';
 
 // These assertions are checked by `pnpm typecheck` (tsc covers test files): a contract change
@@ -156,5 +160,70 @@ describe('Session contracts', () => {
       ok: true, wishlist: [purchase], revision: 3, updatedAt: '2026-11-14T10:00:00.000Z',
     }).success).toBe(true);
     expect(SessionResponseSchema.safeParse({ ok: true, wishlist: [], revision: -1, updatedAt: null }).success).toBe(false);
+  });
+});
+
+describe('Funnel event contracts', () => {
+  const anonId = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
+  const id = '6b1d4c55-0b7e-4a4e-9a51-0c4b1f2f9d10';
+
+  it('match the contract types, and the name lists cover every member', () => {
+    expectTypeOf<z.infer<typeof ClientEventEnvelopeSchema>>().toExtend<ClientEventEnvelope>();
+    expectTypeOf<ClientEventEnvelope>().toExtend<z.input<typeof ClientEventEnvelopeSchema>>();
+    expectTypeOf<z.infer<typeof EventsRequestSchema>>().toExtend<EventsRequest>();
+    expectTypeOf<EventsRequest>().toExtend<z.input<typeof EventsRequestSchema>>();
+    expectTypeOf<z.infer<typeof FunnelReportSchema>>().toExtend<FunnelReport>();
+    expectTypeOf<FunnelReport>().toExtend<z.input<typeof FunnelReportSchema>>();
+    expectTypeOf<ClientFunnelEvent['name']>().toEqualTypeOf<(typeof CLIENT_EVENT_NAMES)[number]>();
+    expectTypeOf<ServerFunnelEvent['name']>().toEqualTypeOf<(typeof SERVER_EVENT_NAMES)[number]>();
+    expectTypeOf<EventsErrorCode>().toEqualTypeOf<(typeof EVENTS_ERROR_CODES)[number]>();
+    expect(new Set(FUNNEL_EVENT_NAMES).size).toBe(FUNNEL_EVENT_NAMES.length);
+    // Every client name has a schema (the discriminated union refuses any other name).
+    for (const name of CLIENT_EVENT_NAMES) {
+      expect(ClientEventEnvelopeSchema.options.some((o) => o.shape.name.value === name)).toBe(true);
+    }
+    // The funnel is made of known events; the Postgres funnel query gives each name one bit of an int.
+    for (const step of FUNNEL_STEPS) expect(FUNNEL_EVENT_NAMES).toContain(step);
+    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(31);
+  });
+
+  it('accepts the events the app sends', () => {
+    const events: ClientEventEnvelope[] = [
+      { id, name: 'play_started' },
+      { id, name: 'clue_opened', props: { home: 1, clue: 'kitchen' } },
+      { id, name: 'home_guessed', props: { home: 3, cluesOpened: 0 } },
+      { id, name: 'game_finished', props: { homes: 5 } },
+      { id, name: 'result_shared', props: { via: 'copy' } },
+      { id, name: 'closest_life_chosen', props: { fromToday: true } },
+      { id, name: 'statement_applied', props: { months: 5 } },
+      { id, name: 'move_committed', props: { kind: 'payCardFirst' } },
+      { id, name: 'afford_checked', props: { verdict: 'wait' } },
+      { id, name: 'loan_compared', props: { offers: 3 } },
+      { id, name: 'paywall_viewed' },
+    ];
+    expect(EventsRequestSchema.safeParse({ anonId, events }).success).toBe(true);
+  });
+
+  it.each([
+    ['an unknown name', { id, name: 'page_view' }],
+    ['a server-only event', { id, name: 'pro_purchased', props: { plan: 'yearly' } }],
+    ['free text in props', { id, name: 'clue_opened', props: { home: 1, clue: 'kitchen', note: 'Jane Doe, 12 Elm St' } }],
+    ['props on an event without them', { id, name: 'play_started', props: { email: 'a@b.co' } }],
+    ['a field beside the event', { id, name: 'forecast_viewed', label: 'Zelle to Jane' }],
+    ['a value outside its enum', { id, name: 'result_shared', props: { via: 'email' } }],
+    ['a home out of range', { id, name: 'home_guessed', props: { home: 0, cluesOpened: 1 } }],
+    ['a fractional count', { id, name: 'home_guessed', props: { home: 1, cluesOpened: 1.5 } }],
+    ['an amount where a count goes', { id, name: 'loan_compared', props: { offers: 28_000 } }],
+    ['an id that is not a UUID', { id: 'abc', name: 'forecast_viewed' }],
+  ])('refuses %s', (_why, ev) => {
+    expect(ClientEventEnvelopeSchema.safeParse(ev).success).toBe(false);
+  });
+
+  it(`takes 1 to ${EVENTS_BATCH_MAX} events and nothing besides anonId and events`, () => {
+    const batch = (n: number) => Array.from({ length: n }, () => ({ id, name: 'forecast_viewed' as const }));
+    expect(EventsRequestSchema.safeParse({ anonId, events: batch(EVENTS_BATCH_MAX) }).success).toBe(true);
+    expect(EventsRequestSchema.safeParse({ anonId, events: batch(EVENTS_BATCH_MAX + 1) }).success).toBe(false);
+    expect(EventsRequestSchema.safeParse({ anonId, events: [] }).success).toBe(false);
+    expect(EventsRequestSchema.safeParse({ anonId, events: batch(1), extra: true }).success).toBe(false);
   });
 });

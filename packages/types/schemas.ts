@@ -9,7 +9,8 @@
 // likely LLM/user mistake and it would silently break every forecast.
 import { z } from 'zod';
 import {
-  AREA_TIERS, COST_CATEGORIES, DEBT_KINDS, KID_AGES, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES, SESSION_ERROR_CODES,
+  AREA_TIERS, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
+  FUNNEL_EVENT_NAMES, KID_AGES, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES, SESSION_ERROR_CODES,
   SESSION_WISHLIST_MAX,
 } from './constants';
 
@@ -256,3 +257,85 @@ export const SessionErrorResponseSchema = z.object({
   ok: z.literal(false),
   error: z.object({ code: SessionErrorCodeSchema, retryAfterSeconds: z.number().optional() }).loose(),
 });
+
+// ----- Funnel events (T8): POST /api/events, GET /api/events/funnel --------------------------
+
+const eventId = z.uuid();
+const homeIndex = z.number().int().min(1).max(EVENT_HOMES_MAX);
+/** An event without props. */
+const bare = <N extends string>(name: N) => z.strictObject({ id: eventId, name: z.literal(name) });
+/** An event with props (a strict object too). */
+const withProps = <N extends string, P extends z.ZodRawShape>(name: N, props: P) =>
+  z.strictObject({ id: eventId, name: z.literal(name), props: z.strictObject(props) });
+
+/**
+ * One event from the browser. Strict objects with bounded enums, flags and counts only: an
+ * unknown name, an extra field or a free-text value is refused, so no personal data gets in.
+ */
+export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
+  bare('play_started'),
+  withProps('clue_opened', { home: homeIndex, clue: z.enum(CLUE_IDS) }),
+  withProps('home_guessed', { home: homeIndex, cluesOpened: z.number().int().min(0).max(CLUE_IDS.length) }),
+  withProps('game_finished', { homes: homeIndex }),
+  withProps('result_shared', { via: z.enum(['share', 'copy']) }),
+  bare('own_guess_submitted'),
+  withProps('closest_life_chosen', { fromToday: z.boolean() }),
+  bare('sliders_adjusted'),
+  bare('balance_sheet_edited'),
+  withProps('statement_applied', { months: z.number().int().min(1).max(120) }),
+  bare('forecast_viewed'),
+  withProps('move_committed', { kind: z.enum(MOVE_KINDS) }),
+  withProps('afford_checked', { verdict: z.enum(['fits', 'wait', 'no']) }),
+  withProps('loan_compared', { offers: z.number().int().min(1).max(3) }),
+  bare('paywall_viewed'),
+]);
+
+/** POST /api/events: 1–EVENTS_BATCH_MAX events for one anonymous id. */
+export const EventsRequestSchema = z.strictObject({
+  anonId: AnonIdSchema,
+  events: z.array(ClientEventEnvelopeSchema).min(1).max(EVENTS_BATCH_MAX),
+});
+
+/** `accepted` = events stored by this request; a resent event (same id) is not stored twice. */
+export const EventsResponseSchema = z.object({ ok: z.literal(true), accepted: z.number().int().min(0) });
+
+export const EventsErrorCodeSchema = z.enum(EVENTS_ERROR_CODES);
+
+/** Any failed /api/events reply. `retryAfterSeconds` accompanies `rate_limited`. */
+export const EventsErrorResponseSchema = z.object({
+  ok: z.literal(false),
+  error: z.object({ code: EventsErrorCodeSchema, retryAfterSeconds: z.number().optional() }).loose(),
+});
+
+export const FunnelEventNameSchema = z.enum(FUNNEL_EVENT_NAMES);
+
+const userCount = z.number().int().min(0);
+const share = z.number().min(0).max(1).nullable();
+
+export const FunnelStepSchema = z.object({
+  name: FunnelEventNameSchema,
+  users: userCount,
+  funnel: userCount,
+  conversion: share,
+});
+
+export const FunnelReportSchema = z.object({
+  from: z.iso.datetime(),
+  to: z.iso.datetime(),
+  users: userCount,
+  steps: z.array(FunnelStepSchema),
+  events: z.record(FunnelEventNameSchema, userCount),
+  game: z.object({
+    players: userCount,
+    finished: userCount,
+    finishRate: share,
+    guesses: userCount,
+    cluesPerHome: z.number().min(0).nullable(),
+    blindGuessRate: share,
+    shared: userCount,
+    shareRate: share,
+  }),
+});
+
+/** The reply of GET /api/events/funnel. */
+export const FunnelResponseSchema = FunnelReportSchema.extend({ ok: z.literal(true) });

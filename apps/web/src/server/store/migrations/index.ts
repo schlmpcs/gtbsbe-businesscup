@@ -12,11 +12,16 @@
 //      - Everything must run inside a transaction: no CREATE INDEX CONCURRENTLY, no VACUUM.
 //      - Key rows by `anon_key` (sha256 of the anonymous id, ../anonKey.ts), never the raw id.
 //   3. Add the table to the memory store too, so tests and `pnpm dev` behave the same.
-// Versions are applied by set, not by "highest so far", so two PRs merging in either order work.
+// Versions are applied by set, not by "highest so far", so two PRs merging in either order work:
+// 4 (T8) landed before 3 (T5). A database that already ran 4 still runs 3 when it arrives, after
+// 4 (migrate.test.ts covers it); keep this list in ascending order, so 3 goes before 4 here.
+// Running them out of order is safe because a migration never touches a table that a migration
+// still open in another PR creates.
 import { m001Sessions } from './001_sessions';
 import { m002ProEntitlements } from './002_pro_entitlements';
+import { m004FunnelEvents } from './004_funnel_events';
 import type { Migration } from './types';
 
 export type { Migration } from './types';
 
-export const MIGRATIONS: readonly Migration[] = [m001Sessions, m002ProEntitlements];
+export const MIGRATIONS: readonly Migration[] = [m001Sessions, m002ProEntitlements, m004FunnelEvents];

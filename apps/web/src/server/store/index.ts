@@ -1,9 +1,10 @@
-// Server-only: the app's store (sessions now; the T5 game and T8 events add theirs here).
+// Server-only: the app's store (sessions and funnel events; the T5 game adds its own here).
 //
 //   getStore()            the process-wide Store for STORE_URL (Postgres), or in memory in dev and
 //                         tests. Throws StoreUnavailableError('not_configured') in production
 //                         without STORE_URL: it never falls back to memory there.
 //   store.sessions        SessionStore (./sessions.ts)
+//   store.events          EventStore (./events.ts): funnel events and the funnel report
 //   store.db              the Postgres connection (null in memory), for server modules that own
 //                         their tables, e.g. Pro entitlements (server/pro/store.ts)
 //   storeHealth()         { status, backend, reason } for /api/health, with a short timeout
@@ -15,6 +16,9 @@
 import { storeConfig } from './config';
 import { StoreUnavailableError, type StoreUnavailableReason } from './errors';
 import { createDb, type Db, type DbOptions } from './postgres';
+import type { EventStore } from './events';
+import { createMemoryEventStore } from './events.memory';
+import { createPostgresEventStore } from './events.postgres';
 import type { SessionStore } from './sessions';
 import { createMemorySessionStore } from './sessions.memory';
 import { createPostgresSessionStore } from './sessions.postgres';
@@ -23,10 +27,12 @@ export { StoreUnavailableError, type StoreUnavailableReason } from './errors';
 export { anonKey } from './anonKey';
 export type { Db, Tx } from './postgres';
 export type { SaveOptions, SaveResult, SessionState, SessionStore, SessionUpdate } from './sessions';
+export type { EventStore, FunnelWindow, StoredEvent } from './events';
 
 export interface Store {
   readonly backend: 'postgres' | 'memory';
   readonly sessions: SessionStore;
+  readonly events: EventStore;
   /** The Postgres connection, or null for the memory store. */
   readonly db: Db | null;
   /** Resolves when the store is usable (connected and migrated); throws StoreUnavailableError otherwise. */
@@ -39,6 +45,7 @@ export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
   return {
     backend: 'postgres',
     sessions: createPostgresSessionStore(db),
+    events: createPostgresEventStore(db),
     db,
     check: () => db.check(),
     close: () => db.close(),
@@ -49,6 +56,7 @@ export function createMemoryStore(): Store {
   return {
     backend: 'memory',
     sessions: createMemorySessionStore(),
+    events: createMemoryEventStore(),
     db: null,
     check: async () => {},
     close: async () => {},

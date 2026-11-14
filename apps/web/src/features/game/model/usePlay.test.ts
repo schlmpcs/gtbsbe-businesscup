@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ClientFunnelEvent, EventsRequest } from '@lifeguessr/types';
+import { flushEvents, queuedEventsForTests, resetEventsForTests } from '@/lib/events';
 import { useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { createFixtureGameClient, type GameClient } from './client';
@@ -149,5 +151,47 @@ describe('usePlay (S2–S4) on fixtures', () => {
   it('streamer is null outside S4', async () => {
     const { result } = await renderPlay(false);
     expect(result.current.streamer).toBeNull();
+  });
+});
+
+describe('usePlay funnel events', () => {
+  it('tracks the start, each clue and guess (with its clue count), the finish and a share', async () => {
+    const sent: EventsRequest[] = [];
+    resetEventsForTests(async (batch) => {
+      sent.push(batch);
+      return 'sent';
+    });
+    const hook = renderHook(() => usePlay({ client, share: async () => 'copied' }));
+    await waitForReady(hook.result);
+    const { result } = hook;
+    for (let i = 0; i < 5; i++) {
+      if (i === 0) {
+        act(() => result.current.openClue('kitchen'));
+        await waitFor(() => expect(result.current.card!.openedCount).toBe(1));
+        act(() => result.current.openClue('garage'));
+        await waitFor(() => expect(result.current.card!.openedCount).toBe(2));
+      }
+      act(() => result.current.submitGuess());
+      await waitFor(() => expect(result.current.phase).toBe('reveal'));
+      act(() => result.current.next());
+    }
+    await waitFor(() => expect(result.current.phase).toBe('summary'));
+    act(() => result.current.share());
+    await waitFor(() => expect(result.current.shareStatus).toBe('copied'));
+
+    while (queuedEventsForTests().length > 0) await flushEvents();
+    const events = sent.flatMap((b) => b.events).map(({ id: _id, ...e }) => e as ClientFunnelEvent);
+    expect(events).toEqual([
+      { name: 'play_started' },
+      { name: 'clue_opened', props: { home: 1, clue: 'kitchen' } },
+      { name: 'clue_opened', props: { home: 1, clue: 'garage' } },
+      { name: 'home_guessed', props: { home: 1, cluesOpened: 2 } },
+      { name: 'home_guessed', props: { home: 2, cluesOpened: 0 } },
+      { name: 'home_guessed', props: { home: 3, cluesOpened: 0 } },
+      { name: 'home_guessed', props: { home: 4, cluesOpened: 0 } },
+      { name: 'home_guessed', props: { home: 5, cluesOpened: 0 } },
+      { name: 'game_finished', props: { homes: 5 } },
+      { name: 'result_shared', props: { via: 'copy' } },
+    ]);
   });
 });
