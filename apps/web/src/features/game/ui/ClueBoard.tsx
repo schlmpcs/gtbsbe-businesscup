@@ -5,8 +5,8 @@ import type { ClueId, ClueVM, ExploreCardVM } from '../model/types';
 import { ClueFacts } from './ClueFacts';
 
 /**
- * Props of the clue panel slot. The static ClueBoard below implements it today; the illustrated
- * <HouseScene> (T12) takes the same props and replaces it behind a flag (PlayScreen's `ClueSlot`).
+ * Props of the clue panel slot (PlayScreen's `ClueSlot`). The illustrated house (HouseSceneClues,
+ * T12) is the default; the static ClueBoard below takes the same props and is the fallback.
  */
 export type ClueBoardProps = {
   /** The home being explored: its clue rooms, layout, decor and the clue cost. */

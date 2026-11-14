@@ -7,6 +7,7 @@ import { Countdown } from './Countdown';
 import { errorText } from './errorText';
 import { GuessPanel } from './GuessPanel';
 import { HomeCard } from './HomeCard';
+import { HouseSceneClues } from './HouseSceneClues';
 import { RevealView } from './RevealView';
 import { SummaryView } from './SummaryView';
 
@@ -15,8 +16,8 @@ export type PlayScreenProps = {
   /** S5 route for the "guess your own life" bridge. */
   guessOwnHref: string;
   /**
-   * The clue panel. Default: the static ClueBoard (tap-to-reveal rows). The illustrated
-   * <HouseScene> (T12) takes the same props and goes here once its flag is on.
+   * The clue panel. Default: the illustrated house (HouseSceneClues, T12). The static ClueBoard
+   * (tap-to-reveal rows) takes the same props and is the fallback (ENGINEERING.md → Cut order).
    */
   ClueSlot?: ComponentType<ClueBoardProps>;
 };
@@ -37,7 +38,7 @@ function LoadingState() {
 }
 
 /** /play: S2 explore + guess, S3 reveal and the day's summary, S4 streamer mode (`vm.streamer`). */
-export function PlayScreen({ vm, guessOwnHref, ClueSlot = ClueBoard }: PlayScreenProps) {
+export function PlayScreen({ vm, guessOwnHref, ClueSlot = HouseSceneClues }: PlayScreenProps) {
   const streamer = vm.streamer;
   const large = streamer !== null;
   const screen = large ? 'S4' : vm.status === 'ready' && vm.phase !== 'explore' ? 'S3' : 'S2';
@@ -86,7 +87,8 @@ export function PlayScreen({ vm, guessOwnHref, ClueSlot = ClueBoard }: PlayScree
         {vm.status === 'ready' && vm.phase === 'explore' && vm.card && (
           <div className={cx('grid grid-cols-1 gap-lg', large && 'lg:grid-cols-2')}>
             <div className="flex flex-col gap-lg">
-              <HomeCard card={vm.card} large={large} />
+              {/* The house draws the decor itself; the static board lists it on the home card. */}
+              <HomeCard card={vm.card} large={large} showDecor={ClueSlot === ClueBoard} />
               <ClueSlot card={vm.card} onOpenClue={vm.openClue} disabled={vm.card.submitting} large={large} />
             </div>
             <div className="flex flex-col gap-lg">

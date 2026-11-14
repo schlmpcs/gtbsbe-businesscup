@@ -17,6 +17,12 @@ export {
 } from './ForecastChart';
 export { formatMoney, formatRate, type FormatMoneyOptions } from './format';
 export { Gauge, gaugeZone, type GaugeProps, type GaugeThresholds, type GaugeZone } from './Gauge';
+export {
+  HouseScene,
+  type HouseSceneProps,
+  type HouseSceneRoom,
+  type HouseSceneRoomStatus,
+} from './HouseScene';
 export { Row, Stack, type Gap, type LayoutProps, type RowProps } from './Layout';
 export { LockNotice, type LockNoticeProps } from './LockNotice';
 export { Money, Percent, type MoneyProps, type PercentProps } from './Money';

@@ -53,5 +53,17 @@ export const common = {
     breakdown: {
       total: 'Total',
     },
+    houseScene: {
+      /** Accessible name of the illustrated house, e.g. "2-bedroom home". */
+      house: (layout: string) => `${layout} home`,
+      /** Screen-reader summary of the always-visible decor. */
+      decor: (items: string) => `Around the house: ${items}.`,
+      back: 'Back to the house',
+      /** Accessible name of the close-up panel of one room. */
+      closeUp: (room: string) => `${room} close-up`,
+      /** Heading over the revealed props in a close-up. */
+      inside: 'Inside',
+      retry: 'Try again',
+    },
   },
 } as const;

@@ -7,6 +7,7 @@ import { common, game as t } from '@/copy';
 import { resetClientState } from '@/test/clientState';
 import { createFixtureGameClient, type GameClient } from './model/client';
 import { usePlay, type UsePlayOptions } from './model/usePlay';
+import { ClueBoard } from './ui/ClueBoard';
 import { PlayScreen } from './ui/PlayScreen';
 
 let client: GameClient;
@@ -29,12 +30,19 @@ describe('PlayScreen', () => {
     await screen.findByText(t.progress(1, 5));
     expect(screen.getByText(t.multiplier.cost('10%'))).toBeInTheDocument();
 
-    const kitchen = screen.getByRole('button', { name: new RegExp(t.clues.rooms.kitchen) });
-    expect(kitchen).toHaveTextContent(t.clues.closedHint('10%'));
+    // The house scene: a closed room shows what opening it costs; tapping it zooms in and opens it.
+    const kitchen = screen.getByRole('button', { name: t.clues.rooms.kitchen });
+    expect(kitchen).toHaveAccessibleDescription(t.clues.closedHint('10%'));
+    expect(kitchen).toHaveTextContent(t.scene.costBadge('10%'));
     fireEvent.click(kitchen);
-    await screen.findByText(/Takeout and restaurants/);
-    expect(screen.queryByRole('button', { name: new RegExp(t.clues.rooms.kitchen) })).toBeNull();
+    const closeUp = screen.getByRole('region', { name: common.kit.houseScene.closeUp(t.clues.rooms.kitchen) });
+    await within(closeUp).findByText(/Takeout and restaurants/);
+    expect(within(closeUp).getByText(t.clues.opened)).toBeInTheDocument();
+    expect(closeUp.querySelector('img')).toHaveAttribute('src', expect.stringMatching(/^\/scene\/kitchen\/takeout-/));
+    expect(kitchen).toHaveAttribute('data-status', 'open');
     expect(screen.getByText('90%')).toBeInTheDocument(); // multiplier after one clue
+    fireEvent.click(within(closeUp).getByRole('button', { name: common.kit.houseScene.back }));
+    expect(screen.queryByRole('region', { name: common.kit.houseScene.closeUp(t.clues.rooms.kitchen) })).toBeNull();
 
     fireEvent.change(screen.getByRole('textbox', { name: t.guess.input }), { target: { value: '4500' } });
     expect(lockInButton()).toHaveTextContent(t.guess.lockIn('$4,500'));
@@ -50,6 +58,21 @@ describe('PlayScreen', () => {
     const labels = bars.map((li) => li.textContent);
     expect(new Set(labels).size).toBe(labels.length);
     expect(screen.getByRole('button', { name: t.reveal.next })).toBeInTheDocument();
+  });
+
+  it('the static clue board still works as the fallback slot', async () => {
+    function PlayBoard() {
+      const vm = usePlay({ client });
+      return <PlayScreen vm={vm} guessOwnHref="/me/guess" ClueSlot={ClueBoard} />;
+    }
+    render(<PlayBoard />);
+    await screen.findByText(t.progress(1, 5));
+    const kitchen = screen.getByRole('button', { name: new RegExp(t.clues.rooms.kitchen) });
+    expect(kitchen).toHaveTextContent(t.clues.closedHint('10%'));
+    fireEvent.click(kitchen);
+    await screen.findByText(/Takeout and restaurants/);
+    expect(screen.queryByRole('button', { name: new RegExp(t.clues.rooms.kitchen) })).toBeNull();
+    expect(screen.getByText(t.home.decor)).toBeInTheDocument(); // the board lists the decor as words
   });
 
   it('plays all five homes into the summary with the share grid and the bridge', async () => {

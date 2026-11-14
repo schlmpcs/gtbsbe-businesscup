@@ -1,0 +1,773 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`sceneOf: snapshot of every fixture card > sample-01-single-nocar-cheap 1`] = `
+{
+  "clues": {
+    "entry": {
+      "cardId": "sample-01-single-nocar-cheap",
+      "clue": "entry",
+      "facts": {
+        "adults": 1,
+        "kids": [],
+      },
+      "props": [
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+      ],
+    },
+    "garage": {
+      "cardId": "sample-01-single-nocar-cheap",
+      "clue": "garage",
+      "facts": {},
+      "props": [
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/none",
+        },
+      ],
+    },
+    "kidsRoom": {
+      "cardId": "sample-01-single-nocar-cheap",
+      "clue": "kidsRoom",
+      "facts": {
+        "kids": [],
+      },
+      "props": [
+        {
+          "clue": "kidsRoom",
+          "room": "kidsRoom",
+          "sprite": "kidsRoom/homeOffice",
+        },
+      ],
+    },
+    "kitchen": {
+      "cardId": "sample-01-single-nocar-cheap",
+      "clue": "kitchen",
+      "facts": {
+        "eatingOutPerWeek": 1,
+      },
+      "props": [
+        {
+          "clue": "kitchen",
+          "room": "kitchen",
+          "sprite": "kitchen/takeout-0-1",
+        },
+      ],
+    },
+    "mailbox": {
+      "cardId": "sample-01-single-nocar-cheap",
+      "clue": "mailbox",
+      "facts": {
+        "tier": "cheap",
+        "zip": "75216",
+      },
+      "props": [
+        {
+          "clue": "mailbox",
+          "room": "mailbox",
+          "sprite": "mailbox/tier-cheap",
+        },
+      ],
+    },
+  },
+  "public": {
+    "caption": "One-bedroom, bus pass, cooks almost every night.",
+    "decor": [
+      {
+        "room": "living",
+        "sprite": "decor/skyline",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/lamp",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/plant",
+      },
+      {
+        "room": "bedroom1",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "yard",
+        "sprite": "decor/tree",
+      },
+    ],
+    "id": "sample-01-single-nocar-cheap",
+    "layout": "1bed",
+    "metro": "Dallas-Fort Worth, TX",
+  },
+}
+`;
+
+exports[`sceneOf: snapshot of every fixture card > sample-02-single-nocar-mid 1`] = `
+{
+  "clues": {
+    "entry": {
+      "cardId": "sample-02-single-nocar-mid",
+      "clue": "entry",
+      "facts": {
+        "adults": 1,
+        "kids": [],
+      },
+      "props": [
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+      ],
+    },
+    "garage": {
+      "cardId": "sample-02-single-nocar-mid",
+      "clue": "garage",
+      "facts": {},
+      "props": [
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/none",
+        },
+      ],
+    },
+    "kidsRoom": {
+      "cardId": "sample-02-single-nocar-mid",
+      "clue": "kidsRoom",
+      "facts": {
+        "kids": [],
+      },
+      "props": [
+        {
+          "clue": "kidsRoom",
+          "room": "kidsRoom",
+          "sprite": "kidsRoom/homeOffice",
+        },
+      ],
+    },
+    "kitchen": {
+      "cardId": "sample-02-single-nocar-mid",
+      "clue": "kitchen",
+      "facts": {
+        "eatingOutPerWeek": 5,
+      },
+      "props": [
+        {
+          "clue": "kitchen",
+          "room": "kitchen",
+          "sprite": "kitchen/takeout-4-6",
+        },
+      ],
+    },
+    "mailbox": {
+      "cardId": "sample-02-single-nocar-mid",
+      "clue": "mailbox",
+      "facts": {
+        "tier": "mid",
+        "zip": "75206",
+      },
+      "props": [
+        {
+          "clue": "mailbox",
+          "room": "mailbox",
+          "sprite": "mailbox/tier-mid",
+        },
+      ],
+    },
+  },
+  "public": {
+    "caption": "Studio off Greenville Ave, bikes to work, knows every taco spot.",
+    "decor": [
+      {
+        "room": "living",
+        "sprite": "decor/skyline",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/lamp",
+      },
+      {
+        "room": "loft",
+        "sprite": "decor/bookshelf",
+      },
+      {
+        "room": "loft",
+        "sprite": "decor/plant",
+      },
+      {
+        "room": "yard",
+        "sprite": "decor/tree",
+      },
+    ],
+    "id": "sample-02-single-nocar-mid",
+    "layout": "studio",
+    "metro": "Dallas-Fort Worth, TX",
+  },
+}
+`;
+
+exports[`sceneOf: snapshot of every fixture card > sample-03-couple-toddler 1`] = `
+{
+  "clues": {
+    "entry": {
+      "cardId": "sample-03-couple-toddler",
+      "clue": "entry",
+      "facts": {
+        "adults": 2,
+        "kids": [
+          "toddler",
+        ],
+      },
+      "props": [
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-kid",
+        },
+      ],
+    },
+    "garage": {
+      "cardId": "sample-03-couple-toddler",
+      "clue": "garage",
+      "facts": {
+        "car": {
+          "apr": 0.089,
+          "downPayment": 2000,
+          "price": 18000,
+          "termMonths": 60,
+        },
+      },
+      "props": [
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/economy",
+        },
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/loanTag",
+        },
+      ],
+    },
+    "kidsRoom": {
+      "cardId": "sample-03-couple-toddler",
+      "clue": "kidsRoom",
+      "facts": {
+        "kids": [
+          "toddler",
+        ],
+      },
+      "props": [
+        {
+          "clue": "kidsRoom",
+          "room": "kidsRoom",
+          "sprite": "kidsRoom/toddler",
+        },
+      ],
+    },
+    "kitchen": {
+      "cardId": "sample-03-couple-toddler",
+      "clue": "kitchen",
+      "facts": {
+        "eatingOutPerWeek": 2,
+      },
+      "props": [
+        {
+          "clue": "kitchen",
+          "room": "kitchen",
+          "sprite": "kitchen/takeout-2-3",
+        },
+      ],
+    },
+    "mailbox": {
+      "cardId": "sample-03-couple-toddler",
+      "clue": "mailbox",
+      "facts": {
+        "tier": "cheap",
+        "zip": "75216",
+      },
+      "props": [
+        {
+          "clue": "mailbox",
+          "room": "mailbox",
+          "sprite": "mailbox/tier-cheap",
+        },
+      ],
+    },
+  },
+  "public": {
+    "caption": "Two parents, one toddler, one used sedan.",
+    "decor": [
+      {
+        "room": "living",
+        "sprite": "decor/skyline",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/lamp",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/plant",
+      },
+      {
+        "room": "bedroom1",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "bedroom2",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "yard",
+        "sprite": "decor/tree",
+      },
+    ],
+    "id": "sample-03-couple-toddler",
+    "layout": "2bed",
+    "metro": "Dallas-Fort Worth, TX",
+  },
+}
+`;
+
+exports[`sceneOf: snapshot of every fixture card > sample-04-family-schoolage-carloan 1`] = `
+{
+  "clues": {
+    "entry": {
+      "cardId": "sample-04-family-schoolage-carloan",
+      "clue": "entry",
+      "facts": {
+        "adults": 2,
+        "kids": [
+          "schoolAge",
+          "schoolAge",
+        ],
+      },
+      "props": [
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-kid",
+        },
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-kid",
+        },
+      ],
+    },
+    "garage": {
+      "cardId": "sample-04-family-schoolage-carloan",
+      "clue": "garage",
+      "facts": {
+        "car": {
+          "apr": 0.069,
+          "downPayment": 4000,
+          "price": 38000,
+          "termMonths": 72,
+        },
+      },
+      "props": [
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/mid",
+        },
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/loanTag",
+        },
+      ],
+    },
+    "kidsRoom": {
+      "cardId": "sample-04-family-schoolage-carloan",
+      "clue": "kidsRoom",
+      "facts": {
+        "kids": [
+          "schoolAge",
+          "schoolAge",
+        ],
+      },
+      "props": [
+        {
+          "clue": "kidsRoom",
+          "room": "kidsRoom",
+          "sprite": "kidsRoom/schoolAge",
+        },
+        {
+          "clue": "kidsRoom",
+          "room": "kidsRoom",
+          "sprite": "kidsRoom/schoolAge",
+        },
+      ],
+    },
+    "kitchen": {
+      "cardId": "sample-04-family-schoolage-carloan",
+      "clue": "kitchen",
+      "facts": {
+        "eatingOutPerWeek": 3,
+      },
+      "props": [
+        {
+          "clue": "kitchen",
+          "room": "kitchen",
+          "sprite": "kitchen/takeout-2-3",
+        },
+      ],
+    },
+    "mailbox": {
+      "cardId": "sample-04-family-schoolage-carloan",
+      "clue": "mailbox",
+      "facts": {
+        "tier": "suburb",
+        "zip": "75024",
+      },
+      "props": [
+        {
+          "clue": "mailbox",
+          "room": "mailbox",
+          "sprite": "mailbox/tier-suburb",
+        },
+      ],
+    },
+  },
+  "public": {
+    "caption": "Suburban family of four, two kids in after-school care, a new SUV.",
+    "decor": [
+      {
+        "room": "living",
+        "sprite": "decor/skyline",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/lamp",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/plant",
+      },
+      {
+        "room": "bedroom1",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "bedroom2",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "bedroom3",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "yard",
+        "sprite": "decor/tree",
+      },
+    ],
+    "id": "sample-04-family-schoolage-carloan",
+    "layout": "3bed",
+    "metro": "Dallas-Fort Worth, TX",
+  },
+}
+`;
+
+exports[`sceneOf: snapshot of every fixture card > sample-05-single-luxury-car 1`] = `
+{
+  "clues": {
+    "entry": {
+      "cardId": "sample-05-single-luxury-car",
+      "clue": "entry",
+      "facts": {
+        "adults": 1,
+        "kids": [],
+      },
+      "props": [
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+      ],
+    },
+    "garage": {
+      "cardId": "sample-05-single-luxury-car",
+      "clue": "garage",
+      "facts": {
+        "car": {
+          "apr": 0.059,
+          "downPayment": 10000,
+          "price": 62000,
+          "termMonths": 60,
+        },
+      },
+      "props": [
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/luxury",
+        },
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/loanTag",
+        },
+      ],
+    },
+    "kidsRoom": {
+      "cardId": "sample-05-single-luxury-car",
+      "clue": "kidsRoom",
+      "facts": {
+        "kids": [],
+      },
+      "props": [
+        {
+          "clue": "kidsRoom",
+          "room": "kidsRoom",
+          "sprite": "kidsRoom/homeOffice",
+        },
+      ],
+    },
+    "kitchen": {
+      "cardId": "sample-05-single-luxury-car",
+      "clue": "kitchen",
+      "facts": {
+        "eatingOutPerWeek": 8,
+      },
+      "props": [
+        {
+          "clue": "kitchen",
+          "room": "kitchen",
+          "sprite": "kitchen/takeout-7plus",
+        },
+      ],
+    },
+    "mailbox": {
+      "cardId": "sample-05-single-luxury-car",
+      "clue": "mailbox",
+      "facts": {
+        "tier": "expensive",
+        "zip": "75205",
+      },
+      "props": [
+        {
+          "clue": "mailbox",
+          "room": "mailbox",
+          "sprite": "mailbox/tier-expensive",
+        },
+      ],
+    },
+  },
+  "public": {
+    "caption": "One-bedroom in Highland Park, German coupe, dinner out most nights.",
+    "decor": [
+      {
+        "room": "living",
+        "sprite": "decor/skyline",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/lamp",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/plant",
+      },
+      {
+        "room": "bedroom1",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "yard",
+        "sprite": "decor/tree",
+      },
+    ],
+    "id": "sample-05-single-luxury-car",
+    "layout": "1bed",
+    "metro": "Dallas-Fort Worth, TX",
+  },
+}
+`;
+
+exports[`sceneOf: snapshot of every fixture card > sample-06-family-infant-preschool 1`] = `
+{
+  "clues": {
+    "entry": {
+      "cardId": "sample-06-family-infant-preschool",
+      "clue": "entry",
+      "facts": {
+        "adults": 2,
+        "kids": [
+          "infant",
+          "preschool",
+        ],
+      },
+      "props": [
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-adult",
+        },
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-kid",
+        },
+        {
+          "clue": "entry",
+          "room": "entry",
+          "sprite": "entry/coat-kid",
+        },
+      ],
+    },
+    "garage": {
+      "cardId": "sample-06-family-infant-preschool",
+      "clue": "garage",
+      "facts": {
+        "car": {
+          "apr": 0.064,
+          "downPayment": 8000,
+          "price": 52000,
+          "termMonths": 72,
+        },
+      },
+      "props": [
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/luxury",
+        },
+        {
+          "clue": "garage",
+          "room": "garage",
+          "sprite": "garage/loanTag",
+        },
+      ],
+    },
+    "kidsRoom": {
+      "cardId": "sample-06-family-infant-preschool",
+      "clue": "kidsRoom",
+      "facts": {
+        "kids": [
+          "infant",
+          "preschool",
+        ],
+      },
+      "props": [
+        {
+          "clue": "kidsRoom",
+          "room": "kidsRoom",
+          "sprite": "kidsRoom/crib",
+        },
+        {
+          "clue": "kidsRoom",
+          "room": "kidsRoom",
+          "sprite": "kidsRoom/preschool",
+        },
+      ],
+    },
+    "kitchen": {
+      "cardId": "sample-06-family-infant-preschool",
+      "clue": "kitchen",
+      "facts": {
+        "eatingOutPerWeek": 4,
+      },
+      "props": [
+        {
+          "clue": "kitchen",
+          "room": "kitchen",
+          "sprite": "kitchen/takeout-4-6",
+        },
+      ],
+    },
+    "mailbox": {
+      "cardId": "sample-06-family-infant-preschool",
+      "clue": "mailbox",
+      "facts": {
+        "tier": "expensive",
+        "zip": "75205",
+      },
+      "props": [
+        {
+          "clue": "mailbox",
+          "room": "mailbox",
+          "sprite": "mailbox/tier-expensive",
+        },
+      ],
+    },
+  },
+  "public": {
+    "caption": "Four bedrooms, a baby and a preschooler, both in daycare.",
+    "decor": [
+      {
+        "room": "living",
+        "sprite": "decor/skyline",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/lamp",
+      },
+      {
+        "room": "living",
+        "sprite": "decor/plant",
+      },
+      {
+        "room": "bedroom1",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "bedroom2",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "bedroom3",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "bedroom4",
+        "sprite": "decor/bed",
+      },
+      {
+        "room": "yard",
+        "sprite": "decor/tree",
+      },
+    ],
+    "id": "sample-06-family-infant-preschool",
+    "layout": "4bed",
+    "metro": "Dallas-Fort Worth, TX",
+  },
+}
+`;
