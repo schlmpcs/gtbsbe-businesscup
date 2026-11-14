@@ -4,14 +4,15 @@ import { afford } from './afford';
 import { common } from './common';
 import { forecast } from './forecast';
 import { game } from './game';
+import { kitShowcase } from './kitShowcase';
 import { ladder } from './ladder';
 import { loan } from './loan';
 import { mocks } from './mocks';
 import { upload } from './upload';
 
-export { afford, common, forecast, game, ladder, loan, mocks, upload };
+export { afford, common, forecast, game, kitShowcase, ladder, loan, mocks, upload };
 
-export const copy = { common, game, ladder, forecast, afford, loan, upload, mocks } as const;
+export const copy = { common, game, ladder, forecast, afford, loan, upload, mocks, kitShowcase } as const;
 
 /** Every screen title by screen ID (S1–S15), merged from the feature files. */
 export const screenTitles = {

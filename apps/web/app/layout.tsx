@@ -18,7 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="en">
       <body className="min-h-dvh bg-bg text-text antialiased">
         {children}
-        <footer className="mx-auto w-full max-w-2xl px-lg pb-xl text-xs text-text-muted">{common.disclaimer}</footer>
+        <footer className="mx-auto w-full max-w-(--container-2xl) px-lg pb-xl text-xs text-text-muted">{common.disclaimer}</footer>
       </body>
     </html>
   );

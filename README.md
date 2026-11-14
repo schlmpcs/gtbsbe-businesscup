@@ -14,7 +14,7 @@ Requires Node 22.12+ and pnpm 10 (`corepack enable` picks up the pinned version)
 ```
 pnpm install
 pnpm dev            # apps/web on localhost:3000
-pnpm test           # Vitest (engine, types, data fixtures, web utils)
+pnpm test           # Vitest (engine, types, data fixtures, web utils, ui-kit components in jsdom)
 pnpm lint           # ESLint, incl. the UI import rule; checks tokens.css is up to date
 pnpm typecheck      # tsc in every package
 pnpm build          # Next.js production build
@@ -34,7 +34,7 @@ packages/data      @lifeguessr/data    public data pipeline (T2) and the canonic
 apps/web           web                 Next.js App Router app
   app/             routes (S3 and S4 are states of /play); app/api/* server routes
   src/features/<feature>/{model,ui}    view-model hooks and presentational components
-  src/ui-kit/      primitives + tokens.css (generated)
+  src/ui-kit/      primitives + tokens.css (generated); every primitive is on show at /kit
   src/copy/        all user-facing strings, one file per feature (import from @/copy)
   src/fixtures/    re-exports packages/data/fixtures
 tokens.json        design tokens (Figma variables export)
@@ -52,5 +52,6 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | Fixtures: 4 Dallas–Fort Worth ZIPs (HUD FY2027 SAFMR, DOL childcare, USDA, EIA, BLS), 6 life cards, demo profile, sample statement, 3 loan offers | Done (H0) |
 | Engine: `loan`, `compareLoans`, `payoffOrder`, `monthEnd`, `sceneOf` | Working stubs until T3, T9, T12 |
 | Engine: `costOfLife`, `cardToProfile`, `scoreGuess`, `forecast`, `applyPatch`, `rankMoves`, `canAfford` | Signatures only (Y1–Y4) |
+| UI kit: Button, Card, Slider (linear + log), Stat, Gauge, Tabs, Sheet, ForecastChart, BarBreakdown, Field/NumberInput, EstimateTag, SourceNote, Money, Stack/Row; showcase at `/kit` | Done |
 | Screens S1–S15 | Placeholder pages |
 | Deploy (live URL) | Pending: Vercel access |
