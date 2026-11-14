@@ -126,9 +126,11 @@ export type MonteCarloSettings = {
 export type HistogramBin = { from: number; to: number; count: number };
 export type MonteCarloResult = {
   paths: number; seed: number; successRate: Rate;           // successRate: share of paths, 0–1
-  bands: { year: number; p10: Money; p50: Money; p90: Money }[];
+  bands: { year: number; p10: Money; p50: Money; p90: Money;
+           p5?: Money; p95?: Money }[];                     // p5/p95 (MP5): the band the AI line is checked against
   samplePaths: { success: boolean; netWorth: Money[] }[];   // ≤ 200 paths for drawing
   histograms: { atRetirement: HistogramBin[]; atEnd: HistogramBin[]; shortfallAge: HistogramBin[] };
+  pathsWithoutShortfall?: number;    // MP5: paths left out of histograms.shortfallAge (never short)
 };
 
 // ----- Budget (P5, MP9) ----------------------------------------------------------------------
