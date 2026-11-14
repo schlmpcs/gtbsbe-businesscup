@@ -1,5 +1,6 @@
 import type { AvatarFacts } from './avatar';
 import type { Goal } from './goal';
+import type { Cadence, ServiceCategory } from './subscriptions';
 import type { TOOL_IDS } from './constants';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
 // Change only together (Amir + Aibek): update this file, the zod schemas in ./schemas.ts,
@@ -218,6 +219,49 @@ export type SessionErrorCode =
   | 'unavailable'         // the store is not configured or cannot be reached (503)
   | 'not_paid';           // the save would add to the wishlist, which is a Pro feature (402)
 
+// ----- Subscription audit (M1): what the detector finds in a statement ---------------------------
+// The catalogue types (Cadence, ServiceCategory, ServicePlan, KnownService) are in ./subscriptions,
+// the overpaying types in ./overpaying and the payoff types in ./payoff. Nothing here is sent to the
+// server: a finding names a merchant (a masked statement label), so findings stay in the browser
+// (docs/ARCHITECTURE.md → Privacy design); only events leave it, and they hold enums and counts.
+/** A calendar day inside a statement: `month` = 'YYYY-MM'. */
+export type ChargeDate = { month: string; day: number };
+export type SubscriptionFlag = 'priceUp' | 'introEnded' | 'overlap' | 'seenOnce';
+// One recurring charge found in a statement (origin 'statement'), or one service the user ticked in
+// the tick-list (origin 'tickList': nothing was charged or seen, so `chargesSeen` is 0, `lastCharge`
+// and `nextExpected` are null, and `isEstimate` is true). Findings are also read back from local
+// storage, so the schema checks the whole shape.
+export type SubscriptionFinding = {
+  /** Stable across runs on the same statement: the merchantKey as a lower-case slug. At most 100 characters. */
+  id: string;
+  merchantKey: string;
+  /** The masked statement label of the latest charge, unchanged (for a tick: the service name). */
+  label: string;
+  /** Absent when no catalogue entry matched, or the matching entry is `ambiguous` (never guessed). */
+  serviceId?: string; category: ServiceCategory;
+  cadence: Cadence; amount: Money;                 // typical charge per cadence
+  // Normalized: monthly = amount ÷ 1, 3 or 12 (monthly, quarterly, yearly), yearly = amount × 12 ÷ that.
+  // Money is unrounded; M3 rounds each to the cent once, at the end. The schema takes the exact figure or the rounded one.
+  monthly: Money; yearly: Money;
+  chargesSeen: number; lastCharge: ChargeDate | null;
+  nextExpected: ChargeDate | null;                 // null when stopped, and for a tick
+  status: 'active' | 'stopped'; flags: SubscriptionFlag[];
+  previousAmount?: Money;                          // set with `priceUp`: the amount before the rise
+  overlapsWith?: string[];                         // set with `overlap`: ids of the other findings in the audit
+  confidence: 'high' | 'medium' | 'low';           // low = pattern only: ask, and do not count until confirmed
+  origin: 'statement' | 'tickList'; isEstimate: boolean };
+export type SubscriptionAudit = {
+  /** Ordered by `yearly` descending, then `id`. */
+  findings: SubscriptionFinding[];
+  // Of the counted findings (auditTotals in M3: active, and confirmed or not low confidence); M3 rounds them to the
+  // cent once, at the end. The schema only bounds them: at least the active findings that are not low confidence,
+  // at most all findings together. Which findings were confirmed is not in the audit, so the exact sum is not checked.
+  monthlyTotal: Money; yearlyTotal: Money;
+  /** Calendar months with at least one statement line; the month in progress counts. */
+  monthsCovered: number;
+  /** The latest day in the statement ("today" for the audit: it never reads the clock); null for no lines. */
+  asOf: ChargeDate | null };
+
 // ----- Funnel events (T8): POST /api/events, GET /api/events/funnel -------------------------
 // What the app counts to show its funnel (docs/PRODUCT.md → Metrics to show). Names come from a
 // fixed list. Props hold only small enums, flags and counts: never text, amounts, ids or anything
@@ -302,4 +346,5 @@ export * from './tools';
 export * from './payoff';
 export * from './overpaying';
 export * from './subscriptions';
+export * from './subscriptionAudit';
 export * from './avatar';
