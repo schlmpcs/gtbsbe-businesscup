@@ -1,9 +1,10 @@
 // Client for POST /api/ai/explain (Y12, apps/web/app/api/ai/explain/route.ts):
-//   ExplainRequest { move?: Move & { source?: 'ai' | 'rules' }, loanResult?: ExplainLoanResult }  → 200 { text, source: 'ai' | 'template' }
+//   ExplainRequest { move?: Move & { source?: 'ai' | 'rules' }, loanResult?: ExplainLoanResult,
+//                    horizon?: { years: 1 | 3 | 5 | 10, effect } }  → 200 { text, source: 'ai' | 'template' }
 //   → 4xx { ok: false, error: { code } }
 // The text is two sentences of language about an engine result; it never carries a new number
 // (the server checks). When the model is unavailable the server answers with a template.
-import type { ExplainRequest, ExplainResponse, ForecastSource, LoanResult, Move, Rate } from '@lifeguessr/types';
+import type { ExplainRequest, ExplainResponse, ForecastSource, HorizonYears, LoanResult, Money, Move, Rate } from '@lifeguessr/types';
 import { z } from 'zod';
 import { postJson } from './http';
 
@@ -29,10 +30,13 @@ function debtLoadForRequest(load: Rate): Rate | null {
  * What callers pass: engine results as they are (a debt load may be Infinity; it is converted here).
  * A move may carry the forecast its `effect10y` came from (a MoveVM does); the server words the
  * sentence by it. `null` means unknown and is not sent, which keeps the server's default wording.
+ * `horizon` is the year the forecast screen shows and the move's effect there; without it the
+ * sentence is about 10 years (`move.effect10y`). It only applies to a move.
  */
 export type ExplainInput = {
   move?: Move & { source?: ForecastSource | null };
   loanResult?: Omit<LoanResult, 'schedule'>;
+  horizon?: { years: HorizonYears; effect: Money };
 };
 
 export type ExplainOptions = { anonId?: string; signal?: AbortSignal };
@@ -53,5 +57,6 @@ export async function explainResult(input: ExplainInput, opts: ExplainOptions = 
       debtLoadAfter: debtLoadForRequest(debtLoadAfter),
     };
   }
+  if (input.horizon) body.horizon = { years: input.horizon.years, effect: input.horizon.effect };
   return postJson('/api/ai/explain', body, ExplainResponseSchema, opts);
 }

@@ -5,7 +5,8 @@
 // canonical schemas from @lifeguessr/types. Those are the source of truth: they reject percent
 // rates (6.9 instead of 0.069), negative money and impossible terms.
 import {
-  COST_CATEGORIES, CostCategorySchema, DEBT_KINDS, ForecastSourceSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema,
+  COST_CATEGORIES, CostCategorySchema, DEBT_KINDS, ForecastSourceSchema, HorizonYearsSchema, MOVE_KINDS, ProfilePatchSchema,
+  ProfileSchema,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 
@@ -110,10 +111,17 @@ export const LoanResultInputSchema = z.object({
   schedule: z.array(z.unknown()).max(1_200).optional(),
 });
 
+/**
+ * The year the forecast screen shows and the move's effect there (packages/types: ExplainRequest).
+ * Only a move is explained at it: with a loan alone it is accepted and ignored.
+ */
+const HorizonInputSchema = z.object({ years: HorizonYearsSchema, effect: finite }).strict();
+
 export const ExplainRequestSchema = z
   .object({
     move: MoveInputSchema.optional(),
     loanResult: LoanResultInputSchema.optional(),
+    horizon: HorizonInputSchema.optional(),
   })
   .refine((b) => b.move !== undefined || b.loanResult !== undefined, {
     message: 'send a move, a loanResult, or both',
