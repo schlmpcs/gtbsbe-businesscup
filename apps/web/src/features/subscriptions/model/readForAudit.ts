@@ -27,6 +27,8 @@ export async function readStatementForAudit(file: File, deps: ReadForAuditDeps =
   let classes: StatementCategorizeResponse['classes'];
   await readStatementFile(file, {
     ...opts,
+    remember: false, // the audit keeps its own findings; nothing to hand on
+
     categorize: async (sent, options) => {
       items = [...sent];
       const response = await categorize(sent, options);

@@ -1,7 +1,7 @@
 'use client';
 
 import { afford as t } from '@/copy';
-import { Field, formatMoney, NumberInput, Stack } from '@/ui-kit';
+import { Field, formatMoney, NumberInput, SourceNote, Stack } from '@/ui-kit';
 import type { AffordVM, PayWithChoice, Purchase } from '../model/types';
 import { bigNumberInput, Choice, TextInput } from './controls';
 
@@ -12,7 +12,7 @@ const fromChoice = (c: RecurringChoice): Purchase['recurring'] => (c === 'once' 
 
 export type PurchaseFormProps = Pick<
   AffordVM,
-  'form' | 'invalidFields' | 'setLabel' | 'setAmount' | 'setRecurring' | 'setPayWith' | 'setLoan'
+  'form' | 'loanEstimate' | 'invalidFields' | 'setLabel' | 'setAmount' | 'setRecurring' | 'setPayWith' | 'setLoan'
 >;
 
 /** Example chips ("Or try one"): each fills the name and the price. Inputs, never results. */
@@ -40,7 +40,7 @@ export function PurchaseExamples({ setLabel, setAmount }: Pick<AffordVM, 'setLab
 }
 
 /** The purchase: what, how much, how often and how it's paid (with loan terms for a loan). */
-export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecurring, setPayWith, setLoan }: PurchaseFormProps) {
+export function PurchaseForm({ form, loanEstimate, invalidFields, setLabel, setAmount, setRecurring, setPayWith, setLoan }: PurchaseFormProps) {
   const error = (path: string) => (invalidFields.includes(path) ? (t.form.errors[path] ?? t.form.errors.payWith) : undefined);
 
   return (
@@ -68,7 +68,7 @@ export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecu
           name="payWith"
           value={form.payWith}
           onChange={setPayWith}
-          hint={t.form.payWithHints[form.payWith]}
+          hint={form.payWith === 'loan' && loanEstimate ? t.form.loanTypicalHint : t.form.payWithHints[form.payWith]}
           options={[
             { value: 'cash', label: t.form.payWithOptions.cash },
             { value: 'card', label: t.form.payWithOptions.card },
@@ -82,7 +82,12 @@ export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecu
               {t.form.loanTitle}
             </p>
             <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
-              <Field label={t.form.apr} error={error('loan.apr')}>
+              <Field
+                label={t.form.apr}
+                isEstimate={loanEstimate?.apr ?? false}
+                hint={loanEstimate?.apr ? t.form.loanTypical[loanEstimate.kind] : undefined}
+                error={error('loan.apr')}
+              >
                 <NumberInput
                   name="apr"
                   percent
@@ -92,7 +97,12 @@ export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecu
                   onValueChange={(apr) => setLoan({ apr })}
                 />
               </Field>
-              <Field label={t.form.termMonths} error={error('loan.termMonths')}>
+              <Field
+                label={t.form.termMonths}
+                isEstimate={loanEstimate?.termMonths ?? false}
+                hint={loanEstimate?.termMonths ? t.form.loanTypical[loanEstimate.kind] : undefined}
+                error={error('loan.termMonths')}
+              >
                 <NumberInput
                   name="termMonths"
                   maxFractionDigits={0}
@@ -114,6 +124,7 @@ export function PurchaseForm({ form, invalidFields, setLabel, setAmount, setRecu
                 <NumberInput name="fees" prefix="$" value={form.loan.fees} onValueChange={(fees) => setLoan({ fees: fees ?? 0 })} />
               </Field>
             </div>
+            {loanEstimate && <SourceNote source={loanEstimate.source} />}
           </fieldset>
         )}
       </Stack>

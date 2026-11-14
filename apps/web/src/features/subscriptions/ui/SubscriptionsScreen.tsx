@@ -1,6 +1,6 @@
 'use client';
 
-// S21 Subscription audit (`/tools/subscriptions`): guess → ticks → reveal → statement → findings → plan.
+// S21 Subscription audit (`/tools/subscriptions`): statement → findings → plan; guess → ticks → reveal as the by-hand fallback.
 // Placeholder UI: tokens and copy only. All data and actions come from useSubscriptions(); nothing is
 // computed here. The designer's frames (docs/design/08-subscription-audit.md) replace it later.
 import type { ReactNode } from 'react';
@@ -37,7 +37,7 @@ export function SubscriptionsScreen({ vm, planResults }: { vm: SubscriptionsVM; 
             {vm.step === 'reveal' && (
               <RevealCard reveal={vm.reveal} onFindForgotten={() => vm.goTo('statement')} onBack={() => vm.goTo('ticks')} />
             )}
-            {vm.step === 'statement' && <UploadStep statement={vm.statement} />}
+            {vm.step === 'statement' && <UploadStep statement={vm.statement} onByHand={() => vm.goTo('guess')} />}
             {vm.step === 'findings' && (
               <Stack gap="xl">
                 <FindingsList

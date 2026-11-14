@@ -38,6 +38,7 @@ test.describe('S13 Decision: keep the car or lease', () => {
     await expect(score).toBeVisible();
     const before = await score.textContent();
 
+    await page.getByTestId('lease-edit-disclosure-summary').click(); // JF14: the lease terms are behind a disclosure
     await page.getByRole('textbox', { name: new RegExp(`^${d.edit.monthly}`) }).fill('150');
     await expect(score).not.toHaveText(before ?? '');
     await expectNoHorizontalScroll(page);
