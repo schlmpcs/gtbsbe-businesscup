@@ -5,6 +5,8 @@ import type { PaywallError } from '../model/types';
 import { errorText } from './errorText';
 
 type Props = {
+  /** Anchor id, so the fine print can link to the form. */
+  id?: string;
   code: string;
   onCodeChange: (code: string) => void;
   onRedeem: () => void;
@@ -31,13 +33,13 @@ function CodeInput({ value, onChange }: { value: string; onChange: (value: strin
 }
 
 /** "Judges: skip checkout": the promo code, prefilled by the screen and editable. */
-export function PromoCodeForm({ code, onCodeChange, onRedeem, busy, disabled, error }: Props) {
+export function PromoCodeForm({ id, code, onCodeChange, onRedeem, busy, disabled, error }: Props) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     onRedeem();
   };
   return (
-    <Card tone="muted" title={copy.promo.title} headingLevel={2}>
+    <Card id={id} title={copy.promo.title} headingLevel={2} className="scroll-mt-xl">
       <form onSubmit={submit} className="flex flex-col gap-md">
         {/* Polite live region: the error under the field is announced when it appears. */}
         <div aria-live="polite">

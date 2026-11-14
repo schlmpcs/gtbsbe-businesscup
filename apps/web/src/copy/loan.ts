@@ -9,20 +9,34 @@ export const loan = {
     S12: 'Loan Lab',
   },
 
-  intro: 'Compare up to 3 offers. Try paying extra.',
+  intro: 'Compare up to 3 offers. See the real cost before you sign.',
   loading: 'Loading your plan…',
 
-  offerName: (n: number) => `Offer ${n}`,
+  /** Offers are lettered: Offer A, Offer B, Offer C (n starts at 1). */
+  offerName: (n: number) => `Offer ${n >= 1 && n <= 26 ? String.fromCharCode(64 + n) : n}`,
 
-  /** The big headline: the selected offer's amount (formatted) and how many offers are compared. */
-  headline: (amount: string) => `${amount} loan.`,
-  ways: (n: number) => (n === 1 ? 'One way.' : n === 2 ? 'Two ways.' : n === 3 ? 'Three ways.' : `${n} ways.`),
-  /** Chips with the selected offer's terms (values already formatted). */
+  /** An offer's down payment and fees under its terms (values already formatted). */
   terms: {
-    label: 'The selected offer',
-    down: (v: string) => `Down ${v}`,
-    fees: (v: string) => `Fees ${v}`,
+    down: (v: string) => `${v} down`,
+    fees: (v: string) => `${v} fees`,
   },
+
+  /**
+   * The ink band under the offers: which offer costs the least overall and which has the lowest monthly
+   * payment, with the engine's numbers (already formatted). `names` is already joined ("Offer A").
+   */
+  verdict: {
+    label: 'The bottom line',
+    lowestBoth: (names: string, total: string, monthly: string) =>
+      `${names} costs the least overall (${total}) and the least each month (${monthly}).`,
+    lowestCost: (names: string, total: string) => `${names} costs the least overall: ${total} in total.`,
+    lowestMonthly: (names: string, monthly: string) => `${names} has the lowest monthly payment: ${monthly}.`,
+    and: ' and ',
+    none: 'Fix the offers above to compare them.',
+  },
+
+  /** Under the page: where the numbers come from (the app footer carries the disclaimer). */
+  footnote: 'Numbers from the loan math on your profile. We don’t recommend lenders.',
 
   compare: {
     title: 'Side by side',
@@ -38,7 +52,7 @@ export const loan = {
     totalCostHint: 'Down payment, fees and interest included.',
     payoffMonths: (n: number) => months(n),
     never: 'Never',
-    lowestCost: 'Lowest cost',
+    lowestCost: 'Least overall',
     lowestMonthly: 'Lowest monthly',
     invalid: 'Fix this offer',
     failed: 'Can’t compute',
@@ -47,6 +61,11 @@ export const loan = {
     /** "36 months at 6.9%" (rate already formatted). */
     offerTerms: (termMonths: number, apr: string) => `${months(termMonths)} at ${apr}`,
     perMonth: 'a month',
+    /** Labels of the term boxes on each offer card. */
+    /** The bold "$3,078 interest · $31,078 total" line. */
+    inline: { totalInterest: 'interest', totalCost: 'total' },
+    boxes: { amount: 'Amount', apr: 'APR', term: 'Term' },
+    termShort: (n: number) => (Number.isFinite(n) ? `${n} mo` : '–'),
   },
 
   neverPaysOff: (name: string) => `${name} never pays off: the payment doesn’t cover the interest.`,

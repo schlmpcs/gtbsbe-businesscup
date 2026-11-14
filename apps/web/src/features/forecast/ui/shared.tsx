@@ -26,6 +26,17 @@ export const FULL_BLEED_PRIMARY = 'bg-primary [border-image:conic-gradient(var(-
 export const ON_ARENA =
   'text-on-primary [&_.text-text]:text-on-primary [&_.text-text-muted]:text-on-primary/80 [&_.text-positive]:text-on-primary [&_.text-negative]:text-on-primary';
 
+/** An ink (near-black) summary band: text turns white, muted text a softer white. */
+export const INK_BAND =
+  'rounded-xl bg-ink text-on-primary shadow-md [&_.text-text]:text-on-primary [&_.text-text-muted]:text-on-primary/70';
+
+/** A white button for an ink band (the ui-kit variants are made for light surfaces). */
+export const ON_INK_BUTTON =
+  'inline-flex min-h-11 items-center justify-center gap-sm rounded-lg bg-surface px-lg py-sm font-bold text-ink transition-colors hover:bg-primary-soft';
+
+/** Eyebrow label above a big number. */
+export const EYEBROW = 'text-xs font-bold uppercase tracking-wide text-text-muted';
+
 /** Decorative tilt (degrees) for tiles, like the Figma screens. */
 export function tilt(deg: number) {
   return { transform: `rotate(${deg}deg)` } as const;

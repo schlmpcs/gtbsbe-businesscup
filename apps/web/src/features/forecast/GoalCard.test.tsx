@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
+import { goal as goalCopy } from '@/copy';
 import { GoalCard } from './ui/GoalCard';
 import type { GoalVM } from './model/types';
 it('renders negative progress and unreachable saving as plain, bounded output', () => {
@@ -28,5 +29,6 @@ it('renders negative progress and unreachable saving as plain, bounded output', 
   render(<GoalCard vm={vm} />);
   expect(screen.getByRole('progressbar').getAttribute('value')).toBe('0');
   expect(screen.getByText(/not projected to be reachable/)).toBeTruthy();
-  expect(screen.getByText(/Behind:/)).toBeTruthy();
+  expect(screen.getByTestId('goal-verdict').textContent).toBe(goalCopy.verdictLabel.behind);
+  expect(screen.getByText(goalCopy.verdict.behind)).toBeTruthy();
 });

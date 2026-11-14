@@ -116,6 +116,13 @@ describe('StatementUpload (S9)', () => {
     expect(screen.getByRole('button', { name: ladder.upload.trySample })).toBeDisabled();
   });
 
+  it('footer: skip to the forecast on the left, the one orange CTA to the forecast on the right', () => {
+    render(<StatementUpload vm={uploadVM()} progress={progress} />);
+    expect(screen.getByRole('link', { name: ladder.shell.skip.S9 })).toHaveAttribute('href', '/future');
+    expect(screen.getByRole('link', { name: ladder.shell.cta.S9 })).toHaveAttribute('href', '/future');
+    expect(screen.getByRole('link', { name: ladder.shell.back })).toHaveAttribute('href', '/x/S8');
+  });
+
   it('with a reader: the picker hands the file over', async () => {
     const readFile = vi.fn();
     render(<StatementUpload vm={uploadVM({ readFile })} progress={progress} />);
@@ -288,5 +295,25 @@ describe('GuessYourself (S5)', () => {
     expect(screen.getByTestId('guess-verdict')).toHaveTextContent(ladder.guess.below('$1,000', '25%'));
     expect(screen.getByText(ladder.guess.basis.closestLife)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: ladder.guess.update })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: ladder.guess.submit })).toBeNull();
+    expect(screen.getByRole('link', { name: ladder.shell.cta.S5 })).toHaveAttribute('href', '/x/S6');
+  });
+
+  it('before a guess is saved: locking it is the CTA, with the game line as a sticker', async () => {
+    const vm: GuessYourselfVM = {
+      status: 'ready',
+      guess: { value: 3000, min: 1000, max: 15000, step: 10, position: 0.4 },
+      savedGuess: null,
+      comparison: null,
+      bridge: { played: 5, guessedLow: 4, guessedHigh: 1 },
+      setGuess: vi.fn(),
+      setGuessPosition: vi.fn(),
+      submit: vi.fn(),
+    };
+    render(<GuessYourself vm={vm} progress={progress} />);
+    expect(screen.getByText(ladder.guess.bridgeLow(4, 5))).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: ladder.shell.cta.S5 })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: ladder.guess.submit }));
+    expect(vm.submit).toHaveBeenCalledOnce();
   });
 });
