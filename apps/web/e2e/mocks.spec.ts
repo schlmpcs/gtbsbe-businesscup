@@ -1,4 +1,4 @@
-// S13 Decision (keep the car or lease) and S14 Monthly check-in on the demo profile and fixtures,
+// S13 Decision (keep the car or lease) on the demo profile and fixtures (S14 is checkin.spec.ts),
 // phone + desktop.
 import { expect, test, type Page } from '@playwright/test';
 import { mocks } from '../src/copy/mocks';
@@ -26,7 +26,6 @@ async function expectNoHorizontalScroll(page: Page) {
 }
 
 const d = mocks.decide;
-const c = mocks.checkin;
 
 test.describe('S13 Decision: keep the car or lease', () => {
   test('shows both paths and the result; editing the lease changes it', async ({ page }) => {
@@ -44,21 +43,3 @@ test.describe('S13 Decision: keep the car or lease', () => {
   });
 });
 
-test.describe('S14 Monthly check-in', () => {
-  test('reviews the sample month, commits to a move and marks it done', async ({ page }) => {
-    await page.goto('/checkin');
-    await expect(page.getByText(c.eyebrow('October'))).toBeVisible();
-    await expect(page.getByText(c.sampleNote)).toBeVisible();
-    await expect(page.getByLabel(c.scoreLabelDone)).toBeVisible();
-    await expect(page.getByRole('heading', { name: c.driftTitle })).toBeVisible();
-    await expectNoHorizontalScroll(page);
-
-    const move = page.getByTestId('checkin-move');
-    await move.getByRole('button', { name: new RegExp(`^${c.move.commit}`) }).first().click();
-    await expect(move.getByText(c.move.question)).toBeVisible();
-    await move.getByRole('button', { name: c.move.done }).click();
-    await expect(page.getByTestId('checkin-move')).toContainText(c.move.doneTitle);
-    await expect(page.getByRole('link', { name: new RegExp(c.addStatement('November')) })).toHaveAttribute('href', '/me/upload');
-    await expectNoHorizontalScroll(page);
-  });
-});

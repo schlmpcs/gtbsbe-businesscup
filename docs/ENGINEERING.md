@@ -248,6 +248,35 @@ Why bill categories are not extrapolated: rent paid on the 1st would project as 
 
 Other rules: only months strictly before the current month count as history; a negative category total (refunds above spending) counts as 0; drifts are sorted by size. Malformed input (a bad `YYYY-MM`, a day outside the month, a non-finite total, the same month twice) throws a `RangeError`.
 
+### Monthly check-in (S14)
+
+`packages/engine/checkin.ts`. No bank connection exists yet, so the month is simulated, labelled "Simulated month" on screen and typed `simulated: true`.
+
+```
+simulateMonth(p, i, seed)   per category c: planned = p.spending[c]
+                            actual  = planned × (1 + u × checkinMonthNoise[c]), u ∈ [−1, 1]
+                            u from mulberry32(FNV-1a("seed:i")), one draw per category in COST_CATEGORIES order
+                            noise: rent+utilities 3%, childcare 2%, subscriptions 5%, groceries 8%,
+                                   car 12%, eating out 15%, other 15%, debtPayments 0 (assumptions.ts)
+checkinRecord(start, month, m)
+                            actual end  = simulate(start with spending = m.totals, 1 month).path[1]
+                            planned end = simulate(start with spending = m.planned, 1 month).path[1]
+                            balances, netWorth = actual end; vsForecast = actual − planned net worth
+                            debtPaidDown = Σ debts at the start − at the end
+                            number10y = forecast(start with the end balances, 10, todaysDollars).in10y.mid
+checkinStart(p, history)    p with the last saved month's end balances (spending stays the plan)
+checkinSummary(plan, history, current, { goal, committedMove })
+                            rows: forecast vs actual per category (debtPayments left out, $0 rows dropped)
+                            number: today = latest net worth; in10y; change vs the last saved check-in
+                                    (or vs the number before the first one)
+                            goal: goalStatus on the profile after the latest month
+                            move: a debt move = paid since the check-ins started and months to payoff;
+                                  a spending move = the latest month vs its target
+                            value: Σ debtPaidDown and Σ vsForecast over saved check-ins, number change
+```
+
+The app seeds each month with `seedOf('YYYY-MM')`, so a month always comes out the same. The plan is the profile with the committed move's patch applied (a committed move is one the user is doing). Each check-in starts at month 0 of the simulation, so spending is not inflated between check-ins (a few months of inflation is well inside the noise). The number here is always the rules forecast ("Rules-based estimate"), like S13. Saved check-ins (Pro) live in the browser store only (`checkins`, zod-checked on load, at most 120); the server session contract has no field for them yet. The reminder is a real `.ics` (`apps/web/src/lib/ics.ts`: one all-day VEVENT, `RRULE:FREQ=MONTHLY;BYMONTHDAY=1`, no personal data).
+
 ### Statements (Aibek, T6/T7)
 
 The pipeline behind S9: `features/upload/model/readStatementFile.ts` → `lib/statement/*` (browser) → `POST /api/statement/categorize` → `statementTotals` (engine).

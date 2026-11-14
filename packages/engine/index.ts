@@ -40,3 +40,7 @@ export {
 } from './loan/index';
 export { goalStatus, extraSavingToReach, movesTowardGoal, GOAL_SOLVE_TOLERANCE } from './goal';
 export { overpayingCheck, type OverpayingInput } from './overpaying';
+export {
+  simulateMonth, checkinRecord, checkinStart, checkinSummary, profileWithBalances, seedOf, CHECKIN_CATEGORIES,
+  type CheckinOptions,
+} from './checkin';

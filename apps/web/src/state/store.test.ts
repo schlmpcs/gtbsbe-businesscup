@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { checkinRecord, checkinStart, seedOf, simulateMonth } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type CostCategory, type Move } from '@lifeguessr/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -94,6 +95,29 @@ describe('app store', () => {
     expect(useAppStore.getState().wishlist.map((w) => w.id)).toEqual([id]);
     useAppStore.getState().removeFromWishlist(id);
     expect(useAppStore.getState().wishlist).toEqual([]);
+  });
+
+  it('check-ins: saved in month order, one per month, persisted, cleared with a new life', async () => {
+    const p = useAppStore.getState().profile;
+    const dec = checkinRecord(p, '2026-12', simulateMonth(p, 1, seedOf('2026-12')));
+    const jan = checkinRecord(checkinStart(p, [dec]), '2027-01', simulateMonth(p, 2, seedOf('2027-01')));
+    useAppStore.getState().saveCheckin(jan);
+    useAppStore.getState().saveCheckin(dec);
+    useAppStore.getState().saveCheckin(dec);
+    const saved = useAppStore.getState().checkins;
+    expect(saved.map((c) => c.month)).toEqual(['2026-12', '2027-01']);
+    expect(saved.every((c) => typeof c.savedAt === 'string')).toBe(true);
+
+    expect(JSON.parse(localStorage.getItem(APP_STORE_KEY)!).state.checkins).toHaveLength(2);
+    useAppStore.setState({ checkins: [] });
+    const raw = JSON.parse(localStorage.getItem(APP_STORE_KEY)!);
+    raw.state.checkins = saved;
+    localStorage.setItem(APP_STORE_KEY, JSON.stringify(raw));
+    await useAppStore.persist.rehydrate();
+    expect(useAppStore.getState().checkins).toEqual(saved);
+
+    useAppStore.getState().loadSample();
+    expect(useAppStore.getState().checkins).toEqual([]);
   });
 });
 

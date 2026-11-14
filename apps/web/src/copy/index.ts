@@ -2,6 +2,7 @@
 // collide; add strings to your feature's file, not here.
 import { afford } from './afford';
 import { ai } from './ai';
+import { checkin } from './checkin';
 import { common } from './common';
 import { duel } from './duel';
 import { forecast } from './forecast';
@@ -14,9 +15,9 @@ import { pro } from './pro';
 import { tour } from './tour';
 import { upload } from './upload';
 
-export { afford, ai, common, duel, forecast, game, kitShowcase, ladder, loan, mocks, pro, tour, upload };
+export { afford, ai, checkin, common, duel, forecast, game, kitShowcase, ladder, loan, mocks, pro, tour, upload };
 
-export const copy = { common, game, duel, ladder, forecast, afford, loan, upload, mocks, pro, tour, ai, kitShowcase } as const;
+export const copy = { checkin, common, game, duel, ladder, forecast, afford, loan, upload, mocks, pro, tour, ai, kitShowcase } as const;
 
 /** Every screen title by screen ID (S1–S15), merged from the feature files. */
 export const screenTitles = {
