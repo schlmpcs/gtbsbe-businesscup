@@ -51,7 +51,9 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | Contracts and zod schemas | Done (H0) |
 | Fixtures: 4 Dallas–Fort Worth ZIPs (HUD FY2027 SAFMR, DOL childcare, USDA, EIA, BLS), 6 life cards, demo profile, sample statement, 3 loan offers | Done (H0) |
 | Engine: `loan`, `compareLoans`, `payoffOrder`, `monthEnd`, `sceneOf` | Working stubs until T3, T9, T12 |
-| Engine: `costOfLife`, `cardToProfile`, `scoreGuess`, `forecast`, `applyPatch`, `rankMoves`, `canAfford` | Signatures only (Y1–Y4) |
+| Engine: `forecast` (range band, today's dollars, purchases), `applyPatch`, `simulate` | Done (Y2) |
+| Engine: `costOfLife`, `cardToProfile`, `scoreGuess` | Done (Y1) |
+| Engine: `rankMoves`, `canAfford` | Signatures only (Y3, Y4) |
 | AI routes: `POST /api/ai/parse` (text → `ProfilePatch` / `Purchase` / `LoanInput`, zod-validated, user confirms) and `POST /api/ai/explain` (2 sentences, numbers checked against the input, template fallback); rate-limited; work without a key | Done (Y12) |
 | Screens S1–S15 | Placeholder pages |
 | Deploy (live URL) | Pending: Vercel access |
