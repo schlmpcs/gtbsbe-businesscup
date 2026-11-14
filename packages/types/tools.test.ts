@@ -500,7 +500,7 @@ describe('the micro-tool funnel events', () => {
       expect(SERVER_EVENT_NAMES).not.toContain(name);
       expect(FUNNEL_STEPS).not.toContain(name);
     }
-    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(31);   // one bit each in the Postgres funnel query
+    expect(FUNNEL_EVENT_NAMES.length).toBeLessThanOrEqual(63);   // one bit each in the Postgres bigint funnel mask (same bound as schemas.test.ts)
   });
 
   it('leaves the main funnel exactly as it was', () => {
