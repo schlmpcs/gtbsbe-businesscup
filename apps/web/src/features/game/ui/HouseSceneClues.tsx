@@ -37,9 +37,9 @@ function roomOf(clue: ClueVM, card: ClueBoardProps['card'], disabled: boolean): 
 export function HouseSceneClues({ card, onOpenClue, disabled = false, large = false }: ClueBoardProps) {
   const headingId = useId();
   return (
-    // The same framed tile as the static ClueBoard (Figma), with the house inside.
-    <section aria-labelledby={headingId} className="min-w-0 rounded-xl bg-surface p-xs text-text shadow-lg sm:p-md">
-      <div className="flex flex-col gap-lg rounded-lg bg-surface-strong p-sm sm:p-xl">
+    // The same white card as the static ClueBoard (Design v3), with the house inside.
+    <section aria-labelledby={headingId} className="min-w-0 rounded-xl bg-surface p-sm text-text shadow-md sm:p-lg">
+      <div className="flex flex-col gap-lg">
         <div className="flex flex-col gap-xs">
           <h2 id={headingId} className={cx('font-display font-extrabold leading-tight', large ? 'text-4xl' : 'text-2xl')}>
             {t.clues.heading}
