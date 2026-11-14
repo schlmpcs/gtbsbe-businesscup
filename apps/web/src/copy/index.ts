@@ -10,13 +10,17 @@ import { ladder } from './ladder';
 import { loan } from './loan';
 import { mocks } from './mocks';
 import { pro } from './pro';
+import { renewals } from './renewals';
+import { subscriptions } from './subscriptions';
 import { upload } from './upload';
 
-export { afford, ai, common, forecast, game, kitShowcase, ladder, loan, mocks, pro, upload };
+export { afford, ai, common, forecast, game, kitShowcase, ladder, loan, mocks, pro, renewals, subscriptions, upload };
 
-export const copy = { common, game, ladder, forecast, afford, loan, upload, mocks, pro, ai, kitShowcase } as const;
+export const copy = {
+  common, game, ladder, forecast, afford, loan, upload, mocks, pro, ai, kitShowcase, renewals, subscriptions,
+} as const;
 
-/** Every screen title by screen ID (S1–S15), merged from the feature files. */
+/** Every screen title by screen ID (S1–S15, S21), merged from the feature files. */
 export const screenTitles = {
   ...forecast.screens,
   ...game.screens,
@@ -25,6 +29,7 @@ export const screenTitles = {
   ...afford.screens,
   ...loan.screens,
   ...mocks.screens,
+  ...subscriptions.screens,
 } as const;
 
 export type ScreenId = keyof typeof screenTitles;
