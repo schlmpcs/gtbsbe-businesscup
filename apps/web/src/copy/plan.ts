@@ -1,0 +1,204 @@
+// Strings for /plan (MP7, epic #160): the KPI cards and their tooltips, the nine plan events, the
+// assumptions and their hints, Monte Carlo, Compare and Next Moves. Owner: Amir. Hooks resolve these
+// to text; the UI may also read them directly. Functions take values already formatted by the hooks.
+import type { AccountGroup, PlanEventType } from '@lifeguessr/types';
+
+const events: Record<PlanEventType, { title: string; description: string }> = {
+  income: { title: 'Extra income', description: 'A raise, side income or a partner’s pay, per month.' },
+  expense: { title: 'Big expense', description: 'A one-time purchase or a new monthly cost, with or without a loan.' },
+  buyHome: { title: 'Buy a home', description: 'Down payment, mortgage, property tax, insurance and upkeep for your area.' },
+  haveKid: { title: 'Have a kid', description: 'Childcare for your county plus everyday costs.' },
+  newJob: { title: 'New job', description: 'A new take-home pay from a chosen year.' },
+  careerBreak: { title: 'Career break', description: 'Income stops until the year you choose.' },
+  windfall: { title: 'Windfall', description: 'A one-time sum, such as a bonus or an inheritance.' },
+  retire: { title: 'Retire', description: 'Work income stops and the plan lives on savings.' },
+  socialSecurity: { title: 'Social Security', description: 'Monthly benefit that starts in the year you choose.' },
+};
+
+const groups: Record<AccountGroup, string> = {
+  cash: 'Cash',
+  investments: 'Investments',
+  retirement: 'Retirement',
+  realEstate: 'Real estate',
+  vehicle: 'Vehicles',
+  otherAsset: 'Other assets',
+  creditCard: 'Credit cards',
+  loan: 'Loans',
+  mortgage: 'Mortgage',
+};
+
+export const plan = {
+  disclaimer: 'An educational simulation, not financial advice. Estimates use rules and averages, not a promise of what will happen.',
+  saveState: { saving: 'Saving…', saved: 'Saved just now' },
+  display: { today: 'Today’s dollars', future: 'Future dollars' },
+  notFound: 'We could not find that scenario.',
+  kpi: {
+    netWorthEndOfYear: { label: 'Net worth this year', tooltip: 'Everything you own minus everything you owe at the end of this year.' },
+    netWorthAtRetirement: { label: (age: number) => `At retirement (${age})`, tooltip: 'Net worth in the year you retire, after the plan’s events.' },
+    netWorthAtEnd: { label: (age: number) => `At age ${age}`, tooltip: 'Net worth at the end of the plan.' },
+    shortfall: {
+      label: 'Money lasts until',
+      tooltip: 'The first age at which spending is no longer covered by income and savings.',
+      never: (endAge: number) => `Past ${endAge}`,
+      age: (age: number) => `Age ${age}`,
+    },
+  },
+  chart: {
+    ageTick: (age: number) => `Age ${age}`,
+    retireMarker: 'Retire',
+  },
+  tables: {
+    accounts: { year: 'Year', age: 'Age', start: 'Start', growth: 'Growth', deposits: 'Deposits', withdrawals: 'Withdrawals', end: 'End' },
+    cashFlow: {
+      year: 'Year', age: 'Age', income: 'Income', expenses: 'Expenses', withdrawals: 'From savings', net: 'Net',
+      lines: { takeHomePay: 'Take-home pay', spending: 'Spending' } as Record<string, string>,
+    },
+    events: { year: 'Year', event: 'Event', summary: 'Details' },
+  },
+  groups,
+  events,
+  eventSummary: {
+    income: (monthly: string) => `${monthly} a month`,
+    expenseOnce: (amount: string) => `${amount} once`,
+    expenseMonthly: (amount: string) => `${amount} a month`,
+    buyHome: (value: string, pct: string) => `${value} home, ${pct} down`,
+    buyHomeCash: (value: string) => `${value} home, paid in cash`,
+    haveKid: (childcare: string, years: number) => `${childcare} a month of childcare for ${years} years`,
+    newJob: (pay: string) => `${pay} a month take-home`,
+    careerBreak: (endYear: number) => `Back at work in ${endYear}`,
+    windfall: (amount: string) => `${amount} one time`,
+    retire: 'Work income stops',
+    socialSecurity: (monthly: string) => `${monthly} a month`,
+  },
+  scenarios: {
+    defaultName: (n: number) => `Scenario ${n}`,
+    copyName: (name: string) => `${name} copy`,
+    compareHint: 'Add a second scenario to compare plans.',
+  },
+  editor: {
+    notFound: 'We could not find that event.',
+    fields: {
+      year: 'Starts in',
+      endYear: 'Ends in',
+      monthly: 'Per month',
+      amount: 'Amount',
+      cadence: 'How often',
+      downPayment: 'Down payment',
+      apr: 'Loan rate',
+      termMonths: 'Loan term (months)',
+      homeValue: 'Home price',
+      downPaymentPct: 'Down payment (% of price)',
+      payCash: 'Pay in cash',
+      termYears: 'Mortgage term',
+      rate: 'Mortgage rate',
+      propertyTaxRate: 'Property tax (per year)',
+      insuranceMonthly: 'Home insurance (per month)',
+      upkeepRate: 'Upkeep (per year)',
+      replaceHousing: 'Replaces my current rent',
+      childcareMonthly: 'Childcare per month',
+      childcareYears: 'Years of childcare',
+      otherMonthly: 'Other costs per month',
+      takeHomePay: 'Take-home pay per month',
+    } as Record<string, string>,
+    cadence: { once: 'Once', monthly: 'Every month' },
+    breakdown: {
+      principalAndInterest: 'Principal and interest',
+      propertyTax: 'Property tax',
+      insurance: 'Home insurance',
+      total: 'Total per month',
+    },
+    preview: {
+      netWorthAtRetirement: 'Net worth at retirement',
+      netWorthAtEnd: 'Net worth at the end of the plan',
+      shortfall: 'Money lasts until',
+      years: (signed: string) => `${signed} years`,
+      with: 'With this event',
+      without: 'Without it',
+    },
+    hints: {
+      rate: 'Fixed-rate 30-year mortgages are quoted per year; check today’s rate for your area.',
+      downPayment: 'Putting down 20% avoids mortgage insurance on most loans.',
+    } as Record<string, string>,
+    estimateNote: 'Our estimate for your area. Change it if you know better.',
+  },
+  assumptions: {
+    labels: {
+      retireAge: 'Retire at',
+      endAge: 'End of plan',
+      inflation: 'Inflation (per year)',
+      display: 'Show amounts in',
+      expensesMode: 'Spending in the plan',
+      expensesMonthly: 'Monthly spending',
+    } as Record<string, string>,
+    hints: {
+      retireAge: 'Social Security pays more if you wait until 67 or later.',
+      endAge: 'Planning to 90 or later keeps you from running out early.',
+      inflation: 'Most plans use 2–3%.',
+      expensesMode: 'Budget uses your statement and balance sheet; manual lets you set one number.',
+    } as Record<string, string>,
+    expensesMode: { budget: 'From my budget', manual: 'A number I choose' },
+    growthHint: (rate: string) => `Default growth is ${rate} a year.`,
+    savingsSplitError: 'Shares must add up to 100%.',
+    withdrawalOrderError: 'List every account type once.',
+  },
+  compare: {
+    title: 'Compare',
+    needTwo: 'Add a second scenario to compare plans.',
+    kpi: {
+      netWorthAtRetirement: 'Net worth at retirement',
+      netWorthAtEnd: 'Net worth at the end of the plan',
+      shortfall: 'Money lasts until',
+    },
+    sentence: {
+      higher: (a: string, b: string, diff: string, age: number) => `${a} leaves you ${diff} better off than ${b} at age ${age}.`,
+      lower: (a: string, b: string, diff: string, age: number) => `${a} leaves you ${diff} worse off than ${b} at age ${age}.`,
+      same: (a: string, b: string, age: number) => `${a} and ${b} end up in about the same place at age ${age}.`,
+    },
+  },
+  chance: {
+    idle: 'Run the simulation to see how often your plan works.',
+    running: 'Running…',
+    gaugeLabel: 'Chance of success',
+    paths: (ok: string, total: string) => `${ok} of ${total} paths work`,
+    histograms: {
+      atRetirement: { title: 'Net worth at retirement', xLabel: 'Net worth' },
+      atEnd: { title: 'Net worth at the end of the plan', xLabel: 'Net worth' },
+      shortfallAge: { title: 'Age when money runs out', xLabel: 'Age' },
+    },
+    settings: {
+      paths: 'Number of simulations',
+      fixedSeed: 'Same result every run',
+      seed: 'Seed',
+      inflationMean: 'Inflation, average',
+      inflationSd: 'Inflation, spread',
+      endThreshold: 'Success needs at least',
+      growthMean: 'Growth, average',
+      growthSd: 'Growth, spread',
+    } as Record<string, string>,
+    hints: {
+      paths: 'More simulations are smoother but slower. 1,000 is plenty.',
+      fixedSeed: 'Keep this on to compare plans fairly.',
+      inflationSd: 'How much inflation can wander from year to year.',
+      endThreshold: 'A plan counts as working if it never runs short and ends above this.',
+    } as Record<string, string>,
+  },
+  moves: {
+    title: 'Your best next moves',
+    effectAtRetirement: (amount: string) => `${amount} at retirement`,
+    successRateDelta: (pts: string) => `${pts} chance of success`,
+    added: 'Added to your plan',
+    // Stand-ins until the moves come from the engine (MP6) and /api/ai/explain writes the explanation.
+    items: {
+      'move-extra-income': { title: 'Earn $400 more a month', explanation: 'Extra monthly income adds to savings every year until you retire, and the early years grow the longest.' },
+      'move-windfall': { title: 'Invest a $10,000 windfall', explanation: 'A lump sum put to work next year has the most time to grow before retirement.' },
+      'move-side-income': { title: 'Add $250 a month of side income', explanation: 'A smaller extra income still compounds over decades and lowers the chance of running short.' },
+    } as Record<string, { title: string; explanation: string }>,
+  },
+  aiLine: {
+    label: 'AI estimate',
+    rejected: {
+      outsideBand: 'The estimate fell outside the range of simulations, so we hid it.',
+      todayMismatch: 'The estimate did not start from today’s balance, so we hid it.',
+    },
+  },
+} as const;
