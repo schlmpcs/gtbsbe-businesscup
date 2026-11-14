@@ -45,6 +45,26 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
 
+  // The life-card catalog holds the game's answers: only server routes (app/api) and tests may
+  // load it, so it can never end up in a browser bundle. (features/*/ui below is stricter still.)
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    ignores: ['apps/web/app/api/**', 'apps/web/**/*.test.{ts,tsx}', 'apps/web/e2e/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@lifeguessr/data/cards',
+              message: 'Life cards hold the answers: load them only in server routes (app/api/**) and tests.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Presentational UI: the import rule.
   {
     files: ['apps/web/src/features/*/ui/**/*.{ts,tsx}'],

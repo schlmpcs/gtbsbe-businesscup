@@ -7,7 +7,8 @@ import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api/http';
-import { areaByZip, cloneProfileDemo } from '@/fixtures';
+import { getArea } from '@lifeguessr/data/areas';
+import { cloneProfileDemo } from '@/fixtures';
 import { useAppStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { howWeCalculate } from './howWeCalculate';
@@ -17,7 +18,7 @@ import { useToday } from './useToday';
 
 beforeEach(resetClientState);
 
-const rates = { inflationAnnual: inflationAnnualOf(areaByZip('75206')) };
+const rates = { inflationAnnual: inflationAnnualOf(getArea('75206')) };
 const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
 
@@ -218,7 +219,7 @@ describe('useFuture "Why?" (POST /api/ai/explain)', () => {
 
 describe('howWeCalculate', () => {
   it('lists the forecast and moves assumptions with their sources or assumption flags', () => {
-    const area = areaByZip('75206');
+    const area = getArea('75206');
     const vm = howWeCalculate({ zip: '75206' });
     expect(vm.forecast.map((a) => a.id)).toEqual([
       'inflation', 'incomeGrowth', 'returnAnnualNominal', 'cashYieldAnnual', 'cardAprDefault', 'cardMinPayment',

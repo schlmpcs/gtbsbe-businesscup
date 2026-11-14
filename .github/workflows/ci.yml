@@ -32,6 +32,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # Data pipeline (Python standard library, no network): parsers + out/areas.json is up to date.
+      - run: pnpm --filter @lifeguessr/data test:py
       - run: pnpm build
         env:
           NEXT_TELEMETRY_DISABLED: 1

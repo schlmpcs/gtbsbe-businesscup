@@ -20,7 +20,7 @@ pnpm typecheck      # tsc in every package
 pnpm build          # Next.js production build
 pnpm e2e            # Playwright: builds, starts and smoke-tests every screen
 pnpm tokens         # tokens.json → apps/web/src/ui-kit/tokens.css
-pnpm data:refresh   # re-fetch public data (T2, not implemented yet)
+pnpm data:refresh   # re-fetch public data into packages/data/out (T2; needs Python 3, no pip packages)
 ```
 
 Copy `.env.example` to `.env` for the AI routes and storage.
@@ -30,7 +30,7 @@ Copy `.env.example` to `.env` for the AI routes and storage.
 ```
 packages/types     @lifeguessr/types   shared contracts (index.ts) + zod schemas (schemas.ts)
 packages/engine    @lifeguessr/engine  pure functions + Vitest: cost, score, forecast, moves, afford, month, scene, loan/
-packages/data      @lifeguessr/data    public data pipeline (T2) and the canonical fixtures in fixtures/
+packages/data      @lifeguessr/data    public data pipeline (T2: out/areas.json), life cards (T10: cards/), canonical fixtures in fixtures/
 apps/web           web                 Next.js App Router app
   app/             routes (S3 and S4 are states of /play); app/api/* server routes
   src/features/<feature>/{model,ui}    view-model hooks and presentational components
@@ -50,6 +50,8 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | Monorepo, lint (incl. UI import rule), Vitest, Playwright, CI | Done (T1) |
 | Contracts and zod schemas | Done (H0) |
 | Fixtures: 4 Dallas–Fort Worth ZIPs (HUD FY2027 SAFMR, DOL childcare, USDA, EIA, BLS), 6 life cards, demo profile, sample statement, 3 loan offers | Done (H0) |
+| Public data (`packages/data/out/areas.json`, `pnpm data:refresh`): 60 ZIPs in 15 metros, one per tier. HUD FY2026 SAFMR rents (none estimated), Census ACS 2020–2024 rent ranges (55 ZIPs), DOL NDCP county childcare CPI-inflated to today (60), USDA food plan, EIA gas, BLS metro CPI, NAIC state car insurance (labeled estimate). Coverage in `out/incomplete-data-report.json`; the web app reads it through `@lifeguessr/data/areas` | Done (T2) |
+| Life cards (`packages/data/cards/cards.json`, server-only `@lifeguessr/data/cards`): 50 daily cards (10 days, each easy → curveball across 5 metros) + 2 creator packs (`nyc-25`, `city-swap`), costed by the engine from the real area data | Done (T10) |
 | Engine: `loan`, `compareLoans`, `payoffOrder`, `monthEnd`, `sceneOf` | Working stubs until T3, T9, T12 |
 | Engine: `forecast` (range band, today's dollars, purchases), `applyPatch`, `simulate` | Done (Y2) |
 | Engine: `costOfLife`, `cardToProfile`, `scoreGuess` | Done (Y1) |

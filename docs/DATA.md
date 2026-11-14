@@ -13,9 +13,11 @@ All data is fetched ahead of time by `packages/data` scripts and committed as JS
 | Childcare by county | DOL Women's Bureau, National Database of Childcare Prices | Public download (verify format) | Cited as a source by the MIT Living Wage methodology. By age group (infant, toddler, preschool, school-age). Map ZIP → county with the HUD USPS ZIP crosswalk. The latest survey year lags several years: inflate to today with CPI and show both years in the Source label. |
 | Groceries by household size | USDA food plans (Thrifty / Low / Moderate / Liberal) | Public PDFs/tables (verify) | Per-person monthly cost. |
 | Eating out | BLS Consumer Expenditure Survey (food away from home) | Public tables (verify) | Average meal price assumption. |
-| Car insurance | Source to choose (state averages) | Verify | Stored per area as `carInsuranceMonthly`; `isEstimate: true` until a source is verified. |
+| Car insurance | NAIC Auto Insurance Database, combined average premium by state (2023, Table 5) | Public PDF (extract committed in `packages/data/sources/`) | Stored per area as `carInsuranceMonthly`: ÷ 12, inflated with BLS CPI-U motor vehicle insurance. A state average, not a quote, so `isEstimate: true`. |
 | Card APR default | ~22.8% average APR on accounts with balances (CardRates, 2026) | Constant | Source-tagged. Cross-check with the Federal Reserve G.19 "interest rate on accounts assessed interest"; prefer G.19 if the two disagree. Stored as a decimal (`0.228`). |
 | Debt context for the pitch | New York Fed Household Debt and Credit, Q3 2026: card balances ~$1.29T | Constant | Pitch only. |
+
+**As built (T2):** `packages/data/README.md` has the exact sources, series IDs and coverage. Two access routes differ from the table above because this network is blocked: HUD's huduser.gov downloads sit behind a WAF challenge, so FY2026 SAFMRs come from HUD's official eGIS open-data service (a downloaded workbook can be passed with `HUD_XLSX`); api.census.gov blocks us, so ACS tables are read through the Census Reporter API. ZIP → county uses the Census ZCTA–county relationships (largest land share) rather than the HUD crosswalk, which needs a token. Gas comes from EIA weekly retail prices (city, state or PADD) rather than BLS `APU` series. Childcare is inflated with BLS CPI-U day care and preschool. The engine constants (meal price, gallons per month, kid grocery factor) are still assumptions in `packages/engine/assumptions.ts`.
 
 ## Do not use
 
@@ -28,8 +30,8 @@ About 60 ZIPs across 15 metros. Suggested metros: New York, Los Angeles, Chicago
 
 ## Output shape
 
-`packages/data/out/areas.json` is an array of `AreaData` (see ARCHITECTURE.md). Fixtures are in `packages/data/fixtures/` (`areaData.sample.json` with 3 ZIPs, `cards.sample.json`, `profile.demo.json`, `statement.sample.csv`, `loanOffers.sample.json`), so the engine and UI can start before the pipeline lands. This is the only fixture location; `apps/web/src/fixtures` re-exports it. Life cards (`cards.json`, 50 cards + 2 creator packs) are built here too, from `areas.json`.
+`packages/data/out/areas.json` is an array of `AreaData` (see ARCHITECTURE.md). Fixtures are in `packages/data/fixtures/` (`areaData.sample.json` with 3 ZIPs, `cards.sample.json`, `profile.demo.json`, `statement.sample.csv`, `loanOffers.sample.json`), so the engine and UI can start before the pipeline lands. This is the only fixture location; `apps/web/src/fixtures` re-exports it. Life cards (`packages/data/cards/cards.json`, 50 daily cards + 2 creator packs of 5) live here too; every card's ZIP is in `areas.json`, and the engine costs it from that area. Load them with `@lifeguessr/data/areas` and `@lifeguessr/data/cards` (server-only); both are validated at import.
 
 ## Refresh
 
-`pnpm data:refresh` re-fetches everything. API keys go in `.env` (`HUD_TOKEN`, `CENSUS_KEY`, `BLS_KEY`, plus the LLM key and the self-hosted store's `STORE_URL`) and are never committed. Commit a `.env.example` with names only.
+`pnpm data:refresh` re-fetches everything except the 92 MB childcare workbook, which `pnpm --filter @lifeguessr/data import:ndcp <path>` imports (see `packages/data/README.md`). No key is required. The optional `BLS_KEY`, `HUD_XLSX` and `HUD_FY` go in `.env` (with the LLM key and the self-hosted store's `STORE_URL`) and are never committed. `.env.example` holds the names only.
