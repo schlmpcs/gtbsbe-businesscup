@@ -27,12 +27,12 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 
 ## Deployment
 
-Production runs on the team's own server, not on Vercel. The files are in `deploy/` (runbook: `deploy/README.md`); the server side is not set up yet.
+Production runs on the team's own server, not on Vercel. The files are in `deploy/` (runbook: `deploy/README.md`). It is live: a push to `main` that passes CI is deployed automatically.
 
 - **Public URL:** the Tailscale Funnel host that PawCoach used. PawCoach has been removed from the server, and LifeGuessr takes over the host's root `/`, so it needs no sub-path and no Next.js `basePath`. Funnel terminates HTTPS on the host (port 443) and proxies to the app on loopback port 3000. Other apps on that host keep their own routes (for example `/ember`) and must not be touched.
 - **Runtime:** a Docker image (`deploy/Dockerfile`, Next.js standalone build) and `deploy/compose.yaml`, with an `.env` beside it on the server, never in the repo. The app port is published on `127.0.0.1` only, so Funnel is the only way in from outside. The store for sessions, leaderboard and events (`STORE_URL`) lives on the same server, in the `/data` volume.
 - **CI/CD:** CI (lint, typecheck, test, build, Playwright e2e) runs on GitHub-hosted runners for every PR and push. `.github/workflows/deploy.yml` then deploys `main` by running `deploy/deploy.sh` on a self-hosted runner on the server: build there, health check on `/api/health`, automatic rollback to the previous image. Rules for that runner are in `deploy/README.md`.
-- **Open items:** the server owner has to approve installing the runner and creating `~/lifeguessr/.env`. The server address and Funnel hostname stay out of this repo, which becomes public; they live in the team's private notes.
+- **Server notes:** the runner has its own user on the server and keeps the app's `.env` in that user's home. Its clock must be right (`deploy/README.md`). The server address and Funnel hostname stay out of this repo, which becomes public; they live in the team's private notes.
 - **No PR previews:** without Vercel there are no per-PR preview deploys.
 
 ## Folder structure (owner in brackets)

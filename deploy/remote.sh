@@ -27,6 +27,14 @@ exec 9>.deploy.lock
 flock -n 9 || { echo "deploy: another deploy is running on the server" >&2; exit 1; }
 [ -f .env ] || { echo "deploy: $APP_DIR/.env is missing (deploy/README.md)" >&2; exit 1; }
 
+# Fail with a reason instead of deep inside a build. The compose and buildx plugins are installed
+# per user, so a new runner user can lack them (deploy/README.md).
+docker info >/dev/null 2>&1 || { echo "deploy: docker is not reachable for user $(id -un); is it in the docker group?" >&2; exit 1; }
+docker compose version >/dev/null 2>&1 || { echo "deploy: the docker compose plugin is missing for user $(id -un)" >&2; exit 1; }
+if [ "$MODE" = deploy ]; then
+  docker buildx version >/dev/null 2>&1 || { echo "deploy: the docker buildx plugin is missing for user $(id -un); put docker-buildx in ~/.docker/cli-plugins (deploy/README.md)" >&2; exit 1; }
+fi
+
 # Wait up to ~2 minutes for the container to report healthy. Prints the final status.
 wait_healthy() {
   local cid status='' _
