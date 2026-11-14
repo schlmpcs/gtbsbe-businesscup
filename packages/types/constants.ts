@@ -40,6 +40,15 @@ export const FORECAST_HORIZONS = [1, 3, 5, 10] as const satisfies readonly Horiz
 export const DUEL_LETTERS = ['A', 'B'] as const satisfies readonly DuelLetter[];
 export const DUEL_ROUNDS = [1, 2, 3, 4, 5] as const satisfies readonly DuelRound[];
 
+/**
+ * Fewest stored picks a duel round needs before the reveal says how other players picked
+ * (PickResult.crowd); below it the crowd is null and the reveal says "Not enough picks yet".
+ * "61% picked A" out of five people is noise dressed up as a fact, and with a handful of picks a
+ * player could also work out how their friends answered. 20 keeps the line meaningful from the
+ * first busy hour of a day. Every stored pick counts, the asking player's own included.
+ */
+export const DUEL_CROWD_MIN_PICKS = 20;
+
 // ----- statements (T6/T7) ---------------------------------------------------------------------
 
 export const STATEMENT_CLASSES = [

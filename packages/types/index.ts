@@ -94,7 +94,7 @@ export type PickResult = {
   breakdown: Record<DuelLetter, CategoryLine[]>;
   decidedBy: { category: CostCategory; A: Money; B: Money };  // biggest gap toward the costlier card (monthly)
   lesson: string;                     // fixed template filled by code, never an LLM
-  crowd: { pickedA: number; total: number } | null;           // null when total < 20
+  crowd: { pickedA: number; total: number } | null;           // live count of stored picks; null when total < DUEL_CROWD_MIN_PICKS (constants.ts)
 };
 export type DuelPickRequest = { anonId: string; date: string; round: DuelRound; choice: DuelLetter };
 export type DuelHintRequest = { anonId: string; date: string; round: DuelRound };

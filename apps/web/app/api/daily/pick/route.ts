@@ -15,8 +15,9 @@
 // anywhere, and each round stands on its own.
 //
 // `crowd` is live, not stored: it comes from liveCrowds, the same helper GET /api/daily?game=duel
-// uses for stored picks, so a pick, its replay and the daily progress always agree (null until
-// #116 counts the picks).
+// uses for stored picks, so a pick, its replay and the daily progress always agree. It is counted
+// after the pick is stored, so the player's own pick is in it, and a replay carries the count of
+// now, not of the first pick. Null while the round has fewer than DUEL_CROWD_MIN_PICKS picks.
 // Spec: docs/ARCHITECTURE.md → Server routes; contract: DuelPickRequestSchema, PickReplySchema.
 import { DuelPickRequestSchema } from '@lifeguessr/types';
 import type { PickReply } from '@/lib/api/gameSchemas';

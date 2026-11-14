@@ -311,7 +311,7 @@ Pro lists only what works (D-5): goal + monthly check-in, saved life, saved tool
 - [ ] `POST /api/daily/hint` (hint log, −10% per hint, floor 50%)
 - [ ] Duel pairing: card pairs per day, gap ladder from easy to close
 - [ ] `decidedBy` + lesson templates + blind-spot template (code, not LLM)
-- [ ] Crowd counts per duel (shown at ≥ 20 picks)
+- [x] Crowd counts per duel (shown at ≥ 20 picks)
 - [ ] `/play?c={resultId}` challenge view
 
 **Profile and forecast**
