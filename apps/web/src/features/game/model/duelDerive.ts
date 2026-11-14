@@ -92,18 +92,33 @@ function sourcesOf(result: PickResult): DuelRevealVM['sources'] {
   return [...out].map(([category, sources]) => ({ category, sources }));
 }
 
+/**
+ * The reveal's crowd line from the server's counts: the letter most players picked (A on an exact
+ * tie) and its share, already rounded to the whole percent the line shows, so the UI only formats
+ * it ("61% picked A, from 214 picks").
+ *
+ * The rounding rule: the share of the majority letter, in whole percent, rounded half up, worked
+ * out from the integer counts (100 × picked / total, so 121 of 200 is exactly 60.5 and shows 61%;
+ * dividing first would give 0.605, which a double stores as 0.60499…, and Intl would show 60%).
+ * One exception: it never says 100% while anyone picked the other life (1,999 of 2,000 shows 99%,
+ * not 100%), because "100% picked A" reads as "everyone", and that would not be true.
+ *
+ * Null when there is nothing to show; the server already answers null below DUEL_CROWD_MIN_PICKS.
+ */
+export function buildDuelCrowd(crowd: NonNullable<PickResult['crowd']>): DuelRevealVM['crowd'] {
+  const { pickedA, total } = crowd;
+  if (total <= 0 || pickedA < 0 || pickedA > total) return null; // not a count we can show honestly
+  const letter: DuelLetter = 2 * pickedA >= total ? 'A' : 'B';
+  const picked = letter === 'A' ? pickedA : total - pickedA;
+  const percent = Math.min(Math.round((100 * picked) / total), picked < total ? 99 : 100);
+  return { letter, share: percent / 100, total };
+}
+
 export function buildDuelReveal(round: DuelRound, pick: { choice: DuelLetter; result: PickResult }): DuelRevealVM {
   const { result, choice } = pick;
   const { costlier, amount } = duelDifference(result.totals);
   const top = costlier ?? 'A';
-  const crowd = result.crowd && result.crowd.total > 0
-    ? (() => {
-        const shareA = result.crowd.pickedA / result.crowd.total;
-        return shareA >= 0.5
-          ? { letter: 'A' as const, share: shareA, total: result.crowd.total }
-          : { letter: 'B' as const, share: 1 - shareA, total: result.crowd.total };
-      })()
-    : null;
+  const crowd = result.crowd ? buildDuelCrowd(result.crowd) : null;
   return {
     round,
     choice,

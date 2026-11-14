@@ -1,6 +1,6 @@
 import { anonKey } from './anonKey';
 import { newResultId, RESULT_ID } from './game';
-import type { DuelStore, StoredPick } from './duel';
+import type { DuelCounts, DuelStore, StoredPick } from './duel';
 import type { DuelRound } from '@lifeguessr/types';
 
 type Day = { date: string; resultId: string | null; hints: Set<DuelRound>; picks: StoredPick[] };
@@ -38,9 +38,11 @@ export function createMemoryDuelStore(): DuelStore {
       const day = [...days.values()].find(d => d.resultId === resultId);
       return day ? { date: day.date, picks: copy([...day.picks].sort((a, b) => a.round - b.round)) } : null;
     },
-    async crowd(date, round) {
-      const result = { A: 0, B: 0 };
-      for (const day of days.values()) if (day.date === date) for (const pick of day.picks) if (pick.round === round) result[pick.choice]++;
+    async crowds(date, rounds) {
+      const result = new Map<DuelRound, DuelCounts>(rounds.map(round => [round, { A: 0, B: 0 }]));
+      // A day holds at most one pick per round (submitPick replays a repeat), so this counts each
+      // player once per round, like the primary key does on Postgres.
+      for (const day of days.values()) if (day.date === date) for (const pick of day.picks) { const counts = result.get(pick.round); if (counts) counts[pick.choice]++; }
       return result;
     },
   };
