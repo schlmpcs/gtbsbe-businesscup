@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { common } from '@/copy';
+import '@fontsource-variable/dm-sans';
+import '@fontsource/bricolage-grotesque/700.css';
+import '@fontsource/bricolage-grotesque/800.css';
 import './globals.css';
 
 export const metadata: Metadata = {

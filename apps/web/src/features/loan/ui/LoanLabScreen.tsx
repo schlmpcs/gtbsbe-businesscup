@@ -28,7 +28,7 @@ export function LoanLabScreen({ vm }: { vm: LoanLabVM }) {
 
   return (
     <main className="mx-auto w-full max-w-(--container-2xl) px-lg py-xl">
-      <h1 className="text-2xl font-semibold leading-tight">{t.screens.S12}</h1>
+      <h1 className="text-4xl leading-display sm:text-display">{t.screens.S12}</h1>
       <p className="mt-sm text-sm text-text-muted">{t.intro}</p>
 
       <div className="mt-xl">

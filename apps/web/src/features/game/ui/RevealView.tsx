@@ -26,7 +26,7 @@ export function RevealView({ reveal, onNext, large = false }: RevealViewProps) {
 
   return (
     <div className="flex flex-col gap-lg">
-      <Card>
+      <Card tone="arena">
         <div className="flex flex-col gap-lg">
           <h2 className={cx('font-bold leading-tight', large ? 'text-display' : 'text-3xl', DIRECTION_TONE[reveal.direction])}>
             {t.reveal.direction[reveal.direction]}

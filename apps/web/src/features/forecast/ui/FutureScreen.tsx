@@ -20,7 +20,7 @@ export function FutureScreen({ vm, links, Link }: FutureScreenProps) {
     <main className="mx-auto w-full max-w-(--container-2xl) px-lg py-xl">
       <Stack gap="xl">
         <header>
-          <h1 className="text-3xl font-semibold leading-tight">{f.title}</h1>
+          <h1 className="text-4xl leading-display sm:text-display">{f.title}</h1>
           <p className="mt-xs text-text-muted">{f.intro}</p>
         </header>
 
@@ -54,7 +54,7 @@ function Forecast({ vm, links, Link }: FutureScreenProps) {
   const compareTitle = vm.compareMove ? moveTitle(vm.compareMove) : '';
   return (
     <Stack gap="lg">
-      <Card data-testid="in10y">
+      <Card tone="arena" data-testid="in10y">
         <Stat
           label={f.headline}
           value={<Money value={vm.in10y.mid} />}

@@ -29,7 +29,7 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
     <main className="mx-auto w-full max-w-(--container-2xl) px-lg py-xl">
       <Stack gap="xl">
         <header>
-          <h1 className="text-3xl font-semibold leading-tight">{t.today.title}</h1>
+          <h1 className="text-4xl leading-display sm:text-display">{t.today.title}</h1>
           <p className="mt-xs text-text-muted">{t.today.intro}</p>
         </header>
 
@@ -41,6 +41,8 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
             </Link>
           </Card>
         )}
+
+        <PlayCard vm={vm} href={links.play} Link={Link} />
 
         <Card title={t.today.future.title} data-testid="in10y">
           {ready ? (
@@ -62,8 +64,6 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
             <Skeleton />
           )}
         </Card>
-
-        <PlayCard vm={vm} href={links.play} Link={Link} />
 
         <Card title={t.today.monthEnd.title} data-testid="month-end">
           {!ready || vm.monthEnd.status === 'loading' ? (
@@ -119,9 +119,9 @@ function PlayCard({ vm, href, Link }: { vm: TodayVM; href: string; Link: LinkCom
   const inProgress = vm.status === 'ready' && played > 0 && !finished;
   const label = finished ? t.today.play.doneCta : inProgress ? t.today.play.continue(played, total) : t.today.play.cta;
   return (
-    <Card title={t.today.play.title} tone="muted" data-testid="play">
+    <Card title={t.today.play.title} tone="arena" data-testid="play">
       <p className="text-sm text-text-muted">{finished ? t.today.play.done : t.today.play.pitch}</p>
-      <Link href={href} className={cx(buttonClassName({ size: 'lg', fullWidth: true }), 'mt-md')}>
+      <Link href={href} className={cx(buttonClassName({ variant: 'dark', size: 'lg', fullWidth: true }), 'mt-md')}>
         {label}
       </Link>
     </Card>
