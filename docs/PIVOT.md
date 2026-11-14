@@ -1,6 +1,6 @@
 # PIVOT.md: rebuild around a Monarch-style planner, keep the game
 
-**Status:** proposal (Nov 15). Needs a yes from Amir and Aibek before CLAUDE.md, PRODUCT.md, ARCHITECTURE.md and TASKS.md change.
+**Status:** accepted (Nov 15). Tracked in epic #160 (tasks MP1–MP19, #161–#179). Decisions: rules engine + Monte Carlo are the forecast source and the AI forecast stays as a labeled second opinion checked against the Monte Carlo band; the Duel is the game; no cut line, everything ships.
 **Input:** the Monarch Money teardown (37 pages; screens, data model, Forecasting and Monte Carlo) and this repo as of `0b282e9`.
 
 ## The decision in one paragraph
@@ -61,15 +61,11 @@ Copy Monarch's behaviour, not its look:
 | E5 | `budgetRows(profile, totals, day)` | Planned, actual, remaining, and the expected spend by today's date |
 | E6 | `accountsToProfile(accounts)` and back | Keeps every existing engine function working unchanged |
 
-## AI's role after the pivot (needs a team decision)
+## AI's role after the pivot (decided)
 
-Recommendation: **the rules engine + Monte Carlo becomes the only source of forecast numbers**, as in Monarch. The AI forecaster (Y15–Y20) stays in the repo behind a flag and is no longer on the demo path. AI keeps doing language: categorizing CSV labels, the "Understand…" explanations, and parsing typed text.
+The rules engine (`plan()`) draws the main line and every KPI; Monte Carlo (`monteCarlo()`) draws the range and Chance of success. The AI forecaster (Y15–Y20) stays as a separate line labeled "AI estimate", shown only when it falls inside the Monte Carlo p5–p95 band and matches today's balance exactly; otherwise it is hidden. It never feeds a KPI, a verdict or a move. AI also keeps doing language: categorizing CSV labels, the "Understand…" explanations, and parsing typed text. Golden rule 1 in CLAUDE.md is updated in MP1 (#161).
 
-Why: 40% of the score is "does it work, not faked", and a seeded, tested Monte Carlo is easier to defend than a model whose numbers we have to sanity-check. It also removes the "AI estimate" caveat from the main screen.
-
-This changes golden rule 1 in CLAUDE.md. If the team agrees, CLAUDE.md, PRODUCT.md and ENGINEERING.md → AI forecast get updated in the same PR.
-
-## Order of work and the cut line
+## Order of work
 
 Every step must leave the live link working.
 
@@ -79,7 +75,7 @@ Every step must leave the live link working.
 4. **Accounts + Dashboard** (Aibek): E6, manual accounts, net worth.
 5. **Budget + Transactions + Cash Flow** (Aibek): reuse T6/T7, E5, Sankey.
 6. **Compare** (Amir): E4, two lines.
-7. ---- cut line ---- Recurring and Goals moved into the shell, account and Cash Flow tables on `/plan`, draggable event icons, "Understand…" buttons.
+7. Recurring and Goals moved into the shell, account and Cash Flow tables on `/plan`, draggable event icons, "Understand…" buttons. No cut line: everything ships; see #160 for owners and dependencies.
 
 ## New demo script (2 minutes)
 
@@ -90,9 +86,3 @@ Every step must leave the live link working.
 5. Chance of success: 1,000 paths, the success %; change the seed and get the same result with "fixed seed" on.
 6. Upload the sample CSV → Transactions, Cash Flow Sankey, Budget planned vs actual.
 7. Show the tests for `plan`, `expandEvent` and `monteCarlo` in the repo.
-
-## Open questions for the team
-
-1. Agree to make the rules engine + Monte Carlo the forecast source (rule 1 change)?
-2. Which game do we keep on the front door: the house scene or the duel?
-3. How many hours are left? If fewer than ~10, stop after step 3 and present the rest as the roadmap.
