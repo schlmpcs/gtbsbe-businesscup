@@ -167,7 +167,9 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
       return {
         serviceId: service.id, name: service.name, category: service.category, ticked: tickedPlan !== undefined,
         plan: toVM(tickedPlan ?? defaultPlan), plans: plans.map(toVM),
-        priceYear: service.priceYear, source: service.source, isEstimate: service.isEstimate,
+        priceYear: service.priceYear, source: service.source,
+        // A tick price is always an estimate: no statement has been shown, whatever the catalogue says about its own price.
+        isEstimate: true,
       };
     });
     const groups: TickGroupVM[] = SERVICE_CATEGORIES.map((category: ServiceCategory) => ({
@@ -346,7 +348,8 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const saving = useMemo(() => {
     if (marked.length === 0) return null;
     const { monthlyTotal, yearlyTotal } = auditTotals(marked, confirmed);
-    return { monthly: monthlyTotal, yearly: yearlyTotal };
+    // An estimate wherever a marked line is one: a ticked price, or a charge not yet seen often enough to be sure of.
+    return { monthly: monthlyTotal, yearly: yearlyTotal, isEstimate: marked.some((f) => f.isEstimate || f.confidence !== 'high') };
   }, [marked, confirmed]);
   const savingMonthly = saving?.monthly ?? null;
 

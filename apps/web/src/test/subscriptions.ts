@@ -45,6 +45,17 @@ export const testCatalogue: readonly KnownService[] = [
   service('apple', 'Apple', 'other', ['APPLE COM BILL'], [['icloud', 0.99]], { ambiguous: true }),
 ];
 
+/**
+ * A catalogue shaped like the real one (packages/data/subscriptions.json, M4): one plan per service
+ * (id "default", the plan's own name), an explicit `ambiguous: false`, and a checked price
+ * (`isEstimate: false`, Spotify) beside estimated ones. Prices here are made up.
+ */
+export const realisticCatalogue: readonly KnownService[] = [
+  { ...service('netflix', 'Netflix', 'video', ['NETFLIX', 'NETFLIX COM'], [['default', 8.99]]), ambiguous: false },
+  { ...service('spotify', 'Spotify', 'music', ['SPOTIFY', 'SPOTIFY USA'], [['default', 12.99]], { isEstimate: false }), ambiguous: false },
+  { ...service('planet-fitness', 'Planet Fitness', 'fitness', ['PLANET FITNESS'], [['default', 15]]), ambiguous: false },
+].map((svc) => ({ ...svc, plans: svc.plans.map((p) => ({ ...p, name: `${svc.name} plan` })) }));
+
 /** A catalogue of `n` unambiguous services, for the 40-service cap. */
 export function bigCatalogue(n: number): KnownService[] {
   return Array.from({ length: n }, (_, i) =>

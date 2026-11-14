@@ -46,7 +46,7 @@ export type TickServiceVM = {
   /** The year the catalogue price is from ("catalogue price, 2026"). */
   priceYear: number;
   source: Source;
-  /** Catalogue prices are estimates unless a source was checked. */
+  /** Always true: a tick is not a charge anyone has shown, so its price is an estimate even when the catalogue's own price was checked. */
   isEstimate: boolean;
 };
 
@@ -177,8 +177,11 @@ export type PlanVM = {
   /** What can be marked: the counted findings (statement findings, then ticked-only services). */
   options: FindingVM[];
   markedCount: number;
-  /** What the marked ones cost; null when none is marked. */
-  saving: { monthly: Money; yearly: Money } | null;
+  /**
+   * What the marked ones cost; null when none is marked. `isEstimate`: a marked line is a ticked
+   * (catalogue) price or a charge below high confidence, so the numbers carry the estimate tag.
+   */
+  saving: { monthly: Money; yearly: Money; isEstimate: boolean } | null;
   /** Null when nothing is marked. 'ready' with `effect10y` 0 = below $1, not worth a move. */
   effect: Loadable<CancelEffectVM> | null;
   /** The profile's subscriptions line, which the move lowers. */

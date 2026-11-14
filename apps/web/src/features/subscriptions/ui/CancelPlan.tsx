@@ -51,8 +51,14 @@ export function CancelPlan({ plan, apply, renewals }: CancelPlanProps) {
                 label={t.plan.marked(plan.markedCount)}
                 value={<Money value={plan.saving.monthly} cents />}
                 hint={t.plan.perMonth(money(plan.saving.monthly))}
+                isEstimate={plan.saving.isEstimate}
               />
-              <Stat label={t.plan.yearLabel} value={<Money value={plan.saving.yearly} cents />} hint={t.plan.perYear(money(plan.saving.yearly))} />
+              <Stat
+                label={t.plan.yearLabel}
+                value={<Money value={plan.saving.yearly} cents />}
+                hint={t.plan.perYear(money(plan.saving.yearly))}
+                isEstimate={plan.saving.isEstimate}
+              />
               <Effect plan={plan} />
             </div>
           )}

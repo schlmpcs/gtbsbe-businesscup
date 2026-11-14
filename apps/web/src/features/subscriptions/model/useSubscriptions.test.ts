@@ -11,7 +11,7 @@ import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
-import { csvFile, fakeCategorize, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
+import { csvFile, fakeCategorize, realisticCatalogue, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
 import { CANCEL_MOVE_ID, cancelCandidate } from './audit';
 import { SubscriptionsToolStateSchema, type SubscriptionsToolState } from './state';
 import { useSubscriptions, type SubscriptionsDeps } from './useSubscriptions';
@@ -81,6 +81,15 @@ describe('cold path: no profile, no upload', () => {
     expect(netflix.source).toEqual({ name: 'Test catalogue (public price pages)', year: 2026 });
     const prime = groups.flatMap((g) => g.services).find((s) => s.serviceId === 'amazon-prime')!;
     expect(prime.plan).toMatchObject({ cadence: 'yearly', price: 139, monthly: 11.58 }); // 139 ÷ 12 = 11.5833…
+  });
+
+  it('a tick price is always an estimate, whatever the catalogue says about its price (no statement has been shown)', async () => {
+    const tool = renderTool({ catalogue: realisticCatalogue });
+    await ready(tool);
+    const services = tool.result.current.vm.ticks.groups.flatMap((g) => g.services);
+    expect(services.map((s) => [s.serviceId, s.plans.length, s.isEstimate])).toEqual([
+      ['netflix', 1, true], ['spotify', 1, true], ['planet-fitness', 1, true],
+    ]);
   });
 
   it('ticking: a service with its default plan, another plan on a second tap, off on the same plan; the total follows', async () => {
@@ -549,6 +558,37 @@ describe('cancel plan', () => {
     expect(tool.result.current.vm.plan.options.find((o) => o.id === 'tick:spotify')!.markedCancel).toBe(false);
   });
 
+  describe('the saving is an estimate wherever a marked line is one', () => {
+    it('a ticked service is a catalogue price: estimate', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      act(() => tool.result.current.vm.ticks.toggle('spotify', 'individual'));
+      act(() => tool.result.current.vm.plan.markCancel('tick:spotify'));
+      expect(tool.result.current.vm.plan.saving).toEqual({ monthly: 11.99, yearly: 143.88, isEstimate: true });
+    });
+
+    it('a charge seen again and again in the statement is measured: no tag', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await uploaded(tool);
+      act(() => tool.result.current.vm.plan.markCancel('planet-fitness-club-fees'));
+      expect(tool.result.current.vm.plan.saving).toEqual({ monthly: 24.99, yearly: 299.88, isEstimate: false });
+    });
+
+    it('a charge seen once is medium confidence: estimate; so is any estimate among the marked', async () => {
+      const tool = renderTool();
+      await ready(tool);
+      await uploaded(tool);
+      act(() => tool.result.current.vm.plan.markCancel('amazon-prime-amzn-com-bill-wa')); // $139 a year, seen once
+      expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 11.58, isEstimate: true });
+      act(() => tool.result.current.vm.plan.unmarkCancel('amazon-prime-amzn-com-bill-wa'));
+      act(() => tool.result.current.vm.plan.markCancel('netflix-com-ca'));
+      expect(tool.result.current.vm.plan.saving).toMatchObject({ isEstimate: false });
+      act(() => tool.result.current.vm.plan.markCancel('amazon-prime-amzn-com-bill-wa'));
+      expect(tool.result.current.vm.plan.saving).toMatchObject({ isEstimate: true });
+    });
+  });
+
   it('only what counts can be marked: not a stopped service, a finding to confirm, or an unknown id', async () => {
     const tool = renderTool();
     await ready(tool);
@@ -565,7 +605,7 @@ describe('cancel plan', () => {
     await ready(tool);
     await uploaded(tool);
     act(() => tool.result.current.vm.plan.markCancel('apple-com-bill-ca'));
-    expect(tool.result.current.vm.plan.saving).toEqual({ monthly: 2.99, yearly: 35.88 });
+    expect(tool.result.current.vm.plan.saving).toEqual({ monthly: 2.99, yearly: 35.88, isEstimate: false }); // seen five times, high confidence
     act(() => tool.result.current.vm.findings.dismiss('apple-com-bill-ca'));
     expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
   });

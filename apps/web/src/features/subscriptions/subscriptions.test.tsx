@@ -8,16 +8,17 @@ import { forecast as forecastCopy, ladder, subscriptions as t } from '@/copy';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import { mockForecastRoute } from '@/test/forecastApi';
-import { csvFile, fakeCategorize, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
+import { csvFile, fakeCategorize, realisticCatalogue, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
+import type { KnownService } from '@lifeguessr/types';
 import { useSubscriptions } from './model/useSubscriptions';
 import { SubscriptionsScreen } from './ui/SubscriptionsScreen';
 
 const track = vi.fn();
 
-function Tool({ categorize = fakeCategorize() }: { categorize?: ReturnType<typeof fakeCategorize> }) {
+function Tool({ categorize = fakeCategorize(), catalogue = testCatalogue }: { categorize?: ReturnType<typeof fakeCategorize>; catalogue?: readonly KnownService[] }) {
   const store = useMemoryStore();
   const profile = useAppStore((s) => s.profile);
-  const vm = useSubscriptions(profile, { catalogue: testCatalogue, store, track, categorize, downloadRenewals: () => 'downloaded' });
+  const vm = useSubscriptions(profile, { catalogue, store, track, categorize, downloadRenewals: () => 'downloaded' });
   return <SubscriptionsScreen vm={vm} />;
 }
 
@@ -83,6 +84,48 @@ describe('SubscriptionsScreen: the cold path', () => {
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) })).toBeDisabled();
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.reveal) })).toBeDisabled();
     expect(screen.getByRole('button', { name: new RegExp(t.stepper.steps.guess) })).toHaveAttribute('aria-current', 'step');
+  });
+});
+
+describe('SubscriptionsScreen: estimate tags', () => {
+  it('every tick price is tagged an estimate, a checked catalogue price included, on a catalogue shaped like the real one', async () => {
+    const user = userEvent.setup();
+    render(<Tool catalogue={realisticCatalogue} />);
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument(); // one plan per service: no plan picker
+    for (const name of ['Netflix', 'Spotify', 'Planet Fitness']) {
+      const row = screen.getByRole('checkbox', { name }).closest('li')!;
+      expect(within(row).getByText('estimate'), name).toBeInTheDocument();
+      expect(within(row).getByText(/catalogue price, 2026/), name).toBeInTheDocument();
+    }
+  });
+
+  it('the cancel saving carries the tag next to the number when a marked line is an estimate, and not when none is', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: t.guess.next }));
+    await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
+    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
+    const plan = screen.getByRole('heading', { name: t.plan.title }).closest('section')!;
+    await user.click(within(plan).getByRole('checkbox', { name: t.plan.mark('Spotify') }));
+    for (const label of [t.plan.marked(1), t.plan.yearLabel]) {
+      expect(within(within(plan).getByText(label).parentElement!).getByText('estimate'), label).toBeInTheDocument();
+    }
+    expect(within(plan).getByText('$11.99')).toBeInTheDocument();
+    expect(within(plan).getByText('$143.88')).toBeInTheDocument();
+  });
+
+  it('a measured saving (a charge seen every month) has no tag', async () => {
+    const user = userEvent.setup();
+    render(<Tool />);
+    await user.click(await screen.findByRole('button', { name: new RegExp(t.stepper.steps.statement) }));
+    await user.upload(screen.getByLabelText(t.statement.pickerLabel), sampleStatementFile());
+    await user.click(await screen.findByRole('button', { name: t.findings.next }));
+    const plan = screen.getByRole('heading', { name: t.plan.title }).closest('section')!;
+    await user.click(within(plan).getByRole('checkbox', { name: t.plan.mark('Planet Fitness') }));
+    for (const label of [t.plan.marked(1), t.plan.yearLabel]) {
+      expect(within(within(plan).getByText(label).parentElement!).queryByText('estimate'), label).not.toBeInTheDocument();
+    }
   });
 });
 
