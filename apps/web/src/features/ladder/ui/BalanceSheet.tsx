@@ -7,7 +7,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { ladder } from '@/copy';
 import { Art, Button, Choice, cx, EstimateTag, formatMoney, formatRate, Gauge, NumberInput, Sticker } from '@/ui-kit';
-import type { BalanceFieldKey, BalanceSheetVM, DebtInput, DebtRowVM, LadderProgressVM } from '../model/types';
+import type { BalanceFieldKey, BalanceSheetVM, DebtInput, DebtRowVM, LadderProgressVM, ScannedDebt, VMError } from '../model/types';
 import { DebtForm } from './DebtForm';
 import { LadderShell } from './LadderShell';
 
@@ -34,6 +34,23 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
   // Which debt row is being edited, or 'new:<kind>' for the quick add form.
   const [editing, setEditing] = useState<string | null>(null);
   const newKind = vm.debtKinds.find((k) => editing === `new:${k}`);
+  // JF9: a scanned statement opens the add form prefilled ('scan' in `editing`).
+  const [scanned, setScanned] = useState<ScannedDebt | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<VMError | null>(null);
+  const scanId = useId();
+  const onScan = async (file: File) => {
+    setScanning(true);
+    setScanError(null);
+    const outcome = await vm.scanStatement(file);
+    setScanning(false);
+    if (outcome.ok) {
+      setScanned(outcome.value);
+      setEditing('scan');
+    } else {
+      setScanError(outcome.error);
+    }
+  };
 
   return (
     <LadderShell
@@ -106,7 +123,27 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
               </ul>
             )}
             {vm.detectedDebt && editing === null && <DetectedDebt vm={vm} detected={vm.detectedDebt} />}
-            {newKind ? (
+            {editing === 'scan' && scanned ? (
+              <DebtForm
+                key="scan"
+                title={t.formTitleAdd}
+                note={t.scan.note}
+                kinds={vm.debtKinds}
+                bounds={vm.debtBounds}
+                aprDefaults={vm.debtAprDefaults}
+                estimateMinPayment={vm.estimateMinPayment}
+                initial={{ kind: scanned.kind ?? 'card', balance: scanned.balance, apr: scanned.apr, minPayment: scanned.minPayment }}
+                onSave={(input) => {
+                  vm.addDebt(input);
+                  setScanned(null);
+                  setEditing(null);
+                }}
+                onCancel={() => {
+                  setScanned(null);
+                  setEditing(null);
+                }}
+              />
+            ) : newKind ? (
               <DebtForm
                 key={newKind}
                 title={t.formTitleAdd}
@@ -122,6 +159,7 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
                 onCancel={() => setEditing(null)}
               />
             ) : (
+              <>
               <div role="group" aria-label={t.addDebt} className="flex flex-wrap gap-sm">
                 {vm.debtKinds.map((k) => (
                   <Button
@@ -137,6 +175,8 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
                   </Button>
                 ))}
               </div>
+              <ScanStatement id={scanId} scanning={scanning} error={scanError} onFile={onScan} />
+              </>
             )}
           </div>
           <Gauge
@@ -299,5 +339,60 @@ function DetectedDebt({
         </Button>
       </div>
     </section>
+  );
+}
+
+function scanErrorText(error: VMError): string {
+  switch (error.kind) {
+    case 'unavailable':
+    case 'notImplemented':
+      return t.scan.errors.unavailable;
+    case 'nothingFound':
+      return t.scan.errors.nothingFound;
+    case 'incomplete':
+      return t.scan.errors.incomplete;
+    case 'rateLimited':
+      return t.scan.errors.rateLimited;
+    case 'badInput':
+      return t.scan.errors.badInput;
+    default:
+      return t.scan.errors.other;
+  }
+}
+
+/** JF9: pick a photo, screenshot or PDF of a statement; the parsed values open the add form to confirm. */
+function ScanStatement({ id, scanning, error, onFile }: { id: string; scanning: boolean; error: VMError | null; onFile: (file: File) => void }) {
+  return (
+    <div className="flex flex-col gap-xs">
+      <label
+        htmlFor={id}
+        aria-busy={scanning || undefined}
+        className={cx(
+          'inline-flex cursor-pointer items-center gap-xs self-start rounded-full border-2 border-dashed border-border px-md py-xs text-sm font-semibold',
+          scanning && 'cursor-wait opacity-60',
+        )}
+      >
+        <span aria-hidden="true">📷</span>
+        {scanning ? t.scan.scanning : t.scan.button}
+      </label>
+      <input
+        id={id}
+        type="file"
+        accept="image/*,application/pdf"
+        className="sr-only"
+        disabled={scanning}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (file) onFile(file);
+        }}
+      />
+      <p className="text-xs text-text-muted">{t.scan.privacy}</p>
+      {error && (
+        <p role="alert" className="text-sm text-negative">
+          {scanErrorText(error)}
+        </p>
+      )}
+    </div>
   );
 }

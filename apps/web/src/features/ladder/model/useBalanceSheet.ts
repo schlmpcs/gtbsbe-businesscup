@@ -6,11 +6,23 @@
 import { cardMinPaymentFor, debtAprDefaults } from '@lifeguessr/engine';
 import { DEBT_KINDS, type Debt, type Money } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
+import { parseImage } from '@/lib/api/aiParseImage';
 import { track } from '@/lib/events';
+import { toVMError } from '@/lib/model/errors';
+import { getAnonId } from '@/state/anonId';
 import { debtLoadGauge, netWorthToday, thisMonth } from '@/lib/model/profile';
 import { useAppReady, useAppStore, useProfile, type DebtInput } from '@/state';
 import { BALANCE_FIELD_BOUNDS, DEBT_BOUNDS, DEBT_LOAD_GAUGE_MAX } from './constants';
-import type { BalanceFieldKey, BalanceSheetVM, DebtRowVM, InputBounds } from './types';
+import type { BalanceFieldKey, BalanceSheetVM, DebtRowVM, InputBounds, ScanDebtOutcome } from './types';
+
+/** JF9: statement photo → debt values to confirm (swappable in tests). */
+export async function scanStatement(file: File): Promise<ScanDebtOutcome> {
+  try {
+    return { ok: true, value: await parseImage('debt', file, { anonId: getAnonId() }) };
+  } catch (err) {
+    return { ok: false, error: toVMError(err) };
+  }
+}
 
 const FIELDS: readonly BalanceFieldKey[] = ['age', 'takeHomePay', 'cash', 'retirement'];
 
@@ -143,6 +155,7 @@ export function useBalanceSheet(): BalanceSheetVM {
       edited();
     },
     addDebt,
+    scanStatement,
     updateDebt,
     removeDebt: (id) => {
       removeDebt(id);

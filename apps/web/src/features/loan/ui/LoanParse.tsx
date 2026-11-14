@@ -2,7 +2,7 @@
 
 import { loan as t } from '@/copy';
 import { Button, cx, formatMoney, formatRate, Row, Stack } from '@/ui-kit';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { LoanInput, ParseConfirmVM, VMError } from '../model/types';
 
 function errorText(error: VMError | null): string {
@@ -62,6 +62,8 @@ function ParsedLoan({ input, inferred }: { input: LoanInput; inferred: readonly 
 export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanInput>; canAddOffer: boolean }) {
   const inputId = useId();
   const panelId = useId();
+  const fileId = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const busy = parse.status === 'parsing';
   const shown = open || parse.status !== 'idle';
@@ -80,6 +82,32 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
       >
         {shown ? t.parse.close : t.parse.open}
       </button>
+      {parse.submitFile && (
+        <div className="flex flex-col gap-xs">
+          <label
+            htmlFor={fileId}
+            aria-busy={busy || undefined}
+            className="cursor-pointer self-start text-sm font-semibold text-primary underline-offset-2 hover:underline"
+          >
+            {busy ? t.parse.scanning : t.parse.scan}
+          </label>
+          <input
+            ref={fileRef}
+            id={fileId}
+            type="file"
+            name="loanFile"
+            accept="image/*,application/pdf"
+            className="sr-only"
+            disabled={busy}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) parse.submitFile?.(file);
+              if (fileRef.current) fileRef.current.value = '';
+            }}
+          />
+          <p className="text-xs text-text-muted">{t.parse.privacy}</p>
+        </div>
+      )}
 
       <div id={panelId} hidden={!shown} className="flex max-w-(--container-2xl) flex-col gap-md">
         <form
@@ -110,6 +138,7 @@ export function LoanParse({ parse, canAddOffer }: { parse: ParseConfirmVM<LoanIn
           {parse.status === 'confirming' && parse.parsed && (
             <section aria-label={t.parse.confirmTitle} className="flex flex-col gap-md rounded-lg bg-surface p-lg shadow-sm">
               <h3 className="text-base font-semibold">{t.parse.confirmTitle}</h3>
+              {parse.fromImage && <p className="text-sm text-text-muted">{t.parse.fromImage}</p>}
               <ParsedLoan input={parse.parsed} inferred={parse.inferred} />
               <Row>
                 <Button
