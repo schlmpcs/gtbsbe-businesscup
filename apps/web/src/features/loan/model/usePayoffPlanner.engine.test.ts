@@ -55,8 +55,10 @@ describe('the planner on the real engine: demo debts plus offer 1', () => {
     expect(monthly).toBeCloseTo(863.28, 2); // ENGINEERING.md known value
     const debts = demoDebtsWithOffer1(monthly);
     const p = result.current.planner!;
-    expect(p.suggestion).toEqual(suggestedPayoffExtra(cloneProfileDemo(), debts, { step: 25 }));
+    expect(p.suggestion!.extra).toBe(suggestedPayoffExtra(cloneProfileDemo(), debts, { step: 25 }).extra);
     expect(p.suggestion!.surplus).toBeCloseTo(939.08 - 863.28, 2);
+    // The same amount Loan Lab's "left over each month" card shows after offer A.
+    expect(p.suggestion!.surplus).toBeCloseTo(result.current.lab.leftOver!.after!, 6);
     expect(p.extra.value).toBe(25);
     expect(p.extraIsSuggested).toBe(true);
     expect(p.comparison).toEqual({ status: 'ready', data: comparePayoff(debts, 25) });

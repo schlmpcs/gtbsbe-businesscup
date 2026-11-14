@@ -340,7 +340,7 @@ describe('usePayoffPlanner: the suggested starting extra (issue #144)', () => {
     expect(suggestedPayoffExtra).toHaveBeenLastCalledWith(
       expect.objectContaining({ takeHomePay: demo.takeHomePay, spending: demo.spending }),
       demoDebtsWithOffer1(monthly),
-      { step: 25 },
+      { step: 25, rates: expect.any(Object) },
     );
     const p = result.current.planner!;
     expect(p.suggestion).toEqual(suggest);

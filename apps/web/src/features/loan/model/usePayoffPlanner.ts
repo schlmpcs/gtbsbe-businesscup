@@ -11,9 +11,11 @@
 // The engine, the event sender and today's date come in through `options`, so the planner can be built and tested
 // before they are bound; with `options` null it answers null and Loan Lab stays as it is (wiring.ts).
 import { MAX_SIMULATION_MONTHS } from '@lifeguessr/engine';
+import type { ForecastRates } from '@lifeguessr/engine';
 import type { ClientFunnelEvent, Debt, Money, PayoffComparison, PayoffMethod, PayoffPlan, Profile } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { runEngine } from '@/lib/model/errors';
+import { areaRates } from '@/lib/model/profile';
 import { linearSliderVM } from '@/lib/model/slider';
 import type { Loadable } from '@/lib/model/types';
 import { SCREEN_ROUTES } from '@/lib/screens';
@@ -46,7 +48,7 @@ export const PAYOFF_SAME_INTEREST: Money = 0.5;
 export type PayoffEngine = {
   comparePayoff: (debts: Debt[], extra: Money) => PayoffComparison;
   extraToFinishBy: (debts: Debt[], months: number, method: PayoffChoice) => { extra: Money; reachable: boolean };
-  suggestedPayoffExtra: (p: Profile, debts: Debt[], opts: { step: Money }) => PayoffSuggestionVM;
+  suggestedPayoffExtra: (p: Profile, debts: Debt[], opts: { step: Money; rates?: Partial<ForecastRates> }) => PayoffSuggestionVM;
 };
 
 /**
@@ -166,7 +168,9 @@ export function usePayoffPlanner(lab: Pick<LoanLabVM, 'offers' | 'selectedOfferI
   // non-number leaves no suggestion, and the extra starts at $0 as it used to.
   const suggestion = useMemo((): PayoffSuggestionVM | null => {
     if (!engine || !active) return null;
-    const result = runEngine(() => engine.suggestedPayoffExtra(profile, debts, { step: PAYOFF_EXTRA_STEP }));
+    // The area's rates, as Loan Lab's "left over each month" uses: the amount the suggestion quotes as left over is then
+    // the same figure that card shows after the selected offer (its month-1 surplus minus the new loan's payment).
+    const result = runEngine(() => engine.suggestedPayoffExtra(profile, debts, { step: PAYOFF_EXTRA_STEP, rates: areaRates(profile) }));
     if (result.status !== 'ready' || hasNonFinite(result.data) || result.data.extra < 0) return null;
     return result.data;
   }, [engine, active, profile, debts]);

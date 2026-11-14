@@ -116,6 +116,7 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
 
   test('keeps the suggested extra a suggestion when only the method was picked, and a picked $0 as $0', async ({ page }) => {
     await page.goto('/loan');
+    await openPlanner(page);
     await expect(extraSlider(page)).toHaveValue('25');
     await methodLabel(page, loan.planner.method.names.snowball).click();
     await expect
@@ -123,6 +124,7 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
       .toEqual({ method: 'snowball' });
 
     await page.reload();
+    await openPlanner(page);
     await expect(planner(page).getByRole('radio', { name: loan.planner.method.names.snowball })).toBeChecked();
     await expect(extraSlider(page)).toHaveValue('25');
     await expect(planner(page).getByTestId('payoff-extra-suggested')).toBeVisible();
@@ -132,6 +134,7 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
       .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('lifeguessr.app') ?? '{}').state?.tools?.payoff))
       .toEqual({ method: 'snowball', extra: 0 });
     await page.reload();
+    await openPlanner(page);
     await expect(extraSlider(page)).toHaveValue('0');
     await expect(planner(page).getByTestId('payoff-tie')).toHaveText(loan.planner.tie.noExtra);
   });

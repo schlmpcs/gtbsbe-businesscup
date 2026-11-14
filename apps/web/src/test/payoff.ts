@@ -126,7 +126,7 @@ export function fakeEngine(opts: FakeEngineOptions = {}) {
     };
   });
   const extraToFinishBy = vi.fn((_debts: Debt[], _months: number, _method: PayoffChoice) => opts.solve ?? { extra: 0, reachable: true });
-  const suggestedPayoffExtra = vi.fn((_p: Profile, _debts: Debt[], _opts: { step: Money }): PayoffSuggestionVM => {
+  const suggestedPayoffExtra = vi.fn((_p: Profile, _debts: Debt[], _opts: { step: Money; rates?: object }): PayoffSuggestionVM => {
     if (opts.suggestThrows !== undefined) throw opts.suggestThrows;
     return opts.suggest ?? { extra: 0, surplus: 0, share: 0.5 };
   });
