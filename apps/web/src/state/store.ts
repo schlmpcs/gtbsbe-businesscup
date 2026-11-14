@@ -12,6 +12,7 @@ import {
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
+import { ScenarioSchema, type Scenario } from '@lifeguessr/types';
 import { ToolsStateSchema, type ToolsState } from '@lifeguessr/types';
 import { restoreTools } from './tools';
 import { create } from 'zustand';
@@ -27,6 +28,12 @@ import {
 export type ProfileOrigin = 'demo' | 'closestLife' | 'user';
 
 export type WishlistItem = { id: string; purchase: Purchase; addedAt: string /* ISO timestamp */ };
+
+/** A saved What if? choice: the two scenarios (a Pro feature). `presetId` when it came from a preset. */
+export type SavedWhatIf = { id: string; A: Scenario; B: Scenario; presetId: string | null; savedAt: string /* ISO timestamp */ };
+
+/** Most saved What if? choices kept (oldest dropped first). */
+export const WHAT_IFS_MAX = 20;
 
 export type AppData = {
   goal: Goal | null;
@@ -50,6 +57,8 @@ export type AppData = {
    * profile is still the demo one (`isSampleActive`): any edit makes the life the user's own.
    */
   isSample: boolean;
+  /** Saved What if? choices, newest last. */
+  whatIfs: SavedWhatIf[];
 };
 
 export type AppActions = {
@@ -85,6 +94,9 @@ export type AppActions = {
   loadSample: () => boolean;
   /** Stop showing the sample life as such ("Use mine"); the profile is left as it is. */
   clearSample: () => void;
+  /** Save a What if? choice (the caller checks Pro); returns its id. */
+  saveWhatIf: (choice: Omit<SavedWhatIf, 'id' | 'savedAt'>) => string;
+  removeWhatIf: (id: string) => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -106,6 +118,7 @@ export function initialAppData(): AppData {
     wishlist: [],
     committedMove: null,
     isSample: false,
+    whatIfs: [],
   };
 }
 
@@ -131,6 +144,10 @@ const MoveSchema = z.object({
 
 const WishlistItemSchema = z.object({ id: z.string().min(1), purchase: PurchaseSchema, addedAt: z.string() });
 
+const SavedWhatIfSchema = z.object({
+  id: z.string().min(1), A: ScenarioSchema, B: ScenarioSchema, presetId: z.string().nullable(), savedAt: z.string(),
+});
+
 /** Saved state is validated field by field; a field that fails keeps its default. */
 const persistedFields = {
   goal: GoalSchema.nullable(),
@@ -144,6 +161,7 @@ const persistedFields = {
   wishlist: z.array(WishlistItemSchema),
   committedMove: MoveSchema.nullable(),
   isSample: z.boolean(),
+  whatIfs: z.array(SavedWhatIfSchema).max(WHAT_IFS_MAX),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -226,6 +244,12 @@ export const useAppStore = create<AppState>()(
         return true;
       },
       clearSample: () => set({ isSample: false }),
+      saveWhatIf: (choice) => {
+        const id = newId();
+        set((s) => ({ whatIfs: [...s.whatIfs, { ...choice, id, savedAt: new Date().toISOString() }].slice(-WHAT_IFS_MAX) }));
+        return id;
+      },
+      removeWhatIf: (id) => set((s) => ({ whatIfs: s.whatIfs.filter((w) => w.id !== id) })),
       setGoal: goal => set({goal:GoalSchema.parse(goal)}),
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
@@ -249,6 +273,7 @@ export const useAppStore = create<AppState>()(
         wishlist: s.wishlist,
         committedMove: s.committedMove,
         isSample: s.isSample,
+        whatIfs: s.whatIfs,
       }),
       merge: mergePersisted,
     },

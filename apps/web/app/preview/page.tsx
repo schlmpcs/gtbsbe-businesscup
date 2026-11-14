@@ -38,6 +38,7 @@ const GROUPS: { title: string; rows: Row[] }[] = [
       { id: 'S11', name: 'Can I afford it?', href: '/afford', status: 'live' },
       { id: 'S12', name: 'Loan Lab', href: '/loan', status: 'live' },
       { id: 'S13', name: 'Decide (car)', href: '/decide', status: 'live' },
+      { id: 'S30', name: 'What if? Two choices, two futures', href: '/what-if', status: 'live' },
       { id: 'S20', name: 'Tools hub', href: '/preview/tools', status: 'preview' },
       { id: 'S21', name: 'Little things (subscriptions and habits)', href: '/preview/tools/subscriptions', status: 'preview' },
       { id: 'S22', name: 'Household', href: '/preview/tools/household', status: 'preview' },

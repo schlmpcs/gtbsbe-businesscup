@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
-  FutureComparisonSchema, ScenarioChangeSchema, ScenarioSchema,
+  type FutureComparisonSchema, ScenarioChangeSchema, ScenarioSchema,
   type FutureComparison, type Scenario, type ScenarioChange,
 } from './index';
 

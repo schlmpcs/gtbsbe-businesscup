@@ -5,8 +5,8 @@
 // `value` is validated with the contract's zod schema here as well. It holds parsed *inputs* the
 // user must confirm before they are applied, never results.
 import {
-  DEBT_KINDS, LoanInputSchema, ProfilePatchSchema, PurchaseSchema,
-  type Debt, type LoanInput, type ProfilePatch, type Purchase,
+  DEBT_KINDS, LoanInputSchema, ProfilePatchSchema, PurchaseSchema, ScenarioChangeSchema,
+  type Debt, type LoanInput, type ProfilePatch, type Purchase, type ScenarioChange,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { postJson } from './http';
@@ -53,4 +53,34 @@ export async function parseText<K extends ParseKind>(kind: K, text: string, opts
     signal: opts.signal,
   });
   return { value: res.value, inferred: res.inferred };
+}
+
+// ----- kind 'scenario' ("What if…") ------------------------------------------------------------
+
+export type ScenarioParseResult = {
+  value: ScenarioChange;
+  inferred: string[];
+  /** Who read the sentence: the model, or the rules reader (no API key, or the model failed). */
+  parsedBy: 'ai' | 'rules';
+};
+
+const ScenarioResponseSchema = z.object({
+  ok: z.literal(true),
+  kind: z.literal('scenario'),
+  value: ScenarioChangeSchema,
+  inferred: z.array(z.string()).default([]),
+  parsedBy: z.enum(['ai', 'rules']),
+});
+
+export type ScenarioParseOptions = { anonId?: string; signal?: AbortSignal; homeZip?: string };
+
+/** A "What if…" sentence → one ScenarioChange for the user to confirm. `homeZip` lets "the suburbs" mean theirs. */
+export async function parseScenarioText(text: string, opts: ScenarioParseOptions = {}): Promise<ScenarioParseResult> {
+  const res = await postJson(
+    '/api/ai/parse',
+    { kind: 'scenario', text, ...(opts.homeZip ? { homeZip: opts.homeZip } : {}) },
+    ScenarioResponseSchema,
+    { anonId: opts.anonId, signal: opts.signal },
+  );
+  return { value: res.value, inferred: res.inferred, parsedBy: res.parsedBy };
 }

@@ -4,7 +4,7 @@ import { useHydrated } from './hydration';
 import { useSessionSync } from './sessionSync';
 
 export { useAppStore, initialAppData, isSampleActive, APP_STORE_KEY } from './store';
-export type { AppData, AppActions, AppState, ProfileOrigin, WishlistItem } from './store';
+export type { AppData, AppActions, AppState, ProfileOrigin, SavedWhatIf, WishlistItem } from './store';
 export { useGameStore, initialGameData, GAME_STORE_KEY } from './game';
 export type { GameData, GameActions, GameState } from './game';
 export { getAnonId, ANON_ID_KEY } from './anonId';
