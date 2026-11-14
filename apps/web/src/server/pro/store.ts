@@ -7,8 +7,10 @@
 //   the stopgap this started as (dev, and a server without the database).
 //
 // Rules every implementation keeps:
-// - A Stripe grant overwrites a demo grant, never the reverse: entering the promo code after
-//   paying must not downgrade anyone. Re-entering the code keeps the original `since`.
+// - Sources rank stripe_test > demo_checkout > demo (SOURCE_RANK). A grant replaces the current
+//   one only when it ranks the same or higher, and the promo code (`demo`) never replaces
+//   anything: entering it after paying must not downgrade anyone, and re-entering it keeps the
+//   original `since`. A demo checkout upgrades a promo grant and can change its own plan.
 // - A Checkout Session unlocks Pro for exactly one anonymous id. Claiming it and granting Pro is
 //   one atomic step, so a crash in between cannot leave a session claimed but not granted.
 // - Anonymous ids are stored as SHA-256 hashes: the raw id also keys the user's saved profile,
@@ -28,7 +30,7 @@ export type ClaimResult = { ok: true; entitlement: Entitlement } | { ok: false }
 
 export interface EntitlementStore {
   get(anonId: string): Promise<Entitlement | null>;
-  /** Grants Pro without a session (the promo code); returns the entitlement now in effect. */
+  /** Grants Pro without a session (the promo code, the simulated checkout); returns the entitlement now in effect. */
   grant(anonId: string, entitlement: Entitlement): Promise<Entitlement>;
   /**
    * Claims a Stripe Checkout Session for `anonId` and grants its entitlement. Claiming a session
@@ -70,9 +72,16 @@ type State = z.infer<typeof StateSchema>;
 const emptyState = (): State => ({ version: 1, entitlements: {}, sessions: {} });
 const hashId = anonKey;
 
+/** How much each source is worth when two grants meet: a higher one is never replaced by a lower one. */
+const SOURCE_RANK = { demo: 0, demo_checkout: 1, stripe_test: 2 } as const satisfies Record<ProSource, number>;
+
+/** SOURCE_RANK as a SQL expression over `column`, so the upserts apply the same order as `effective`. */
+const rankSql = (column: string): string =>
+  `(CASE ${column} ${Object.entries(SOURCE_RANK).map(([source, rank]) => `WHEN '${source}' THEN ${rank}`).join(' ')} END)`;
+
 function effective(current: Entitlement | undefined, incoming: Entitlement): Entitlement {
-  if (current && incoming.source === 'demo') return current;
-  return incoming;
+  if (!current) return incoming;
+  return incoming.source !== 'demo' && SOURCE_RANK[incoming.source] >= SOURCE_RANK[current.source] ? incoming : current;
 }
 
 type Persistence = { load(): Promise<State>; save(state: State): Promise<void> };
@@ -273,15 +282,15 @@ function fromRow(row: EntitlementRow): Entitlement {
 }
 
 /**
- * `effective()` as one statement: a new key gets the grant; an existing one is replaced unless
- * the incoming grant is a demo one. Returns the entitlement now in effect.
+ * `effective()` as one statement: a new key gets the grant; an existing one is replaced only by a
+ * grant that is not a promo one and ranks the same or higher. Returns the entitlement now in effect.
  */
 async function upsertEntitlement(tx: Tx, key: string, entitlement: Entitlement): Promise<Entitlement> {
   await tx.query(
     `INSERT INTO pro_entitlements (anon_key, source, plan, since) VALUES ($1, $2, $3, $4::timestamptz)
      ON CONFLICT (anon_key) DO UPDATE
         SET source = EXCLUDED.source, plan = EXCLUDED.plan, since = EXCLUDED.since, updated_at = now()
-      WHERE EXCLUDED.source <> 'demo'`,
+      WHERE EXCLUDED.source <> 'demo' AND ${rankSql('EXCLUDED.source')} >= ${rankSql('pro_entitlements.source')}`,
     [key, entitlement.source, entitlement.plan ?? null, entitlement.since],
   );
   const { rows } = await tx.query<EntitlementRow>(`SELECT ${ENTITLEMENT_COLUMNS} FROM pro_entitlements WHERE anon_key = $1`, [key]);
@@ -312,7 +321,7 @@ async function importLegacyFile(db: Db, dir: string): Promise<void> {
         `INSERT INTO pro_entitlements (anon_key, source, plan, since) VALUES ($1, $2, $3, $4::timestamptz)
          ON CONFLICT (anon_key) DO UPDATE
             SET source = EXCLUDED.source, plan = EXCLUDED.plan, since = EXCLUDED.since, updated_at = now()
-          WHERE pro_entitlements.source = 'demo' AND EXCLUDED.source <> 'demo'`,
+          WHERE ${rankSql('EXCLUDED.source')} > ${rankSql('pro_entitlements.source')}`,
         [key, e.source, e.plan ?? null, e.since],
       );
     }

@@ -8,7 +8,7 @@ import {
   StatementCategorizeRequestSchema, StatementCategorizeResponseSchema,
   type StatementCategorizeRequest, type StatementCategorizeResponse, type StatementClass,
   type AreaDataSchema, CategoryTotalsSchema, type LifeCardSchema, LoanInputSchema, ProfilePatchSchema,
-  ProConfirmRequestSchema, ProDemoUnlockRequestSchema, ProErrorResponseSchema, type ProStatusSchema,
+  ProConfirmRequestSchema, ProDemoCheckoutRequestSchema, ProDemoUnlockRequestSchema, ProErrorResponseSchema, ProStatusSchema,
   ProStatusResponseSchema, ProfileSchema, PurchaseSchema, StatementItemSchema,
   type AreaData, type CategoryTotals, type ClueId, type CostCategory, type Debt, type KidAge,
   type LifeCard, type LoanInput, type MoveKind, type ProErrorCode, type ProPlan, type ProSource,
@@ -121,6 +121,24 @@ describe('Pro contracts', () => {
   it('trims the promo code and rejects an empty one', () => {
     expect(ProDemoUnlockRequestSchema.parse({ code: '  JURY-DEMO ' })).toEqual({ code: 'JURY-DEMO' });
     expect(ProDemoUnlockRequestSchema.safeParse({ code: '   ' }).success).toBe(false);
+  });
+
+  it('takes only a plan for the simulated checkout, never card-like fields', () => {
+    expect(ProDemoCheckoutRequestSchema.parse({ plan: 'monthly' })).toEqual({ plan: 'monthly' });
+    for (const bad of [{}, { plan: 'weekly' }, { plan: 'yearly', card: '4242 4242 4242 4242' }]) {
+      expect(ProDemoCheckoutRequestSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it('knows the simulated checkout as a Pro source that carries a plan', () => {
+    const since = '2026-11-14T12:00:00.000Z';
+    const status = { pro: true, source: 'demo_checkout', plan: 'yearly', since } as const;
+    expect(ProStatusSchema.parse(status)).toEqual(status);
+  });
+
+  it('records simulated purchases as their own event, outside the funnel steps', () => {
+    expect(FUNNEL_EVENT_NAMES).toContain('pro_demo_purchased');
+    expect(FUNNEL_STEPS).not.toContain('pro_demo_purchased');
   });
 
   it('shapes the status and error replies', () => {

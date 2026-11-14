@@ -1,13 +1,14 @@
 // S15 Pro paywall (demo, no real money): pick a plan → Stripe Checkout in test mode → back on
-// /pro?checkout=success&session_id=cs_test_… → the server confirms the session; or unlock with the
-// promo code the screen shows. The server is the authority on Pro; this hook only drives the flow.
+// /pro?checkout=success&session_id=cs_test_… → the server confirms the session; or, when the server
+// has no Stripe key, pay in the simulated in-app checkout; or unlock with the promo code the screen
+// shows. The server is the authority on Pro; this hook only drives the flow.
 import { PRO_PLANS, PRO_PRICES, ProConfirmRequestSchema, type ProPlan, type ProStatus } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getProAdapter, type ProFailure, type ProResult } from '@/lib/api/pro';
 import { useTrackOnce } from '@/lib/events';
 import { SCREEN_ROUTES } from '@/lib/screens';
 import { usePro, useProStore } from '@/state';
-import type { PaywallError, PaywallErrorKey, PaywallPlanVM, PaywallVM } from './types';
+import type { CheckoutMode, PaywallError, PaywallErrorKey, PaywallPlanVM, PaywallVM } from './types';
 
 const RETURN_PARAMS = ['checkout', 'session_id'] as const;
 
@@ -169,6 +170,18 @@ export function usePaywall({ checkoutReturn, navigate = assignLocation }: UsePay
     end();
   }, [begin, coolingDown, end, fail, navigate, plan, pro.checkoutAvailable, pro.isPro]);
 
+  // Stripe wins when the server has a test key; otherwise the simulated checkout, which the server
+  // switches off together with the promo code (PRO_DEMO_UNLOCK=off).
+  const checkoutMode: CheckoutMode = pro.checkoutAvailable ? 'stripe' : pro.demo.enabled ? 'demo' : 'off';
+
+  const payDemo = useCallback(async () => {
+    if (coolingDown || checkoutMode !== 'demo' || pro.isPro || !begin('demoCheckout')) return;
+    const res = await useProStore.getState().demoCheckout(plan);
+    if (res.ok) unlocked(res.value);
+    else fail('checkout', res.error);
+    end();
+  }, [begin, checkoutMode, coolingDown, end, fail, plan, pro.isPro, unlocked]);
+
   const promoCode = promoDraft ?? pro.demo.code ?? '';
 
   const redeem = useCallback(async () => {
@@ -225,8 +238,9 @@ export function usePaywall({ checkoutReturn, navigate = assignLocation }: UsePay
     view,
     plans,
     selectPlan: setPlan,
-    checkoutAvailable: pro.checkoutAvailable,
+    checkoutMode,
     startCheckout: () => void startCheckout(),
+    payDemo: () => void payDemo(),
     promoEnabled: pro.demo.enabled,
     promoCode,
     setPromoCode,

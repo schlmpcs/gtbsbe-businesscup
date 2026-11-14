@@ -4,6 +4,7 @@ import { Button, cx, Sticker } from '@/ui-kit';
 import type { PaywallError, PaywallVM } from '../model/types';
 import { FULL_BLEED_PRIMARY, ON_ARENA } from './arena';
 import { CheckoutBlock, TestCardNote } from './CheckoutBlock';
+import { DemoCheckoutBlock } from './DemoCheckoutBlock';
 import { errorText } from './errorText';
 import { IncludesList } from './IncludesList';
 import { PlanPicker } from './PlanPicker';
@@ -14,10 +15,15 @@ export type PaywallProps = PaywallVM;
 
 const errorIn = (error: PaywallError | null, ...where: PaywallError['where'][]) => (error && where.includes(error.where) ? error : null);
 
-/** S15 Pro paywall (demo): an orange band with the plans and checkout, then the judges' promo code. */
+/**
+ * S15 Pro paywall (demo): an orange band with the plans and a checkout (Stripe's test checkout, or
+ * the simulated one when the server has no Stripe key), then the judges' promo code.
+ */
 export function Paywall(vm: PaywallProps) {
   const testCardId = useId();
   const locked = vm.busy !== null || vm.coolingDown;
+  const stripe = vm.checkoutMode === 'stripe';
+  const selectedPlan = vm.plans.find((p) => p.selected) ?? vm.plans[0]!;
   const pageError = errorIn(vm.error, 'status', 'confirm');
   const message =
     vm.view === 'confirming' ? copy.confirming : vm.cancelled ? copy.cancelled : vm.view === 'loading' ? copy.loading : null;
@@ -27,7 +33,7 @@ export function Paywall(vm: PaywallProps) {
     <div className="mt-lg flex flex-col gap-xl">
       <div className={cx(FULL_BLEED_PRIMARY, ON_ARENA, 'flex flex-col items-center gap-xl py-2xl text-center sm:py-3xl')}>
         <Sticker tone="ink" tilt={-2}>
-          {copy.demoBadge}
+          {vm.checkoutMode === 'demo' ? copy.demoBadge.demo : copy.demoBadge.stripe}
         </Sticker>
 
         {offer && (
@@ -53,22 +59,32 @@ export function Paywall(vm: PaywallProps) {
           <>
             <PlanPicker plans={vm.plans} onSelect={vm.selectPlan} disabled={locked} />
             <IncludesList />
-            <CheckoutBlock
-              available={vm.checkoutAvailable}
-              busy={vm.busy === 'checkout'}
-              disabled={locked}
-              error={errorIn(vm.error, 'checkout')}
-              onCheckout={vm.startCheckout}
-              testCardId={testCardId}
-            />
+            {vm.checkoutMode === 'demo' ? (
+              <DemoCheckoutBlock
+                plan={selectedPlan}
+                busy={vm.busy === 'demoCheckout'}
+                disabled={locked}
+                error={errorIn(vm.error, 'checkout')}
+                onPay={vm.payDemo}
+              />
+            ) : (
+              <CheckoutBlock
+                available={stripe}
+                busy={vm.busy === 'checkout'}
+                disabled={locked}
+                error={errorIn(vm.error, 'checkout')}
+                onCheckout={vm.startCheckout}
+                testCardId={testCardId}
+              />
+            )}
             <p className="text-xs">{common.disclaimer}</p>
           </>
         )}
       </div>
 
-      {offer && (vm.checkoutAvailable || vm.promoEnabled) && (
+      {offer && (stripe || vm.promoEnabled) && (
         <div className="grid items-start gap-lg sm:grid-cols-2">
-          {vm.checkoutAvailable && <TestCardNote id={testCardId} />}
+          {stripe && <TestCardNote id={testCardId} />}
           {vm.promoEnabled && (
             <PromoCodeForm
               code={vm.promoCode}

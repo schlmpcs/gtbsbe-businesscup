@@ -10,6 +10,7 @@ export type FakeProAdapter = { [K in keyof ProAdapter]: Mock<ProAdapter[K]> };
 export const FREE: ProStatus = { pro: false };
 export const PRO_DEMO: ProStatus = { pro: true, source: 'demo', since: '2026-11-14T12:00:00.000Z' };
 export const PRO_STRIPE: ProStatus = { pro: true, source: 'stripe_test', plan: 'yearly', since: '2026-11-14T12:00:00.000Z' };
+export const PRO_DEMO_CHECKOUT = { pro: true, source: 'demo_checkout', plan: 'yearly', since: '2026-11-14T12:00:00.000Z' } as const satisfies ProStatus;
 
 export function statusInfo(status: ProStatus = FREE, extra: Partial<ProStatusInfo> = {}): ProStatusInfo {
   return { status, checkoutAvailable: true, demo: { enabled: true, code: 'JURY2026' }, ...extra };
@@ -30,6 +31,7 @@ export function fakeProAdapter(info: ProStatusInfo = statusInfo()): FakeProAdapt
     startCheckout: vi.fn<ProAdapter['startCheckout']>(async () => ({ ok: true, value: 'https://checkout.stripe.com/c/pay/cs_test_abc12345' })),
     confirm: vi.fn<ProAdapter['confirm']>(async () => grant(PRO_STRIPE)),
     demoUnlock: vi.fn<ProAdapter['demoUnlock']>(async () => grant(PRO_DEMO)),
+    demoCheckout: vi.fn<ProAdapter['demoCheckout']>(async (plan) => grant({ ...PRO_DEMO_CHECKOUT, plan })),
   };
 }
 

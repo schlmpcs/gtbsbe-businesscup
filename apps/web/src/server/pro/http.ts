@@ -11,13 +11,15 @@ const perMinute = (limit: number): RateLimitRule => ({ limit, windowMs: 60_000 }
 /**
  * Per anonId for a normal user, plus a looser per-IP cap so rotating the anonId doesn't bypass
  * it. The status poll is cheap; checkout and confirm each cost a Stripe call; the promo code is
- * the strictest, since it is the one thing worth guessing.
+ * the strictest, since it is the one thing worth guessing. The simulated checkout has no secret
+ * to guess and costs nothing, so it gets the same room as the real one.
  */
 export const PRO_RATE_LIMITS = {
   status: { perAnonId: perMinute(60), perIp: perMinute(120) },
   checkout: { perAnonId: perMinute(10), perIp: perMinute(30) },
   confirm: { perAnonId: perMinute(10), perIp: perMinute(30) },
   demoUnlock: { perAnonId: perMinute(5), perIp: perMinute(20) },
+  demoCheckout: { perAnonId: perMinute(10), perIp: perMinute(30) },
 } as const satisfies Record<string, { perAnonId: RateLimitRule; perIp: RateLimitRule }>;
 
 export type ProRoute = keyof typeof PRO_RATE_LIMITS;

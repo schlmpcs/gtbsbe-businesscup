@@ -7,12 +7,20 @@ export type { ProPlan, ProSource } from '@lifeguessr/types';
 /**
  * What the screen shows.
  * - loading: neither the server nor the cached hint has said who this is yet.
- * - offer: free user: plans, test checkout, promo code.
+ * - offer: free user: plans, checkout (see CheckoutMode), promo code.
  * - confirming: back from Stripe, the server is checking the Checkout Session.
  * - success: Pro was unlocked during this visit.
  * - pro: already Pro on arrival (no purchase buttons).
  */
 export type PaywallView = 'loading' | 'offer' | 'confirming' | 'success' | 'pro';
+
+/**
+ * Which checkout the offer shows.
+ * - stripe: the server has a Stripe test key: the button goes to Stripe's hosted test checkout.
+ * - demo: no Stripe key, demo unlock on: the simulated in-app checkout (nothing is charged).
+ * - off: neither is available; only the plans and a note are shown.
+ */
+export type CheckoutMode = 'stripe' | 'demo' | 'off';
 
 export type PaywallPlanVM = {
   id: ProPlan;
@@ -49,7 +57,7 @@ export type PaywallError = {
 /** The active Pro entitlement (views 'success' and 'pro'). */
 export type PaywallProVM = {
   source: ProSource;
-  /** Set for a Stripe test checkout; a promo unlock has no plan. */
+  /** Set for a Stripe test checkout and a simulated one; a promo unlock has no plan. */
   plan: ProPlan | null;
   /** When it was unlocked, formatted for display (local date). */
   sinceLabel: string;
@@ -60,10 +68,12 @@ export type PaywallVM = {
   /** Yearly first and preselected. */
   plans: PaywallPlanVM[];
   selectPlan: (plan: ProPlan) => void;
-  /** False when the server has no Stripe test key: the button is disabled, the promo code still works. */
-  checkoutAvailable: boolean;
-  /** Ask for a test Checkout Session and send the browser to Stripe. */
+  /** Which checkout to show; the promo code works in every mode the server leaves it on for. */
+  checkoutMode: CheckoutMode;
+  /** stripe mode: ask for a test Checkout Session and send the browser to Stripe. */
   startCheckout: () => void;
+  /** demo mode: pay for the selected plan in the simulated checkout (nothing is charged). */
+  payDemo: () => void;
   /** False when the server switched the promo code off. */
   promoEnabled: boolean;
   /** The promo field: prefilled with the code the server shows, editable. */
@@ -71,7 +81,7 @@ export type PaywallVM = {
   setPromoCode: (code: string) => void;
   redeem: () => void;
   /** The request in flight, if any. Every action is ignored while one runs (double clicks). */
-  busy: 'checkout' | 'promo' | 'confirm' | null;
+  busy: 'checkout' | 'demoCheckout' | 'promo' | 'confirm' | null;
   /** True for the server's retry-after window after a 429; actions are ignored until it passes. */
   coolingDown: boolean;
   /** The user came back from Stripe without paying. */
