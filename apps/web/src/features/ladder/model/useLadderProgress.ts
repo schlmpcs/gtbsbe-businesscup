@@ -9,7 +9,7 @@ import { cardsSample } from '@/fixtures/cards';
 import { areaForZip } from '@/lib/areas';
 import { displayForecast, estimatedFields } from '@/lib/model/profile';
 import { SCREEN_ROUTES } from '@/lib/screens';
-import { useAppReady, useAppStore, useGameStore, type AppData } from '@/state';
+import { useAppReady, useAppStore, useProfile, useGameStore, type AppData } from '@/state';
 import { SPENDING_SLIDERS } from './constants';
 import type { LadderProgressVM, LadderRungVM, LadderScreen } from './types';
 
@@ -110,7 +110,7 @@ export function buildLadderProgress(s: ProgressData): Omit<LadderProgressVM, 'st
 
 export function useLadderProgress(): LadderProgressVM {
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const profileOrigin = useAppStore((s) => s.profileOrigin);
   const selfGuess = useAppStore((s) => s.selfGuess);
   const closestCardId = useAppStore((s) => s.closestCardId);

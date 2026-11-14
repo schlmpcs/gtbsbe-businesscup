@@ -34,13 +34,13 @@ describe('masks', () => {
     expect(maskOf(FUNNEL_EVENT_NAMES)).toBe(2n ** BigInt(FUNNEL_EVENT_NAMES.length) - 1n);
   });
 
-  it('keeps forty event names distinct', () => {
+  it('keeps every event name distinct up to the 63 a signed 64-bit mask holds', () => {
     const names = FUNNEL_EVENT_NAMES as unknown as string[];
     const originalLength = names.length;
     try {
-      while (names.length < 40) names.push(`future_test_event_${names.length}`);
-      expect(new Set(names.map(eventBit)).size).toBe(40);
-      expect(maskOf(names)).toBe((1n << 40n) - 1n);
+      while (names.length < 63) names.push(`future_test_event_${names.length}`);
+      expect(new Set(names.map(eventBit)).size).toBe(63);
+      expect(maskOf(names)).toBe((1n << 63n) - 1n);
     } finally { names.length = originalLength; }
   });
 

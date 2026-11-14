@@ -1,5 +1,6 @@
 // S10 You in N years + Next Moves: the year picker, the headline number with its range, the forecast
-// chart with the range band, a comparison with a move, the ranked moves and "How we calculate".
+// chart with the range band, a comparison with a move, "Coming up" (life events, passed in by the
+// route), the ranked moves and "How we calculate".
 import type { ReactNode } from 'react';
 import { forecast as t, yearsPhrase } from '@/copy';
 import { Art, buttonClassName, Choice, cx, EstimateTag, ForecastChart, formatMoney, Money, Stack, Sticker } from '@/ui-kit';
@@ -25,11 +26,13 @@ export type FutureScreenProps = {
   Link: LinkComponent;
   /** The goal card (its own view-model), placed under the headline number when the route passes it. */
   goal?: ReactNode;
+  /** The "Coming up" life events card (its own view-model), placed under the forecast chart when the route passes it. */
+  events?: ReactNode;
 };
 
 const CARD = 'rounded-xl bg-surface p-xl shadow-md';
 
-export function FutureScreen({ vm, links, Link, goal }: FutureScreenProps) {
+export function FutureScreen({ vm, links, Link, goal, events }: FutureScreenProps) {
   const f = t.future;
   const loading = vm.status === 'loading';
   const failed = vm.status === 'error' && vm.error !== null;
@@ -72,6 +75,8 @@ export function FutureScreen({ vm, links, Link, goal }: FutureScreenProps) {
         </section>
 
         {shown && <ChartCard vm={vm} links={links} Link={Link} />}
+
+        {events}
 
         <NextMoves vm={vm} explanations={vm.explanations} onExplain={vm.explain} loading={loading} />
 

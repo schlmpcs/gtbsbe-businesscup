@@ -326,7 +326,9 @@ export type ClientFunnelEvent =
   | { name: 'loan_compared'; props: { offers: number } }
   | { name: 'paywall_viewed' }
   | { name: 'sample_loaded' }
-  | { name: 'forecast_horizon_changed'; props: { years: HorizonYears } };
+  | { name: 'forecast_horizon_changed'; props: { years: HorizonYears } }
+  /** S10 "Coming up": an event was added (its kind, and the shortcut it came from; never its amount or month). */
+  | { name: 'life_event_added'; props: { kind: LifeEventKind; preset?: LifeEventPreset } };
 
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =

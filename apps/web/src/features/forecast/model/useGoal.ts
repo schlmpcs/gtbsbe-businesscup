@@ -6,7 +6,7 @@ import {
   rankMoves,
 } from '@lifeguessr/engine';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
-import { useAppReady, useAppStore } from '@/state';
+import { useAppReady, useAppStore, useProfile } from '@/state';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import { track, useTrackOnce } from '@/lib/events';
@@ -16,7 +16,7 @@ const YEAR_PRESETS = [5, 10, 15, 20, 30];
 /** Independent rules-only goal model; never uses or modifies the AI forecast bundle. */
 export function useGoal(): GoalVM {
   const ready = useAppReady(),
-    profile = useAppStore((s) => s.profile),
+    profile = useProfile(),
     goal = useAppStore((s) => s.goal);
   const subscriptionsDetected = useAppStore((s) => s.subscriptionsDetected);
   const [inputError, setInputError] = useState(false);

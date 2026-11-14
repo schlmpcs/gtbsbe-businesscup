@@ -3,8 +3,9 @@
 // copy user input or measured statement totals, and averages of those totals.
 import { applyPatch, cardMinPaymentFor } from '@lifeguessr/engine';
 import {
-  COST_CATEGORIES,
-  type CategoryTotals, type CostCategory, type Debt, type Money, type Profile, type ProfilePatch, type Rate,
+  COST_CATEGORIES, LifeEventSchema, MAX_LIFE_EVENTS,
+  type CategoryTotals, type CostCategory, type Debt, type LifeEvent, type LifeEventPreset, type Money, type Profile,
+  type ProfilePatch, type Rate, type YearMonth,
 } from '@lifeguessr/types';
 
 /** Scalar Profile fields the balance sheet edits. */
@@ -123,4 +124,79 @@ export function mergeStatementTotals(p: Profile, months: readonly CategoryTotals
   const pays = months.map((m) => m.detectedPay).filter((v): v is Money => typeof v === 'number' && v > 0);
   const takeHomePay = pays.length > 0 ? measured(pays.reduce((s, v) => s + v, 0) / pays.length) : p.takeHomePay;
   return { ...p, spending, takeHomePay };
+}
+
+// ----- Future life events (S10 "Coming up") ----------------------------------------------------
+// Spec: docs/superpowers/specs/2026-11-15-life-events-design.md → Client.
+
+/** A category a spending event may set (debts are modelled as debts). */
+export type LifeEventCategory = Extract<LifeEvent, { kind: 'spending' }>['category'];
+
+/** What `foldStartedEvents` did with one started event, for the one-line note on S10. */
+export type FoldedNote =
+  | { kind: 'pay'; month: YearMonth; preset?: LifeEventPreset }
+  | { kind: 'spending'; month: YearMonth; preset?: LifeEventPreset; category: LifeEventCategory }
+  | { kind: 'oneOff'; month: YearMonth; preset?: LifeEventPreset; direction: 'cost' | 'income' };
+
+/** The profile without `asOf`: it is stamped when the profile is used (state/profile.ts), never stored. */
+export function withoutAsOf(p: Profile): Profile {
+  if (!('asOf' in p)) return p;
+  const { asOf: _asOf, ...rest } = p;
+  return rest;
+}
+
+/** A valid event (the contract's schema). */
+export function isValidLifeEvent(e: LifeEvent): boolean {
+  return LifeEventSchema.safeParse(e).success;
+}
+
+/** Add an event, or null when the profile already holds MAX_LIFE_EVENTS or the event is invalid. */
+export function addLifeEvent(p: Profile, e: LifeEvent): Profile | null {
+  const events = p.events ?? [];
+  if (events.length >= MAX_LIFE_EVENTS || !isValidLifeEvent(e)) return null;
+  return { ...p, events: [...events, e] };
+}
+
+/** Replace an event's fields, keeping its id and place in the list; null when the id is unknown or the event invalid. */
+export function updateLifeEvent(p: Profile, id: string, e: LifeEvent): Profile | null {
+  const events = p.events ?? [];
+  const next: LifeEvent = { ...e, id };
+  if (!events.some((x) => x.id === id) || !isValidLifeEvent(next)) return null;
+  return { ...p, events: events.map((x) => (x.id === id ? next : x)) };
+}
+
+export function removeLifeEvent(p: Profile, id: string): Profile {
+  return { ...p, events: (p.events ?? []).filter((e) => e.id !== id) };
+}
+
+function noteFor(e: LifeEvent): FoldedNote {
+  const preset = e.preset !== undefined ? { preset: e.preset } : {};
+  switch (e.kind) {
+    case 'pay':
+      return { kind: 'pay', month: e.month, ...preset };
+    case 'spending':
+      return { kind: 'spending', month: e.month, ...preset, category: e.category };
+    case 'oneOff':
+      return { kind: 'oneOff', month: e.month, ...preset, direction: e.direction };
+  }
+}
+
+/**
+ * Started events (month ≤ `currentMonth`) become today's values and leave the list: pay sets
+ * `takeHomePay`, spending sets its category (value and isEstimate from the event), a one-off is in the
+ * past and is dropped. Applied in month order (ties in list order), so the latest start wins. Returns
+ * the same profile object when nothing has started.
+ */
+export function foldStartedEvents(p: Profile, currentMonth: YearMonth): { profile: Profile; notes: FoldedNote[] } {
+  const events = p.events ?? [];
+  // 'YYYY-MM' strings compare in calendar order.
+  const started = events.filter((e) => e.month <= currentMonth);
+  if (started.length === 0) return { profile: p, notes: [] };
+  const inOrder = [...started].sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : 0)); // stable
+  let next: Profile = { ...p, spending: { ...p.spending }, events: events.filter((e) => e.month > currentMonth) };
+  for (const e of inOrder) {
+    if (e.kind === 'pay') next = { ...next, takeHomePay: { ...e.takeHomePay } };
+    else if (e.kind === 'spending') next.spending[e.category] = { ...e.monthly };
+  }
+  return { profile: next, notes: inOrder.map(noteFor) };
 }

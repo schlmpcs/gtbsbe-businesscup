@@ -15,6 +15,7 @@ import { getArea } from '@lifeguessr/data/areas';
 import { cloneProfileDemo } from '@/fixtures';
 import { FIXTURE_DUEL_LOG_KEY } from '@/features/game/model/duelProgress';
 import { useAppStore, useGameStore } from '@/state';
+import { currentMonth } from '@/state/profile';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute, rulesAnswer } from '@/test/forecastApi';
 import { howWeCalculate } from './howWeCalculate';
@@ -108,7 +109,7 @@ describe('useFuture (S10)', () => {
     const { result } = renderHook(() => useFuture());
     await waitForReady(result);
     expect(route.calls).toEqual([{
-      profile: cloneProfileDemo(),
+      profile: { ...cloneProfileDemo(), asOf: currentMonth() }, // stamped with this month (state/profile.ts)
       rates,
       scenarios: moveCandidates(cloneProfileDemo(), { rates }).map(({ id, patch }) => ({ id, patch })),
     }]);

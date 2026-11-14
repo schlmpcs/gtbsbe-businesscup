@@ -10,7 +10,7 @@ import { areaRates } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { SCREEN_ROUTES } from '@/lib/screens';
-import { useAppReady, useAppStore, usePro } from '@/state';
+import { useAppReady, useAppStore, useProfile, usePro } from '@/state';
 import type { AffordFormVM, AffordHorizonVM, AffordResultVM, AffordRulesVM, AffordVM } from './types';
 
 const HORIZONS = [1, 12, 60, 120] as const;
@@ -78,7 +78,7 @@ const at = (points: ForecastPoint[], month: number) => points[Math.min(month, po
 
 export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const wishlist = useAppStore((s) => s.wishlist);
   const addPurchase = useAppStore((s) => s.addToWishlist);
   const removeFromWishlist = useAppStore((s) => s.removeFromWishlist);

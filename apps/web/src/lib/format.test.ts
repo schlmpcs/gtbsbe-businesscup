@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, formatMonth, formatRate } from './format';
+import { formatMoney, formatMonth, formatMonthYear, formatRate } from './format';
 
 describe('formatMoney', () => {
   it('rounds to whole dollars by default, with thousands separators', () => {
@@ -47,6 +47,15 @@ describe('formatRate', () => {
   it('handles negatives and non-finite values', () => {
     expect(formatRate(-0.015)).toBe('−1.5%');
     expect(formatRate(Number.NaN)).toBe('—');
+  });
+});
+
+describe('formatMonthYear', () => {
+  it('names a YYYY-MM month with its year, whatever the local time zone; a dash for anything else', () => {
+    expect(formatMonthYear('2027-03')).toBe('March 2027');
+    expect(formatMonthYear('2026-12')).toBe('December 2026');
+    expect(formatMonthYear('2027-13')).toBe('—');
+    expect(formatMonthYear('')).toBe('—');
   });
 });
 

@@ -57,6 +57,13 @@ export function formatRate(rate: Rate, digits = 1): string {
 
 const monthFormat = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' });
 const monthDayFormat = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+const monthYearFormat = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+/** A 'YYYY-MM' month with its year: formatMonthYear('2027-03') → "March 2027". Anything else → "—". */
+export function formatMonthYear(month: string): string {
+  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month);
+  return m ? monthYearFormat.format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1))) : NOT_A_NUMBER;
+}
 
 /**
  * A 'YYYY-MM' month by name: formatMonth('2026-11') → "November"; with a day of that month,

@@ -13,7 +13,7 @@ export { GoalSchema } from './goal';
 import { z } from 'zod';
 import {
   AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, DUEL_LETTERS, DUEL_ROUNDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
-  FUNNEL_EVENT_NAMES, KID_AGES, LIFE_EVENT_ID_MAX_LENGTH, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
+  FUNNEL_EVENT_NAMES, KID_AGES, LIFE_EVENT_ID_MAX_LENGTH, LIFE_EVENT_KINDS, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
   SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
 } from './constants';
 
@@ -455,6 +455,7 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   bare('avatar_stats_viewed'),
   bare('sample_loaded'),
   withProps('forecast_horizon_changed', { years: HorizonYearsSchema }),
+  withProps('life_event_added', { kind: z.enum(LIFE_EVENT_KINDS), preset: z.enum(LIFE_EVENT_PRESETS).optional() }),
   withProps('goal_set', {years:z.number().int().min(1).max(30)}),
   withProps('goal_verdict_shown', {verdict:z.enum(['onTrack','withinRange','behind'])}),
   bare('goal_cleared'),

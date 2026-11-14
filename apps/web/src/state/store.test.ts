@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { COST_CATEGORIES, type CostCategory, type Move } from '@lifeguessr/types';
-import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { COST_CATEGORIES, MAX_LIFE_EVENTS, type CostCategory, type LifeEvent, type Move } from '@lifeguessr/types';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { ANON_ID_KEY, getAnonId } from './anonId';
 import { useHydrated } from './hydration';
+import { SESSION_SAVE_DEBOUNCE_MS, setSessionAdapter, useSessionSync } from './sessionSync';
 import { APP_STORE_KEY, initialAppData, isSampleActive, useAppStore } from './store';
 
 const totals = (over: Partial<Record<CostCategory, number>>) =>
@@ -13,6 +14,7 @@ const totals = (over: Partial<Record<CostCategory, number>>) =>
 const move: Move = { id: 'cutCategory:eatingOut', kind: 'cutCategory', level: 1, category: 'eatingOut', effect10y: 5000, patch: { spending: { eatingOut: 272 } } };
 
 beforeEach(resetClientState);
+afterEach(() => vi.useRealTimers());
 
 describe('app store', () => {
   it('starts on the demo profile', () => {
@@ -133,6 +135,130 @@ describe('app store', () => {
     expect(useAppStore.getState().wishlist.map((w) => w.id)).toEqual([id]);
     useAppStore.getState().removeFromWishlist(id);
     expect(useAppStore.getState().wishlist).toEqual([]);
+  });
+});
+
+describe('life events in the store', () => {
+  const raise: LifeEvent = { id: 'ev-raise', kind: 'pay', month: '2027-03', preset: 'raise', takeHomePay: { value: 6_000, isEstimate: false } };
+  const kid: LifeEvent = {
+    id: 'ev-kid', kind: 'spending', month: '2027-06', preset: 'kid', category: 'childcare', monthly: { value: 1_375, isEstimate: true },
+  };
+  const trip: LifeEvent = { id: 'ev-trip', kind: 'oneOff', month: '2026-12', amount: 3_000, direction: 'cost' };
+  const events = () => useAppStore.getState().profile.events ?? [];
+
+  it('adds, updates and removes events on the profile; an edit makes the life the user’s own', () => {
+    expect(useAppStore.getState().addLifeEvent(raise)).toBe(true);
+    expect(useAppStore.getState().profileOrigin).toBe('user');
+    useAppStore.getState().addLifeEvent(kid);
+    expect(events().map((e) => e.id)).toEqual(['ev-raise', 'ev-kid']);
+
+    useAppStore.getState().updateLifeEvent('ev-raise', { ...raise, id: 'ignored', takeHomePay: { value: 6_500, isEstimate: false } });
+    expect(events()[0]).toEqual({ ...raise, takeHomePay: { value: 6_500, isEstimate: false } }); // the id is kept
+
+    useAppStore.getState().removeLifeEvent('ev-raise');
+    expect(events().map((e) => e.id)).toEqual(['ev-kid']);
+  });
+
+  it(`rejects a ${MAX_LIFE_EVENTS + 1}th event and an invalid one, changing nothing`, () => {
+    for (let i = 0; i < MAX_LIFE_EVENTS; i++) expect(useAppStore.getState().addLifeEvent({ ...trip, id: `ev-${i}` })).toBe(true);
+    const before = useAppStore.getState().profile;
+    expect(useAppStore.getState().addLifeEvent({ ...trip, id: 'one-too-many' })).toBe(false);
+    expect(useAppStore.getState().profile).toBe(before);
+
+    useAppStore.getState().reset();
+    expect(useAppStore.getState().addLifeEvent({ ...trip, amount: 0 })).toBe(false);
+    expect(useAppStore.getState().addLifeEvent({ ...trip, month: '2027-13' })).toBe(false);
+    expect(useAppStore.getState().profile.events).toBeUndefined();
+    expect(useAppStore.getState().profileOrigin).toBe('demo');
+  });
+
+  it('persists the events with the profile, never `asOf`', async () => {
+    useAppStore.getState().addLifeEvent(kid);
+    // Even a profile handed in with `asOf` (a stamped one) is stored without it.
+    useAppStore.getState().setProfile({ ...useAppStore.getState().profile, asOf: '2026-11' }, 'user');
+    expect(useAppStore.getState().profile.asOf).toBeUndefined();
+    const saved = JSON.parse(localStorage.getItem(APP_STORE_KEY)!);
+    expect(saved.state.profile.events).toEqual([kid]);
+    expect(saved.state.profile).not.toHaveProperty('asOf');
+
+    useAppStore.setState({ profile: initialAppData().profile });
+    localStorage.setItem(APP_STORE_KEY, JSON.stringify(saved));
+    await useAppStore.persist.rehydrate();
+    expect(useAppStore.getState().profile.events).toEqual([kid]);
+  });
+
+  it('folds started events into today: pay and spending values (with isEstimate), past one-offs dropped, future ones kept', () => {
+    for (const e of [raise, kid, trip]) useAppStore.getState().addLifeEvent(e);
+    const later: LifeEvent = { ...raise, id: 'ev-later', month: '2028-01', takeHomePay: { value: 7_000, isEstimate: false } };
+    useAppStore.getState().addLifeEvent(later);
+
+    const notes = useAppStore.getState().foldStartedEvents('2027-06');
+    const s = useAppStore.getState();
+    expect(s.profile.takeHomePay).toEqual({ value: 6_000, isEstimate: false });
+    expect(s.profile.spending.childcare).toEqual({ value: 1_375, isEstimate: true });
+    expect(s.profile.events).toEqual([later]);
+    expect(notes).toEqual([
+      { kind: 'oneOff', month: '2026-12', direction: 'cost' },
+      { kind: 'pay', month: '2027-03', preset: 'raise' },
+      { kind: 'spending', month: '2027-06', preset: 'kid', category: 'childcare' },
+    ]);
+    expect(s.foldedNotes).toEqual(notes);
+
+    // Nothing more to fold: the profile and the notes stay as they are.
+    const profile = s.profile;
+    expect(useAppStore.getState().foldStartedEvents('2027-06')).toEqual([]);
+    expect(useAppStore.getState().profile).toBe(profile);
+    expect(useAppStore.getState().foldedNotes).toEqual(notes);
+
+    // S10 shows them once: they leave the saved state, and stay on screen until dismissed.
+    useAppStore.getState().showFoldedNotes();
+    expect(useAppStore.getState().foldedNotes).toEqual([]);
+    expect(useAppStore.getState().foldedNotesShown).toEqual(notes);
+    expect(JSON.parse(localStorage.getItem(APP_STORE_KEY)!).state).not.toHaveProperty('foldedNotesShown');
+    useAppStore.getState().dismissFoldedNotes();
+    expect(useAppStore.getState().foldedNotesShown).toEqual([]);
+  });
+
+  it('folds several started events on one field in month order: the latest start wins', () => {
+    const early: LifeEvent = { ...raise, id: 'a', month: '2027-05', takeHomePay: { value: 9_000, isEstimate: true } };
+    useAppStore.getState().addLifeEvent(early);
+    useAppStore.getState().addLifeEvent(raise); // 2027-03, added later but starts earlier
+    useAppStore.getState().foldStartedEvents('2027-06');
+    expect(useAppStore.getState().profile.takeHomePay).toEqual({ value: 9_000, isEstimate: true });
+    expect(useAppStore.getState().profile.events).toEqual([]);
+  });
+
+  it('the server session carries the events inside the profile (never `asOf`), both ways', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const restored = { ...initialAppData().profile, events: [raise, kid] };
+    setSessionAdapter({ enabled: true, load: vi.fn().mockResolvedValue({ profile: restored }), save });
+    renderHook(() => useSessionSync(true));
+    await waitFor(() => expect(useAppStore.getState().profile.events).toEqual([raise, kid]));
+    expect(useAppStore.getState().profileOrigin).toBe('user');
+
+    vi.useFakeTimers();
+    act(() => void useAppStore.getState().addLifeEvent(trip));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SESSION_SAVE_DEBOUNCE_MS);
+    });
+    const saved = save.mock.lastCall![1];
+    expect(saved.profile.events).toEqual([raise, kid, trip]);
+    expect(saved.profile).not.toHaveProperty('asOf');
+  });
+
+  it('a life card on S6, the sample life and reset replace the events with the new profile’s (none)', () => {
+    const add = () => useAppStore.getState().addLifeEvent(kid);
+    add();
+    useAppStore.getState().chooseClosestLife('card-1', initialAppData().profile);
+    expect(useAppStore.getState().profile.events).toBeUndefined();
+
+    add();
+    useAppStore.getState().reset();
+    expect(useAppStore.getState().profile.events).toBeUndefined();
+
+    useAppStore.setState({ profile: { ...initialAppData().profile, events: [kid] }, profileOrigin: 'demo' });
+    expect(useAppStore.getState().loadSample()).toBe(true);
+    expect(useAppStore.getState().profile.events).toBeUndefined();
   });
 });
 

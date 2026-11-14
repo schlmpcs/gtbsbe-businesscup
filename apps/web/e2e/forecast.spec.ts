@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { yearsPhrase } from '../src/copy/ai';
 import { common } from '../src/copy/common';
 import { forecast as t } from '../src/copy/forecast';
+import { lifeEvents as le } from '../src/copy/lifeEvents';
 
 let pageErrors: string[] = [];
 
@@ -202,4 +203,37 @@ test('Today follows the year picked on You in N years, and the pick is remembere
   const card = page.getByTestId('at-horizon');
   await expect(card.getByRole('heading', { name: t.today.future.title(5) })).toBeVisible();
   await expect(card.getByText(t.netWorthAt(5))).toBeVisible();
+});
+
+test('Coming up: adding a kid from the shortcut moves the headline, and the event survives a reload', async ({ page }) => {
+  // A fresh browser opens on the first-visit screen; the sample life puts numbers on S10.
+  await page.goto('/future?sample=1');
+  await expect(page).toHaveURL(/\/future$/);
+  const headline = page.getByTestId('at-horizon');
+  await expect(headline.getByText(t.future.headline(10))).toBeVisible();
+  // Let the first forecast settle (the model may upgrade the rules number), so the number read below is final.
+  await expect(page.getByTestId('forecast-refreshing')).toBeEmpty({ timeout: 30_000 });
+  const amount = headline.getByText(/^−?\$[\d,]+$/).first();
+  const before = (await amount.textContent()) ?? '';
+  expect(before).toMatch(/\$/);
+
+  const card = page.getByRole('region', { name: le.title });
+  await expect(card.getByText(le.empty)).toBeVisible();
+  await card.getByRole('button', { name: le.shortcuts.kid, exact: true }).click();
+  const form = card.getByRole('form', { name: le.form.addTitle(le.shortcuts.kid) });
+  await expect(form.getByText(le.form.kidHint.area)).toBeVisible(); // the sample's ZIP is one of our areas
+  await form.getByRole('button', { name: le.form.add, exact: true }).click();
+
+  const row = card.getByTestId('life-event');
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText(le.label({ kind: 'spending', preset: 'kid' }));
+  // Childcare from next year on: the rules answer moves the number at once (the model's may follow).
+  await expect(amount).not.toHaveText(before);
+  await noSideScroll(page);
+
+  await page.reload();
+  await expect(page.getByRole('region', { name: le.title }).getByTestId('life-event')).toContainText(
+    le.label({ kind: 'spending', preset: 'kid' }),
+  );
+  await expect(page.getByTestId('at-horizon').getByText(/^−?\$[\d,]+$/).first()).not.toHaveText(before);
 });

@@ -484,6 +484,28 @@ describe('Forecast horizon contracts', () => {
   });
 });
 
+describe('life_event_added funnel event', () => {
+  const id = '6b1d4c55-0b7e-4a4e-9a51-0c4b1f2f9d10';
+  const accepts = (props: unknown) => ClientEventEnvelopeSchema.safeParse({ id, name: 'life_event_added', props }).success;
+
+  it('carries the kind and, for a shortcut, its preset: nothing else', () => {
+    expectTypeOf<Extract<ClientFunnelEvent, { name: 'life_event_added' }>['props']>().toEqualTypeOf<{
+      kind: LifeEventKind; preset?: LifeEventPreset;
+    }>();
+    expect(accepts({ kind: 'spending', preset: 'kid' })).toBe(true);
+    expect(accepts({ kind: 'oneOff' })).toBe(true);
+    expect(accepts({ kind: 'debt' })).toBe(false);
+    expect(accepts({ kind: 'pay', preset: 'lottery' })).toBe(false);
+    expect(accepts({ kind: 'pay', amount: 6000 })).toBe(false); // no amounts, no text
+    expect(accepts(undefined)).toBe(false);
+  });
+
+  it('is a client event and not a funnel step', () => {
+    expect(CLIENT_EVENT_NAMES).toContain('life_event_added');
+    expect(FUNNEL_STEPS).not.toContain('life_event_added' as never);
+  });
+});
+
 describe('Duel contracts', () => {
   const anonId = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
   const card = (letter: 'A' | 'B') => ({

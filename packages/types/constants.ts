@@ -86,7 +86,7 @@ export const CLIENT_EVENT_NAMES = [
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
   'paywall_viewed', 'avatar_preview_viewed', 'avatar_stats_viewed', 'sample_loaded',
-  'goal_set', 'goal_verdict_shown', 'goal_cleared', 'forecast_horizon_changed',
+  'goal_set', 'goal_verdict_shown', 'goal_cleared', 'forecast_horizon_changed', 'life_event_added',
   'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked',
   'renewals_exported', 'overpaying_checked', 'payoff_planned',
   'duel_picked', 'hint_opened', 'challenge_copied', 'own_guess_started',

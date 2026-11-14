@@ -17,7 +17,7 @@ import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
 import { SCREEN_ROUTES } from '@/lib/screens';
-import { useAppReady, useAppStore, usePro } from '@/state';
+import { useAppReady, useAppStore, useProfile, usePro } from '@/state';
 import type {
   CheckinCompareVM, CheckinDataSource, CheckinMonthVM, CheckinMoveAnswer, CheckinVM, MoveProgressVM, MoveVM,
 } from './types';
@@ -122,7 +122,7 @@ export function moveProgress(
 
 export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
   const ready = useAppReady();
-  const profile = useAppStore((s) => s.profile);
+  const profile = useProfile();
   const statementMonths = useAppStore((s) => s.statementMonths);
   const committedMove = useAppStore((s) => s.committedMove);
   const markMoveDone = useAppStore((s) => s.markMoveDone);
