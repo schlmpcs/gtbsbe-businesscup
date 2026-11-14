@@ -52,6 +52,8 @@ export type LadderProgressVM = {
   estimates: { left: number; total: number };
   /** "See your future →" (S10). */
   futureHref: string;
+  /** S7: set your spending by hand, the alternative to importing a statement on S9. */
+  byHandHref: string;
 };
 
 /** S5 after a guess is saved: the guess next to the engine's monthly cost for the current profile. */

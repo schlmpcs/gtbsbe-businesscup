@@ -16,7 +16,7 @@ export function LadderSteps({ screen, progress }: LadderProgressProps) {
       <p className="sr-only">{ready ? t.stepsDone(doneCount, rungs.length) : t.loading}</p>
       <ol className="flex flex-wrap gap-sm">
         {rungs.map((rung, i) => {
-          const isCurrent = rung.screen === screen;
+          const isCurrent = rung.screen === (screen === 'S7' ? 'S9' : screen);
           const state = isCurrent ? t.current : rung.done ? t.done : t.notYet;
           return (
             <li key={rung.screen} className="min-w-0">
