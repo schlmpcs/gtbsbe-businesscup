@@ -54,7 +54,7 @@ export function forecast(p: Profile, years = 10, opts: ForecastOptions = {}): Fo
 }
 
 /** A deep copy of a profile (plain data), so callers can't reach into the input through the result. */
-function cloneProfile(p: Profile): Profile {
+export function cloneProfile(p: Profile): Profile {
   return {
     ...p,
     age: { ...p.age },

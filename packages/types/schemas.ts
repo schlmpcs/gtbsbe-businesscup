@@ -128,6 +128,39 @@ export const ProfilePatchSchema = z.object({
   retirementShare: ShareSchema.optional(),
 });
 
+// ----- forecasts -----------------------------------------------------------------------------
+
+// z.number() already rejects NaN and ±Infinity (zod 4), which is what an LLM answer with a broken
+// number needs: schemas.test.ts pins it.
+export const ForecastPointSchema = z.object({
+  month: z.number(), mid: MoneySchema, low: MoneySchema, high: MoneySchema,   // balance
+});
+
+/** At least 121 points (months 0..120, so `in10y` exists). Ordering and ranges are checked by the engine. */
+export const ForecastSchema = z.object({
+  points: z.array(ForecastPointSchema).min(121),
+  in10y: ForecastPointSchema,
+  todaysDollars: z.boolean(),
+});
+
+/**
+ * Structure only: the year must be an integer, but the count (10), the order (1, 2, …) and
+ * low ≤ mid ≤ high are checked by the engine's `anchorIssues`, which words each problem for the model.
+ */
+export const YearAnchorSchema = z.object({
+  year: z.number().int(),
+  low: MoneySchema, mid: MoneySchema, high: MoneySchema,                      // balance
+});
+
+export const ForecastSourceSchema = z.enum(['ai', 'rules']);
+
+export const ForecastBundleSchema = z.object({
+  source: ForecastSourceSchema,
+  model: z.string().optional(),
+  base: ForecastSchema,
+  scenarios: z.record(z.string(), ForecastSchema),
+});
+
 // ----- loans and purchases -------------------------------------------------------------------
 
 export const LoanInputSchema = z.object({
