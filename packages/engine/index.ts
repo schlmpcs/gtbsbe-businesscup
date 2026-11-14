@@ -6,6 +6,12 @@ export * from './errors';
 export { costOfLife, cardToProfile } from './cost';
 export { scoreGuess } from './score';
 export { forecast, applyPatch, type ForecastOptions } from './forecast';
+export {
+  simulate, forecastMonths, resolveRates, monthlyRate, inflationAnnualOf, cardMinPaymentFor,
+  usesCardFormula, hasEstimates, SYNTHETIC_CARD_ID,
+  type Simulation, type SimulationMonth, type SimulateOptions, type ForecastRates,
+  type ScheduledPurchase, type Scenario,
+} from './simulate';
 export { rankMoves } from './moves';
 export { canAfford } from './afford';
 export { monthEnd, type CurrentMonth } from './month';
