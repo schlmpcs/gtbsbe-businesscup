@@ -1,7 +1,7 @@
 // Server-only: funnel events in Postgres (table `funnel_events`, migration 004).
-import { FUNNEL_EVENT_NAMES } from '@lifeguessr/types';
+import { FUNNEL_EVENT_NAMES, TOOL_IDS } from '@lifeguessr/types';
 import { anonKey } from './anonKey';
-import { buildFunnelReport, propsOf, uniqueById, type EventStore, type GuessStats, type MaskCount } from './events';
+import { buildFunnelReport, propsOf, uniqueById, type EventStore, type GuessStats, type MaskCount, type ToolCount, TOOL_COMPLETIONS } from './events';
 import type { Db } from './postgres';
 
 // One statement per batch. Arrays go in as parameters (never into the SQL text); props are JSON
@@ -31,6 +31,20 @@ SELECT count(*)::int AS guesses,
  WHERE name = 'home_guessed' AND occurred_at >= $1 AND occurred_at <= $2
    AND jsonb_typeof(props->'cluesOpened') = 'number'`;
 
+const TOOLS = `
+SELECT tool, count(*) FILTER (WHERE opened)::int AS opened,
+       count(*) FILTER (WHERE completed)::int AS completed,
+       count(*) FILTER (WHERE opened AND completed)::int AS converted
+FROM (
+  SELECT t.tool, e.anon_key,
+         bool_or(e.name = 'tool_opened' AND e.props->>'tool' = t.tool) AS opened,
+         bool_or(e.name = t.completion) AS completed
+  FROM unnest($1::text[], $2::text[]) AS t(tool, completion)
+  JOIN funnel_events e ON (e.name = t.completion OR (e.name = 'tool_opened' AND e.props->>'tool' = t.tool))
+  WHERE e.occurred_at >= $3 AND e.occurred_at <= $4
+  GROUP BY t.tool, e.anon_key
+) per_id GROUP BY tool`;
+
 export function createPostgresEventStore(db: Db): EventStore {
   return {
     async record(anonId, events) {
@@ -53,7 +67,8 @@ export function createPostgresEventStore(db: Db): EventStore {
         const guesses = await tx.query<{ guesses: number; clues_opened: number; blind: number }>(GUESSES, [window.from, window.to]);
         const g = guesses.rows[0];
         const stats: GuessStats = { guesses: g?.guesses ?? 0, cluesOpened: g?.clues_opened ?? 0, blind: g?.blind ?? 0 };
-        return buildFunnelReport(window, masks.rows, stats);
+        const tools = await tx.query<ToolCount>(TOOLS, [TOOL_IDS, TOOL_IDS.map(id=>TOOL_COMPLETIONS[id]),window.from,window.to]);
+        return buildFunnelReport(window, masks.rows, stats, tools.rows);
       });
     },
   };

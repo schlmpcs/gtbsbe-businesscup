@@ -286,6 +286,7 @@ export const ladder = {
     driftNotYet: 'Drift alerts on Today start at 3 months.',
     keep: {
       title: 'What we keep',
+      tools: 'Subscription findings and tick choices, overpaying inputs and payoff settings are stored in this browser only.',
       none: 'Nothing from a statement yet.',
       gist: 'Only monthly category totals and take-home pay. Never the file.',
       details: 'Exactly what we keep',
