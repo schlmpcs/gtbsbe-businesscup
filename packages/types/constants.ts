@@ -1,8 +1,10 @@
 // Value lists for the unions in ./index.ts (runtime iteration, zod enums). Each `satisfies` line
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
 import type {
-  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, EventsErrorCode, FunnelEventName, KidAge, MoveKind,
-  ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass,
+  AreaData, Benchmark, BenchmarkLine, Cadence, ClientFunnelEvent, ClueId, CostCategory, Debt, EventsErrorCode,
+  FunnelEventName, KidAge, MissBucket, MoveKind, OverpayingResult, PayoffMethod, ProErrorCode, ProPlan, ProSource,
+  ServerFunnelEvent, ServiceCategory, SessionErrorCode, StatementCategorizeResponse, StatementClass,
+  SubscriptionFinding, SubscriptionFlag, ToolId,
 } from './index';
 
 export const COST_CATEGORIES = [
@@ -64,6 +66,9 @@ export const CLIENT_EVENT_NAMES = [
   'own_guess_submitted', 'closest_life_chosen', 'sliders_adjusted', 'balance_sheet_edited',
   'statement_applied', 'forecast_viewed', 'move_committed', 'afford_checked', 'loan_compared',
   'paywall_viewed',
+  // Micro-tools (M1). Appended, so the order of the names above does not change.
+  'tool_opened', 'subs_started', 'subs_revealed', 'subs_flagged', 'subs_cancel_marked', 'renewals_exported',
+  'overpaying_checked', 'payoff_planned',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 /** Events only the server records (the Pro routes). */
 export const SERVER_EVENT_NAMES = [
@@ -87,3 +92,37 @@ export const EVENTS_BATCH_MAX = 25;
 export const FUNNEL_MAX_DAYS = 90;
 /** Most homes in one day's set: the bound on `home` in event props. */
 export const EVENT_HOMES_MAX = 10;
+/** Largest count an event prop may carry (findings flagged or marked to cancel): a bound, not a target. */
+export const EVENT_COUNT_MAX = 100;
+
+// ----- Micro-tools (M1) ------------------------------------------------------------------------
+
+export const TOOL_IDS = ['subscriptions', 'overpaying', 'payoff'] as const satisfies readonly ToolId[];
+/** Guess ÷ actual, lowest first: under 0.5, 0.5 to 0.8, 0.8 to 1.25, 1.25 to 2, over 2. */
+export const MISS_BUCKETS = ['under0.5', '0.5to0.8', '0.8to1.25', '1.25to2', 'over2'] as const satisfies readonly MissBucket[];
+
+export const CADENCES = ['monthly', 'quarterly', 'yearly'] as const satisfies readonly Cadence[];
+/** Months in one billing period of each cadence: `monthly` = amount ÷ this, `yearly` = amount × 12 ÷ this. */
+export const CADENCE_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 } as const satisfies Record<Cadence, number>;
+export const SERVICE_CATEGORIES = [
+  'video', 'music', 'software', 'cloud', 'fitness', 'news', 'gaming', 'learning', 'food', 'other',
+] as const satisfies readonly ServiceCategory[];
+export const SUBSCRIPTION_FLAGS = ['priceUp', 'introEnded', 'overlap', 'seenOnce'] as const satisfies readonly SubscriptionFlag[];
+export const SUBSCRIPTION_CONFIDENCES = ['high', 'medium', 'low'] as const satisfies readonly SubscriptionFinding['confidence'][];
+export const SUBSCRIPTION_STATUSES = ['active', 'stopped'] as const satisfies readonly SubscriptionFinding['status'][];
+export const SUBSCRIPTION_ORIGINS = ['statement', 'tickList'] as const satisfies readonly SubscriptionFinding['origin'][];
+
+export const BENCHMARK_LINES = ['rent', 'carInsurance', 'groceries', 'childcare'] as const satisfies readonly BenchmarkLine[];
+export const BENCHMARK_POSITIONS = ['below', 'inRange', 'above'] as const satisfies readonly Benchmark['position'][];
+export const OVERPAYING_COVERAGES = ['exact', 'metro', 'none'] as const satisfies readonly OverpayingResult['coverage'][];
+export const OVERPAYING_SKIP_REASONS = ['noData', 'notEntered'] as const satisfies readonly OverpayingResult['skipped'][number]['reason'][];
+
+export const PAYOFF_METHODS = ['avalanche', 'snowball', 'minimum'] as const satisfies readonly PayoffMethod[];
+/**
+ * Longest payoff timeline, in months after month 0: the engine's MAX_SIMULATION_MONTHS (packages/engine/loan/amortize.ts).
+ * This package cannot import the engine, so keep the two equal by hand.
+ */
+export const PAYOFF_TIMELINE_MAX_MONTHS = 1_200;
+
+/** Longest id (catalogue slug, finding id, debt id) the micro-tool schemas accept. */
+export const MAX_ID_LENGTH = 100;

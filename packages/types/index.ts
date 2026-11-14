@@ -142,7 +142,11 @@ export type StatementClass = CostCategory | 'pay' | 'transfer';
 // POST /api/statement/categorize. `categorizedBy`: who sorted the labels: the AI, the keyword
 // rules (no API key, provider failure or invalid output), or both (the AI skipped some labels).
 export type StatementCategorizeRequest = { items: StatementItem[] };
-export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed' };
+// `classes` (additive, M1): how each distinct masked label of the request was sorted, so the browser
+// can tell a rent or loan line from a subscription (the subscription audit uses it). Labels are the
+// ones the browser already sent; a label with only masks gets no entry. Absent on older servers.
+export type StatementCategorizeResponse = { months: CategoryTotals[]; categorizedBy: 'ai' | 'rules' | 'mixed';
+  classes?: { label: string; class: StatementClass }[] };
 
 // ----- Pro (S15): the paywall demo -----------------------------------------------------------
 // No real money ever moves. `stripe_test` = Stripe Checkout in test mode; `demo_checkout` = the
@@ -169,11 +173,87 @@ export type SessionErrorCode =
   | 'unavailable'         // the store is not configured or cannot be reached (503)
   | 'not_paid';           // the save would add to the wishlist, which is a Pro feature (402)
 
+// ----- Micro-tools (M1): subscription audit, overpaying check, debt payoff planner -------------
+// Small tools beside the main flow. Nothing here is sent to the server: a finding names a merchant
+// (a masked statement label), so findings, ticks and results stay in the browser (docs/ARCHITECTURE.md
+// → Privacy design). Only the events at the end of this section leave it, and they hold enums and
+// counts. Money and rates follow the rules at the top of this file.
+export type ToolId = 'subscriptions' | 'overpaying' | 'payoff';
+// How far a guess was from the actual figure, as guess ÷ actual. A bucket, never the number itself,
+// so the `subs_revealed` event carries no amount.
+export type MissBucket = 'under0.5' | '0.5to0.8' | '0.8to1.25' | '1.25to2' | 'over2';
+
+// ----- subscriptions
+export type Cadence = 'monthly' | 'quarterly' | 'yearly';
+export type ServiceCategory = 'video' | 'music' | 'software' | 'cloud' | 'fitness' | 'news' | 'gaming'
+  | 'learning' | 'food' | 'other';
+/** One way to buy a service: `price` is per `cadence`, in dollars. */
+export type ServicePlan = { id: string; name: string; price: Money; cadence: Cadence };
+/** An entry of the catalogue of known subscription services (a dated manual snapshot, not live prices). */
+export type KnownService = { id: string; name: string; category: ServiceCategory;
+  matchers: string[];            // normalized (merchantKey style: letters and single spaces) whole-word patterns; masked-label friendly
+  ambiguous?: boolean;           // a merchant that bills many products (Apple, Google, Amazon): ask the user which
+  plans: ServicePlan[]; priceYear: number; source: Source; isEstimate: boolean };
+/** A calendar day inside a statement: `month` = 'YYYY-MM'. */
+export type ChargeDate = { month: string; day: number };
+export type SubscriptionFlag = 'priceUp' | 'introEnded' | 'overlap' | 'seenOnce';
+// One recurring charge found in a statement (origin 'statement'), or one service the user ticked in
+// the tick-list (origin 'tickList': nothing was charged or seen, so `chargesSeen` is 0, `lastCharge`
+// and `nextExpected` are null, and `isEstimate` is true). Findings are also read back from local
+// storage, so the schema checks the whole shape.
+export type SubscriptionFinding = {
+  /** Stable across runs on the same statement: the merchantKey as a lower-case slug. At most 100 characters. */
+  id: string;
+  merchantKey: string;
+  /** The masked statement label of the latest charge, unchanged (for a tick: the service name). */
+  label: string;
+  /** Absent when no catalogue entry matched, or the matching entry is `ambiguous` (never guessed). */
+  serviceId?: string; category: ServiceCategory;
+  cadence: Cadence; amount: Money;                 // typical charge per cadence
+  monthly: Money; yearly: Money;                   // normalized, to whole cents: amount ÷ 1, 3 or 12 months, and amount × 12 ÷ that
+  chargesSeen: number; lastCharge: ChargeDate | null;
+  nextExpected: ChargeDate | null;                 // null when stopped, and for a tick
+  status: 'active' | 'stopped'; flags: SubscriptionFlag[];
+  previousAmount?: Money;                          // set with `priceUp`: the amount before the rise
+  overlapsWith?: string[];                         // set with `overlap`: ids of the other findings in the audit
+  confidence: 'high' | 'medium' | 'low';           // low = pattern only: ask, and do not count until confirmed
+  origin: 'statement' | 'tickList'; isEstimate: boolean };
+export type SubscriptionAudit = {
+  /** Ordered by `yearly` descending, then `id`. */
+  findings: SubscriptionFinding[];
+  monthlyTotal: Money; yearlyTotal: Money;         // of the counted findings (see auditTotals in M3), rounded to cents once
+  /** Calendar months with at least one statement line; the month in progress counts. */
+  monthsCovered: number;
+  /** The latest day in the statement ("today" for the audit: it never reads the clock); null for no lines. */
+  asOf: ChargeDate | null };
+
+// ----- overpaying
+export type BenchmarkLine = 'rent' | 'carInsurance' | 'groceries' | 'childcare';
+export type Benchmark = { line: BenchmarkLine; yours: Money;    // monthly
+  typical: { low: Money; mid: Money; high: Money }; source: Source; isEstimate: boolean;
+  position: 'below' | 'inRange' | 'above'; gapPerMonth: Money;  // yours − high when above; 0 otherwise
+  gapPerYear: Money; effect10y: Money };                        // effect10y: closing the gap to mid, today's dollars
+export type OverpayingResult = { coverage: 'exact' | 'metro' | 'none'; metro?: string;
+  lines: Benchmark[]; skipped: { line: BenchmarkLine; reason: 'noData' | 'notEntered' }[] };
+
+// ----- debt payoff
+export type PayoffMethod = 'avalanche' | 'snowball' | 'minimum';
+export type PayoffPlan = { method: PayoffMethod; order: string[];          // debt ids
+  monthsToDebtFree: number | null;                                         // null = never at these payments
+  totalInterest: Money; totalPaid: Money;
+  perDebt: { id: string; payoffMonth: number | null; interest: Money }[];
+  timeline: { month: number; balance: Money }[];                           // total balance, month 0..end
+  interestSavedVsMinimum: Money; monthsSavedVsMinimum: number | null };
+export type PayoffComparison = { extra: Money; avalanche: PayoffPlan; snowball: PayoffPlan; minimum: PayoffPlan };
+
 // ----- Funnel events (T8): POST /api/events, GET /api/events/funnel -------------------------
 // What the app counts to show its funnel (docs/PRODUCT.md → Metrics to show). Names come from a
 // fixed list. Props hold only small enums, flags and counts: never text, amounts, ids or anything
 // a person typed, so an event cannot carry personal data. Stored under the hash of the anonymous id.
 // `home` is the 1-based position of a home in today's set.
+// The micro-tool events (last eight) are not steps of the main funnel; each tool's own counts are
+// reported per tool (M2). `tool_opened` for `payoff` is sent once per session, when the payoff
+// section of Loan Lab first shows a plan.
 export type ClientFunnelEvent =
   | { name: 'play_started' }
   | { name: 'clue_opened'; props: { home: number; clue: ClueId } }
@@ -189,7 +269,15 @@ export type ClientFunnelEvent =
   | { name: 'move_committed'; props: { kind: MoveKind } }
   | { name: 'afford_checked'; props: { verdict: AffordResult['verdict'] } }
   | { name: 'loan_compared'; props: { offers: number } }
-  | { name: 'paywall_viewed' };
+  | { name: 'paywall_viewed' }
+  | { name: 'tool_opened'; props: { tool: ToolId } }
+  | { name: 'subs_started'; props: { path: 'tickList' | 'statement' } }
+  | { name: 'subs_revealed'; props: { miss: MissBucket } }
+  | { name: 'subs_flagged'; props: { count: number } }          // findings with a flag
+  | { name: 'subs_cancel_marked'; props: { count: number } }    // findings marked to cancel
+  | { name: 'renewals_exported' }
+  | { name: 'overpaying_checked'; props: { lines: number; above: number } } // lines compared; of those, above the range
+  | { name: 'payoff_planned'; props: { method: Exclude<PayoffMethod, 'minimum'> } };
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =
   | { name: 'checkout_started'; props: { plan: ProPlan } }

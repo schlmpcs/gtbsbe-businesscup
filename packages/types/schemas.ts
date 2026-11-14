@@ -9,9 +9,12 @@
 // likely LLM/user mistake and it would silently break every forecast.
 import { z } from 'zod';
 import {
-  AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
-  FUNNEL_EVENT_NAMES, KID_AGES, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
-  SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES,
+  AREA_TIERS, BENCHMARK_LINES, BENCHMARK_POSITIONS, CADENCE_MONTHS, CADENCES, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES,
+  DEBT_KINDS, EVENT_COUNT_MAX, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES, FUNNEL_EVENT_NAMES, KID_AGES,
+  MAX_ID_LENGTH, MAX_STATEMENT_ITEMS, MISS_BUCKETS, MOVE_KINDS, OVERPAYING_COVERAGES, OVERPAYING_SKIP_REASONS,
+  PAYOFF_METHODS, PAYOFF_TIMELINE_MAX_MONTHS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES, SERVICE_CATEGORIES,
+  SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES, SUBSCRIPTION_CONFIDENCES, SUBSCRIPTION_FLAGS,
+  SUBSCRIPTION_ORIGINS, SUBSCRIPTION_STATUSES, TOOL_IDS,
 } from './constants';
 
 // ----- primitives ----------------------------------------------------------------------------
@@ -229,6 +232,202 @@ export const StatementCategorizeResponseSchema = z.object({
   ok: z.literal(true),
   months: z.array(CategoryTotalsSchema),
   categorizedBy: z.enum(CATEGORIZED_BY),
+  /** Additive (M1): how each distinct masked label was sorted. Optional: older servers do not send it. */
+  classes: z.array(z.object({ label: z.string().min(1).max(200), class: StatementClassSchema }))
+    .max(MAX_STATEMENT_ITEMS).optional(),
+});
+
+// ----- Micro-tools (M1): subscription audit, overpaying check, debt payoff planner ------------
+// The schemas the tools and their tests share. Findings and audits are also read back from local
+// storage, so they check the whole shape, including the arithmetic a finding must satisfy.
+
+export const ToolIdSchema = z.enum(TOOL_IDS);
+export const MissBucketSchema = z.enum(MISS_BUCKETS);
+export const CadenceSchema = z.enum(CADENCES);
+export const ServiceCategorySchema = z.enum(SERVICE_CATEGORIES);
+export const SubscriptionFlagSchema = z.enum(SUBSCRIPTION_FLAGS);
+export const BenchmarkLineSchema = z.enum(BENCHMARK_LINES);
+export const PayoffMethodSchema = z.enum(PAYOFF_METHODS);
+
+/** A catalogue slug, a finding id or a debt id: short, never empty. */
+const shortId = z.string().min(1).max(MAX_ID_LENGTH);
+/** Strictly positive dollars: a price, or the amount of one charge. */
+const PositiveMoneySchema = z.number().positive();
+/** Money rounded to cents is compared to its exact value within this much. */
+const CENT = 0.01;
+const hasDuplicates = (values: readonly unknown[]) => new Set(values).size !== values.length;
+type Issue = (path: (string | number)[], message: string) => void;
+const issuer = (ctx: z.RefinementCtx): Issue => (path, message) => ctx.addIssue({ code: 'custom', path, message });
+
+// ----- subscriptions
+
+export const ServicePlanSchema = z.object({
+  id: shortId,
+  name: z.string().min(1).max(80),
+  price: PositiveMoneySchema,                      // per cadence
+  cadence: CadenceSchema,
+});
+
+/** What merchantKey() leaves of a label: letters and single spaces (no digits, no punctuation). */
+const matcherSchema = z.string().max(60).regex(/^[A-Za-z]+(?: [A-Za-z]+)*$/, 'expected letters and single spaces only (merchantKey style)');
+
+export const KnownServiceSchema = z.object({
+  id: shortId,
+  name: z.string().min(1).max(80),
+  category: ServiceCategorySchema,
+  matchers: z.array(matcherSchema).min(1).max(20),
+  ambiguous: z.boolean().optional(),
+  plans: z.array(ServicePlanSchema).min(1).max(10),
+  priceYear: z.number().int().min(2000).max(2100),
+  source: SourceSchema,
+  isEstimate: z.boolean(),
+}).superRefine((service, ctx) => {
+  if (hasDuplicates(service.plans.map((p) => p.id))) issuer(ctx)(['plans'], 'plan ids must be unique');
+});
+
+/** A day inside a statement: 'YYYY-MM' and a day that month has. */
+export const ChargeDateSchema = z.object({ month: MonthSchema, day: z.number().int().min(1).max(31) })
+  .refine((d) => d.day <= daysInMonth(d.month), { message: 'day is past the end of the month', path: ['day'] });
+
+export const SubscriptionFindingSchema = z.object({
+  id: shortId,
+  merchantKey: z.string().min(1).max(200),
+  label: z.string().min(1).max(200),
+  serviceId: shortId.optional(),
+  category: ServiceCategorySchema,
+  cadence: CadenceSchema,
+  amount: PositiveMoneySchema,                     // per cadence
+  monthly: PositiveMoneySchema,
+  yearly: PositiveMoneySchema,
+  chargesSeen: z.number().int().min(0).max(1_000),
+  lastCharge: ChargeDateSchema.nullable(),
+  nextExpected: ChargeDateSchema.nullable(),
+  status: z.enum(SUBSCRIPTION_STATUSES),
+  flags: z.array(SubscriptionFlagSchema).max(SUBSCRIPTION_FLAGS.length),
+  previousAmount: PositiveMoneySchema.optional(),
+  overlapsWith: z.array(shortId).max(50).optional(),
+  confidence: z.enum(SUBSCRIPTION_CONFIDENCES),
+  origin: z.enum(SUBSCRIPTION_ORIGINS),
+  isEstimate: z.boolean(),
+}).superRefine((f, ctx) => {
+  const issue = issuer(ctx);
+  // The normalized figures follow from the amount and the cadence (to the cent).
+  const months = CADENCE_MONTHS[f.cadence];
+  if (Math.abs(f.monthly - f.amount / months) > CENT / 2 + 1e-9) issue(['monthly'], `expected amount ÷ ${months} (to the cent)`);
+  if (Math.abs(f.yearly - (f.amount * 12) / months) > CENT / 2 + 1e-9) issue(['yearly'], `expected amount × ${12 / months} (to the cent)`);
+  if (f.origin === 'tickList') {
+    // A tick is something the user said they pay for: no charge was seen, and the price is an estimate.
+    if (f.chargesSeen !== 0) issue(['chargesSeen'], 'a ticked service has no charges seen');
+    if (f.lastCharge !== null) issue(['lastCharge'], 'a ticked service has no last charge');
+    if (f.nextExpected !== null) issue(['nextExpected'], 'a ticked service has no next date');
+    if (f.status !== 'active') issue(['status'], 'a ticked service is active');
+    if (!f.isEstimate) issue(['isEstimate'], 'a ticked service is an estimate');
+  } else {
+    if (f.chargesSeen < 1) issue(['chargesSeen'], 'a statement finding has at least one charge');
+    if (f.lastCharge === null) issue(['lastCharge'], 'a statement finding has a last charge');
+  }
+  if (f.status === 'stopped' && f.nextExpected !== null) issue(['nextExpected'], 'a stopped finding has no next date');
+  if (f.lastCharge && f.nextExpected) {
+    const { lastCharge: l, nextExpected: n } = f;
+    if (!(n.month > l.month || (n.month === l.month && n.day > l.day))) issue(['nextExpected'], 'next date is not after the last charge');
+  }
+  if (hasDuplicates(f.flags)) issue(['flags'], 'flags must be unique');
+  if (f.flags.includes('priceUp') && (f.previousAmount === undefined || f.previousAmount >= f.amount)) {
+    issue(['previousAmount'], 'a price rise needs the lower amount it rose from');
+  }
+  if (f.flags.includes('overlap') && (f.overlapsWith?.length ?? 0) === 0) issue(['overlapsWith'], 'an overlap names the findings it overlaps');
+  if (f.overlapsWith?.includes(f.id)) issue(['overlapsWith'], 'a finding cannot overlap itself');
+  if (f.flags.includes('seenOnce') && f.chargesSeen !== 1) issue(['flags'], 'seenOnce means exactly one charge');
+});
+
+export const SubscriptionAuditSchema = z.object({
+  findings: z.array(SubscriptionFindingSchema).max(500),
+  monthlyTotal: NonNegativeMoneySchema,
+  yearlyTotal: NonNegativeMoneySchema,
+  monthsCovered: z.number().int().min(0).max(600),
+  asOf: ChargeDateSchema.nullable(),
+}).superRefine((audit, ctx) => {
+  const issue = issuer(ctx);
+  const ids = audit.findings.map((f) => f.id);
+  if (hasDuplicates(ids)) issue(['findings'], 'finding ids must be unique');
+  audit.findings.forEach((f, i) => {
+    for (const other of f.overlapsWith ?? []) {
+      if (!ids.includes(other)) issue(['findings', i, 'overlapsWith'], `${other} is not a finding of this audit`);
+    }
+  });
+  if (audit.findings.length > 0 && audit.asOf === null) issue(['asOf'], 'an audit with findings has an as-of date');
+});
+
+// ----- overpaying
+
+const BenchmarkRangeSchema = z.object({ low: NonNegativeMoneySchema, mid: NonNegativeMoneySchema, high: NonNegativeMoneySchema })
+  .refine((r) => r.low <= r.mid && r.mid <= r.high, { message: 'expected low ≤ mid ≤ high' });
+
+export const BenchmarkSchema = z.object({
+  line: BenchmarkLineSchema,
+  yours: NonNegativeMoneySchema,                   // monthly
+  typical: BenchmarkRangeSchema,
+  source: SourceSchema,
+  isEstimate: z.boolean(),
+  position: z.enum(BENCHMARK_POSITIONS),
+  gapPerMonth: NonNegativeMoneySchema,
+  gapPerYear: NonNegativeMoneySchema,
+  effect10y: MoneySchema,                          // can be negative: moving a line up to the mid costs money
+}).superRefine((b, ctx) => {
+  const issue = issuer(ctx);
+  const position = b.yours > b.typical.high ? 'above' : b.yours < b.typical.low ? 'below' : 'inRange';
+  if (b.position !== position) issue(['position'], `${b.yours} against ${b.typical.low}–${b.typical.high} is ${position}`);
+  const gap = position === 'above' ? b.yours - b.typical.high : 0;
+  if (Math.abs(b.gapPerMonth - gap) > CENT) issue(['gapPerMonth'], 'expected yours − high when above, 0 otherwise');
+  if (Math.abs(b.gapPerYear - b.gapPerMonth * 12) > CENT * 12) issue(['gapPerYear'], 'expected twelve months of gapPerMonth');
+});
+
+export const OverpayingResultSchema = z.object({
+  coverage: z.enum(OVERPAYING_COVERAGES),
+  metro: z.string().min(1).max(100).optional(),
+  lines: z.array(BenchmarkSchema).max(BENCHMARK_LINES.length),
+  skipped: z.array(z.object({ line: BenchmarkLineSchema, reason: z.enum(OVERPAYING_SKIP_REASONS) })).max(BENCHMARK_LINES.length),
+}).superRefine((r, ctx) => {
+  const issue = issuer(ctx);
+  if (hasDuplicates([...r.lines.map((l) => l.line), ...r.skipped.map((s) => s.line)])) {
+    issue(['lines'], 'a line is either compared or skipped, once');
+  }
+  if (r.coverage === 'none' && r.lines.length > 0) issue(['lines'], 'no coverage means no lines');
+  if (r.coverage === 'metro' && r.metro === undefined) issue(['metro'], 'a metro result names its metro');
+});
+
+// ----- debt payoff
+
+const PayoffMonthSchema = z.number().int().min(0).max(PAYOFF_TIMELINE_MAX_MONTHS);
+
+export const PayoffPlanSchema = z.object({
+  method: PayoffMethodSchema,
+  order: z.array(shortId).max(100),
+  monthsToDebtFree: PayoffMonthSchema.nullable(),  // null = never at these payments
+  totalInterest: NonNegativeMoneySchema,
+  totalPaid: NonNegativeMoneySchema,
+  perDebt: z.array(z.object({ id: shortId, payoffMonth: PayoffMonthSchema.nullable(), interest: NonNegativeMoneySchema })).max(100),
+  timeline: z.array(z.object({ month: PayoffMonthSchema, balance: NonNegativeMoneySchema })).min(1).max(PAYOFF_TIMELINE_MAX_MONTHS + 1),
+  interestSavedVsMinimum: MoneySchema,
+  monthsSavedVsMinimum: z.number().int().min(0).max(PAYOFF_TIMELINE_MAX_MONTHS).nullable(),
+}).superRefine((p, ctx) => {
+  const issue = issuer(ctx);
+  if (hasDuplicates(p.order)) issue(['order'], 'a debt appears once in the order');
+  if (hasDuplicates(p.perDebt.map((d) => d.id))) issue(['perDebt'], 'a debt appears once in perDebt');
+  p.timeline.forEach((point, i) => {
+    if (point.month !== i) issue(['timeline', i, 'month'], 'the timeline runs month 0, 1, 2, … with no gap');
+  });
+});
+
+export const PayoffComparisonSchema = z.object({
+  extra: NonNegativeMoneySchema,                   // monthly
+  avalanche: PayoffPlanSchema,
+  snowball: PayoffPlanSchema,
+  minimum: PayoffPlanSchema,
+}).superRefine((c, ctx) => {
+  for (const method of PAYOFF_METHODS) {
+    if (c[method].method !== method) issuer(ctx)([method, 'method'], `the ${method} plan has method ${method}`);
+  }
 });
 
 // ----- Pro (S15): requests and responses of /api/pro/* ---------------------------------------
@@ -330,6 +529,8 @@ export const SessionErrorResponseSchema = z.object({
 
 const eventId = z.uuid();
 const homeIndex = z.number().int().min(1).max(EVENT_HOMES_MAX);
+const eventCount = z.number().int().min(0).max(EVENT_COUNT_MAX);
+const benchmarkLineCount = z.number().int().min(0).max(BENCHMARK_LINES.length);
 /** An event without props. */
 const bare = <N extends string>(name: N) => z.strictObject({ id: eventId, name: z.literal(name) });
 /** An event with props (a strict object too). */
@@ -356,6 +557,20 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   withProps('afford_checked', { verdict: z.enum(['fits', 'wait', 'no']) }),
   withProps('loan_compared', { offers: z.number().int().min(1).max(3) }),
   bare('paywall_viewed'),
+  // Micro-tools (M1): enums and counts only, so a merchant, a label or an amount cannot get in.
+  withProps('tool_opened', { tool: ToolIdSchema }),
+  withProps('subs_started', { path: z.enum(['tickList', 'statement']) }),
+  withProps('subs_revealed', { miss: MissBucketSchema }),
+  withProps('subs_flagged', { count: eventCount }),
+  withProps('subs_cancel_marked', { count: eventCount }),
+  bare('renewals_exported'),
+  z.strictObject({
+    id: eventId,
+    name: z.literal('overpaying_checked'),
+    props: z.strictObject({ lines: benchmarkLineCount, above: benchmarkLineCount })
+      .refine((p) => p.above <= p.lines, { message: 'above cannot exceed lines', path: ['above'] }),
+  }),
+  withProps('payoff_planned', { method: z.enum(['avalanche', 'snowball']) }),
 ]);
 
 /** POST /api/events: 1–EVENTS_BATCH_MAX events for one anonymous id. */
