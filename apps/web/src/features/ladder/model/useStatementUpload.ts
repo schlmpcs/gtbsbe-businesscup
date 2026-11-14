@@ -3,6 +3,7 @@
 // `submitTotals`, is shown for review, and on `apply` becomes measured spending in the profile.
 import { CategoryTotalsSchema, COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
+import { sessionSource } from '@/lib/config';
 import type { VMError } from '@/lib/model/types';
 import { useAppReady, useAppStore } from '@/state';
 import type { StatementMonthVM, StatementUploadVM } from './types';
@@ -62,6 +63,7 @@ export function useStatementUpload(): StatementUploadVM {
       months,
       categories: months.length > 0 ? ([...COST_CATEGORIES] as CostCategory[]) : [],
       takeHomePay: kept.some((m) => (m.detectedPay ?? 0) > 0),
+      savedProfileToServer: sessionSource() === 'api',
     };
   }, [history, pending, statementMonths]);
 
@@ -82,6 +84,8 @@ export function useStatementUpload(): StatementUploadVM {
     history,
     hasDriftHistory: history.length >= DRIFT_HISTORY_MONTHS,
     whatWeKeep,
+    // T6/T7 (features/upload) replaces this with the in-browser CSV reader + categorize call.
+    readFile: null,
     submitTotals,
     apply,
     discard,

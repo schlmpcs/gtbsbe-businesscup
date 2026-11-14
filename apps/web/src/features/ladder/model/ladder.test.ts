@@ -6,11 +6,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFixtureGameClient } from '@/features/game/model/client';
 import { areaByZip, cardById, cardsSample } from '@/fixtures';
 import type { ParseFn } from '@/lib/model/useParseConfirm';
+import { thisMonth } from '@/lib/model/profile';
 import { useAppStore, useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { useBalanceSheet } from './useBalanceSheet';
 import { useClosestLife } from './useClosestLife';
 import { useGuessYourself } from './useGuessYourself';
+import { useLadderProgress } from './useLadderProgress';
 import { useQuickSliders } from './useQuickSliders';
 import { useStatementUpload } from './useStatementUpload';
 
@@ -37,6 +39,28 @@ describe('useGuessYourself (S5)', () => {
     expect(useAppStore.getState().selfGuess).toBe(4570);
     expect(result.current.savedGuess).toBe(4570);
   });
+
+  it('compares the saved guess with the engine month of the current profile', async () => {
+    const { result } = renderHook(() => useGuessYourself());
+    await waitForReady(result);
+    expect(result.current.comparison).toBeNull();
+    act(() => result.current.setGuess(3000));
+    act(() => result.current.submit());
+    const month = thisMonth(useAppStore.getState().profile);
+    const estimate = month.spending + month.debtPayments;
+    expect(result.current.comparison).toEqual({
+      guess: 3000,
+      estimate,
+      isEstimate: true, // the demo profile has estimated categories and an estimated card minimum
+      basis: 'demo',
+      difference: 3000 - estimate,
+      differenceShare: (3000 - estimate) / estimate,
+      direction: 3000 > estimate ? 'above' : 'below',
+    });
+
+    act(() => useAppStore.getState().setSelfGuess(estimate)); // the comparison follows the saved guess
+    expect(result.current.comparison).toMatchObject({ difference: 0, differenceShare: 0, direction: 'match' });
+  });
 });
 
 describe('useClosestLife (S6)', () => {
@@ -51,7 +75,15 @@ describe('useClosestLife (S6)', () => {
     expect(dist(candidates[0]!.monthly.mid)).toBeLessThanOrEqual(dist(candidates[1]!.monthly.mid));
     expect(result.current.nearestCardId).toBe(candidates[0]!.cardId);
     const card = cardById(candidates[0]!.cardId);
-    expect(candidates[0]!.monthly).toEqual(costOfLife(card, areaByZip(card.zip)).total);
+    const cost = costOfLife(card, areaByZip(card.zip));
+    expect(candidates[0]!.monthly).toEqual(cost.total);
+    // Cost lines with sources, largest first, unique ids, summing to the mid.
+    const { items } = candidates[0]!;
+    expect(items).toHaveLength(cost.items.length);
+    expect(items.every((i, n) => n === 0 || items[n - 1]!.amount >= i.amount)).toBe(true);
+    expect(new Set(items.map((i) => i.id)).size).toBe(items.length);
+    expect(items.every((i) => i.source.name.length > 0)).toBe(true);
+    expect(items.reduce((s, i) => s + i.amount, 0)).toBeCloseTo(cost.total.mid, 6);
   });
 
   it('choose builds the profile with cardToProfile', async () => {
@@ -100,6 +132,32 @@ describe('useQuickSliders (S7)', () => {
     expect(result.current.parse.status).toBe('idle');
     expect(parse).toHaveBeenCalledWith('life', 'rent is 1800', expect.objectContaining({ debts: expect.any(Array) }));
   });
+
+  it('parsed values become confirmation rows with today’s value and the inferred flag', async () => {
+    const parse = vi.fn(async () => ({
+      value: {
+        spending: { eatingOut: 200, rentUtilities: 1800 },
+        debts: [{ id: 'card-1', apr: 0.24 }, { id: 'gone-1', extraPayment: 50 }],
+        retirementShare: 0.1,
+      },
+      inferred: ['spending.eatingOut', 'debts.0.apr'],
+    })) as unknown as ParseFn;
+    const { result } = renderHook(() => useQuickSliders({ parse }));
+    await waitForReady(result);
+    expect(result.current.parsedRows).toEqual([]);
+    act(() => result.current.parse.setText('rent 1800, eat out a bit, card around 24%, save 10%'));
+    act(() => result.current.parse.submit());
+    await waitFor(() => expect(result.current.parse.status).toBe('confirming'));
+    expect(result.current.parsedRows).toEqual([
+      { path: 'spending.rentUtilities', target: { kind: 'spending', category: 'rentUtilities' }, value: 1800, unit: 'money', current: 1950, inferred: false },
+      { path: 'spending.eatingOut', target: { kind: 'spending', category: 'eatingOut' }, value: 200, unit: 'money', current: 340, inferred: true },
+      { path: 'debts.0.apr', target: { kind: 'debtApr', debtId: 'card-1', debtKind: 'card' }, value: 0.24, unit: 'rate', current: 0.2436, inferred: true },
+      { path: 'debts.1.extraPayment', target: { kind: 'debtExtraPayment', debtId: 'gone-1', debtKind: null }, value: 50, unit: 'money', current: null, inferred: false },
+      { path: 'retirementShare', target: { kind: 'retirementShare' }, value: 0.1, unit: 'rate', current: 0, inferred: false },
+    ]);
+    act(() => result.current.parse.cancel());
+    expect(result.current.parsedRows).toEqual([]);
+  });
 });
 
 describe('useBalanceSheet (S8)', () => {
@@ -126,6 +184,41 @@ describe('useBalanceSheet (S8)', () => {
     expect(result.current.debtLoad.value).toBeCloseTo(1505.92 / 5200, 2);
     expect(result.current.debtLoad.zone).toBe('yellow');
   });
+
+  it('clamps typed values to what the profile contract accepts', async () => {
+    const { result } = renderHook(() => useBalanceSheet());
+    await waitForReady(result);
+    expect(result.current.fieldBounds.age).toEqual({ min: 16, max: 110, step: 1 });
+    expect(result.current.debtBounds.apr).toMatchObject({ min: 0, max: 1 });
+    expect(result.current.debtKinds).toContain('student');
+    expect(result.current.debtLoadMax).toBeGreaterThan(result.current.debtLoad.thresholds.red);
+
+    act(() => result.current.setField('age', 3)); // first digit of "34" while typing
+    expect(result.current.fields.age).toEqual({ value: 16, isEstimate: false });
+    act(() => result.current.setField('age', 34.6));
+    expect(result.current.fields.age.value).toBe(35);
+    act(() => result.current.setField('retirement', -50));
+    expect(result.current.fields.retirement.value).toBe(0);
+    act(() => result.current.setField('cash', -1200)); // an overdraft is allowed
+    expect(result.current.fields.cash.value).toBe(-1200);
+    act(() => result.current.setField('cash', Number.NaN));
+    expect(result.current.fields.cash.value).toBe(-1200);
+
+    let id = '';
+    act(() => {
+      id = result.current.addDebt({ kind: 'personal', balance: -10, apr: 22.8, minPayment: null });
+    });
+    expect(result.current.debts.find((d) => d.id === id)).toMatchObject({ balance: 0, apr: 1, minPaymentIsEstimate: true });
+    act(() => result.current.updateDebt(id, { kind: 'personal', balance: 5000, apr: 0.12, minPayment: -5 }));
+    expect(result.current.debts.find((d) => d.id === id)).toMatchObject({ balance: 5000, apr: 0.12, minPayment: 0, minPaymentIsEstimate: false });
+    let bad = 'x';
+    act(() => {
+      bad = result.current.addDebt({ kind: 'card', balance: Number.NaN, apr: 0.2, minPayment: null });
+    });
+    expect(bad).toBe('');
+    act(() => result.current.removeDebt(id));
+    expect(result.current.debts.some((d) => d.id === id)).toBe(false);
+  });
 });
 
 describe('useStatementUpload (S9)', () => {
@@ -143,7 +236,8 @@ describe('useStatementUpload (S9)', () => {
     expect(result.current.status).toBe('review');
     expect(result.current.pending.map((m) => m.month)).toEqual(['2026-08', '2026-09', '2026-10']);
     expect(result.current.pending[0]!.total).toBe(530);
-    expect(result.current.whatWeKeep).toMatchObject({ months: ['2026-08', '2026-09', '2026-10'], takeHomePay: true });
+    expect(result.current.whatWeKeep).toMatchObject({ months: ['2026-08', '2026-09', '2026-10'], takeHomePay: true, savedProfileToServer: false });
+    expect(result.current.readFile).toBeNull(); // T6/T7 wires the CSV reader
     expect(useAppStore.getState().statementMonths).toEqual([]); // nothing until apply
 
     act(() => result.current.apply());
@@ -162,5 +256,94 @@ describe('useStatementUpload (S9)', () => {
     act(() => result.current.submitTotals([{ month: 'Oct', totals: {}, oneOffs: [] } as unknown as CategoryTotals]));
     expect(result.current.status).toBe('error');
     expect(result.current.error).toEqual({ kind: 'badInput' });
+  });
+});
+
+describe('useLadderProgress', () => {
+  it('marks rungs done as the user climbs and the band narrows as estimates become real', async () => {
+    const { result } = renderHook(() => useLadderProgress());
+    await waitForReady(result);
+    expect(result.current.rungs.map((r) => [r.screen, r.href, r.done])).toEqual([
+      ['S5', '/me/guess', false],
+      ['S6', '/me/closest', false],
+      ['S7', '/me/sliders', false],
+      ['S8', '/me/balance', false], // the demo profile has measured fields, but they are a sample
+      ['S9', '/me/upload', false],
+    ]);
+    expect(result.current.futureHref).toBe('/future');
+
+    act(() => useAppStore.getState().setSelfGuess(4000));
+    const { result: closest } = renderHook(() => useClosestLife());
+    await waitForReady(closest);
+    act(() => closest.current.choose(closest.current.nearestCardId!));
+    expect(result.current.doneCount).toBe(2);
+    // A life card is all estimates: the band is as wide as it gets, nothing narrowed yet.
+    const start = result.current;
+    expect(start.estimates.left).toBe(start.estimates.total);
+    expect(start.bandWidth).toBeCloseTo(start.bandWidthAllEstimated, 6);
+    expect(start.bandNarrowed).toBe(0);
+    expect(start.in10y.low).toBeLessThanOrEqual(start.in10y.mid);
+    expect(start.in10y.mid).toBeLessThanOrEqual(start.in10y.high);
+
+    act(() => useAppStore.getState().setSpending('rentUtilities', 1600));
+    expect(result.current.rungs.find((r) => r.screen === 'S7')!.done).toBe(true);
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
+    act(() => useAppStore.getState().setField('takeHomePay', 6000));
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(true);
+    expect(result.current.estimates.left).toBe(start.estimates.total - 2);
+    act(() => useAppStore.getState().skipField('takeHomePay'));
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
+    // Adding a debt counts, even with its minimum payment left to us (an estimate).
+    let id = '';
+    act(() => {
+      id = useAppStore.getState().addDebt({ kind: 'student', balance: 20000, apr: 0.05, minPayment: null });
+    });
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(true);
+    // One more input (its minimum is estimated) and one fewer estimate (rent): back to `total` left.
+    expect(result.current.estimates).toEqual({ left: start.estimates.total, total: start.estimates.total + 1 });
+    act(() => useAppStore.getState().removeDebt(id));
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
+    act(() => useAppStore.getState().setField('takeHomePay', 6000));
+    expect(result.current.bandWidth).toBeLessThan(result.current.bandWidthAllEstimated);
+    expect(result.current.bandNarrowed).toBeGreaterThan(0);
+
+    act(() =>
+      useAppStore.getState().applyStatementTotals([
+        { month: '2026-10', totals: totals({ groceries: 600, eatingOut: 150 }), oneOffs: [] },
+      ]),
+    );
+    expect(result.current.rungs.every((r) => r.done)).toBe(true);
+    expect(result.current.doneCount).toBe(5);
+  });
+
+  it('a fully measured profile has no band left', async () => {
+    const { result } = renderHook(() => useLadderProgress());
+    await waitForReady(result);
+    act(() => {
+      const s = useAppStore.getState();
+      for (const f of ['age', 'takeHomePay', 'cash', 'retirement', 'retirementShare'] as const) s.setField(f, s.profile[f].value);
+      for (const c of COST_CATEGORIES) s.setSpending(c, s.profile.spending[c].value);
+      for (const d of useAppStore.getState().profile.debts) {
+        s.updateDebt(d.id, { kind: d.kind, balance: d.balance, apr: d.apr, minPayment: d.minPayment.value });
+      }
+    });
+    expect(result.current.estimates.left).toBe(0);
+    expect(result.current.bandWidth).toBeCloseTo(0, 6);
+    expect(result.current.bandNarrowed).toBe(1);
+  });
+});
+
+describe('debtsChanged / startingDebts', () => {
+  it('compares the debts with the starting profile', async () => {
+    const { debtsChanged, startingDebts } = await import('./useLadderProgress');
+    const demo = startingDebts(null, cardsSample)!;
+    expect(demo.map((d) => d.id)).toEqual(['card-1', 'auto-1']);
+    expect(debtsChanged(demo, demo)).toBe(false);
+    expect(debtsChanged(demo, demo.slice(1))).toBe(true);
+    expect(debtsChanged(demo, demo.map((d) => (d.id === 'card-1' ? { ...d, apr: 0.2 } : d)))).toBe(true);
+    expect(debtsChanged(null, [])).toBe(false);
+    expect(startingDebts('no-such-card', cardsSample)).toBeNull();
+    const withCar = cardsSample.find((c) => c.car)!;
+    expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, areaByZip(withCar.zip)).debts);
   });
 });

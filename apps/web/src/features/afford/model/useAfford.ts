@@ -1,6 +1,6 @@
 // S11 Can I Afford It?: purchase form → engine canAfford (verdict, wait, rule, with / without
 // forecasts), free text via /api/ai/parse (confirmed first), and the wishlist.
-import { canAfford } from '@lifeguessr/engine';
+import { canAfford, debtLoadThresholds, safetyCushionMonths } from '@lifeguessr/engine';
 import { LoanInputSchema, PurchaseSchema, type ForecastPoint, type Purchase } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { afford as affordCopy } from '@/copy';
@@ -10,9 +10,15 @@ import type { Loadable } from '@/lib/model/types';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { SCREEN_ROUTES } from '@/lib/screens';
 import { useAppReady, useAppStore, usePro } from '@/state';
-import type { AffordFormVM, AffordHorizonVM, AffordResultVM, AffordVM } from './types';
+import type { AffordFormVM, AffordHorizonVM, AffordResultVM, AffordRulesVM, AffordVM } from './types';
 
 const HORIZONS = [1, 12, 60, 120] as const;
+
+/** The rules canAfford checks, from the engine's assumptions (one source for the numbers in the copy). */
+export const AFFORD_RULES: AffordRulesVM = {
+  cushionMonths: safetyCushionMonths.value,
+  debtLoadRed: debtLoadThresholds.value.red,
+};
 
 export const EMPTY_AFFORD_FORM: AffordFormVM = {
   label: '',
@@ -122,6 +128,7 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
 
   return {
     status: ready ? 'ready' : 'loading',
+    rules: AFFORD_RULES,
     form,
     setLabel: useCallback((label: string) => setForm((f) => ({ ...f, label })), []),
     setAmount: useCallback((amount: number | null) => setForm((f) => ({ ...f, amount })), []),

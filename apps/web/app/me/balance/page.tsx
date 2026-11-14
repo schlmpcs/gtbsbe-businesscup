@@ -1,6 +1,10 @@
-import { ScreenPage } from '../../_components/ScreenPage';
+'use client';
 
-// S8: feature ladder (Y9). Placeholder until its task lands.
+import { useBalanceSheet } from '@/features/ladder/model/useBalanceSheet';
+import { useLadderProgress } from '@/features/ladder/model/useLadderProgress';
+import { BalanceSheet } from '@/features/ladder/ui/BalanceSheet';
+
+// S8 Balance sheet (ladder, Y9).
 export default function BalanceSheetPage() {
-  return <ScreenPage id="S8" />;
+  return <BalanceSheet vm={useBalanceSheet()} progress={useLadderProgress()} />;
 }

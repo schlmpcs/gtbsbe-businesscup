@@ -1,0 +1,16 @@
+# The Docker build copies named folders (deploy/Dockerfile), so this mostly keeps local build
+# output out of the context when someone builds from a checkout instead of `git archive`.
+**/node_modules
+**/.next
+**/.turbo
+**/*.tsbuildinfo
+.git
+.claude
+.env
+.env.*
+!.env.example
+docs
+graphify-out
+coverage
+playwright-report
+test-results

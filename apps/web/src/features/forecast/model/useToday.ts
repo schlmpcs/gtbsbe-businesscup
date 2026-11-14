@@ -1,6 +1,6 @@
 // S1 Today: month-end card (engine monthEnd), You in 10 years, the committed / top move and the
 // daily game call to action.
-import { monthEnd, type CurrentMonth } from '@lifeguessr/engine';
+import { hasEstimates, monthEnd, type CurrentMonth } from '@lifeguessr/engine';
 import { useMemo } from 'react';
 import { localMonthDay } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
@@ -58,6 +58,7 @@ export function useToday(opts: { now?: Date } = {}): TodayVM {
     isDemoProfile: profileOrigin === 'demo',
     monthEnd: monthEndVM,
     in10y,
+    in10yBandIsZero: !hasEstimates(profile),
     committedMove: committed,
     markCommittedDone: () => {
       if (committedMove) markMoveDone(committedMove);
