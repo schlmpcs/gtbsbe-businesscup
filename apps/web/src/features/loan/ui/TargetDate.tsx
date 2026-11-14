@@ -33,7 +33,7 @@ function fieldError(target: PayoffPlannerVM['target']): string | undefined {
     case 'past':
       return t.planner.target.past;
     case 'tooFar':
-      return t.planner.target.tooFar(100);
+      return t.planner.target.tooFar(target.years);
     default:
       return undefined;
   }

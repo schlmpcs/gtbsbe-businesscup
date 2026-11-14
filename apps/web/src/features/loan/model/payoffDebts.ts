@@ -2,6 +2,13 @@
 // useLoanLab (its payoff order) and usePayoffPlanner, so both always run on the same list.
 import type { Debt, LoanInput, Money } from '@lifeguessr/types';
 
+/**
+ * A balance at or below this many dollars is paid off: the engine's PAID_OFF_EPSILON (packages/engine/loan/amortize.ts),
+ * which it uses to drop such a debt from every plan. Not exported by @lifeguessr/engine, so it is repeated here;
+ * the planner must call the same debts "owed" as the engine does, or it would show a plan for nothing.
+ */
+export const PAYOFF_PAID_OFF_EPSILON: Money = 1e-6;
+
 /** Id of the selected offer when it is added to the payoff order as a new debt. */
 export const NEW_LOAN_DEBT_ID = 'new-loan';
 

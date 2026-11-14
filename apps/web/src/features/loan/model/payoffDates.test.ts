@@ -1,6 +1,6 @@
 // Calendar months for the payoff planner: today comes in as 'YYYY-MM', the dates come out as month + year.
 import { describe, expect, it } from 'vitest';
-import { PAYOFF_MAX_MONTHS, addMonths, monthsBetween } from './payoffDates';
+import { addMonths, monthsBetween } from './payoffDates';
 
 describe('addMonths', () => {
   it('adds within the year', () => {
@@ -21,9 +21,10 @@ describe('addMonths', () => {
     expect(addMonths('2026-12', 1)).toEqual({ month: '2027-01', year: 2027 });
   });
 
-  it('reaches the end of the 1,200-month simulation: 2026-11 + 1,200 = 2126-11', () => {
-    expect(PAYOFF_MAX_MONTHS).toBe(1200);
+  it('counts a century and a month: 2026-11 + 1,201 months = 2126-12', () => {
+    // 1,200 months is exactly 100 years (2126-11); one more is December.
     expect(addMonths('2026-11', 1200)).toEqual({ month: '2126-11', year: 2126 });
+    expect(addMonths('2026-11', 1201)).toEqual({ month: '2126-12', year: 2126 });
   });
 
   it('answers null for a month that is not YYYY-MM, or a count that is not a whole number of months', () => {

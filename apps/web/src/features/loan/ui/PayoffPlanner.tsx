@@ -18,8 +18,6 @@ const PlainLink: LinkComponent = ({ href, className, children }) => (
   </a>
 );
 
-const NEVER_FIX_YEARS = (months: number) => Math.round(months / 12);
-
 function EditDebts({ href, Link }: { href: string; Link: LinkComponent }) {
   return (
     <Link href={href} className="w-fit text-base font-semibold text-primary underline underline-offset-4">
@@ -45,7 +43,7 @@ function NeverNotice({ fix }: { fix: NonNullable<PayoffPlannerVM['fix']> | null 
       <p className="text-sm">{t.planner.never.body}</p>
       {fix && (
         <p className="text-sm font-semibold">
-          {fix.extra === null ? t.planner.never.fixNone : t.planner.never.fix(formatMoney(fix.extra), NEVER_FIX_YEARS(fix.months))}
+          {fix.extra === null ? t.planner.never.fixNone : t.planner.never.fix(formatMoney(fix.extra), fix.years)}
         </p>
       )}
     </div>

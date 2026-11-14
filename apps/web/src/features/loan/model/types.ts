@@ -135,8 +135,11 @@ export type PayoffChartVM = {
   minimum: { month: number; balance: Money }[];
 };
 
-/** A plan that never pays off, and the extra per month that would clear it within `months` (null = no extra could). */
-export type PayoffFixVM = { months: number; extra: Money | null };
+/**
+ * A plan that never pays off, and the total extra per month that would clear it within `months` (`years` is the same
+ * span in years; extra null = no extra could).
+ */
+export type PayoffFixVM = { months: number; years: number; extra: Money | null };
 
 /** The target-date solver: the extra per month needed to be debt-free by a chosen month. */
 export type PayoffTargetVM =
@@ -145,8 +148,8 @@ export type PayoffTargetVM =
   | { status: 'invalid' }
   /** This month or earlier. */
   | { status: 'past' }
-  /** Beyond the 100 years the engine simulates. */
-  | { status: 'tooFar' }
+  /** Beyond the longest plan the engine simulates (`years` long). */
+  | { status: 'tooFar'; years: number }
   | { status: 'error'; error: VMError }
   /** The current extra (even $0) already finishes by then; `extraNeeded` is the least that would. */
   | { status: 'onTrack'; date: PayoffDate; months: number; extraNeeded: Money }

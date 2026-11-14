@@ -3,13 +3,14 @@
 // Every expected figure is worked out by hand from the demo profile (card $6,400 at 24.36%, auto $17,800 at 7.4%),
 // sample offer 1 ($28,000 at 6.9%), the canned plans in src/test/payoff.ts and "today = November 2026".
 import { payoffOrder } from '@lifeguessr/engine';
-import type { Debt, PayoffComparison } from '@lifeguessr/types';
+import { PAYOFF_TIMELINE_MAX_MONTHS, type Debt, type PayoffComparison } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo, loanOffersSample } from '@/fixtures';
 import { resetClientState } from '@/test/clientState';
 import { useAppStore } from '@/state';
 import { hasNonFinite, plannerOptions } from '@/test/payoff';
+import { addMonths } from './payoffDates';
 import { useLoanLab } from './useLoanLab';
 import { PAYOFF_EXTRA_LIMIT, PAYOFF_NEVER_FIX_MONTHS, usePayoffPlanner, type PayoffPlannerOptions, type PayoffStoredState } from './usePayoffPlanner';
 
@@ -255,6 +256,22 @@ describe('usePayoffPlanner: the offer and the profile', () => {
     expect(comparePayoff).not.toHaveBeenCalled();
   });
 
+  // The engine counts a balance of a millionth of a dollar or less as paid off, so the planner does too: no
+  // "debt-free this month" plan, no empty order list, no events for a debt that is not owed.
+  it.each([
+    [1e-7, false],
+    [1e-6, false],
+    [2e-6, true],
+  ])('a balance of %s dollars is owed: %s', async (balance, owed) => {
+    const demo = cloneProfileDemo();
+    useAppStore.setState({ profile: { ...demo, debts: [{ ...demo.debts[1]!, balance }] } });
+    const { options, comparePayoff, track } = plannerOptions();
+    const { result } = await ready(options, { initialOffers: [] });
+    expect(result.current.planner!.hasDebts).toBe(owed);
+    expect(comparePayoff).toHaveBeenCalledTimes(owed ? 1 : 0);
+    expect(track).toHaveBeenCalledTimes(owed ? 2 : 0);
+  });
+
   it('inherits "estimate" from a defaulted minimum, and drops it when no such debt has a balance', async () => {
     const { options } = plannerOptions();
     const { result } = await ready(options);
@@ -323,7 +340,7 @@ describe('usePayoffPlanner: a plan that never pays off', () => {
     expect(p.columns[0]!.debtFreeDate).toBeNull();
     expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), 120, 'avalanche');
     // 312.40 rounded up to a whole dollar, so that paying it does finish within the ten years.
-    expect(p.fix).toEqual({ months: 120, extra: 313 });
+    expect(p.fix).toEqual({ months: 120, years: 10, extra: 313 });
     expect(hasNonFinite(p)).toBe(false);
   });
 
@@ -352,7 +369,7 @@ describe('usePayoffPlanner: a plan that never pays off', () => {
   it('says no extra could when even the engine\'s largest extra does not help (never shows its limit as an answer)', async () => {
     const { options } = plannerOptions({ engineOptions: { ...never, solve: { extra: 1_000_000, reachable: false } } });
     const { result } = await ready(options);
-    expect(result.current.planner!.fix).toEqual({ months: 120, extra: null });
+    expect(result.current.planner!.fix).toEqual({ months: 120, years: 10, extra: null });
   });
 
   it('has no fix while the plan does pay off', async () => {
@@ -444,16 +461,19 @@ describe('usePayoffPlanner: the target date', () => {
     expect(extraToFinishBy).not.toHaveBeenCalled();
   });
 
-  it('refuses a month past the 100 years the engine simulates: 1,200 months is the last (2126-11)', async () => {
+  it('refuses a month past the longest plan the engine simulates, and takes the last month that fits', async () => {
     const { options, extraToFinishBy } = plannerOptions({ engineOptions: { solve: { extra: 5, reachable: true } } });
     const { result } = await ready(options);
-    act(() => result.current.planner!.setTargetDate('2126-12')); // 1,201 months
-    expect(result.current.planner!.target).toEqual({ status: 'tooFar' });
+    // The limit is the contract's: the engine's longest timeline, counted from November 2026 (today).
+    const last = addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS)!.month;
+    const beyond = addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS + 1)!.month;
+    act(() => result.current.planner!.setTargetDate(beyond));
+    expect(result.current.planner!.target).toEqual({ status: 'tooFar', years: PAYOFF_TIMELINE_MAX_MONTHS / 12 });
     expect(extraToFinishBy).not.toHaveBeenCalled();
-    act(() => result.current.planner!.setTargetDate('2126-11')); // 1,200 months
+    act(() => result.current.planner!.setTargetDate(last));
     expect(result.current.planner!.target.status).toBe('needs');
-    expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), 1_200, 'avalanche');
-    expect(result.current.planner!.targetBounds).toEqual({ min: '2026-12', max: '2126-11' });
+    expect(extraToFinishBy).toHaveBeenLastCalledWith(expect.any(Array), PAYOFF_TIMELINE_MAX_MONTHS, 'avalanche');
+    expect(result.current.planner!.targetBounds).toEqual({ min: '2026-12', max: last });
   });
 
   it('says "invalid" for text that is not a month, and "none" once it is cleared', async () => {
@@ -620,7 +640,7 @@ describe('usePayoffPlanner: saved inputs', () => {
     const { result } = await ready(options);
     act(() => result.current.planner!.setTargetDate('2026-01'));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'avalanche', extra: 0 });
-    act(() => result.current.planner!.setTargetDate('2127-01'));
+    act(() => result.current.planner!.setTargetDate(addMonths('2026-11', PAYOFF_TIMELINE_MAX_MONTHS + 2)!.month));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'avalanche', extra: 0 });
     act(() => result.current.planner!.setTargetDate('soon'));
     expect(onStore).toHaveBeenLastCalledWith({ method: 'avalanche', extra: 0 });

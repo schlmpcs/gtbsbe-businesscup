@@ -1,9 +1,6 @@
 // Calendar months for the payoff planner. The model never reads the clock: `today` is injected as a
 // 'YYYY-MM' month (lib/dates → localMonthDay().month), and month 0 of a plan is that month.
 
-/** The longest plan the engine simulates (its MAX_SIMULATION_MONTHS: 100 years). Keep the two equal by hand. */
-export const PAYOFF_MAX_MONTHS = 1_200;
-
 /** A calendar month: `month` is 'YYYY-MM', `year` is its year (so the screen can print both). */
 export type PayoffDate = { month: string; year: number };
 
