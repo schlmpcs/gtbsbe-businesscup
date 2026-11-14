@@ -322,7 +322,7 @@ export const ladder = {
         'account numbers or names',
       ],
       sentTitle: 'What leaves your browser:',
-      sent: 'only each line’s merchant label (with personal names and account numbers masked), amount, month and day of month, to sort it into categories. They are not stored. Only the labels, without amounts or dates, may go on to our AI provider to sort them, under its no-training, zero-retention option.',
+      sent: 'only each line’s merchant label (account numbers masked, and personal names on payment-app and transfer lines), amount, month and day of month, to sort it into categories. We don’t store the labels or the lines. Only the labels, without amounts or dates, may go on to our AI provider, Anthropic, just to sort them; it doesn’t use API data to train its models.',
     },
   },
 } as const;
