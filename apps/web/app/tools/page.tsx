@@ -1,0 +1,16 @@
+// "What if?" hub: every tool as the question it answers. Thin route.
+import Link from 'next/link';
+import { ToolsHub } from '@/features/tools/ui/ToolsHub';
+import { SCREEN_ROUTES } from '@/lib/screens';
+
+const hrefs = {
+  afford: SCREEN_ROUTES.S11,
+  loan: SCREEN_ROUTES.S12,
+  decide: SCREEN_ROUTES.S13,
+  checkin: SCREEN_ROUTES.S14,
+  exact: SCREEN_ROUTES.S9,
+};
+
+export default function ToolsPage() {
+  return <ToolsHub hrefs={hrefs} Link={Link} />;
+}

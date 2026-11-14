@@ -12,11 +12,10 @@ export const common = {
     label: 'Main',
     home: 'LifeGuessr home',
     links: [
-      { href: '/', label: 'Today' },
+      { href: '/', label: 'Home' },
       { href: '/play', label: 'Play' },
       { href: '/future', label: 'My future' },
-      { href: '/afford', label: 'Can I afford it?' },
-      { href: '/loan', label: 'Loan Lab' },
+      { href: '/tools', label: 'What if?', match: ['/afford', '/loan', '/decide', '/checkin'] },
     ],
     pro: 'Go Pro',
   },
