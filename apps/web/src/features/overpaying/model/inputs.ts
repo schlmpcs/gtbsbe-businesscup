@@ -1,10 +1,13 @@
 // The overpaying check's form: reading a typed ZIP, the starting values (saved inputs, else the
 // profile, else defaults), the shape the engine takes and the shape the store keeps. Pure.
-import { BENCHMARK_LINES, type CostCategory, type Profile } from '@lifeguessr/types';
+import { BenchmarkLineSchema, type CostCategory, type Profile } from '@lifeguessr/types';
 import type {
   Adults, AreaTier, Bedrooms, BenchmarkLine, KidAge, Money, OverpayingCheckInput, OverpayingInputsVM, OverpayingToolState,
   PrefillSource, PrefillVM,
 } from './types';
+
+/** The four lines that can be compared, in the order the engine reports them. */
+export const BENCHMARK_LINES = BenchmarkLineSchema.options;
 
 export const KID_AGES = ['infant', 'toddler', 'preschool', 'schoolAge'] as const satisfies readonly KidAge[];
 

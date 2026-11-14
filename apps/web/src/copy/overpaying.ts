@@ -71,8 +71,6 @@ export const overpaying = {
     noneTitle: 'We do not have data for this ZIP yet',
     none: (zip: string, zips: number, metros: number) =>
       `We cover ${zips} ZIP codes in ${metros} metros, and ${zip} is not one of them. Pick the nearest metro and area type for an approximate comparison.`,
-    noneNoCounts: (zip: string) =>
-      `We do not cover ${zip}. Pick the nearest metro and area type for an approximate comparison.`,
   },
 
   picker: {
@@ -142,7 +140,6 @@ export const overpaying = {
   },
 
   errors: {
-    notImplemented: 'The comparison is not available yet.',
     invalidResponse: 'We could not check these numbers. Please try different inputs.',
     unknown: 'Something went wrong while comparing. Please try different inputs.',
   },

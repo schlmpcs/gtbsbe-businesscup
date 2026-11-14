@@ -14,7 +14,7 @@ const ICON: Record<Position, string> = {
 
 function PositionTag({ position }: { position: Position }) {
   return (
-    <Tag className="gap-xs py-xs text-sm text-text">
+    <Tag data-testid="position" className="gap-xs py-xs text-sm text-text">
       <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4 shrink-0 fill-none stroke-current" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d={ICON[position]} />
       </svg>
@@ -75,7 +75,7 @@ export function BenchmarkRow({ row, effectAvailable, profileHref }: { row: Bench
       <p className="flex flex-wrap items-center gap-sm text-sm">
         <span>{t.result.typicalRange(formatMoney(row.typical.low), formatMoney(row.typical.high))}</span>
         {row.isEstimate && (
-          <Tag variant="dashed" title={t.result.estimateWhy}>
+          <Tag variant="dashed" data-testid="range-estimate" title={t.result.estimateWhy}>
             {t.result.estimate}
             <span className="sr-only">: {t.result.estimateWhy}</span>
           </Tag>

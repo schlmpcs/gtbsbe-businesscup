@@ -23,9 +23,7 @@ export function CoverageNotice({ coverage, counts }: { coverage: CoverageVM; cou
       return (
         <div data-testid="coverage" data-coverage="none" role="note" className="flex flex-col gap-xs rounded-lg bg-surface p-lg">
           <h2 className="text-base font-semibold leading-tight">{t.coverage.noneTitle}</h2>
-          <p className="text-sm text-text-muted">
-            {counts ? t.coverage.none(coverage.zip, counts.zips, counts.metros) : t.coverage.noneNoCounts(coverage.zip)}
-          </p>
+          <p className="text-sm text-text-muted">{t.coverage.none(coverage.zip, counts.zips, counts.metros)}</p>
         </div>
       );
     default:

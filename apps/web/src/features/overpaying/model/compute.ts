@@ -1,9 +1,9 @@
 // The overpaying check without React: what the typed inputs mean (which area, what is missing or
 // unusable) and, when there is something to compare, the engine's answer as a view-model. The hook
 // only holds the form's state and calls this.
-import { BENCHMARK_LINES, OverpayingResultSchema, type AreaData, type Profile } from '@lifeguessr/types';
+import { OverpayingResultSchema, type AreaData, type Profile } from '@lifeguessr/types';
 import { runEngine } from '@/lib/model/errors';
-import { KID_AGES, parseZip, toCheckInput } from './inputs';
+import { BENCHMARK_LINES, KID_AGES, parseZip, toCheckInput } from './inputs';
 import { toResultVM } from './rows';
 import type {
   AreaTier, CoverageVM, Loadable, OverpayingDeps, OverpayingField, OverpayingInputsVM, OverpayingNeed, OverpayingResultVM,
@@ -49,7 +49,7 @@ export function computeOverpaying({ inputs, metro, profile, deps }: ComputeArgs)
   else if (zip.kind === 'invalid') coverage = { kind: 'invalid' };
   else {
     const exact = deps.areas.forZip(zip.zip);
-    const chosen = !exact && metro.metro && metro.tier ? (deps.metros?.forMetro(metro.metro, metro.tier) ?? null) : null;
+    const chosen = !exact && metro.metro && metro.tier ? (deps.metros.forMetro(metro.metro, metro.tier) ?? null) : null;
     if (exact) {
       area = exact;
       areaCoverage = 'exact';
@@ -81,22 +81,17 @@ export function computeOverpaying({ inputs, metro, profile, deps }: ComputeArgs)
     BENCHMARK_LINES.map((line) => inputs.amounts[line]),
   ]);
 
-  const check = deps.check;
+  const { check } = deps;
   let result: Loadable<OverpayingResultVM>;
-  if (!check) {
-    // The engine is not wired in yet (issue #86): say so the way every unfinished engine piece does.
-    result = { status: 'error', error: { kind: 'notImplemented', task: 'M10' } };
-  } else {
-    const ran = runEngine(() => check(toCheckInput(inputs), area, profile ?? undefined, { coverage: areaCoverage }));
-    if (ran.status !== 'ready') result = ran;
-    else {
-      // Numbers that contradict themselves (a position that does not match its range) are not shown.
-      const valid = OverpayingResultSchema.safeParse(ran.data);
-      const kidCount = KID_AGES.reduce((sum, age) => sum + inputs.kids[age], 0);
-      result = valid.success
-        ? { status: 'ready', data: toResultVM(ran.data, { profileUsed: profile !== null, kidCount }) }
-        : { status: 'error', error: { kind: 'invalidResponse' } };
-    }
+  const ran = runEngine(() => check(toCheckInput(inputs), area, profile ?? undefined, { coverage: areaCoverage }));
+  if (ran.status !== 'ready') result = ran;
+  else {
+    // Numbers the contract does not allow (a range that is not low ≤ mid ≤ high, a negative gap) are not shown.
+    const valid = OverpayingResultSchema.safeParse(ran.data);
+    const kidCount = KID_AGES.reduce((sum, age) => sum + inputs.kids[age], 0);
+    result = valid.success
+      ? { status: 'ready', data: toResultVM(ran.data, { profileUsed: profile !== null, kidCount }) }
+      : { status: 'error', error: { kind: 'invalidResponse' } };
   }
   return { coverage, invalidFields, needs, result, signature };
 }

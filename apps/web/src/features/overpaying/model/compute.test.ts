@@ -153,12 +153,6 @@ describe('computeOverpaying: the result', () => {
     expect(out.result?.status === 'ready' && out.result.data.skipped).toEqual([{ line: 'childcare', reason: 'noKids' }]);
   });
 
-  it('reports "not implemented (M10)" while the engine is not wired in', () => {
-    const deps = { ...fakeDeps(), check: undefined };
-    const out = computeOverpaying(args({}, deps));
-    expect(out.result).toEqual({ status: 'error', error: { kind: 'notImplemented', task: 'M10' } });
-  });
-
   it('turns an engine error into an error state instead of throwing', () => {
     const deps = fakeDeps();
     deps.check.mockImplementation(() => {
@@ -170,7 +164,7 @@ describe('computeOverpaying: the result', () => {
 
   it('refuses a result that breaks the contract rather than showing its numbers', () => {
     const bad = sampleOverpayingResult();
-    bad.lines[0]!.position = 'below'; // 3000 against 1784–2676 is above
+    bad.lines[0]!.typical = { low: 3000, mid: 2230, high: 2676 }; // a range must be low ≤ mid ≤ high
     const out = computeOverpaying(args({}, fakeDeps({ result: bad })));
     expect(out.result).toEqual({ status: 'error', error: { kind: 'invalidResponse' } });
   });

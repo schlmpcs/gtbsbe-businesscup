@@ -38,8 +38,8 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
   const current = draft ?? initial.draft;
   const edit = useCallback((change: (d: Draft) => Draft) => setDraft((prev) => change(prev ?? initial.draft)), [initial]);
 
-  const metros = deps.metros;
-  const metroOptions = useMemo(() => metros?.list() ?? [], [metros]);
+  const { metros } = deps;
+  const metroOptions = useMemo(() => metros.list(), [metros]);
 
   const computed = useMemo(
     () =>
@@ -98,11 +98,11 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
   }, [draft]);
 
   // ----- events: enums and counts only, never an amount, a ZIP or a place -----
-  const { track } = deps;
+  const { track, trackTool } = deps;
   const shown = ready && !streamer;
   useEffect(() => {
-    if (shown) track({ name: 'tool_opened', props: { tool: 'overpaying' } }, { once: 'tool:overpaying' });
-  }, [shown, track]);
+    if (shown) trackTool('overpaying');
+  }, [shown, trackTool]);
 
   const reported = useRef(new Set<string>());
   const readyResult = computed?.result?.status === 'ready' ? computed.result.data : null;
@@ -133,7 +133,7 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
 
   const coverage = computed?.coverage ?? { kind: 'empty' as const };
   const metroPicker: MetroPickerVM | null =
-    metros && (coverage.kind === 'none' || coverage.kind === 'metro')
+    coverage.kind === 'none' || coverage.kind === 'metro'
       ? {
           options: metroOptions,
           metro: current.metro,
@@ -155,7 +155,7 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
     setAmount,
     limits: { kidsPerBand: KIDS_PER_BAND_MAX, bedrooms: BEDROOMS_MAX, adults: ADULTS_MAX },
     prefill,
-    coverageCounts: metros ? { zips: deps.areas.zipCount, metros: metroOptions.length } : null,
+    coverageCounts: { zips: deps.areas.zipCount, metros: metroOptions.length },
     coverage,
     metroPicker,
     invalidFields: computed?.invalidFields ?? [],

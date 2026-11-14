@@ -199,11 +199,13 @@ describe('a ZIP we do not cover', () => {
   });
 });
 
-describe('when the engine is not there', () => {
-  it('says the comparison is not available yet instead of showing numbers', async () => {
-    const user = await open({ deps: { ...fakeDeps(), check: undefined } });
+describe('when the engine answers with numbers the contract does not allow', () => {
+  it('says so instead of showing them', async () => {
+    const bad = sampleOverpayingResult();
+    bad.lines[0]!.typical = { low: 3000, mid: 2230, high: 2676 }; // a range must be low ≤ mid ≤ high
+    const user = await open({ deps: fakeDeps({ result: bad }) });
     await cold(user);
-    expect(await screen.findByTestId('overpaying-error')).toHaveTextContent(t.errors.notImplemented);
+    expect(await screen.findByTestId('overpaying-error')).toHaveTextContent(t.errors.invalidResponse);
     expect(screen.queryByTestId('benchmark-row')).toBeNull();
   });
 });

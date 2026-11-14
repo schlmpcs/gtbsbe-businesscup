@@ -21,7 +21,6 @@ const area75216 = areaDataSample.find((a) => a.zip === '75216')!;
 async function setup(profile: Profile | null = null, opts: OverpayingOptions = {}, deps: OverpayingDeps = fakeDeps()) {
   const rendered = renderHook(() => useOverpaying(profile, { deps, ...opts }));
   await waitForReady(rendered.result);
-  // Tests that read the fakes' calls pass fakeDeps(); the "not wired yet" tests never look at them.
   return { ...rendered, deps: deps as FakeDeps, vm: () => rendered.result.current as OverpayingVM };
 }
 
@@ -286,25 +285,6 @@ describe('useOverpaying: a ZIP we do not cover', () => {
       expect(vm().metroPicker, JSON.stringify(zip)).toBeNull();
     }
   });
-
-  it('without the metro lookup (not wired yet) there is no picker and no counts', async () => {
-    const { vm } = await setup(null, {}, fakeDeps({ withMetros: false }));
-    act(() => vm().setZip(UNCOVERED_ZIP));
-    expect(vm().coverage.kind).toBe('none');
-    expect(vm().metroPicker).toBeNull();
-    expect(vm().coverageCounts).toBeNull();
-  });
-});
-
-describe('useOverpaying: the engine is not wired in yet', () => {
-  it('reports it the way every unfinished engine piece does', async () => {
-    const { vm } = await setup(null, {}, { ...fakeDeps(), check: undefined });
-    act(() => {
-      vm().setZip('75206');
-      vm().setAmount('rent', 3000);
-    });
-    expect(vm().result).toEqual({ status: 'error', error: { kind: 'notImplemented', task: 'M10' } });
-  });
 });
 
 describe('useOverpaying: the last inputs', () => {
@@ -362,8 +342,8 @@ describe('useOverpaying: events', () => {
 
   it('says the tool was opened, once, when it is on screen', async () => {
     const { deps } = await setup();
-    expect(deps.track).toHaveBeenCalledWith({ name: 'tool_opened', props: { tool: 'overpaying' } }, { once: 'tool:overpaying' });
-    expect(fired(deps).filter((e) => e.name === 'tool_opened')).toHaveLength(1);
+    expect(deps.trackTool).toHaveBeenCalledTimes(1);
+    expect(deps.trackTool).toHaveBeenCalledWith('overpaying'); // lib/events trackTool: once per page session, key 'tool:overpaying'
   });
 
   it('sends overpaying_checked with counts only, once the inputs have settled', async () => {
@@ -444,6 +424,7 @@ describe('useOverpaying: streamer mode', () => {
     act(() => vi.advanceTimersByTime(CHECKED_EVENT_SETTLE_MS * 2));
     expect(deps.check).not.toHaveBeenCalled();
     expect(deps.track).not.toHaveBeenCalled();
+    expect(deps.trackTool).not.toHaveBeenCalled();
   });
 });
 

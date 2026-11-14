@@ -1,28 +1,24 @@
 // @vitest-environment jsdom
 // The view-model on the REAL overpayingCheck over areaData.sample.json: the issue's "view-model on
-// areaData.sample.json" tests. overpayingCheck (issue #86) is on main but not yet exported from
-// @lifeguessr/engine in this branch (M1 has to be reconciled with main first), so these are skipped
-// until it is, and then run with no edit. Expected numbers are worked by hand from the sample data
-// for 75206 (mid tier), 2 bedrooms, 1 adult:
+// areaData.sample.json" tests. Expected numbers are worked by hand from the sample data for 75206
+// (mid tier), 2 bedrooms, 1 adult:
 //   rent         $2,230 (no Census ratio, so ±20%)            → $1,784 to $2,676
 //   car insurance $150 ±20%                                     → $120 to $180
 //   groceries    $367.95 per adult, plus 0.7 of that per child, ±15%: one adult and an infant is $625.515 → $531.68775 to $719.34225
 //   childcare    $840.67 for one infant ±20%                    → $672.536 to $1,008.804
-import * as engine from '@lifeguessr/engine';
+import { overpayingCheck } from '@lifeguessr/engine';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { areaDataSample, cloneProfileDemo } from '@/fixtures';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { SAMPLE_METRO, UNCOVERED_ZIP, fakeDeps, sampleAreaForMetro } from './testUtils';
-import type { OverpayingCheckFn, OverpayingDeps, OverpayingVM } from './types';
+import type { OverpayingDeps, OverpayingVM } from './types';
 import { useOverpaying } from './useOverpaying';
-
-const check = (engine as unknown as { overpayingCheck?: OverpayingCheckFn }).overpayingCheck;
 
 beforeEach(resetClientState);
 
 function realDeps(over: Partial<OverpayingDeps> = {}): OverpayingDeps {
-  return { ...fakeDeps(), check, ...over };
+  return { ...fakeDeps(), check: overpayingCheck, ...over };
 }
 
 async function setup(profile: Parameters<typeof useOverpaying>[0], deps: OverpayingDeps = realDeps()) {
@@ -37,7 +33,7 @@ function rowsOf(vm: OverpayingVM) {
   return r.data;
 }
 
-describe.skipIf(!check)('useOverpaying on the real overpayingCheck (areaData.sample.json)', () => {
+describe('useOverpaying on the real overpayingCheck (areaData.sample.json)', () => {
   it('each position, the gap per year and the total, without a profile', async () => {
     const { vm } = await setup(null);
     act(() => {
@@ -125,13 +121,4 @@ describe.skipIf(!check)('useOverpaying on the real overpayingCheck (areaData.sam
     act(() => vm().setKidCount('toddler', 1));
     expect(rowsOf(vm()).skipped).toContainEqual({ line: 'childcare', reason: 'noData' });
   });
-});
-
-// Visible in the test output while the engine is not exported here.
-describe.skipIf(!!check)('useOverpaying on the real overpayingCheck (waits on #86 in this branch)', () => {
-  it.todo('each position, the gap per year and the total, without a profile');
-  it.todo('with the demo profile: the 10-year effect');
-  it.todo('a ZIP outside the data with a metro chosen is flagged metro');
-  it.todo('bedrooms above the data count as 4; the household sizes the groceries range');
-  it.todo('childcare: no data in the area is not the same as no children');
 });

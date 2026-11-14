@@ -73,15 +73,17 @@ export function sampleAreaForMetro(metro: string, tier: AreaTier): AreaData | nu
 export type FakeDeps = OverpayingDeps & {
   check: ReturnType<typeof vi.fn<OverpayingCheckFn>>;
   track: ReturnType<typeof vi.fn<OverpayingDeps['track']>>;
+  trackTool: ReturnType<typeof vi.fn<OverpayingDeps['trackTool']>>;
 };
 
 /** Deps over the sample data. `check` returns `result` (default: the hand-built sample) and records its calls. */
-export function fakeDeps(opts: { result?: OverpayingResult; withMetros?: boolean } = {}): FakeDeps {
+export function fakeDeps(opts: { result?: OverpayingResult } = {}): FakeDeps {
   const result = opts.result ?? sampleOverpayingResult();
   return {
     areas: { forZip: (zip) => areaDataSample.find((a) => a.zip === zip) ?? null, zipCount: areaDataSample.length },
     check: vi.fn<OverpayingCheckFn>(() => result),
-    metros: opts.withMetros === false ? undefined : { list: () => SAMPLE_METROS, forMetro: sampleAreaForMetro },
+    metros: { list: () => SAMPLE_METROS, forMetro: sampleAreaForMetro },
     track: vi.fn<OverpayingDeps['track']>(),
+    trackTool: vi.fn<OverpayingDeps['trackTool']>(),
   };
 }

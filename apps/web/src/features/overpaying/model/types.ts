@@ -1,8 +1,10 @@
 // View-model types for the overpaying check (S23, route /tools/overpaying). Task: M11 (model + placeholder ui).
 // ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
 // Hook: useOverpaying() in ./useOverpaying.ts.
+import type { coveredMetros } from '@lifeguessr/data/areas';
+import type { OverpayingInput, overpayingCheck } from '@lifeguessr/engine';
 import type {
-  AreaData, Benchmark, BenchmarkLine, ClientFunnelEvent, KidAge, Money, OverpayingResult, Profile, Source,
+  AreaData, Benchmark, BenchmarkLine, ClientFunnelEvent, KidAge, Money, Source, ToolId, ToolsState,
 } from '@lifeguessr/types';
 import type { Loadable } from '@/lib/model/types';
 
@@ -55,8 +57,8 @@ export type CoverageVM =
   | { kind: 'none'; zip: string }
   | { kind: 'metro'; zip: string; metro: string; tier: AreaTier };
 
-/** A metro we have data for and the area types (tiers) available in it. */
-export type CoveredMetro = { metro: string; state: string; tiers: AreaTier[] };
+/** A metro we have data for and the area types (tiers) available in it (`coveredMetros` in @lifeguessr/data/areas). */
+export type CoveredMetro = ReturnType<typeof coveredMetros>[number];
 
 export type MetroPickerVM = {
   options: CoveredMetro[];
@@ -152,8 +154,8 @@ export type OverpayingVM = {
   limits: { kidsPerBand: number; bedrooms: number; adults: number };
   /** Which boxes still hold what the profile gave. Editing here never changes the profile. */
   prefill: PrefillVM;
-  /** The ZIPs and metros we have data for (for the "not covered" notice); null when unknown. */
-  coverageCounts: { zips: number; metros: number } | null;
+  /** The ZIPs and metros we have data for (for the "not covered" notice). */
+  coverageCounts: { zips: number; metros: number };
   coverage: CoverageVM;
   /** Shown when `coverage` is none or metro; null otherwise. */
   metroPicker: MetroPickerVM | null;
@@ -171,24 +173,11 @@ export type OverpayingVM = {
 
 // ----- what the model is given ------------------------------------------------------------------
 
-/** What the engine's `overpayingCheck` takes (packages/engine/overpaying.ts, issue #86). */
-export type OverpayingCheckInput = {
-  bedrooms: Bedrooms;
-  adults: Adults;
-  kids: KidAge[];
-  rent?: Money;
-  carInsurance?: Money;
-  groceries?: Money;
-  childcare?: Money;
-};
+/** What the engine's `overpayingCheck` takes (packages/engine/overpaying.ts). */
+export type OverpayingCheckInput = OverpayingInput;
 
-/** Same signature as the engine's `overpayingCheck(input, area, profile?, opts?)` (#86). */
-export type OverpayingCheckFn = (
-  input: OverpayingCheckInput,
-  area: AreaData | null,
-  profile?: Profile,
-  opts?: { coverage?: 'exact' | 'metro' },
-) => OverpayingResult;
+/** The engine's `overpayingCheck(input, area, profile?, opts?)`. */
+export type OverpayingCheckFn = typeof overpayingCheck;
 
 /** Engine, data and the event sender, so the model can be tested on its own. Bound to the real ones in ./deps.ts. */
 export type OverpayingDeps = {
@@ -198,40 +187,28 @@ export type OverpayingDeps = {
     /** How many ZIPs the data covers. */
     zipCount: number;
   };
-  /** `overpayingCheck` (#86). Absent until that lands: the result then reports "not implemented". */
-  check?: OverpayingCheckFn;
-  /** `coveredMetros` and `areaForMetro` from `@lifeguessr/data/areas` (#86). Absent until that lands: no metro picker. */
-  metros?: {
+  /** `overpayingCheck` (@lifeguessr/engine). */
+  check: OverpayingCheckFn;
+  /** `coveredMetros` and `areaForMetro` (@lifeguessr/data/areas). */
+  metros: {
     list: () => CoveredMetro[];
     forMetro: (metro: string, tier: AreaTier) => AreaData | null;
   };
   /** `track` from lib/events. */
   track: (event: ClientFunnelEvent, opts?: { once?: string }) => void;
+  /** `trackTool` from lib/events: `tool_opened`, once per page session. */
+  trackTool: (tool: ToolId) => void;
 };
 
-/**
- * The last inputs, as kept in the store under `tools.overpaying` (OverpayingToolStateSchema in
- * packages/types/tools.ts, issue #78). Same shape as that schema's output.
- */
-export type OverpayingToolState = {
-  zip?: string;
-  metro?: string;
-  tier?: AreaTier;
-  bedrooms: number;
-  adults: number;
-  kids: KidAge[];
-  rent?: Money;
-  carInsurance?: Money;
-  groceries?: Money;
-  childcare?: Money;
-};
+/** The last inputs, as the store keeps them under `tools.overpaying` (OverpayingToolStateSchema in packages/types/tools.ts). */
+export type OverpayingToolState = NonNullable<ToolsState['overpaying']>;
 
 export type OverpayingOptions = {
   /** Streamer mode: the tool is hidden. */
   streamer?: boolean;
-  /** The saved inputs: the store's `tools.overpaying` (#78). They win over the profile's values. */
+  /** The saved inputs: the store's `tools.overpaying`. They win over the profile's values. */
   stored?: OverpayingToolState;
-  /** Called with the inputs after each change the person makes (`setTool('overpaying', state)`, #78). */
+  /** Called with the inputs after each change the person makes (`setTool('overpaying', state)`). */
   onStore?: (state: OverpayingToolState) => void;
   /** Engine, data and events; defaults to the real ones. */
   deps?: OverpayingDeps;

@@ -22,7 +22,6 @@ function Skeleton() {
 }
 
 function errorText(error: VMError): string {
-  if (error.kind === 'notImplemented') return t.errors.notImplemented;
   if (error.kind === 'invalidResponse') return t.errors.invalidResponse;
   return t.errors.unknown;
 }
