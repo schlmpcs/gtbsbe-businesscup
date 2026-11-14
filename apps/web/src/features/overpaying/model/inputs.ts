@@ -1,6 +1,6 @@
 // The overpaying check's form: reading a typed ZIP, the starting values (saved inputs, else the
 // profile, else defaults), the shape the engine takes and the shape the store keeps. Pure.
-import { BenchmarkLineSchema, type CostCategory, type Profile } from '@lifeguessr/types';
+import { BenchmarkLineSchema, type CostCategory, type HouseholdFacts, type Profile } from '@lifeguessr/types';
 import type {
   Adults, AreaTier, Bedrooms, BenchmarkLine, KidAge, Money, OverpayingCheckInput, OverpayingInputsVM, OverpayingToolState,
   PrefillSource, PrefillVM,
@@ -93,9 +93,30 @@ function expandKids(counts: Record<KidAge, number>): KidAge[] {
  * Where the form starts. Saved inputs (the last ones typed) win as a whole: a box left blank stays blank.
  * Without them, a profile of the person's own fills the ZIP and the spending lines that match a benchmark
  * (rent + utilities, groceries, childcare when above 0); the household and car insurance are always asked.
- * `prefill` says which boxes came from the profile.
+ * `prefill` says which boxes came from the profile. `household` ("About you", S6) fills the household
+ * and the ZIP when there are no saved inputs, or when the saved household was left at the defaults.
  */
-export function initialDraft(profile: Profile | null, stored: OverpayingToolState | undefined): { draft: Draft; prefill: PrefillVM } {
+export function initialDraft(
+  profile: Profile | null,
+  stored: OverpayingToolState | undefined,
+  household?: { facts: HouseholdFacts; zip: string | null } | null,
+): { draft: Draft; prefill: PrefillVM } {
+  const result = initialDraftFromProfile(profile, stored);
+  if (!household) return result;
+  const { draft, prefill } = result;
+  if (draft.householdEntered) return result;
+  const inputs = {
+    ...draft.inputs,
+    bedrooms: clampBedrooms(household.facts.bedrooms),
+    adults: clampAdults(household.facts.adults),
+    kids: countKids(household.facts.kids),
+  };
+  const fillZip = household.zip !== null && inputs.zip.trim() === '';
+  if (fillZip) inputs.zip = household.zip!;
+  return { draft: { ...draft, inputs, householdEntered: true }, prefill: { ...prefill, zip: prefill.zip || fillZip } };
+}
+
+function initialDraftFromProfile(profile: Profile | null, stored: OverpayingToolState | undefined): { draft: Draft; prefill: PrefillVM } {
   if (stored) {
     const amounts = noAmounts();
     for (const line of BENCHMARK_LINES) amounts[line] = stored[line] ?? null;

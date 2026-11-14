@@ -9,7 +9,7 @@ import { applyPatch } from '@lifeguessr/engine';
 import {
   CategoryTotalsSchema, HorizonYearsSchema, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MOVE_KINDS, ProfilePatchSchema, ProfileSchema,
   PurchaseSchema, CostCategorySchema, YearMonthSchema,
-  type CategoryTotals, type CostCategory, type HorizonYears, type LifeEvent, type Money, type Move, type Profile,
+  type CategoryTotals, type CostCategory, type HorizonYears, type HouseholdFacts, type LifeEvent, type Money, type Move, type Profile,
   type ProfilePatch, type Purchase, type YearMonth,
 } from '@lifeguessr/types';
 import { z } from 'zod';
@@ -89,6 +89,11 @@ export type AppActions = {
   /** S6: start from a life card's profile (`cardToProfile`). Drops any committed move. */
   chooseClosestLife: (cardId: string, profile: Profile) => void;
   setSpending: (category: CostCategory, value: Money) => void;
+  /**
+   * S6 "About you": the household the person typed, and their ZIP (null while it is not a valid one: the
+   * profile then has no ZIP, never a sample's). Not a number the forecast reads, so the origin stays.
+   */
+  setHousehold: (facts: HouseholdFacts, zip: string | null) => void;
   setField: (field: ProfileField, value: number) => void;
   skipField: (field: ProfileField) => void;
   addDebt: (input: DebtInput) => string;
@@ -250,6 +255,13 @@ export const useAppStore = create<AppState>()(
       chooseClosestLife: (cardId, profile) =>
         set({ profile: withoutAsOf(profile), profileOrigin: 'closestLife', closestCardId: cardId, committedMove: null }),
       setSpending: (category, value) => set((s) => ({ profile: setSpending(s.profile, category, value), profileOrigin: 'user' })),
+      setHousehold: (facts, zip) =>
+        set((s) => {
+          const profile: Profile = { ...s.profile, householdFacts: { ...facts, kids: [...facts.kids] } };
+          if (zip) profile.zip = zip;
+          else delete profile.zip;
+          return { profile };
+        }),
       setField: (field, value) => set((s) => ({ profile: setField(s.profile, field, value), profileOrigin: 'user' })),
       skipField: (field) => set((s) => ({ profile: skipField(s.profile, field) })),
       addDebt: (input) => {

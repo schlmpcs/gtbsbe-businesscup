@@ -1,39 +1,26 @@
 // S5 Guess yourself (Design v3, Figma 202:1873): headline and sub on the left, a giant orange guess
 // over one log-scale slider for your own monthly cost, today's game result as a tilted ink sticker,
-// and the empty plot on the right ("your house starts here"). The orange CTA locks the guess; once
-// it is saved, the guess sits next to the engine's estimate and the CTA leads to the next rung.
+// and the empty plot on the right ("your house starts here"). Only the gut guess: the orange CTA
+// locks it, then the slider is the guess and the CTA leads on. Guess vs reality shows only once the
+// spending is the user's own.
 import { ladder } from '@/copy';
-import { Art, Button, Card, cx, EstimateTag, formatMoney, formatRate, Slider, Sticker } from '@/ui-kit';
-import type { GuessYourselfVM, LadderProgressVM, SelfGuessComparisonVM } from '../model/types';
-import { LadderShell, LadderTextButton } from './LadderShell';
+import { Art, Button, Card, formatMoney, Slider, Sticker } from '@/ui-kit';
+import type { GuessYourselfVM, LadderProgressVM, SelfGuessRevealVM } from '../model/types';
+import { LadderShell } from './LadderShell';
 
 const t = ladder.guess;
 
 export type GuessYourselfProps = { vm: GuessYourselfVM; progress: LadderProgressVM };
 
 export function GuessYourself({ vm, progress }: GuessYourselfProps) {
-  const { guess, savedGuess, bridge, comparison } = vm;
-  const isSaved = savedGuess !== null && savedGuess === guess.value;
+  const { guess, savedGuess, bridge, reveal } = vm;
 
   // Before the first save, locking the guess is the one orange CTA (skipping is the text action).
-  // After it, the CTA goes on to the next rung (the shell's default) and changing the guess is the
-  // text action on the left.
+  // After it, the CTA goes on to the next rung (the shell's default).
   const lock = (
     <Button size="lg" onClick={vm.submit}>
       {t.submit}
     </Button>
-  );
-  const update = (
-    <div className="flex flex-wrap items-center gap-md">
-      <LadderTextButton onClick={vm.submit} disabled={isSaved}>
-        {t.update}
-      </LadderTextButton>
-      {isSaved && (
-        <span role="status" className="text-sm font-semibold text-positive">
-          {t.saved}
-        </span>
-      )}
-    </div>
   );
 
   return (
@@ -42,7 +29,6 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
       progress={progress}
       loading={vm.status === 'loading'}
       primary={savedGuess === null ? lock : undefined}
-      secondary={savedGuess === null ? undefined : update}
       aside={
         <div className="relative flex flex-col items-center">
           <Art name="empty-plot" className="w-full max-w-(--container-md)" />
@@ -78,48 +64,19 @@ export function GuessYourself({ vm, progress }: GuessYourselfProps) {
         )}
       </div>
 
-      {comparison && <Comparison comparison={comparison} />}
+      {reveal && <Reveal reveal={reveal} />}
     </LadderShell>
   );
 }
 
-function Comparison({ comparison: c }: { comparison: SelfGuessComparisonVM }) {
-  const amount = formatMoney(Math.abs(c.difference));
-  const share = formatRate(Math.abs(c.differenceShare), 0);
-  const verdict = c.direction === 'match' ? t.exact : c.direction === 'above' ? t.above(amount, share) : t.below(amount, share);
+function Reveal({ reveal: r }: { reveal: SelfGuessRevealVM }) {
+  const gap = formatMoney(Math.abs(r.difference));
+  const verdict = Math.abs(r.difference) < 1 ? t.revealExact : r.difference > 0 ? t.revealMore(gap) : t.revealLess(gap);
   return (
-    <Card title={t.compareTitle}>
-      <div className="flex flex-col gap-lg">
-        <div className="grid grid-cols-2 gap-xl">
-          <div className="flex flex-col gap-xs">
-            <span className="text-sm font-medium text-text-muted">{t.yourGuess}</span>
-            <span className="font-display text-4xl font-extrabold leading-display tabular-nums">
-              {formatMoney(c.guess)}
-              <span className="text-base font-normal text-text-muted">{t.perMonth}</span>
-            </span>
-          </div>
-          <div className="flex flex-col gap-xs">
-            <span className="flex flex-wrap items-center gap-sm text-sm font-medium text-text-muted">
-              {t.ourEstimate}
-              {c.isEstimate && <EstimateTag />}
-            </span>
-            <span className="font-display text-4xl font-extrabold leading-display text-primary tabular-nums">
-              {formatMoney(c.estimate)}
-              <span className="text-base font-normal text-text-muted">{t.perMonth}</span>
-            </span>
-          </div>
-        </div>
-        <p
-          data-testid="guess-verdict"
-          style={{ transform: 'rotate(-1deg)' }}
-          className={cx(
-            'w-fit rounded-full px-lg py-sm text-base font-bold text-on-primary shadow-md',
-            c.direction === 'match' ? 'bg-positive' : 'bg-ink',
-          )}
-        >
-          {verdict}
-        </p>
-        <p className="text-xs text-text-muted">{t.basis[c.basis]}</p>
+    <Card title={t.revealTitle}>
+      <div className="flex flex-col gap-sm" data-testid="guess-reveal">
+        <p className="text-lg font-semibold">{t.reveal(formatMoney(r.guess), formatMoney(r.actual))}</p>
+        <p className="text-sm text-text-muted">{verdict}</p>
       </div>
     </Card>
   );
