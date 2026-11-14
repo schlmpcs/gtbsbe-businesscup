@@ -32,7 +32,7 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 
 | Done | ID | Task | Hours | Depends on | Done when |
 | --- | --- | --- | --- | --- | --- |
-| [x] | T1 | Monorepo, lint (incl. UI import rule), Vitest, CI, env (live deploy moved to the team's server, see `ARCHITECTURE.md`, Deployment; not set up yet) | 0.5 | — | Live URL by hour 1 |
+| [x] | T1 | Monorepo, lint (incl. UI import rule), Vitest, CI, env, live deploy (on the team's server, see `ARCHITECTURE.md`, Deployment) | 0.5 | — | Live URL by hour 1 |
 | [ ] | T2 | Data pipeline (HUD, Census, BLS, childcare) → `areas.json` for ~60 ZIPs + refresh | 2.5 | Contracts | JSON committed, every value has a Source |
 | [ ] | T3 | Engine: `loan`, `compareLoans`, debt load, extra payments, payoff order | 1.5 | Contracts | Amortization matches the formula in tests; `payoffMonth: null` when the payment doesn't cover interest |
 | [ ] | T4 | Sessions: anon ID, save Profile + wishlist | 1 | T1 | Reload keeps profile without sign-up |

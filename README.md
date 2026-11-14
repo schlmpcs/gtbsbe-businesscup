@@ -64,4 +64,4 @@ Rules for contributors (human or AI) are in [CLAUDE.md](CLAUDE.md); specs are in
 | Ladder S5–S9 (`/me/guess`, `/me/closest`, `/me/sliders`, `/me/balance`, `/me/upload`): guess vs. engine estimate, closest life with sources, sliders + "describe your life" (confirm before apply), balance sheet with debts, statement review + "What we keep"; rung progress and the 10-year range narrowing as estimates become real | Placeholder UI done (Y9); S9 file reading waits for T6/T7 |
 | S11 Can I Afford It? (`/afford`: form + free text with confirm, verdict and reason, with / without chart, wishlist) and S12 Loan Lab (`/loan`: 3 offers side by side, debt-load gauges, extra-payment slider, edit / add / type an offer) | Placeholder UI on real data (Y11) |
 | Screens S13–S15 | Placeholder pages |
-| Deploy (live URL) | Files in `deploy/` (Docker, compose, `deploy.sh`) and a deploy-after-CI workflow are written; the team server and its runner are not set up yet (`deploy/README.md`) |
+| Deploy (live URL) | Done: live on the team server; a push to `main` that passes CI is deployed automatically (`deploy/README.md`) |
