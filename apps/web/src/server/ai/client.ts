@@ -37,6 +37,11 @@ export function llmModel(): string {
   return process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_MODEL;
 }
 
+/** The model for /api/ai/forecast: ANTHROPIC_FORECAST_MODEL when set, otherwise the shared one. */
+export function forecastModel(): string {
+  return process.env.ANTHROPIC_FORECAST_MODEL?.trim() || llmModel();
+}
+
 /** Prompts and responses are logged in development only (docs/ENGINEERING.md → AI usage rules). */
 export function devLog(scope: string, label: string, data: unknown): void {
   if (process.env.NODE_ENV !== 'development') return;
