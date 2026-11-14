@@ -7,7 +7,9 @@
 // - the fixture game client (apps/web/src/features/game/model/fixtureClient.ts), which plays the
 //   sample cards in the browser. client.ts loads it with a dynamic import() that an API build
 //   drops, so it must have no chunk at all. Same for the fixture duel client (duelFixtureClient.ts,
-//   loaded by duelClient.ts).
+//   loaded by duelClient.ts), but only in a build with NEXT_PUBLIC_DUEL_SOURCE=api: by default the
+//   duel plays in the browser (its own flag, until the duel routes land: #115, #120) on the made-up
+//   duel sample cards (ids sample-duel-*, no catalog card), so its client ships on purpose.
 // It also fails when the scan can't be trusted: no chunks, or no chunk with the HTTP game client
 // (proof that the game code was scanned).
 //
@@ -25,6 +27,9 @@ const CATALOG_PATH = join(root, 'packages/data/cards/cards.json');
 const FIXTURE_CLIENT_PATH = join(root, 'apps/web/src/features/game/model/fixtureClient.ts');
 const HTTP_CLIENT_PATH = join(root, 'apps/web/src/features/game/model/client.ts');
 const FIXTURE_DUEL_CLIENT_PATH = join(root, 'apps/web/src/features/game/model/duelFixtureClient.ts');
+
+/** The duel's data source the build was made with (same rule as apps/web/src/lib/config.ts duelSource). */
+const envDuelSource = () => (process.env.NEXT_PUBLIC_DUEL_SOURCE === 'api' ? 'api' : 'fixtures');
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -52,18 +57,20 @@ function literalIn(path, literal) {
 
 /**
  * What must not ship and what must, read from the sources so the check follows them:
- * - forbidden: every catalog card id, and two string literals of the fixture game client (its
- *   storage key and an error message no other module has);
+ * - forbidden: every catalog card id, two string literals of the fixture game client (its
+ *   storage key and an error message no other module has) and, when the duel plays against the
+ *   server (`duelSource: 'api'`), the fixture duel client's result id prefix;
  * - required: the HTTP game client's guess route.
  */
-export function bundleRules() {
+export function bundleRules({ duelSource = envDuelSource() } = {}) {
   const catalog = JSON.parse(readFileSync(CATALOG_PATH, 'utf8'));
   if (!Array.isArray(catalog) || catalog.length === 0) throw new Error('packages/data/cards/cards.json: expected a non-empty array of cards');
   const fixtureSource = readFileSync(FIXTURE_CLIENT_PATH, 'utf8');
   const logKey = /export const FIXTURE_LOG_KEY = '([^']+)'/.exec(fixtureSource)?.[1];
   if (!logKey) throw new Error('fixtureClient.ts: FIXTURE_LOG_KEY not found: update scripts/check-client-bundle.mjs');
-  const duelLogKey = /export const FIXTURE_DUEL_LOG_KEY = '([^']+)'/.exec(readFileSync(FIXTURE_DUEL_CLIENT_PATH, 'utf8'))?.[1];
-  if (!duelLogKey) throw new Error('duelFixtureClient.ts: FIXTURE_DUEL_LOG_KEY not found: update scripts/check-client-bundle.mjs');
+  // The duel log's storage key is shared with S1 Today (duelProgress.ts), so the duel client's own
+  // marker is the result id prefix only it writes.
+  const duelMarker = literalIn(FIXTURE_DUEL_CLIENT_PATH, 'fixture-duel-');
   return {
     forbidden: [
       ...catalog.map((card) => ({ label: `catalog card ${card.id}`, pattern: tokenPattern(card.id) })),
@@ -72,7 +79,9 @@ export function bundleRules() {
         label: 'fixture game client (its error message)',
         pattern: new RegExp(escapeRe(literalIn(FIXTURE_CLIENT_PATH, 'No fixture data for card'))),
       },
-      { label: 'fixture duel client (FIXTURE_DUEL_LOG_KEY)', pattern: new RegExp(escapeRe(duelLogKey)) },
+      ...(duelSource === 'api'
+        ? [{ label: 'fixture duel client (its result id prefix)', pattern: new RegExp(escapeRe(duelMarker)) }]
+        : []),
     ],
     required: [{ label: 'HTTP game client (/api/daily/guess)', pattern: new RegExp(escapeRe(literalIn(HTTP_CLIENT_PATH, '/api/daily/guess'))) }],
   };
@@ -109,7 +118,9 @@ function main() {
     process.exit(1);
   }
   const count = listChunks(staticDir).length;
-  console.log(`OK: ${count} browser chunks, no catalog card (${rules.forbidden.length - 3} ids) and no fixture game or duel client.`);
+  const ids = rules.forbidden.filter((r) => r.label.startsWith('catalog card ')).length;
+  const duel = envDuelSource() === 'api' ? 'no fixture game or duel client' : 'no fixture game client (the duel plays in the browser: NEXT_PUBLIC_DUEL_SOURCE=fixtures)';
+  console.log(`OK: ${count} browser chunks, no catalog card (${ids} ids) and ${duel}.`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

@@ -78,12 +78,15 @@ export const forecast = {
 
   /** S1 Today. */
   today: {
-    /**
-     * The hero headline. The game today is "guess one stranger's month" (a slider), not a duel between two
-     * lives, so the Figma line "Which life costs more?" waits for the duel game.
-     */
+    /** The hero headline and lead while /play is the slider game (NEXT_PUBLIC_GAME_MODE=slider). */
     title: 'What does their life cost?',
     lead: 'Guess what a stranger’s month costs, then price your own and see your next 10 years.',
+    /** The same while /play is the duel (the default). */
+    duel: {
+      title: 'Which life costs more?',
+      lead: 'Pick the costlier of two lives, five times a day. Then price your own month and see your next 10 years.',
+      steps: ['Play 5 quick rounds', 'Price your own month', 'See you in 10 years'],
+    },
     note: 'No sign-up, no bank login',
     /** Opens the forecast on the sample profile (shown only while the profile is still the sample one). */
     sampleCta: 'Try with sample data',
@@ -130,6 +133,19 @@ export const forecast = {
       hint: 'In today’s dollars',
       cta: 'See your forecast',
     },
+    /** The game call to action while /play is the duel (the default): rounds, not homes. */
+    playDuel: {
+      cta: 'Play today’s five',
+      continue: (played: number, total: number) => `Keep playing (${played} of ${total})`,
+      /** Sticker over the score once today's five rounds are all picked. */
+      doneSticker: 'Today’s five · done',
+      /** The big line once the day is done: rounds picked of today's total. */
+      doneScore: (played: number, total: number) => `${played} of ${total}`,
+      done: 'Done for today. Five new duels tomorrow. Now try your own month.',
+      doneCta: 'See your results',
+      priceOwn: 'Price my own month',
+    },
+    /** The game call to action while /play is the slider game (NEXT_PUBLIC_GAME_MODE=slider). */
     play: {
       cta: 'Play today’s homes',
       continue: (played: number, total: number) => `Keep playing (${played} of ${total})`,

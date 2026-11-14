@@ -63,7 +63,7 @@ function todayVm(over: Partial<TodayVM> = {}): TodayVM {
     in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, in10yBandKind: 'inputs',
     forecastStatus: 'ready', forecastError: null, source: 'rules', isRefreshing: false, actionsDisabled: false, committedMove: null,
     markCommittedDone: () => {}, topMove: { status: 'ready', data: null },
-    game: { date: null, played: 0, total: 0, finished: false, homes: [] },
+    game: { kind: 'duel', date: null, played: 0, total: 5, finished: false, homes: [] },
     ...over,
   };
 }
@@ -108,7 +108,9 @@ describe('TodayScreen (S1)', () => {
     expect(within(card).getByText(/^Likely between \$[\d,]+ and \$[\d,]+$/)).toBeInTheDocument();
     expect(within(card).getByTestId('forecast-source')).toHaveTextContent(t.source.rules);
     expect(within(card).getByText(t.band.label)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: t.today.play.cta })).toHaveAttribute('href', '/play');
+    // /play is the duel by default: rounds, not homes.
+    expect(screen.getByRole('heading', { level: 1, name: t.today.duel.title })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t.today.playDuel.cta })).toHaveAttribute('href', '/play');
     expect(screen.getByRole('link', { name: t.today.future.cta })).toHaveAttribute('href', '/future');
     expect(screen.getByRole('link', { name: new RegExp(t.today.tools.afford.title) })).toHaveAttribute('href', '/afford');
     expect(screen.getByRole('link', { name: new RegExp(t.today.tools.loan.title) })).toHaveAttribute('href', '/loan');
@@ -230,6 +232,36 @@ describe('TodayScreen (S1)', () => {
     await waitFor(() => expect(within(moveCard).getByText(t.today.move.committedTitle)).toBeInTheDocument());
     await user.click(within(moveCard).getByRole('button', { name: t.today.move.markDone }));
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([ranked[0]!.id]);
+  });
+});
+
+describe('TodayScreen (S1) daily game copy', () => {
+  it('duel: counts today’s five and shows no home tiles', () => {
+    const p = t.today.playDuel;
+    const { unmount } = render(
+      <TodayScreen vm={todayVm({ game: { kind: 'duel', date: '2026-11-14', played: 2, total: 5, finished: false, homes: [] } })} links={links} screens={[]} Link={A} />,
+    );
+    expect(screen.getByRole('link', { name: p.continue(2, 5) })).toHaveAttribute('href', '/play');
+    expect(screen.queryByRole('region', { name: t.today.homes.label })).not.toBeInTheDocument();
+    expect(screen.queryByText(/today’s homes/i)).not.toBeInTheDocument();
+    unmount();
+
+    render(<TodayScreen vm={todayVm({ game: { kind: 'duel', date: '2026-11-14', played: 5, total: 5, finished: true, homes: [] } })} links={links} screens={[]} Link={A} />);
+    expect(screen.getByText(p.doneSticker)).toBeInTheDocument();
+    expect(screen.getByText(p.done)).toBeInTheDocument();
+  });
+
+  it('slider (NEXT_PUBLIC_GAME_MODE=slider): today’s homes, with their tiles', () => {
+    const homes = [{ id: 'a', metro: 'Austin, TX', played: true }, { id: 'b', metro: 'Boise, ID', played: false }];
+    render(<TodayScreen vm={todayVm({ game: { kind: 'slider', date: '2026-11-14', played: 1, total: 2, finished: false, homes } })} links={links} screens={[]} Link={A} />);
+    expect(screen.getByRole('heading', { level: 1, name: t.today.title })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t.today.play.continue(1, 2) })).toHaveAttribute('href', '/play');
+    expect(screen.getByRole('region', { name: t.today.homes.label })).toBeInTheDocument();
+  });
+
+  it('lists a screen under the title it is given (S2 as the duel)', () => {
+    render(<TodayScreen vm={todayVm()} links={links} screens={[{ id: 'S2', href: '/play', title: 'Which life costs more?' }]} Link={A} />);
+    expect(screen.getByRole('link', { name: /S2\s*Which life costs more\?/ })).toHaveAttribute('href', '/play');
   });
 });
 

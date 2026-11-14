@@ -47,8 +47,11 @@ export type TodayLinks = {
 export type TodayScreenProps = {
   vm: TodayVM;
   links: TodayLinks;
-  /** Every screen, for the compact "All screens" list (judges can reach each one). */
-  screens: { id: ScreenId; href: string }[];
+  /**
+   * Every screen the app links to, for the compact "All screens" list (judges can reach each one).
+   * `title` overrides the screen's default title (S2/S3 when /play is the duel).
+   */
+  screens: { id: ScreenId; href: string; title?: string }[];
   Link: LinkComponent;
 };
 
@@ -63,7 +66,7 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
       <Stack gap="3xl">
         <Hero vm={vm} links={links} Link={Link} />
 
-        {firstVisit && <Steps />}
+        {firstVisit && <Steps items={vm.game.kind === 'duel' ? t.today.duel.steps : t.today.steps.items} />}
 
         {ready && vm.game.homes.length > 0 && <HomesRow homes={vm.game.homes} />}
 
@@ -129,7 +132,9 @@ function Hero({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: LinkC
   const { played, total, finished } = vm.game;
   const done = ready && finished;
   const inProgress = ready && played > 0 && !finished;
-  const p = t.today.play;
+  // The duel counts rounds ("today's five"), the slider game homes.
+  const duel = vm.game.kind === 'duel';
+  const p = duel ? t.today.playDuel : t.today.play;
 
   return (
     <section data-testid="play" className="grid items-center gap-2xl lg:grid-cols-2">
@@ -159,9 +164,9 @@ function Hero({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: LinkC
               {inProgress ? t.today.inProgress : t.today.kicker}
             </Sticker>
             <h1 className="font-display text-6xl font-extrabold leading-display tracking-tight sm:text-7xl xl:text-8xl">
-              {t.today.title}
+              {duel ? t.today.duel.title : t.today.title}
             </h1>
-            <p className="max-w-(--container-lg) text-xl">{t.today.lead}</p>
+            <p className="max-w-(--container-lg) text-xl">{duel ? t.today.duel.lead : t.today.lead}</p>
             <div className="flex w-full flex-wrap items-center gap-md">
               <Link
                 href={links.play}
@@ -528,7 +533,7 @@ function AllScreens({ screens, Link }: Pick<TodayScreenProps, 'screens' | 'Link'
           {t.today.allScreens}
         </summary>
         <ul className="mt-sm flex flex-wrap gap-xs">
-          {screens.map(({ id, href }) => (
+          {screens.map(({ id, href, title }) => (
             <li key={id}>
               <Link
                 href={href}
@@ -536,7 +541,7 @@ function AllScreens({ screens, Link }: Pick<TodayScreenProps, 'screens' | 'Link'
                 className="inline-flex items-baseline gap-xs rounded-full bg-surface px-md py-xs text-xs shadow-sm hover:bg-primary-soft"
               >
                 <span className="font-mono text-text-muted">{id}</span>
-                <span>{screenTitles[id]}</span>
+                <span>{title ?? screenTitles[id]}</span>
               </Link>
             </li>
           ))}

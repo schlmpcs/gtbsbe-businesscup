@@ -4,8 +4,8 @@
 // per day (in localStorage, so a reload can neither re-pick nor drop a hint), and fills the lesson
 // from the fixed template table in @/copy. Crowd counts need many players: always null here.
 //
-// It holds the answers (the cards), so only ./duelClient loads it, with a dynamic import() that an
-// API build drops (NEXT_PUBLIC_GAME_SOURCE=api). Don't import it statically from browser code; the
+// It holds the answers (the cards), so only ./duelClient loads it, with a dynamic import() that a
+// duel API build drops (NEXT_PUBLIC_DUEL_SOURCE=api). Don't import it statically from browser code; the
 // ESLint rule in eslint.config.mjs holds that.
 import { LAYOUTS, carSprite, costOfLife, dailyDuelPairs, scoreDuelPick } from '@lifeguessr/engine';
 import type {
@@ -17,18 +17,10 @@ import { ApiError } from '@/lib/api/http';
 import { areaForZip } from '@/lib/areas';
 import { readStorage, writeStorage } from '@/lib/safeStorage';
 import { newUuid } from '@/state/anonId';
-import type { DuelClient, DuelProgress } from './duelClient';
+import type { DuelClient } from './duelClient';
+import { FIXTURE_DUEL_LOG_KEY, parseDuelLog, type DuelLog } from './duelProgress';
 
-export const FIXTURE_DUEL_LOG_KEY = 'lifeguessr.fixtureDuel';
-
-/** The fixture "server" log for one day. */
-type DuelLog = {
-  date: string;
-  /** One id for the player's day: the challenge link and share card point at it. */
-  resultId: string;
-  picks: DuelProgress['picks'];
-  hints: DuelProgress['hints'];
-};
+export { FIXTURE_DUEL_LOG_KEY };
 
 /** The 4 fact chips of a life: car, kids, eating out, housing. Picks words only; no cost facts. */
 export function duelFacts(card: LifeCard): string[] {
@@ -70,18 +62,7 @@ export function createFixtureDuelClient(
   const save = () => {
     if (persist && log) writeStorage(FIXTURE_DUEL_LOG_KEY, JSON.stringify(log));
   };
-  const restore = (date: string): DuelLog | null => {
-    if (!persist) return null;
-    try {
-      const saved = JSON.parse(readStorage(FIXTURE_DUEL_LOG_KEY) ?? 'null') as DuelLog | null;
-      if (saved && saved.date === date && typeof saved.resultId === 'string') {
-        return { date, resultId: saved.resultId, picks: saved.picks ?? {}, hints: saved.hints ?? {} };
-      }
-    } catch {
-      // a corrupt log: start the day fresh
-    }
-    return null;
-  };
+  const restore = (date: string): DuelLog | null => (persist ? parseDuelLog(readStorage(FIXTURE_DUEL_LOG_KEY), date) : null);
 
   const costOf = (card: LifeCard): CostBreakdown => {
     const area = areaFor(card.zip);

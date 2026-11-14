@@ -1,8 +1,9 @@
 // T8: the 2-minute demo path (docs/PRODUCT.md → Two-minute demo script) in one spec, phone and
-// desktop: play 3 homes, opening a room in each → guess your own month → closest life → sliders →
-// You in 10 years → upload the sample statement → Loan Lab compare. Selectors come from the copy
-// files and roles, so a Figma restyle or the game moving to server routes (NEXT_PUBLIC_GAME_SOURCE)
-// does not break it.
+// desktop: play today's five duels at /play (a hint in the first) → the day result's "Price my own
+// month" → guess your own month → closest life → sliders → You in 10 years → upload the sample
+// statement → Loan Lab compare. Selectors come from the copy files and roles, so a Figma restyle or
+// the duel moving to server routes (NEXT_PUBLIC_DUEL_SOURCE) does not break it. The slider game
+// (NEXT_PUBLIC_GAME_MODE=slider, the rollback) has its own spec, play.spec.ts.
 //
 // When the build sends funnel events (NEXT_PUBLIC_EVENTS_SOURCE=api with a store, as CI's e2e job
 // runs it), it also checks that each step of the path was recorded, that what was sent carries no
@@ -11,8 +12,8 @@ import { fileURLToPath } from 'node:url';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import type { ClientFunnelEvent, FunnelReport } from '@lifeguessr/types';
 import { common } from '../src/copy/common';
+import { duel } from '../src/copy/duel';
 import { forecast } from '../src/copy/forecast';
-import { game } from '../src/copy/game';
 import { ladder } from '../src/copy/ladder';
 import { loan } from '../src/copy/loan';
 
@@ -75,41 +76,36 @@ function stored(page: Page, name: ClientFunnelEvent['name']): Promise<unknown> {
   );
 }
 
-test('demo path: 3 homes → own guess → sliders → forecast → statement → Loan Lab', async ({ page, isMobile }) => {
+test('demo path: 5 duels → own guess → sliders → forecast → statement → Loan Lab', async ({ page }) => {
   test.setTimeout(120_000);
 
-  // ----- 1. Play 3 homes, opening one room in each (S2 → S3) -----
+  // ----- 1. Play today's five duels at /play (S2 → S3 → day result) -----
   await page.goto('/play');
-  await expect(h1(page)).toHaveText(game.screens.S2);
-  const rooms = [game.clues.rooms.kitchen, game.clues.rooms.garage, game.clues.rooms.mailbox] as const;
-  for (let i = 0; i < 3; i++) {
-    await expect(page.getByText(game.progress(i + 1, 5))).toBeVisible();
-    await page.getByRole('button', { name: rooms[i], exact: true }).click();
-    const closeUp = page.getByRole('region', { name: common.kit.houseScene.closeUp(rooms[i]) });
-    await expect(closeUp.getByText(game.clues.opened)).toBeVisible();
-    await closeUp.getByRole('button', { name: common.kit.houseScene.back }).click();
-    await expect(closeUp).toHaveCount(0);
-
-    const guess = String(2500 + i * 1000);
-    const input = page.getByRole('textbox', { name: game.guess.input });
-    if (isMobile) await input.tap();
-    else await input.click();
-    await page.keyboard.type(guess);
-    await input.blur();
-    await page.getByRole('button', { name: /^Lock in/ }).click();
-
-    // The reveal: the real cost, scored with the room that was opened.
-    await expect(h1(page)).toHaveText(game.screens.S3);
-    await expect(page.getByRole('figure', { name: /Your guess/ })).toBeVisible();
-    await expect(page.getByText(/for 1 room opened/)).toBeVisible();
-    await page.getByRole('button', { name: game.reveal.next }).click();
+  await expect(h1(page)).toHaveText(duel.title);
+  // One hint in the first round: one more fact on each card, for −10% of the round's points.
+  await page.getByRole('button', { name: duel.hint.offer('10%') }).click();
+  await expect(page.getByText(duel.hint.used('900'))).toBeVisible();
+  for (let round = 1; round <= 5; round++) {
+    await expect(page.getByText(duel.round(round, 5))).toBeVisible();
+    await page.getByRole('button', { name: /^Life A costs more/ }).click();
+    // The reveal: both monthly totals, each with its category breakdown, computed by the engine.
+    await expect(page.getByText(/^Right! \+[\d,]+ points$|^Not this time · 0 points$/)).toBeVisible();
+    for (const letter of ['A', 'B'] as const) {
+      const breakdown = page.getByRole('list', { name: duel.reveal.breakdownLabel(letter) });
+      await expect(breakdown).toBeVisible();
+      await expect(page.getByRole('article').filter({ has: breakdown }).getByText(/\$[\d,]+/).first()).toBeVisible();
+    }
+    await page.getByRole('button', { name: round === 5 ? duel.reveal.finish : duel.reveal.next }).click();
   }
-  await expect(page.getByText(game.progress(4, 5))).toBeVisible();
+  await expect(page.getByRole('heading', { name: duel.summary.heading })).toBeVisible();
+  await expect(page.getByRole('list', { name: duel.summary.gridLabel }).getByRole('listitem')).toHaveCount(5);
+  await expectNoSideScroll(page);
   // The game's events leave in their own batch before the next page (see `stored`).
-  if (EVENTS_ON) await expect.poll(() => sentEvents.filter((e) => e.name === 'home_guessed').length, { timeout: 10_000 }).toBe(3);
+  if (EVENTS_ON) await expect.poll(() => sentEvents.filter((e) => e.name === 'home_guessed').length, { timeout: 10_000 }).toBe(5);
+  await page.getByRole('link', { name: duel.summary.cta }).click();
+  await expect(page).toHaveURL(/\/me\/guess$/);
 
   // ----- 2. Guess your own month (S5) -----
-  await page.goto('/me/guess');
   await expect(h1(page)).toHaveText(ladder.screens.S5);
   const own = page.getByRole('slider', { name: ladder.guess.sliderLabel });
   await own.focus();
@@ -121,7 +117,7 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
 
   await ownGuess;
 
-  // ----- 3. Closest life (S6), from today's homes -----
+  // ----- 3. Closest life (S6), from the sample lives (the duel's lives are composites) -----
   await page.getByRole('link', { name: ladder.shell.cta.S5 }).click();
   await expect(page).toHaveURL(/\/me\/closest$/);
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) }).first();
@@ -185,13 +181,12 @@ test('demo path: 3 homes → own guess → sliders → forecast → statement �
   await expect
     .poll(() => PATH_EVENTS.filter((name) => !sentEvents.some((e) => e.name === name)), { timeout: 15_000 })
     .toEqual([]);
+  // The duel reports a round as a home guessed and its hint as the mailbox clue (useDuel).
   const opened = sentEvents.filter((e) => e.name === 'clue_opened');
-  expect(opened.map((e) => (e as Extract<ClientFunnelEvent, { name: 'clue_opened' }>).props)).toEqual([
-    { home: 1, clue: 'kitchen' }, { home: 2, clue: 'garage' }, { home: 3, clue: 'mailbox' },
-  ]);
+  expect(opened.map((e) => (e as Extract<ClientFunnelEvent, { name: 'clue_opened' }>).props)).toEqual([{ home: 1, clue: 'mailbox' }]);
   const guessed = sentEvents.filter((e) => e.name === 'home_guessed');
   expect(guessed.map((e) => (e as Extract<ClientFunnelEvent, { name: 'home_guessed' }>).props)).toEqual([
-    { home: 1, cluesOpened: 1 }, { home: 2, cluesOpened: 1 }, { home: 3, cluesOpened: 1 },
+    { home: 1, cluesOpened: 1 }, { home: 2, cluesOpened: 0 }, { home: 3, cluesOpened: 0 }, { home: 4, cluesOpened: 0 }, { home: 5, cluesOpened: 0 },
   ]);
 
   // Nothing personal leaves the browser: the id travels in a header and the body, never the URL,

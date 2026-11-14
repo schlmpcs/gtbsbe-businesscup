@@ -55,7 +55,7 @@ test('first visit: Today explains the app; Try with sample data opens the foreca
   await page.reload();
   await expect(banner).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.title);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.duel.title);
   await expect(banner).toBeVisible();
   await banner.getByRole('link', { name: common.sampleBanner.cta }).click();
   await expect(page).toHaveURL(/\/me\/guess$/);
@@ -67,7 +67,7 @@ test('Today shows the 10-year number with its range and links to /play and /futu
   await page.goto('/future?sample=1');
   await expect(page.getByTestId('sample-banner')).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.title);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.duel.title);
 
   const in10y = page.getByTestId('in10y');
   await expect(in10y.getByText(t.netWorthIn10y)).toBeVisible();
@@ -78,7 +78,7 @@ test('Today shows the 10-year number with its range and links to /play and /futu
   await expect(page.getByTestId('month-end-no-history')).toContainText(t.today.monthEnd.needHistory(0));
   await noSideScroll(page);
 
-  await page.getByRole('link', { name: t.today.play.cta }).click();
+  await page.getByRole('link', { name: t.today.playDuel.cta }).click();
   await expect(page).toHaveURL(/\/play$/);
 
   await page.goto('/');

@@ -139,6 +139,13 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
             />
           )}
         </div>
+
+        <footer data-testid="duel-footer" className="text-center text-xs text-text-muted">
+          <p>
+            {t.footer.composite}
+            {vm.source === 'fixtures' && ` ${t.footer.browser}`}
+          </p>
+        </footer>
       </div>
     </main>
   );
