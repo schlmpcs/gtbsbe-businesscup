@@ -98,6 +98,7 @@ export function buildLadderProgress(s: ProgressData): Omit<LadderProgressVM, 'st
     rungs,
     doneCount: rungs.filter((r) => r.done).length,
     in10y,
+    in10ySource: 'rules',
     bandWidth,
     bandWidthAllEstimated,
     bandNarrowed,

@@ -37,6 +37,11 @@ export type LadderProgressVM = {
   doneCount: number;
   /** Net worth in 10 years (today's dollars) with the range band from the estimated inputs. */
   in10y: ForecastPoint;
+  /**
+   * Who made `in10y`: always the rules engine here, so the number moves as you type (S1 and S10 show
+   * the AI forecast). The UI labels it "Rules-based preview".
+   */
+  in10ySource: 'rules';
   /** in10y.high − in10y.low. */
   bandWidth: Money;
   /** The same profile's band if every input were an estimate: where the ladder starts. */
@@ -152,6 +157,8 @@ export type QuickSlidersVM = {
   selfGuess: Money | null;
   /** Net worth in 10 years, today's dollars, with the range band. */
   in10y: ForecastPoint;
+  /** Who made `in10y`: always the rules engine (a drag needs instant feedback). Not shown on this screen. */
+  in10ySource: 'rules';
   setSpending: (category: CostCategory, value: Money) => void;
   setSavingsShare: (share: Rate) => void;
   /** "I pay 1,800 rent and eat out twice a week" → ProfilePatch, applied after confirmation. */

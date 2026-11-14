@@ -110,6 +110,7 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
     monthlyCost: month.spending + month.debtPayments,
     selfGuess,
     in10y,
+    in10ySource: 'rules',
     setSpending,
     setSavingsShare,
     parse,

@@ -86,13 +86,23 @@ test('closest life → sliders → balance sheet with a new debt → /future', a
   await expect(page.getByRole('progressbar', { name: ladder.shell.narrowedLabel })).toBeVisible();
   await expect(range(page)).toBeVisible();
 
-  // S10: the CTA leads to the forecast of the profile built above (same engine number as the ladder's).
+  // S10: the CTA leads to the forecast of the profile built above. The ladder's number is the engine's
+  // preview, labeled so. S10 shows the same number only while its own answer is the rules forecast (always
+  // so in CI, where there is no model key); with the model's answer it shows another number, labeled as the AI's.
   const in10y = (await page.getByTestId('ladder-in10y').getByText(/^−?\$[\d,]+$/).textContent()) ?? '';
   expect(in10y).toMatch(/\$/);
+  await expect(page.getByTestId('ladder-in10y-source')).toHaveText(forecast.source.rulesPreview);
   await page.getByRole('link', { name: ladder.shell.futureCta }).click();
   await expect(page).toHaveURL(/\/future$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.future.title);
-  await expect(page.getByTestId('in10y')).toContainText(in10y);
+  const headlineSource = page.getByTestId('in10y').getByTestId('forecast-source');
+  await expect(headlineSource).toBeVisible({ timeout: 30_000 }); // the model has up to 25 s before the rules answer
+  if ((await headlineSource.getAttribute('data-source')) === 'rules') {
+    await expect(headlineSource).toHaveText(forecast.source.rules);
+    await expect(page.getByTestId('in10y')).toContainText(in10y);
+  } else {
+    await expect(headlineSource).toHaveText(forecast.source.ai);
+  }
   await expect(page.getByRole('figure', { name: forecast.future.chartTitle }).locator('.recharts-line-curve').first()).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);

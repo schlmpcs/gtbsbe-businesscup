@@ -5,7 +5,7 @@ import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { common, ladder } from '@/copy';
+import { common, forecast, ladder } from '@/copy';
 import type {
   GuessYourselfVM, LadderProgressVM, ParsedRowVM, QuickSlidersVM, StatementUploadVM,
 } from './model/types';
@@ -23,6 +23,7 @@ const progress: LadderProgressVM = {
   bandWidthAllEstimated: 100_000,
   bandNarrowed: 0.5,
   estimates: { left: 6, total: 14 },
+  in10ySource: 'rules',
   futureHref: '/future',
 };
 
@@ -57,10 +58,16 @@ describe('LadderProgress (via any rung)', () => {
     expect(screen.getByRole('progressbar', { name: ladder.shell.narrowedLabel })).toHaveAttribute('aria-valuenow', '0.5');
     expect(screen.getByRole('link', { name: ladder.shell.futureCta })).toHaveAttribute('href', '/future');
   });
+
+  it('labels the 10-year number as the rules preview, next to the number', () => {
+    render(<StatementUpload vm={uploadVM()} progress={progress} />);
+    const number = screen.getByTestId('ladder-in10y');
+    expect(within(number).getByTestId('ladder-in10y-source')).toHaveTextContent(forecast.source.rulesPreview);
+  });
 });
 
 describe('StatementUpload (S9)', () => {
-  it('without a reader: the picker is disabled and explains why; nothing claims data is sent', () => {
+  it('without a reader: the picker is disabled and explains why; nothing claims statement data is sent', () => {
     render(<StatementUpload vm={uploadVM()} progress={progress} />);
     const picker = screen.getByLabelText(ladder.upload.pickerLabel);
     expect(picker).toBeDisabled();
@@ -68,6 +75,15 @@ describe('StatementUpload (S9)', () => {
     expect(screen.getByRole('region', { name: ladder.upload.keep.title })).toHaveTextContent(ladder.upload.keep.none);
     expect(screen.queryByText(ladder.upload.keep.sentTitle)).toBeNull();
     expect(screen.queryByText(ladder.upload.keep.server)).toBeNull();
+  });
+
+  it('always says what the 10-year forecast sends to the model provider', () => {
+    const { unmount } = render(<StatementUpload vm={uploadVM()} progress={progress} />);
+    const keep = screen.getByRole('region', { name: ladder.upload.keep.title });
+    expect(keep).toHaveTextContent(ladder.upload.keep.forecastSent);
+    unmount();
+    render(<StatementUpload vm={uploadVM({ readFile: vi.fn() })} progress={progress} />);
+    expect(screen.getByRole('region', { name: ladder.upload.keep.title })).toHaveTextContent(ladder.upload.keep.forecastSent);
   });
 
   it('with a reader: the picker hands the file over', async () => {

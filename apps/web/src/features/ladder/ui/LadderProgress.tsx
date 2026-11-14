@@ -1,7 +1,7 @@
 // Ladder progress: the five rungs (done / not yet / this step), the 10-year number with its range
 // band, how far the user's own numbers have narrowed that band, the next rung and "See your future".
 import { useId } from 'react';
-import { ladder, screenTitles } from '@/copy';
+import { forecast, ladder, screenTitles } from '@/copy';
 import { buttonClassName, Card, cx, formatMoney, formatRate, Row, Stack, Stat } from '@/ui-kit';
 import type { LadderProgressVM, LadderScreen } from '../model/types';
 
@@ -65,6 +65,14 @@ export function LadderProgress({ screen, progress }: LadderProgressProps) {
                 isEstimate={estimates.left > 0}
                 hint={t.in10yHint}
               />
+              {progress.in10ySource === 'rules' && (
+                <span
+                  data-testid="ladder-in10y-source"
+                  className="mt-xs inline-flex w-fit items-center rounded-full border border-border px-sm text-xs font-medium leading-normal text-text-muted"
+                >
+                  {forecast.source.rulesPreview}
+                </span>
+              )}
             </div>
             <p className="text-sm tabular-nums" data-testid="ladder-range">
               {t.range(formatMoney(in10y.low), formatMoney(in10y.high))}

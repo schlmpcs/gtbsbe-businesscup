@@ -267,6 +267,8 @@ export const ladder = {
       ],
       sentTitle: 'What leaves your browser:',
       sent: 'only each line’s merchant label (with personal names masked), amount, month and day of month, to sort it into categories. They are not stored.',
+      forecastSent:
+        'For the 10-year forecast, the numbers in your profile (no names or account numbers) go to the AI model provider, set not to train on them or keep them. They are not stored.',
     },
   },
 } as const;
