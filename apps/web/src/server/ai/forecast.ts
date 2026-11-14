@@ -81,7 +81,7 @@ Rules:
 - Use nominal US dollars (not adjusted for inflation), written as plain dollar amounts, never in thousands or millions.
 - For every year give low, mid and high, with low ≤ mid ≤ high. mid is your best estimate.
 - The range (low to high) is the uncertainty that comes from the inputs marked "isEstimate": true, which are guesses by the person or by the simulator. Inputs marked "isEstimate": false are exact. The more estimated inputs, the wider the range; with no estimated inputs the range is narrow. Do not widen it for market or inflation risk.
-- Return a forecast for the id "base" (the situation as given) and one for every scenario id listed, each id exactly once and no other ids. A scenario is the same person with its patch applied from today on. Work out what each patch changes in income, spending, debt interest and payments, and retirement saving, and let its forecast end where that change leads, compared with "base". A scenario that helps ends higher than "base"; never copy "base" for a scenario.
+- Return a forecast for the id "base" (the situation as given) and one for every scenario id listed, each id exactly once and no other ids. A scenario is the same person with its patch applied from today on. Work out what each patch changes in income, spending, debt interest and payments, and retirement saving, and let its forecast end where that change leads, compared with "base". A scenario that helps ends higher than "base"; do not copy "base" for a scenario unless its patch changes nothing.
 - Use the simulator's assumptions given in the request for inflation, take-home pay growth, and returns on cash and retirement.
 - Reply with JSON only, matching the schema.`;
 
@@ -141,11 +141,11 @@ const describeId = (id: string): string => (id === BASE_FORECAST_ID ? 'base fore
 const about = (id: string, issues: readonly string[]): string[] => issues.map((i) => `${describeId(id)}: ${i}`);
 
 /**
- * Checks one model answer against the request and the rules bundle: either the AI bundle, or every
- * issue found (so the retry can fix them all at once). Throws only if an engine check does, which
+ * Checks one model answer against the request and the rules bundle: either the AI bundle (labeled
+ * with `model`, the one the request was sent to), or every issue found (so the retry can fix them all at once). Throws only if an engine check does, which
  * the caller treats as a failed attempt.
  */
-function checkAnswer(req: ForecastRequest, text: string, rules: ForecastBundle): Checked {
+function checkAnswer(req: ForecastRequest, text: string, rules: ForecastBundle, model: string): Checked {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -206,7 +206,7 @@ function checkAnswer(req: ForecastRequest, text: string, rules: ForecastBundle):
   return {
     bundle: {
       source: 'ai',
-      model: forecastModel(),
+      model,
       base: candidates.get(BASE_FORECAST_ID)!,
       scenarios: Object.fromEntries(req.scenarios.map((s) => [s.id, candidates.get(s.id)!])),
     },
@@ -222,6 +222,24 @@ function referenceOf(rules: ForecastBundle, id: string): Forecast {
 // ----- main ----------------------------------------------------------------------------------
 
 /**
+ * One line per failed attempt, kept in production logs (`devLog` is development only, so without
+ * this a provider outage is invisible). Diagnostics only: where it failed and a coarse why (the
+ * error's class and HTTP status, the stop reason, how many checks failed). Never the prompt, the
+ * answer, the error's message, or any profile value or id.
+ */
+function warnFailed(reason: string, detail: Record<string, string | number | undefined> = {}): void {
+  const parts = Object.entries(detail).filter(([, v]) => v !== undefined).map(([k, v]) => `${k}=${v}`);
+  console.warn(`[ai/forecast] attempt failed: ${reason}${parts.length > 0 ? ` (${parts.join(', ')})` : ''}`);
+}
+
+const errorClass = (error: unknown): string => (error instanceof Error ? error.constructor.name || error.name : typeof error);
+/** The HTTP status of an SDK APIError (duck-typed: the SDK module is replaced in tests). */
+const httpStatus = (error: unknown): number | undefined => {
+  const status = (error as { status?: unknown } | null | undefined)?.status;
+  return typeof status === 'number' ? status : undefined;
+};
+
+/**
  * Up to two attempts at an AI bundle; null when there is none to give (provider error, refusal,
  * two failed answers, out of time). Never throws.
  */
@@ -229,6 +247,7 @@ async function attempts(
   req: ForecastRequest,
   client: LlmClient,
   rules: ForecastBundle,
+  model: string,
   deadlineAt: number,
   signal: AbortSignal,
 ): Promise<ForecastBundle | null> {
@@ -246,7 +265,7 @@ async function attempts(
       try {
         response = await client.messages.create(
           {
-            model: forecastModel(),
+            model,
             max_tokens: MAX_OUTPUT_TOKENS,
             output_config: { effort: 'low', format: forecastOutputFormat() },
             system,
@@ -257,29 +276,40 @@ async function attempts(
         );
       } catch (error) {
         devLog('ai/forecast', 'provider error', String(error));
+        // At the deadline `forecastWithModel` already said so; the abort error is the same event.
+        if (!signal.aborted) warnFailed('provider_error', { attempt, error: errorClass(error), status: httpStatus(error) });
         return null;
       }
       const text = responseText(response);
       devLog('ai/forecast', `response (attempt ${attempt})`, { stop_reason: response.stop_reason, text });
-      if (response.stop_reason === 'refusal') return null;
+      if (response.stop_reason === 'refusal') {
+        warnFailed('refusal', { attempt, stop_reason: response.stop_reason });
+        return null;
+      }
 
       let checked: Checked;
+      let checkError: string | undefined;
       if (response.stop_reason === 'max_tokens') {
         checked = { issues: ['the answer was cut off; return only the JSON'] };
       } else {
         try {
-          checked = checkAnswer(req, text, rules);
+          checked = checkAnswer(req, text, rules, model);
         } catch (error) {
           devLog('ai/forecast', 'check error', String(error));
+          checkError = errorClass(error);
           checked = { issues: ['the answer could not be checked; return every value as a finite number of US dollars'] };
         }
       }
       if ('bundle' in checked) return checked.bundle;
       devLog('ai/forecast', `rejected (attempt ${attempt})`, checked.issues);
+      warnFailed(checkError ? 'check_error' : 'rejected', {
+        attempt, stop_reason: response.stop_reason ?? undefined, issues: checked.issues.length, error: checkError,
+      });
       content = retryContent(firstContent, response.stop_reason === 'max_tokens' ? null : text, checked.issues);
     }
   } catch (error) {
     devLog('ai/forecast', 'unexpected error', String(error));
+    warnFailed('unexpected', { error: errorClass(error) });
   }
   return null;
 }
@@ -295,6 +325,8 @@ export async function forecastWithModel(req: ForecastRequest, client: LlmClient 
   const rules = rulesBundle(req.profile, req.scenarios, req.rates);
   if (!client) return rules;
 
+  // Read once: the label must name the model this request was sent to, even if the environment changes meanwhile.
+  const model = forecastModel();
   const deadlineAt = startedAt + FORECAST_DEADLINE_MS;
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -302,12 +334,13 @@ export async function forecastWithModel(req: ForecastRequest, client: LlmClient 
   // waiting for it and abort it.
   const expired = new Promise<null>((resolve) => {
     timer = setTimeout(() => {
+      console.warn(`[ai/forecast] attempt failed: deadline (${FORECAST_DEADLINE_MS} ms) reached`);
       controller.abort();
       resolve(null);
     }, Math.max(0, deadlineAt - Date.now()));
   });
   try {
-    const ai = await Promise.race([attempts(req, client, rules, deadlineAt, controller.signal), expired]);
+    const ai = await Promise.race([attempts(req, client, rules, model, deadlineAt, controller.signal), expired]);
     return ai ?? rules;
   } finally {
     clearTimeout(timer);

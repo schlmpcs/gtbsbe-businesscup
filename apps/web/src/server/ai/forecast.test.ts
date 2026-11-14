@@ -1,8 +1,6 @@
 import type * as Engine from '@lifeguessr/engine';
 import { rulesBundle, simulate } from '@lifeguessr/engine';
-import {
-  ForecastBundleSchema, type Forecast, type Profile, type ProfilePatch, type YearAnchor,
-} from '@lifeguessr/types';
+import { ForecastBundleSchema, type Profile } from '@lifeguessr/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import { forecastModel, type LlmClient } from './client';
@@ -11,7 +9,7 @@ import {
   forecastOutputFormat, forecastPrompt, forecastWithModel,
 } from './forecast';
 import { type ForecastRequest } from './schemas';
-import { reply } from './testUtils';
+import { DEMO_SCENARIOS, goodAnswer, goodReply, forecastReply, reply, type WireForecast } from './testUtils';
 
 const { create, checks } = vi.hoisted(() => ({ create: vi.fn(), checks: { throws: false } }));
 const client = { messages: { create } } as unknown as LlmClient;
@@ -31,10 +29,7 @@ vi.mock('@lifeguessr/engine', async (importOriginal) => {
 
 // ----- fixtures: model answers built from the rules forecast, so they pass the checks ---------
 
-const SCENARIOS: { id: string; patch: ProfilePatch }[] = [
-  { id: 'pay-card', patch: { debts: [{ id: 'card-1', extraPayment: 300 }] } },
-  { id: 'cut-eating', patch: { spending: { eatingOut: 200 } } },
-];
+const SCENARIOS = DEMO_SCENARIOS;
 
 const request = (over: Partial<ForecastRequest> = {}): ForecastRequest => ({
   profile: cloneProfileDemo(),
@@ -42,37 +37,22 @@ const request = (over: Partial<ForecastRequest> = {}): ForecastRequest => ({
   ...over,
 });
 
-type WireForecast = { id: string; anchors: YearAnchor[] };
-
-const anchorsOf = (f: Forecast): YearAnchor[] =>
-  Array.from({ length: 10 }, (_, i) => {
-    const { low, mid, high } = f.points[(i + 1) * 12]!;
-    return { year: i + 1, low, mid, high };
-  });
-
-/** What a good model would say: the rules forecast of every id, as yearly anchors. */
-function goodAnswer(req: ForecastRequest): WireForecast[] {
-  const rules = rulesBundle(req.profile, req.scenarios, req.rates);
-  return [
-    { id: 'base', anchors: anchorsOf(rules.base) },
-    ...req.scenarios.map((s) => ({ id: s.id, anchors: anchorsOf(rules.scenarios[s.id]!) })),
-  ];
-}
-
 const scaled = (forecasts: WireForecast[], k: number): WireForecast[] =>
   forecasts.map((f) => ({
     ...f,
     anchors: f.anchors.map((a) => ({ ...a, low: a.low * k, mid: a.mid * k, high: a.high * k })),
   }));
 
-const answerText = (forecasts: WireForecast[]) => JSON.stringify({ forecasts });
-const replyWith = (forecasts: WireForecast[]) => reply(answerText(forecasts));
-const goodReply = (req: ForecastRequest = request()) => replyWith(goodAnswer(req));
+// A failed attempt logs one diagnostic line (see `warnFailed`); the tests read it and keep the output clean.
+const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+const logged = () => warn.mock.calls.map((call) => call.join(' ')).join('\n');
+
 const sent = (call: number) => create.mock.calls[call]![0].messages[0].content as string;
 const options = (call: number) => create.mock.calls[call]![1] as { timeout: number; maxRetries: number; signal: AbortSignal };
 
 beforeEach(() => {
   create.mockReset();
+  warn.mockClear();
   checks.throws = false;
   vi.stubEnv('ANTHROPIC_MODEL', '');
   vi.stubEnv('ANTHROPIC_FORECAST_MODEL', '');
@@ -162,7 +142,7 @@ describe('forecastWithModel', () => {
   it('retries once when every value is in thousands, and puts the issues in the second prompt', async () => {
     const req = request();
     create
-      .mockResolvedValueOnce(replyWith(scaled(goodAnswer(req), 1 / 1000)))
+      .mockResolvedValueOnce(forecastReply(scaled(goodAnswer(req), 1 / 1000)))
       .mockResolvedValueOnce(goodReply(req));
     const bundle = await forecastWithModel(req, client);
 
@@ -178,7 +158,7 @@ describe('forecastWithModel', () => {
     const req = request();
     const answer = goodAnswer(req);
     const flat = answer.map((f) => (f.id === 'pay-card' ? { ...f, anchors: answer[0]!.anchors } : f));
-    create.mockResolvedValueOnce(replyWith(flat)).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(forecastReply(flat)).mockResolvedValueOnce(goodReply(req));
     const bundle = await forecastWithModel(req, client);
 
     expect(bundle.source).toBe('ai');
@@ -194,20 +174,20 @@ describe('forecastWithModel', () => {
         ? { ...f, anchors: f.anchors.map((a) => ({ ...a, low: a.low + by, mid: a.mid + by, high: a.high + by })) }
         : f));
     // 'cut-eating' should add ~$22.5K at year 10; this one subtracts it, then adds 10x as much.
-    create.mockResolvedValueOnce(replyWith(shift('cut-eating', -45_000))).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(forecastReply(shift('cut-eating', -45_000))).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
     expect(sent(1)).toContain('scenario "cut-eating": 10-year effect');
     expect(sent(1)).toContain('wrong sign');
 
     create.mockReset();
-    create.mockResolvedValueOnce(replyWith(shift('cut-eating', 200_000))).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(forecastReply(shift('cut-eating', 200_000))).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
     expect(sent(1)).toContain('times the plausible size');
   });
 
   it('falls back to the rules bundle after two bad answers', async () => {
     const req = request();
-    const bad = replyWith(scaled(goodAnswer(req), 1 / 1000));
+    const bad = forecastReply(scaled(goodAnswer(req), 1 / 1000));
     create.mockResolvedValueOnce(bad).mockResolvedValueOnce(bad);
     const bundle = await forecastWithModel(req, client);
 
@@ -252,7 +232,7 @@ describe('forecastWithModel', () => {
   it('retries when a scenario id is missing, and names it', async () => {
     const req = request();
     const answer = goodAnswer(req).filter((f) => f.id !== 'cut-eating');
-    create.mockResolvedValueOnce(replyWith(answer)).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(forecastReply(answer)).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
     expect(sent(1)).toContain('missing the forecast for id "cut-eating"');
   });
@@ -260,7 +240,7 @@ describe('forecastWithModel', () => {
   it('retries when an id is duplicated', async () => {
     const req = request();
     const answer = goodAnswer(req);
-    create.mockResolvedValueOnce(replyWith([...answer, answer[1]!])).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(forecastReply([...answer, answer[1]!])).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
     expect(sent(1)).toContain('"pay-card" appears 2 times');
   });
@@ -268,7 +248,7 @@ describe('forecastWithModel', () => {
   it('retries when the model renames an id (it is both missing and unknown)', async () => {
     const req = request();
     const renamed = goodAnswer(req).map((f) => (f.id === 'pay-card' ? { ...f, id: 'pay_card' } : f));
-    create.mockResolvedValueOnce(replyWith(renamed)).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(forecastReply(renamed)).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
     expect(sent(1)).toContain('missing the forecast for id "pay-card"');
     expect(sent(1)).toContain('unknown id "pay_card"');
@@ -278,7 +258,7 @@ describe('forecastWithModel', () => {
     const req = request();
     const answer = goodAnswer(req);
     const wrongYears = answer.map((f) => (f.id === 'base' ? { ...f, anchors: f.anchors.map((a) => ({ ...a, year: a.year - 1 })) } : f));
-    create.mockResolvedValueOnce(replyWith(wrongYears)).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(forecastReply(wrongYears)).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
     expect(sent(1)).toContain('base forecast: anchor 1 has year 0');
 
@@ -286,7 +266,7 @@ describe('forecastWithModel', () => {
     const inverted = answer.map((f) => (f.id === 'base'
       ? { ...f, anchors: f.anchors.map((a, i) => (i === 3 ? { ...a, low: a.mid + 100 } : a)) }
       : f));
-    create.mockResolvedValueOnce(replyWith(inverted)).mockResolvedValueOnce(goodReply(req));
+    create.mockResolvedValueOnce(forecastReply(inverted)).mockResolvedValueOnce(goodReply(req));
     expect((await forecastWithModel(req, client)).source).toBe('ai');
     expect(sent(1)).toContain('year 4: low');
   });
@@ -306,7 +286,7 @@ describe('forecastWithModel', () => {
       ...f,
       anchors: f.anchors.map((a) => ({ ...a, mid: a.mid * 0.85, low: a.low * 0.85 - 2_000, high: a.high * 0.85 + 2_000 })),
     }));
-    create.mockResolvedValueOnce(replyWith(answer));
+    create.mockResolvedValueOnce(forecastReply(answer));
     const bundle = await forecastWithModel(req, client);
 
     expect(bundle.source).toBe('ai');
@@ -326,12 +306,114 @@ describe('forecastWithModel', () => {
     expect(sent(1)).toContain('could not be checked');
   });
 
+  it('reads the model once per request: both calls and the label name the same model', async () => {
+    const req = request();
+    vi.stubEnv('ANTHROPIC_FORECAST_MODEL', 'model-a');
+    create.mockImplementationOnce(async () => {
+      vi.stubEnv('ANTHROPIC_FORECAST_MODEL', 'model-b'); // the environment changes while the first call is out
+      return forecastReply(scaled(goodAnswer(req), 1 / 1000));
+    });
+    create.mockResolvedValueOnce(goodReply(req));
+    const bundle = await forecastWithModel(req, client);
+
+    expect(bundle.source).toBe('ai');
+    expect(create.mock.calls.map((c) => c[0].model)).toEqual(['model-a', 'model-a']);
+    expect(bundle.model).toBe('model-a');
+  });
+
+  it('accepts a scenario that ends where the base ends when its patch changes nothing', async () => {
+    const req = request({
+      scenarios: [{ id: 'empty', patch: {} }, { id: 'same-value', patch: { spending: { eatingOut: 340 } } }],
+    });
+    create.mockResolvedValueOnce(goodReply(req));
+    const bundle = await forecastWithModel(req, client);
+
+    expect(bundle.source).toBe('ai');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(bundle.scenarios.empty!.in10y.mid).toBeCloseTo(bundle.base.in10y.mid, 6);
+  });
+
   it('applies the request inflation to the rules fallback', async () => {
     const req = request({ rates: { inflationAnnual: 0.05 } });
     create.mockRejectedValue(new Error('down'));
     const bundle = await forecastWithModel(req, client);
     expect(bundle).toEqual(rulesBundle(req.profile, req.scenarios, { inflationAnnual: 0.05 }));
     expect(bundle.base.in10y.mid).not.toBe(rulesBundle(req.profile, req.scenarios).base.in10y.mid);
+  });
+});
+
+// ----- diagnostics ----------------------------------------------------------------------------
+
+describe('failed attempts are logged without content', () => {
+  // Distinctive values of the demo profile and request, and text a provider error might echo.
+  const SECRETS = ['5200', '6400', '17800', '14500', '3800', '0.2436', '193.92', 'card-1', 'auto-1', 'pay-card', 'cut-eating', 'echoed prompt'];
+  const expectNoContent = () => {
+    for (const secret of SECRETS) expect(logged()).not.toContain(secret);
+  };
+
+  it('logs nothing for a good answer or without a client', async () => {
+    const req = request();
+    create.mockResolvedValueOnce(goodReply(req));
+    await forecastWithModel(req, client);
+    await forecastWithModel(req, null);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('logs a provider error as its class and HTTP status, never its message', async () => {
+    class RateLimitError extends Error {
+      status = 429;
+    }
+    create.mockRejectedValue(new RateLimitError('429 echoed prompt: takeHomePay 5200, debt card-1, scenario pay-card'));
+    await forecastWithModel(request(), client);
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(logged()).toBe('[ai/forecast] attempt failed: provider_error (attempt=1, error=RateLimitError, status=429)');
+  });
+
+  it('logs a provider error that is not an HTTP error without a status', async () => {
+    create.mockRejectedValue(new TypeError('fetch failed: echoed prompt 5200'));
+    await forecastWithModel(request(), client);
+    expect(logged()).toBe('[ai/forecast] attempt failed: provider_error (attempt=1, error=TypeError)');
+    expectNoContent();
+  });
+
+  it('logs a refusal by its stop reason', async () => {
+    create.mockResolvedValue(reply('I cannot help. echoed prompt 5200', 'refusal'));
+    await forecastWithModel(request(), client);
+    expect(logged()).toBe('[ai/forecast] attempt failed: refusal (attempt=1, stop_reason=refusal)');
+    expectNoContent();
+  });
+
+  it('logs one line per rejected attempt with the number of issues, not the issues', async () => {
+    const req = request();
+    const bad = forecastReply(scaled(goodAnswer(req), 1 / 1000));
+    create.mockResolvedValueOnce(bad).mockResolvedValueOnce(bad);
+    await forecastWithModel(req, client);
+
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn.mock.calls[0]![0]).toMatch(/^\[ai\/forecast\] attempt failed: rejected \(attempt=1, stop_reason=end_turn, issues=\d+\)$/);
+    expect(warn.mock.calls[1]![0]).toMatch(/\(attempt=2, stop_reason=end_turn, issues=\d+\)$/);
+    expect(logged()).not.toMatch(/plausible|lower bound|year \d/);
+    expectNoContent();
+  });
+
+  it('logs a cut-off answer by its stop reason', async () => {
+    const req = request();
+    create.mockResolvedValueOnce(reply('{"forecasts":[{"id":"base"', 'max_tokens')).mockResolvedValueOnce(goodReply(req));
+    await forecastWithModel(req, client);
+    expect(logged()).toBe('[ai/forecast] attempt failed: rejected (attempt=1, stop_reason=max_tokens, issues=1)');
+  });
+
+  it('logs a check that threw by its error class, never its message', async () => {
+    checks.throws = true;
+    const req = request();
+    create.mockResolvedValue(goodReply(req));
+    await forecastWithModel(req, client);
+
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(logged()).toContain('check_error (attempt=1, stop_reason=end_turn, issues=1, error=RangeError)');
+    expect(logged()).not.toContain('non-finite');
+    expectNoContent();
   });
 });
 
@@ -363,9 +445,21 @@ describe('forecastWithModel deadline', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('logs the deadline once, also when the call honors the abort and rejects', async () => {
+    create.mockImplementation((_params, opts: { signal: AbortSignal }) => new Promise((_resolve, reject) => {
+      opts.signal.addEventListener('abort', () => reject(new Error('aborted: echoed prompt 5200')));
+    }));
+    const done = forecastWithModel(request(), client);
+    await vi.advanceTimersByTimeAsync(FORECAST_DEADLINE_MS);
+    expect((await done).source).toBe('rules');
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(logged()).toBe(`[ai/forecast] attempt failed: deadline (${FORECAST_DEADLINE_MS} ms) reached`);
+  });
+
   it('does not start a second attempt when less than the minimum retry time remains', async () => {
     const req = request();
-    const bad = reply(answerText(scaled(goodAnswer(req), 1 / 1000)));
+    const bad = forecastReply(scaled(goodAnswer(req), 1 / 1000));
     const lateMs = FORECAST_DEADLINE_MS - FORECAST_MIN_RETRY_MS + 1; // 1 ms short of a retry
     create.mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(bad), lateMs)));
     create.mockResolvedValue(goodReply(req)); // would succeed, if it were asked
@@ -380,7 +474,7 @@ describe('forecastWithModel deadline', () => {
 
   it('starts the second attempt when exactly the minimum retry time remains, with that time as its timeout', async () => {
     const req = request();
-    const bad = reply(answerText(scaled(goodAnswer(req), 1 / 1000)));
+    const bad = forecastReply(scaled(goodAnswer(req), 1 / 1000));
     const lateMs = FORECAST_DEADLINE_MS - FORECAST_MIN_RETRY_MS;
     create.mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(bad), lateMs)));
     create.mockResolvedValueOnce(goodReply(req));
@@ -398,7 +492,7 @@ describe('forecastWithModel deadline', () => {
 
   it('bounds the whole request: a hung second attempt ends at the deadline too', async () => {
     const req = request();
-    create.mockResolvedValueOnce(replyWith(scaled(goodAnswer(req), 1 / 1000)));
+    create.mockResolvedValueOnce(forecastReply(scaled(goodAnswer(req), 1 / 1000)));
     create.mockImplementationOnce(() => new Promise(() => {}));
 
     const done = forecastWithModel(req, client);
@@ -465,6 +559,12 @@ describe('forecastPrompt', () => {
     expect(system).toMatch(/JSON only/i);
     expect(system).toMatch(/isEstimate/);
     expect(system).toMatch(/exactly once/i);
+  });
+
+  it('lets a scenario equal the base only when its patch changes nothing', () => {
+    const { system } = forecastPrompt(request());
+    expect(system).toContain('do not copy "base" for a scenario unless its patch changes nothing');
+    expect(system).not.toMatch(/never copy/i);
   });
 
   it('says there are no scenarios when none are given', () => {

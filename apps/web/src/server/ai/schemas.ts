@@ -122,8 +122,19 @@ export const MAX_FORECAST_SCENARIOS = 8;
 /** The id of the forecast of the profile as it is; a scenario cannot use it. */
 export const BASE_FORECAST_ID = 'base';
 
+/**
+ * What a scenario id or a debt id may look like in a forecast request. Both are written into the
+ * model's prompt inside quotes, so free text (a quote, a line break, an instruction) must not get
+ * through. The real ones fit: `payCardFirst:<debt id>`, `cutCategory:<category>` and
+ * `committed:<move id>` (a debt id is a UUID, 36 characters, so the longest today is
+ * `committed:payCardFirst:<uuid>`, 59). 96 leaves room for a longer move kind
+ * (`committed:cancelSubscriptions:<uuid>` is 66).
+ */
+export const FORECAST_ID_PATTERN = /^[A-Za-z0-9:_.-]{1,96}$/;
+const FORECAST_ID_MESSAGE = 'an id may only contain letters, digits and : _ . - (1 to 96 characters)';
+
 const ForecastScenarioSchema = z.object({
-  id: z.string().min(1).max(64),
+  id: z.string().regex(FORECAST_ID_PATTERN, FORECAST_ID_MESSAGE),
   patch: ProfilePatchSchema,
 });
 
@@ -142,6 +153,18 @@ export const ForecastRequestSchema = z
     scenarios: z.array(ForecastScenarioSchema).max(MAX_FORECAST_SCENARIOS).default([]),
   })
   .superRefine((req, ctx) => {
+    req.profile.debts.forEach((d, i) => {
+      if (!FORECAST_ID_PATTERN.test(d.id)) ctx.addIssue({ code: 'custom', path: ['profile', 'debts', i, 'id'], message: FORECAST_ID_MESSAGE });
+    });
+    // A patch on a debt the profile does not have changes nothing (applyPatch skips it): a scenario that is the base in disguise.
+    const debtIds = new Set(req.profile.debts.map((d) => d.id));
+    req.scenarios.forEach((s, i) => {
+      s.patch.debts?.forEach((d, j) => {
+        if (!debtIds.has(d.id)) {
+          ctx.addIssue({ code: 'custom', path: ['scenarios', i, 'patch', 'debts', j, 'id'], message: 'is not the id of a debt in the profile' });
+        }
+      });
+    });
     const seen = new Set<string>();
     req.scenarios.forEach((s, i) => {
       const path = ['scenarios', i, 'id'];
