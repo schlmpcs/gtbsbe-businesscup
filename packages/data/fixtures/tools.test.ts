@@ -1,7 +1,7 @@
 // M1: the micro-tool fixtures. The sample statement's items are checked against the CSV reader in
 // apps/web/src/lib/statement/sampleItems.test.ts (this package cannot import the reader); here the
 // fixtures are checked against the schemas and against figures worked out by hand from the CSV.
-import { StatementItemSchema, SubscriptionAuditSchema, SubscriptionFindingSchema } from '@lifeguessr/types';
+import { StatementItemSchema, SubscriptionAuditSchema, SubscriptionFindingSchema, SubscriptionToolStateSchema } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
 import { readStatementSampleCsv } from './node';
 import { statementItemsSample, subscriptionsExpected } from './tools';
@@ -36,6 +36,10 @@ describe('subscriptionsExpected (the golden audit of the sample statement)', () 
     expect(SubscriptionAuditSchema.safeParse(subscriptionsExpected).success).toBe(true);
     for (const f of subscriptionsExpected.findings) expect(SubscriptionFindingSchema.safeParse(f).success, f.id).toBe(true);
     expect(Object.isFrozen(subscriptionsExpected)).toBe(true);
+  });
+
+  it('is a valid audit to keep in the subscription tool slice, which is where the app saves the last one', () => {
+    expect(SubscriptionToolStateSchema.safeParse({ audit: subscriptionsExpected }).success).toBe(true);
   });
 
   it('finds Spotify, Netflix, Apple and Planet Fitness: monthly, five charges each, active', () => {

@@ -1,10 +1,11 @@
 // S1 Today and S10 You in 10 years + Next Moves on the demo profile (phone + desktop projects).
 import { expect, test, type Page } from '@playwright/test';
+import { common } from '../src/copy/common';
 import { forecast as t } from '../src/copy/forecast';
 
 let pageErrors: string[] = [];
 
-// Errors are collected only on this spec's screens; /play is another feature's (it is only navigated to).
+// Errors are collected only on this spec's screens; /play and /me/guess are other features' (only navigated to).
 const OWN_PATHS = new Set(['/', '/future']);
 const onOwnScreen = (page: Page) => OWN_PATHS.has(new URL(page.url()).pathname);
 
@@ -30,7 +31,41 @@ async function noSideScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
+test('first visit: Today explains the app; Try with sample data opens the forecast with the sample banner', async ({ page }) => {
+  const f = t.today.firstVisit;
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(f.title);
+  await expect(page.getByText(f.body)).toBeVisible();
+  await expect(page.getByText(f.note)).toBeVisible();
+  const hero = page.getByTestId('today-first-visit');
+  await expect(hero.getByRole('link', { name: f.play, exact: true })).toHaveAttribute('href', '/play');
+  await expect(page.getByTestId('in10y')).toHaveCount(0); // no numbers on a first visit
+  await expect(page.getByTestId('sample-banner')).toHaveCount(0);
+  await noSideScroll(page);
+
+  await hero.getByRole('link', { name: f.sample }).click();
+  await expect(page).toHaveURL(/\/future$/); // ?sample=1 is dropped once the sample is loaded
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title);
+  await expect(page.getByTestId('in10y')).toContainText(/\$\d/);
+  const banner = page.getByTestId('sample-banner');
+  await expect(banner).toContainText(common.sampleBanner.text);
+  await noSideScroll(page);
+
+  // The sample stays on across screens and reloads, until "Use mine".
+  await page.reload();
+  await expect(banner).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.title);
+  await expect(banner).toBeVisible();
+  await banner.getByRole('link', { name: common.sampleBanner.cta }).click();
+  await expect(page).toHaveURL(/\/me\/guess$/);
+  await expect(page.getByTestId('sample-banner')).toHaveCount(0);
+});
+
 test('Today shows the 10-year number with its range and links to /play and /future', async ({ page }) => {
+  // Past the first visit (the sample life is on), Today shows the numbers.
+  await page.goto('/future?sample=1');
+  await expect(page.getByTestId('sample-banner')).toBeVisible();
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.title);
 

@@ -6,7 +6,8 @@
 //   the server;
 // - the fixture game client (apps/web/src/features/game/model/fixtureClient.ts), which plays the
 //   sample cards in the browser. client.ts loads it with a dynamic import() that an API build
-//   drops, so it must have no chunk at all.
+//   drops, so it must have no chunk at all. Same for the fixture duel client (duelFixtureClient.ts,
+//   loaded by duelClient.ts).
 // It also fails when the scan can't be trusted: no chunks, or no chunk with the HTTP game client
 // (proof that the game code was scanned).
 //
@@ -23,6 +24,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const CATALOG_PATH = join(root, 'packages/data/cards/cards.json');
 const FIXTURE_CLIENT_PATH = join(root, 'apps/web/src/features/game/model/fixtureClient.ts');
 const HTTP_CLIENT_PATH = join(root, 'apps/web/src/features/game/model/client.ts');
+const FIXTURE_DUEL_CLIENT_PATH = join(root, 'apps/web/src/features/game/model/duelFixtureClient.ts');
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -60,6 +62,8 @@ export function bundleRules() {
   const fixtureSource = readFileSync(FIXTURE_CLIENT_PATH, 'utf8');
   const logKey = /export const FIXTURE_LOG_KEY = '([^']+)'/.exec(fixtureSource)?.[1];
   if (!logKey) throw new Error('fixtureClient.ts: FIXTURE_LOG_KEY not found: update scripts/check-client-bundle.mjs');
+  const duelLogKey = /export const FIXTURE_DUEL_LOG_KEY = '([^']+)'/.exec(readFileSync(FIXTURE_DUEL_CLIENT_PATH, 'utf8'))?.[1];
+  if (!duelLogKey) throw new Error('duelFixtureClient.ts: FIXTURE_DUEL_LOG_KEY not found: update scripts/check-client-bundle.mjs');
   return {
     forbidden: [
       ...catalog.map((card) => ({ label: `catalog card ${card.id}`, pattern: tokenPattern(card.id) })),
@@ -68,6 +72,7 @@ export function bundleRules() {
         label: 'fixture game client (its error message)',
         pattern: new RegExp(escapeRe(literalIn(FIXTURE_CLIENT_PATH, 'No fixture data for card'))),
       },
+      { label: 'fixture duel client (FIXTURE_DUEL_LOG_KEY)', pattern: new RegExp(escapeRe(duelLogKey)) },
     ],
     required: [{ label: 'HTTP game client (/api/daily/guess)', pattern: new RegExp(escapeRe(literalIn(HTTP_CLIENT_PATH, '/api/daily/guess'))) }],
   };
@@ -104,7 +109,7 @@ function main() {
     process.exit(1);
   }
   const count = listChunks(staticDir).length;
-  console.log(`OK: ${count} browser chunks, no catalog card (${rules.forbidden.length - 2} ids) and no fixture game client.`);
+  console.log(`OK: ${count} browser chunks, no catalog card (${rules.forbidden.length - 3} ids) and no fixture game or duel client.`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

@@ -24,7 +24,7 @@ function validAnchors(): YearAnchor[] {
 describe('aiForecastSanity', () => {
   it('holds the guard values, is marked as an assumption, and stays out of the user-facing list', () => {
     expect(aiForecastSanity.value).toEqual({
-      relative: 0.5, floorMonths: 12, bandMaxRatio: 3, effectRatioMin: 0.25, effectRatioMax: 4, effectFloor: 1_000,
+      relative: 0.25, floorMonths: 12, bandMaxRatio: 3, effectRatioMin: 1 / 3, effectRatioMax: 3, effectFloor: 1_000,
     });
     expect(aiForecastSanity.assumption).toBe(true);
     expect(Object.keys(assumptions)).not.toContain('aiForecastSanity');
@@ -426,6 +426,10 @@ describe('forecastSanityIssues: the tolerance at the extremes of net worth', () 
   it('far from zero the tolerance is relative to the size, for a negative net worth as for a positive one', () => {
     expect(forecastSanityIssues(flat(600_000), flat(500_000), pay)).toEqual([]);
     expect(forecastSanityIssues(flat(-600_000), flat(-500_000), pay)).toEqual([]);
+    // ±25% of |rules mid| (= $125,000 here): just inside passes, just outside does not
+    expect(forecastSanityIssues(flat(620_000), flat(500_000), pay)).toEqual([]);
+    expect(forecastSanityIssues(flat(630_000), flat(500_000), pay).length).toBeGreaterThan(0);
+    expect(forecastSanityIssues(flat(370_000), flat(500_000), pay).length).toBeGreaterThan(0);
     expect(forecastSanityIssues(flat(-1_200_000), flat(-500_000), pay).length).toBeGreaterThan(0);
     expect(forecastSanityIssues(flat(1_200_000), flat(500_000), pay).length).toBeGreaterThan(0);
   });
@@ -454,7 +458,8 @@ describe('scenarioEffectIssues', () => {
       ['+$5,900 (inside the $1,000 floor)', 5_900],
       ['+$4,100 (inside the floor, below)', 4_100],
       ['+$7,500 (ratio 1.5)', 7_500],
-      ['+$19,000 (ratio 3.8)', 19_000],
+      ['+$14,000 (ratio 2.8)', 14_000],
+      ['+$1,800 (ratio 0.36)', 1_800],
     ])('accepts an AI effect of %s', (_label, effect) => {
       expect(scenarioEffectIssues(pair(effect), reference)).toEqual([]);
     });
@@ -463,7 +468,9 @@ describe('scenarioEffectIssues', () => {
       ['$0 (scenario equal to base)', 0],
       ['−$5,000 (wrong sign)', -5_000],
       ['+$25,000 (5×)', 25_000],
+      ['+$16,000 (3.2×)', 16_000],
       ['+$1,000 (a fifth)', 1_000],
+      ['+$1,500 (0.3×)', 1_500],
       ['NaN', Number.NaN],
       ['Infinity', Number.POSITIVE_INFINITY],
     ])('rejects an AI effect of %s', (_label, effect) => {

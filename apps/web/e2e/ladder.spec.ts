@@ -50,7 +50,7 @@ test('closest life → sliders → balance sheet with a new debt → /future', a
   expect((await savedProfile(page))?.profileOrigin).toBe('closestLife');
 
   // S7: through the "Next" CTA; move a slider and watch the month and the forecast change.
-  await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S7) }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S6 }).click();
   await expect(page).toHaveURL(/\/me\/sliders$/);
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
@@ -66,7 +66,7 @@ test('closest life → sliders → balance sheet with a new debt → /future', a
   await expect(narrowed).not.toHaveAttribute('aria-valuenow', '0');
 
   // S8: add a student loan; APR typed as a percent, saved as a decimal; minimum left empty.
-  await page.getByRole('link', { name: ladder.shell.next(ladder.screens.S8) }).click();
+  await page.getByRole('link', { name: ladder.shell.cta.S7 }).click();
   await expect(page).toHaveURL(/\/me\/balance$/);
   const debtLoad = page.getByRole('meter', { name: ladder.balance.debtLoadLabel });
   const loadBefore = await debtLoad.getAttribute('aria-valuenow');
@@ -155,6 +155,18 @@ test('S9: upload the sample statement, review its months, and use them', async (
   expect(saved?.state.statementMonths.map((m) => m.month)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10', '2026-11']);
   expect(saved?.state.statementMonths.every((m) => m.oneOffs.length === 0)).toBe(true); // one-off labels are not kept
   expect(saved?.state.profile.takeHomePay.isEstimate).toBe(false);
+});
+
+test('S9: "Try with sample statement" reads the sample through the same path as an upload', async ({ page }) => {
+  await page.goto('/me/upload');
+  await expect(page.getByText(/connect your bank/i)).toHaveCount(0); // not built: hidden
+  const sent = page.waitForRequest((r) => r.url().endsWith('/api/statement/categorize') && r.method() === 'POST');
+  await page.getByRole('button', { name: ladder.upload.trySample }).click();
+  const body = (await sent).postDataJSON() as { items: { label: string }[] };
+  expect(body.items).toHaveLength(170);
+  expect(JSON.stringify(body)).not.toMatch(/Tom Becker|Maria Lopez|Daniel Kim|PRIYA SHAH|Jake Morris/i);
+  await expect(page.getByTestId('statement-read')).toContainText('Read 170 transactions from Jul 1, 2026 to Nov 12, 2026.');
+  await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).toContainText(ladder.upload.detectedPay('$4,800'));
 });
 
 test('S9: a file without transaction columns gets a clear error', async ({ page }) => {

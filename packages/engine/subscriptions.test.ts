@@ -160,9 +160,9 @@ describe('detectSubscriptions: the class filter', () => {
     },
   );
 
-  it.each(['subscriptions', 'other'] as const)('looks at lines the categorizer put in %s', (cls) => {
+  it.each([['subscriptions', 'high'], ['other', 'low']] as const)('looks at lines the categorizer put in %s (confidence %s)', (cls, confidence) => {
     const audit = run(rent, { classOf: asClass(cls) });
-    expect(only(audit)).toMatchObject({ id: 'oakwood-apts-web-pmts-web-id', amount: 1720, chargesSeen: 4, confidence: 'high' });
+    expect(only(audit)).toMatchObject({ id: 'oakwood-apts-web-pmts-web-id', amount: 1720, chargesSeen: 4, confidence });
   });
 
   it('lets a catalogue match override the class: a known service is a subscription whatever the categorizer said', () => {
@@ -931,12 +931,57 @@ describe('review 1: boundaries', () => {
   });
 });
 
+// ----- decision 2: confidence of a pattern with no catalogue match ----------------------------
+
+describe('decision 2: a pattern with no catalogue match', () => {
+  // The issue says a pattern alone is `low` (decision 2) and `high` with 3 or more charges (the confidence rule).
+  // Reading: only the categorizer saying `subscriptions` lets 3 charges make a pattern `high`; with class `other`
+  // (rent to a person, a transfer, a regular shop) a pattern alone stays `low`, shown to confirm and not counted.
+  const zelle = monthly('Zelle to [name]', 200, 1, range(1, 3));
+  const landlord = monthly('SUNRISE PROPERTY MGMT', 1500, 1, range(1, 3));
+  const streaming = monthly('STREAMLY # CA', 12.99, 14, range(1, 3));
+
+  it('Zelle to [name] $200 on the 1st for 3 months, class other: low, and not in the totals', () => {
+    const audit = run(zelle, { classOf: asClass('other') });
+    expect(only(audit)).toMatchObject({ id: 'zelle-to', amount: 200, chargesSeen: 3, confidence: 'low', status: 'active' });
+    expect([audit.monthlyTotal, audit.yearlyTotal]).toEqual([0, 0]);
+    expect(auditTotals(audit.findings)).toEqual({ monthlyTotal: 0, yearlyTotal: 0 });
+  });
+
+  it('a property manager $1,500 for 3 months, class other: low, and not in the totals', () => {
+    const audit = run(landlord, { classOf: asClass('other') });
+    expect([only(audit).confidence, audit.monthlyTotal, audit.yearlyTotal]).toEqual(['low', 0, 0]);
+  });
+
+  it('an unknown streaming merchant, class subscriptions, 3 charges: high, and counted', () => {
+    const audit = run(streaming, { classOf: subscriptions });
+    expect([only(audit).confidence, audit.monthlyTotal, audit.yearlyTotal]).toEqual(['high', 12.99, 155.88]); // 12.99 × 12
+  });
+
+  it('class subscriptions with 2 charges is low, and class other stays low however many charges', () => {
+    expect(only(run(monthly('STREAMLY # CA', 12.99, 14, range(1, 2)), { classOf: subscriptions })).confidence).toBe('low');
+    expect(only(run(monthly('Zelle to [name]', 200, 1, range(1, 12)), { classOf: asClass('other') })).confidence).toBe('low');
+  });
+
+  it('counts a low pattern once the user confirms it', () => {
+    const audit = run(zelle, { classOf: asClass('other'), confirmed: new Set(['zelle-to']) });
+    expect([audit.monthlyTotal, audit.yearlyTotal]).toEqual([200, 2400]);
+  });
+
+  it('leaves a catalogue match alone: class other with 3 charges is still high, and so is an ambiguous match', () => {
+    const known = run(monthly('NETFLIX.COM', 17.99, 7, range(1, 3)), { classOf: asClass('other'), catalogue: CATALOGUE });
+    expect(only(known).confidence).toBe('high');
+    const apple = run(monthly('APPLE.COM/BILL # CA', 2.99, 3, range(1, 3)), { classOf: asClass('other'), catalogue: CATALOGUE });
+    expect(only(apple).confidence).toBe('high');
+  });
+});
+
 // ----- housekeeping ----------------------------------------------------------------------------
 
 describe('M3 assumptions', () => {
   it('are in the assumptions list, each flagged as an assumption', () => {
     const ids = Object.keys(subscriptionAssumptions);
-    expect(ids).toHaveLength(20);
+    expect(ids).toHaveLength(22);
     for (const id of ids) {
       expect((assumptions as Record<string, { assumption?: boolean }>)[id]?.assumption, id).toBe(true);
     }

@@ -22,23 +22,23 @@ export function DemoCheckoutBlock({ plan, busy, disabled, error, onPay }: Props)
   const noteId = useId();
   const price = <Money value={plan.amount} cents />;
   return (
-    <Card title={copy.demoCheckout.title} headingLevel={3} className="w-full max-w-md text-left text-ink">
+    <Card title={copy.demoCheckout.title} headingLevel={3} className="w-full text-left">
       <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-lg gap-y-sm text-sm">
-        <dt className="text-ink/60">{copy.demoCheckout.orderLabel}</dt>
+        <dt className="text-text-muted">{copy.demoCheckout.orderLabel}</dt>
         <dd className="flex flex-wrap items-baseline justify-between gap-x-md">
           <span className="font-semibold">{copy.demoCheckout.orderItem(copy.plans.names[plan.id])}</span>
           <span>
             {price} {copy.plans.per[plan.interval]}
           </span>
         </dd>
-        <dt className="text-ink/60">{copy.demoCheckout.payWithLabel}</dt>
+        <dt className="text-text-muted">{copy.demoCheckout.payWithLabel}</dt>
         <dd className="font-mono">{copy.demoCheckout.card}</dd>
       </dl>
       <p id={noteId} className="mt-md text-xs text-text-muted">
         {copy.demoCheckout.note}
       </p>
       <Button
-        variant="dark"
+        variant="primary"
         size="lg"
         fullWidth
         className="mt-lg"

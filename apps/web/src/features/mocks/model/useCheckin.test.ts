@@ -183,7 +183,7 @@ describe('useCheckin (S14)', () => {
       patch: { debts: card.patch.debts!.map((d) => ({ ...d, extraPayment: (d.extraPayment ?? 0) + 50 })) },
     };
     act(() => useAppStore.getState().commitMove(stored));
-    await waitFor(() => expect(result.current.move.committed?.id).toBe(card.id));
+    await waitFor(() => expect(result.current.move.committed).toMatchObject({ id: card.id, source: 'ai' }));
     const { committed, progress } = result.current.move;
     expect(committed).toMatchObject({ id: card.id, source: 'ai', isCommitted: true });
     expect(committed?.effect10y).not.toBe(1); // the current ranked number, not the stored one
@@ -202,24 +202,20 @@ describe('useCheckin (S14)', () => {
     expect(result.current.move.committed).toMatchObject({ source: null, effect10y: stored.effect10y });
   });
 
-  it('"I did it" waits for the forecast answer, like S1', async () => {
+  it('"I did it" works at once, like S1: the rules forecast for this profile is on screen while the answer is on its way', async () => {
     let release: (() => void) | undefined;
     mockForecastRoute((body) => new Promise<ForecastBundle>((resolve) => (release = () => resolve(rulesAnswer(body)))));
     const { result } = renderHook(() => useCheckin({ now: NOW }));
     await waitForReady(result);
     await waitFor(() => expect(release).toBeDefined());
-    expect(result.current.move.actionsDisabled).toBe(true);
+    expect(result.current.move.actionsDisabled).toBe(false);
     const first = rankMoves(cloneProfileDemo(), { rates })[0]!;
     act(() => useAppStore.getState().commitMove(first));
-    act(() => result.current.move.markDone());
-    expect(useAppStore.getState().profile.doneMoveIds).toEqual([]);
-    expect(result.current.move.answer).toBe('none');
-
-    await act(async () => release?.());
-    await waitFor(() => expect(result.current.move.actionsDisabled).toBe(false));
+    expect(result.current.move.committed).toMatchObject({ id: first.id, source: 'rules' });
     act(() => result.current.move.markDone());
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([first.id]);
     expect(result.current.move.answer).toBe('done');
+    await act(async () => release?.());
   });
 
   it('links the preview note to Pro', async () => {

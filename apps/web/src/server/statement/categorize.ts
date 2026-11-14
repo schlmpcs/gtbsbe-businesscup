@@ -175,7 +175,15 @@ export async function categorizeStatement(
     return { ...item, cls, oneOffHint };
   });
 
+  // The audit needs one class per label. Prefer outgoing spending over an incoming
+  // classification for the same descriptor; refunds must not hide a recurring charge.
+  const classes = new Map<string, StatementClass>();
+  for (const entry of [...entries.values()].sort((a,b)=>Number(a.direction==='out')-Number(b.direction==='out'))) {
+    if (entry.label === 'Unknown' || !/[a-z]/i.test(entry.label.replace(/\[(?:name|ref|email)\]/gi,''))) continue;
+    classes.set(entry.label, sorted.get(entry.id)!.cls);
+  }
   return {
+    classes: [...classes].map(([label, cls])=>({label,class:cls})),
     months: statementTotals(classified),
     categorizedBy: byAi === 0 ? 'rules' : byAi === entries.size ? 'ai' : 'mixed',
   };

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { ANON_ID_KEY, getAnonId } from './anonId';
 import { useHydrated } from './hydration';
-import { APP_STORE_KEY, useAppStore } from './store';
+import { APP_STORE_KEY, isSampleActive, useAppStore } from './store';
 
 const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
@@ -79,6 +79,29 @@ describe('app store', () => {
     expect(s.profile.doneMoveIds).toEqual([move.id]);
     expect(s.profile.committedMoveId).toBeUndefined();
     expect(s.committedMove).toBeNull();
+  });
+
+  it('loads the sample life only without a profile of the user’s own; an edit or "Use mine" ends it', async () => {
+    expect(useAppStore.getState().loadSample()).toBe(true);
+    expect(useAppStore.getState().isSample).toBe(true);
+    expect(isSampleActive(useAppStore.getState())).toBe(true);
+    expect(JSON.parse(localStorage.getItem(APP_STORE_KEY)!).state.isSample).toBe(true);
+    useAppStore.setState({ isSample: false }, false); // (persisted too) then a reload brings back the saved flag
+    const saved = JSON.parse(localStorage.getItem(APP_STORE_KEY)!);
+    saved.state.isSample = true;
+    localStorage.setItem(APP_STORE_KEY, JSON.stringify(saved));
+    await useAppStore.persist.rehydrate();
+    expect(useAppStore.getState().isSample).toBe(true);
+
+    useAppStore.getState().clearSample();
+    expect(isSampleActive(useAppStore.getState())).toBe(false);
+
+    useAppStore.getState().loadSample();
+    useAppStore.getState().setSpending('groceries', 640); // the life is now the user's own
+    expect(isSampleActive(useAppStore.getState())).toBe(false);
+    const mine = useAppStore.getState().profile;
+    expect(useAppStore.getState().loadSample()).toBe(false);
+    expect(useAppStore.getState().profile).toBe(mine);
   });
 
   it('wishlist add / remove', () => {

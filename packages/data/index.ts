@@ -3,3 +3,4 @@
 // '@lifeguessr/data/cards' in server code and tests only.
 export * from './areas';
 export * from './fixtures/index';
+export * from './subscriptions';
