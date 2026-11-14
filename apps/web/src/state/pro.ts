@@ -2,7 +2,7 @@
 // last answer plus what the Pro screen needs (is checkout configured, the promo code). localStorage
 // holds only a hint so a Pro user does not see "free" for a moment on load. The hint never
 // authorizes anything on the server, and any server answer replaces it.
-import { ProStatusSchema, type ProStatus } from '@lifeguessr/types';
+import { ProStatusSchema, type ProPlan, type ProStatus } from '@lifeguessr/types';
 import { useEffect } from 'react';
 import { z } from 'zod';
 import { create } from 'zustand';
@@ -33,6 +33,8 @@ export type ProActions = {
   confirmCheckout: (sessionId: string) => Promise<ProResult<ProStatus>>;
   /** Unlock with the promo code; on success the store holds the new status. */
   redeemCode: (code: string) => Promise<ProResult<ProStatus>>;
+  /** Pay for `plan` in the simulated checkout; on success the store holds the new status. */
+  demoCheckout: (plan: ProPlan) => Promise<ProResult<ProStatus>>;
 };
 
 export type ProState = ProData & ProActions;
@@ -112,6 +114,7 @@ export const useProStore = create<ProState>()((set, get) => {
     },
     confirmCheckout: (sessionId) => mutate(() => getProAdapter().confirm(sessionId)),
     redeemCode: (code) => mutate(() => getProAdapter().demoUnlock(code)),
+    demoCheckout: (plan) => mutate(() => getProAdapter().demoCheckout(plan)),
   };
 });
 

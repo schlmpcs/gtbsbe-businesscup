@@ -2,7 +2,8 @@
 //
 // Adding a table (e.g. T5 game guesses, T8 events):
 //   1. Create `NNN_<name>.ts` here exporting a Migration with the next free version, and add it
-//      to MIGRATIONS below. Taken: 3 = T5 game (#18), 4 = T8 funnel events (#21); take 5+.
+//      to MIGRATIONS below. Taken: 3 = T5 game (#18), 4 = T8 funnel events (#21), 5 = Pro demo
+//      checkout source; take 6+.
 //   2. Rules, because production keeps every migration it ever ran:
 //      - Never edit or renumber a migration once it is on main. The runner compares checksums and
 //        refuses to start on an edited one. Fix forward with a new migration.
@@ -20,8 +21,9 @@ import { m001Sessions } from './001_sessions';
 import { m002ProEntitlements } from './002_pro_entitlements';
 import { m003Game } from './003_game';
 import { m004FunnelEvents } from './004_funnel_events';
+import { m005ProDemoCheckout } from './005_pro_demo_checkout';
 import type { Migration } from './types';
 
 export type { Migration } from './types';
 
-export const MIGRATIONS: readonly Migration[] = [m001Sessions, m002ProEntitlements, m003Game, m004FunnelEvents];
+export const MIGRATIONS: readonly Migration[] = [m001Sessions, m002ProEntitlements, m003Game, m004FunnelEvents, m005ProDemoCheckout];

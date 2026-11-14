@@ -244,7 +244,7 @@ export const ProStatusSchema = z.discriminatedUnion('pro', [
   z.object({
     pro: z.literal(true),
     source: ProSourceSchema,
-    plan: ProPlanSchema.optional(),                // stripe_test only
+    plan: ProPlanSchema.optional(),                // stripe_test and demo_checkout only
     since: z.iso.datetime(),
   }),
 ]);
@@ -263,6 +263,12 @@ export const ProConfirmRequestSchema = z.object({
 
 /** POST /api/pro/demo-unlock */
 export const ProDemoUnlockRequestSchema = z.object({ code: z.string().trim().min(1).max(64) });
+
+/**
+ * POST /api/pro/demo-checkout: the simulated checkout. Strict on purpose: the plan is the only
+ * thing it takes, so a client that sends card-like fields by mistake is refused, not ignored.
+ */
+export const ProDemoCheckoutRequestSchema = z.strictObject({ plan: ProPlanSchema });
 
 /** GET /api/pro/status */
 export const ProStatusResponseSchema = z.object({

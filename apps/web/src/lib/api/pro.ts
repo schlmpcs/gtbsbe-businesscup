@@ -5,6 +5,7 @@ import {
   ProCheckoutRequestSchema,
   ProCheckoutResponseSchema,
   ProConfirmRequestSchema,
+  ProDemoCheckoutRequestSchema,
   ProDemoUnlockRequestSchema,
   ProErrorResponseSchema,
   ProMutationResponseSchema,
@@ -53,6 +54,8 @@ export interface ProAdapter {
   confirm(sessionId: string): Promise<ProResult<ProStatus>>;
   /** Unlock with the promo code shown on the Pro screen. */
   demoUnlock(code: string): Promise<ProResult<ProStatus>>;
+  /** The simulated checkout: nothing is charged and only the plan is sent. */
+  demoCheckout(plan: ProPlan): Promise<ProResult<ProStatus>>;
 }
 
 const CODE_TO_FAILURE: Record<ProErrorCode, ProFailure['kind']> = {
@@ -131,6 +134,12 @@ export function createHttpProAdapter(opts: { anonId?: () => string; base?: strin
       const req = ProDemoUnlockRequestSchema.safeParse({ code });
       if (!req.success) return BAD_REQUEST;
       const res = await post('/api/pro/demo-unlock', req.data, ProMutationResponseSchema);
+      return res.ok ? { ok: true, value: res.value.status } : res;
+    },
+    async demoCheckout(plan) {
+      const req = ProDemoCheckoutRequestSchema.safeParse({ plan });
+      if (!req.success) return BAD_REQUEST;
+      const res = await post('/api/pro/demo-checkout', req.data, ProMutationResponseSchema);
       return res.ok ? { ok: true, value: res.value.status } : res;
     },
   };

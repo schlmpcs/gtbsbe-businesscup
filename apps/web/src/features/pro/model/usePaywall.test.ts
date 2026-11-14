@@ -56,7 +56,7 @@ describe('usePaywall (S15)', () => {
       { id: 'yearly', amount: PRO_PRICES.yearly.amount, interval: 'year', isEstimate: true, selected: true },
       { id: 'monthly', amount: PRO_PRICES.monthly.amount, interval: 'month', isEstimate: true, selected: false },
     ]);
-    expect(result.current).toMatchObject({ checkoutAvailable: true, promoEnabled: true, promoCode: 'JURY2026', busy: null, error: null, pro: null });
+    expect(result.current).toMatchObject({ checkoutMode: 'stripe', promoEnabled: true, promoCode: 'JURY2026', busy: null, error: null, pro: null });
   });
 
   it('starts checkout for the chosen plan and sends the browser to Stripe once, however many clicks', async () => {
@@ -73,17 +73,77 @@ describe('usePaywall (S15)', () => {
     expect(result.current.busy).toBe('checkout'); // the page is leaving
   });
 
-  it('without a Stripe test key the checkout is off and the promo code still works', async () => {
+  it('without a Stripe test key the checkout is the simulated one and the promo code still works', async () => {
     resetProState((adapter = fakeProAdapter(statusInfo(undefined, { checkoutAvailable: false }))));
     const { result } = await renderPaywall();
-    expect(result.current.checkoutAvailable).toBe(false);
-    act(() => result.current.startCheckout());
+    expect(result.current.checkoutMode).toBe('demo');
+    act(() => result.current.startCheckout()); // Stripe is not on: ignored
     expect(adapter.startCheckout).not.toHaveBeenCalled();
 
     act(() => result.current.redeem());
     await waitFor(() => expect(result.current.view).toBe('success'));
     expect(adapter.demoUnlock).toHaveBeenCalledWith('JURY2026');
     expect(result.current.pro).toEqual({ source: 'demo', plan: null, sinceLabel: 'Nov 14, 2026' });
+  });
+
+  describe('simulated checkout', () => {
+    beforeEach(() => resetProState((adapter = fakeProAdapter(statusInfo(undefined, { checkoutAvailable: false })))));
+
+    it('pays for the chosen plan once, however many taps, and unlocks Pro', async () => {
+      const { result } = await renderPaywall();
+      act(() => result.current.selectPlan('monthly'));
+      act(() => {
+        result.current.payDemo();
+        result.current.payDemo();
+      });
+      expect(result.current.busy).toBe('demoCheckout');
+      await waitFor(() => expect(result.current.view).toBe('success'));
+      expect(adapter.demoCheckout).toHaveBeenCalledTimes(1);
+      expect(adapter.demoCheckout).toHaveBeenCalledWith('monthly');
+      expect(result.current.pro).toEqual({ source: 'demo_checkout', plan: 'monthly', sinceLabel: 'Nov 14, 2026' });
+      expect(result.current.busy).toBeNull();
+      expect(adapter.startCheckout).not.toHaveBeenCalled();
+    });
+
+    it('shows a failed payment on the checkout block, and paying works again', async () => {
+      adapter.demoCheckout.mockResolvedValueOnce({ ok: false, error: { kind: 'unavailable' } });
+      const { result } = await renderPaywall();
+      act(() => result.current.payDemo());
+      await waitFor(() => expect(result.current.busy).toBeNull());
+      expect(result.current.error).toEqual({ where: 'checkout', key: 'unavailable', retryAfterSeconds: null });
+      expect(result.current.view).toBe('offer');
+
+      act(() => result.current.payDemo());
+      await waitFor(() => expect(result.current.view).toBe('success'));
+      expect(result.current.error).toBeNull();
+    });
+
+    it('does nothing for someone who is already Pro', async () => {
+      resetProState((adapter = fakeProAdapter(statusInfo(PRO_DEMO, { checkoutAvailable: false }))));
+      const { result } = await renderPaywall();
+      expect(result.current.view).toBe('pro');
+      act(() => result.current.payDemo());
+      expect(adapter.demoCheckout).not.toHaveBeenCalled();
+    });
+  });
+
+  it('pays nothing in the simulated way while Stripe checkout is the one on offer', async () => {
+    const { result } = await renderPaywall();
+    expect(result.current.checkoutMode).toBe('stripe');
+    act(() => result.current.payDemo());
+    expect(adapter.demoCheckout).not.toHaveBeenCalled();
+  });
+
+  it('has no checkout at all without a Stripe key and with demo unlock switched off', async () => {
+    resetProState((adapter = fakeProAdapter(statusInfo(undefined, { checkoutAvailable: false, demo: { enabled: false } }))));
+    const { result } = await renderPaywall();
+    expect(result.current).toMatchObject({ checkoutMode: 'off', promoEnabled: false });
+    act(() => {
+      result.current.payDemo();
+      result.current.startCheckout();
+    });
+    expect(adapter.demoCheckout).not.toHaveBeenCalled();
+    expect(adapter.startCheckout).not.toHaveBeenCalled();
   });
 
   it('a checkout failure is shown on the checkout block and the button works again', async () => {

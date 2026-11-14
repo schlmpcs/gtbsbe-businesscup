@@ -3,7 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { ProResult, ProStatusInfo } from '@/lib/api/pro';
 import { resetClientState } from '@/test/clientState';
-import { FREE, PRO_DEMO, PRO_STRIPE, fakeProAdapter, resetProState, statusInfo } from '@/test/pro';
+import { FREE, PRO_DEMO, PRO_DEMO_CHECKOUT, PRO_STRIPE, fakeProAdapter, resetProState, statusInfo } from '@/test/pro';
 import { getAnonId } from './anonId';
 import { PRO_CACHE_KEY, usePro, useProStore } from './pro';
 
@@ -99,6 +99,25 @@ describe('useProStore unlocks', () => {
     expect(useProStore.getState().status).toEqual(PRO_DEMO);
     expect(adapter.status).toHaveBeenCalledTimes(2); // the refresh after the unlock
     expect(readHint()).toEqual({ anonId: getAnonId(), status: PRO_DEMO });
+  });
+
+  it('a demo checkout stores the new status for the plan paid, caches it and refreshes', async () => {
+    const adapter = fakeProAdapter();
+    resetProState(adapter);
+    const res = await useProStore.getState().demoCheckout('monthly');
+    expect(res).toEqual({ ok: true, value: { ...PRO_DEMO_CHECKOUT, plan: 'monthly' } });
+    expect(adapter.demoCheckout).toHaveBeenCalledWith('monthly');
+    expect(useProStore.getState()).toMatchObject({ status: { source: 'demo_checkout', plan: 'monthly' }, origin: 'server' });
+    expect(readHint()).toEqual({ anonId: getAnonId(), status: { ...PRO_DEMO_CHECKOUT, plan: 'monthly' } });
+    await waitFor(() => expect(adapter.status).toHaveBeenCalledTimes(1));
+  });
+
+  it('a failed demo checkout leaves the status alone and returns the failure', async () => {
+    const adapter = fakeProAdapter();
+    adapter.demoCheckout.mockResolvedValue({ ok: false, error: { kind: 'unavailable' } });
+    resetProState(adapter);
+    expect(await useProStore.getState().demoCheckout('yearly')).toEqual({ ok: false, error: { kind: 'unavailable' } });
+    expect(useProStore.getState()).toMatchObject({ status: FREE, origin: 'default' });
   });
 
   it('a failed confirm leaves the status alone and returns the failure', async () => {

@@ -32,7 +32,7 @@ export const MAX_STATEMENT_ITEMS = 5_000;
 // ----- Pro (S15, the paywall demo) -----------------------------------------------------------
 
 export const PRO_PLANS = ['yearly', 'monthly'] as const satisfies readonly ProPlan[];
-export const PRO_SOURCES = ['stripe_test', 'demo'] as const satisfies readonly ProSource[];
+export const PRO_SOURCES = ['stripe_test', 'demo_checkout', 'demo'] as const satisfies readonly ProSource[];
 export const PRO_ERROR_CODES = [
   'bad_request', 'too_large', 'rate_limited', 'unavailable', 'upstream_error',
   'not_paid', 'session_mismatch', 'invalid_code',
@@ -67,7 +67,7 @@ export const CLIENT_EVENT_NAMES = [
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 /** Events only the server records (the Pro routes). */
 export const SERVER_EVENT_NAMES = [
-  'checkout_started', 'pro_purchased', 'pro_promo_redeemed',
+  'checkout_started', 'pro_purchased', 'pro_demo_purchased', 'pro_promo_redeemed',
 ] as const satisfies readonly ServerFunnelEvent['name'][];
 export const FUNNEL_EVENT_NAMES = [...CLIENT_EVENT_NAMES, ...SERVER_EVENT_NAMES] as const satisfies readonly FunnelEventName[];
 /**

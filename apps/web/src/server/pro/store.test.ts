@@ -23,6 +23,12 @@ const stripe = (plan: 'yearly' | 'monthly' = 'yearly', since = '2026-11-14T11:00
   since,
 });
 
+const demoPaid = (plan: 'yearly' | 'monthly', since = '2026-11-14T10:30:00.000Z'): Entitlement => ({
+  source: 'demo_checkout',
+  plan,
+  since,
+});
+
 let dir: string;
 let cleanup: () => Promise<void>;
 /** Postgres stores opened by a test, closed (and their schemas dropped) after it. */
@@ -112,6 +118,31 @@ describe.each(implementations)('%s entitlement store', (_name, make: () => Entit
       store.grant(ANON, demo()),
       store.claimSession(SESSION_ID, ANON, stripe()),
       store.grant(ANON, demo('2026-11-14T12:00:00.000Z')),
+    ]);
+    expect(await store.get(ANON)).toEqual(stripe());
+  });
+
+  it('lets a demo checkout upgrade a promo grant and change its own plan, but never replace Stripe', async () => {
+    const store = make();
+    await store.grant(ANON, demo());
+    expect(await store.grant(ANON, demoPaid('yearly'))).toEqual(demoPaid('yearly'));
+    // The promo code after a demo checkout changes nothing.
+    expect(await store.grant(ANON, demo('2026-11-16T00:00:00.000Z'))).toEqual(demoPaid('yearly'));
+    // Paying again with the other plan replaces the plan.
+    const monthly = demoPaid('monthly', '2026-11-17T00:00:00.000Z');
+    expect(await store.grant(ANON, monthly)).toEqual(monthly);
+    // Stripe replaces it, and a later demo checkout can no longer take it back.
+    await store.claimSession(SESSION_ID, ANON, stripe());
+    expect(await store.grant(ANON, demoPaid('yearly', '2026-11-18T00:00:00.000Z'))).toEqual(stripe());
+    expect(await store.get(ANON)).toEqual(stripe());
+  });
+
+  it('never lets concurrent demo checkouts downgrade a concurrent purchase', async () => {
+    const store = make();
+    await Promise.all([
+      store.grant(ANON, demoPaid('yearly')),
+      store.claimSession(SESSION_ID, ANON, stripe()),
+      store.grant(ANON, demoPaid('monthly', '2026-11-14T12:00:00.000Z')),
     ]);
     expect(await store.get(ANON)).toEqual(stripe());
   });

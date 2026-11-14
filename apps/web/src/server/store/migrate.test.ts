@@ -10,7 +10,7 @@ const m = (version: number, name: string, sql: string): Migration => ({ version,
 describe('the migration list', () => {
   it('is valid: unique, ascending versions, snake_case names, SQL in each', () => {
     expect(() => checkMigrationList(MIGRATIONS)).not.toThrow();
-    expect(MIGRATIONS.map((x) => x.version)).toEqual([1, 2, 3, 4]);
+    expect(MIGRATIONS.map((x) => x.version)).toEqual([1, 2, 3, 4, 5]);
   });
 
   it.each([
@@ -98,14 +98,14 @@ describePostgres('migrate (Postgres)', () => {
     // IF NOT EXISTS) and their checksums still match.
     const later = open(MIGRATIONS, schema);
     await later.store.check();
-    expect((await applied(schema)).map((r: { version: number }) => r.version)).toEqual([1, 2, 3, 4]);
+    expect((await applied(schema)).map((r: { version: number }) => r.version)).toEqual(MIGRATIONS.map((x) => x.version));
     expect(await tables(schema)).toEqual(expect.arrayContaining(['funnel_events', 'game_clues', 'game_results']));
 
     // And a third process finds nothing left to do.
     const again = testPostgresStore({ migrations: MIGRATIONS, schema });
     await again.store.check();
     await again.store.close();
-    expect(await applied(schema)).toHaveLength(4);
+    expect(await applied(schema)).toHaveLength(MIGRATIONS.length);
   });
 
   it('rolls back every pending migration when one fails, and fails the store until fixed', async () => {
