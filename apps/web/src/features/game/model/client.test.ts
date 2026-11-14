@@ -1,6 +1,7 @@
 import { costOfLife, scoreGuess } from '@lifeguessr/engine';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { areaByZip, cardById, cardsSample } from '@/fixtures';
+import { getArea } from '@lifeguessr/data/areas';
+import { cardById, cardsSample } from '@/fixtures';
 import { createFixtureGameClient, createHttpGameClient, fixtureDailyCards } from './client';
 
 const DATE = '2026-11-14';
@@ -31,7 +32,7 @@ describe('fixture game client', () => {
 
     const reveal = await client.guess(id, 3000);
     const card = cardById(id);
-    const cost = costOfLife(card, areaByZip(card.zip));
+    const cost = costOfLife(card, getArea(card.zip));
     expect(reveal.cost).toEqual(cost);
     expect(reveal.result).toEqual(scoreGuess(3000, cost, 2));
     expect(reveal.cluesOpened).toEqual(['garage', 'kitchen']);

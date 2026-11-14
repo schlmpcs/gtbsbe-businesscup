@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 // S13 / S14 screens on their real view-model hooks (the demo profile and the fixtures). Every number
 // the tests expect on screen is computed by the engine here, never taken from a constant.
-import { inflationAnnualOf, monthEnd, rankMoves } from '@lifeguessr/engine';
+import { monthEnd, rankMoves } from '@lifeguessr/engine';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { common, forecast, mocks } from '@/copy';
-import { areaByZip, cloneProfileDemo, leaseScenarioSample, statementTotalsSample } from '@/fixtures';
+import { cloneProfileDemo, leaseScenarioSample, statementTotalsSample } from '@/fixtures';
+import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import { resetProState } from '@/test/pro';
@@ -33,7 +34,8 @@ function A({ href, children, ...rest }: { href: string; children?: ReactNode; cl
 const NOW = new Date(2026, 10, 14);
 const Decide = () => <DecideScreen vm={useDecide({ now: NOW })} Link={A} />;
 const Checkin = () => <CheckinScreen vm={useCheckin({ now: NOW })} Link={A} />;
-const rates = { inflationAnnual: inflationAnnualOf(areaByZip('75206')) };
+/** The demo profile's area rates, from the real area data (what the hooks use). */
+const rates = areaRates(cloneProfileDemo());
 const d = mocks.decide;
 const c = mocks.checkin;
 

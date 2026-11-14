@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { forecast, inflationAnnualOf, simulate } from '@lifeguessr/engine';
+import { forecast, simulate } from '@lifeguessr/engine';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { areaByZip, cloneProfileDemo, leaseScenarioSample } from '@/fixtures';
+import { cloneProfileDemo, leaseScenarioSample } from '@/fixtures';
+import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { resetProState } from '@/test/pro';
@@ -13,7 +14,8 @@ beforeEach(() => {
   resetProState();
 });
 
-const rates = { inflationAnnual: inflationAnnualOf(areaByZip('75206')) };
+/** The demo profile's area rates, from the real area data (what the hooks use). */
+const rates = areaRates(cloneProfileDemo());
 
 async function ready() {
   const hook = renderHook(() => useDecide({ now: new Date(2026, 10, 14) }));

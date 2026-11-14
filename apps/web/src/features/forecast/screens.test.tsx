@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { common, forecast as t } from '@/copy';
-import { areaByZip } from '@/fixtures';
+import { getArea } from '@lifeguessr/data/areas';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import type { ExplainFn } from './model/useMoveExplain';
@@ -97,7 +97,7 @@ describe('TodayScreen (S1)', () => {
     await waitFor(() => expect(within(moveCard).getByText(t.today.move.topTitle)).toBeInTheDocument());
     expect(within(moveCard).queryByRole('button')).not.toBeInTheDocument();
 
-    const ranked = rankMoves(useAppStore.getState().profile, { rates: { inflationAnnual: inflationAnnualOf(areaByZip('75206')) } });
+    const ranked = rankMoves(useAppStore.getState().profile, { rates: { inflationAnnual: inflationAnnualOf(getArea('75206')) } });
     act(() => useAppStore.getState().commitMove(ranked[0]!));
     await waitFor(() => expect(within(moveCard).getByText(t.today.move.committedTitle)).toBeInTheDocument());
     await user.click(within(moveCard).getByRole('button', { name: t.today.move.markDone }));

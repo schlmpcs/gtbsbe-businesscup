@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { applyPatch, inflationAnnualOf, monthEnd, movesLevel, rankMoves, simulate } from '@lifeguessr/engine';
+import { applyPatch, monthEnd, movesLevel, rankMoves, simulate } from '@lifeguessr/engine';
 import type { CategoryTotals, CostCategory } from '@lifeguessr/types';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { areaByZip, cloneProfileDemo, statementTotalsSample } from '@/fixtures';
+import { cloneProfileDemo, statementTotalsSample } from '@/fixtures';
+import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { resetProState } from '@/test/pro';
@@ -14,7 +15,8 @@ beforeEach(() => {
   resetProState();
 });
 
-const rates = { inflationAnnual: inflationAnnualOf(areaByZip('75206')) };
+/** The demo profile's area rates, from the real area data (what the hooks use). */
+const rates = areaRates(cloneProfileDemo());
 const NOW = new Date(2026, 10, 14); // 14 Nov 2026, local time
 
 const totals = (over: Partial<Record<CostCategory, number>> = {}): Record<CostCategory, number> => ({
