@@ -6,7 +6,7 @@
 // One retry, then the deterministic template from @/copy. The template is also the answer when
 // no API key is configured or the provider fails, so the app works without a key.
 import { ai as copy } from '@/copy/ai';
-import { COST_CATEGORIES } from '@lifeguessr/types';
+import { COST_CATEGORIES, type ForecastSource } from '@lifeguessr/types';
 import { formatMoney, formatRate } from '@/lib/format';
 import { devLog, llmModel, responseText, type LlmClient } from './client';
 import { allowedForms, unsupportedNumbers } from './numbers';
@@ -19,13 +19,24 @@ const MAX_CHARS = 420;
 /** The forecast horizon ("in 10 years") is part of what effect10y means, so it may be named. */
 const HORIZON_YEARS = 10;
 
-const SYSTEM = `You explain one result of an educational budget simulator to a US adult in plain words.
+/** What the rules say about where the numbers come from; the one line that differs by source. */
+const SOURCE_RULE = {
+  /** The move's 10-year number is the simulation's (a 'rules' move, or one with no source). */
+  simulation: '- Explain what the move or loan means for the person; the numbers come from the simulation.',
+  /** The move's 10-year number is the model's own estimate: it must not be passed off as a simulation result. */
+  ai: `- Explain what the move or loan means for the person. The move's 10-year change in net worth is an AI estimate that we checked against our rules: call it an AI estimate and do not describe it as a simulated or calculated result. The other numbers describe the change the move makes.`,
+} as const;
+
+/** The system prompt. Without a source, or for 'rules', it is the one the explanation always had. */
+function explainSystem(source: ForecastSource | undefined): string {
+  return `You explain one result of an educational budget simulator to a US adult in plain words.
 Rules:
 - Write exactly two short sentences, plain text, no lists or markdown.
 - Use only the numbers in the facts you are given, written as given. Do not compute, round differently, add, compare or invent any other number, date, rate or duration.
-- Explain what the move or loan means for the person; the numbers come from the simulation.
+${source === 'ai' ? SOURCE_RULE.ai : SOURCE_RULE.simulation}
 - Never name or recommend a lender, bank, card issuer, investment, fund, stock or other security, and give no tax advice.
 - This is an educational simulation, not financial advice; don't promise outcomes.`;
+}
 
 // ----- facts sent to the model ---------------------------------------------------------------
 
@@ -35,7 +46,10 @@ const signedMoney = (v: number) => formatMoney(v, { signed: true });
 
 function moveFacts(move: NonNullable<ExplainRequest['move']>, facts: Facts) {
   facts.lines.push(`Move: ${copy.moveSummary(move.kind, move.category)}`);
-  facts.lines.push(`Change in net worth after 10 years: ${signedMoney(move.effect10y)}`);
+  const label = move.source === 'ai'
+    ? 'Change in net worth after 10 years (AI estimate, checked against our rules)'
+    : 'Change in net worth after 10 years';
+  facts.lines.push(`${label}: ${signedMoney(move.effect10y)}`);
   facts.numbers.push(move.effect10y);
   for (const category of COST_CATEGORIES) {
     const amount = move.patch.spending?.[category];
@@ -101,7 +115,14 @@ function sentenceCount(text: string): number {
   return (text.match(/[.!?]+(?=\s|$)/g) ?? []).length;
 }
 
-export function explanationIssues(text: string, allowed: readonly number[]): string[] {
+/** "In our simulation", "the simulation says", "this simulation shows": the number is credited to the rules engine. */
+const CREDITS_SIMULATION = /\b(our|the|this) simulation\b/i;
+
+/**
+ * Problems with a model sentence. `source` is where the move's 10-year number came from: for an AI
+ * estimate the sentence must not credit the simulation for it. Without `source` nothing changes.
+ */
+export function explanationIssues(text: string, allowed: readonly number[], source?: ForecastSource): string[] {
   const issues: string[] = [];
   if (!text) return ['the answer is empty'];
   if (text.length > MAX_CHARS) issues.push(`the answer is longer than ${MAX_CHARS} characters`);
@@ -111,6 +132,9 @@ export function explanationIssues(text: string, allowed: readonly number[]): str
   const extra = unsupportedNumbers(text, allowed);
   if (extra.length > 0) issues.push(`these numbers are not in the facts: ${extra.join(', ')}`);
   for (const { re, why } of ADVICE_PATTERNS) if (re.test(text)) issues.push(`the answer ${why}`);
+  if (source === 'ai' && CREDITS_SIMULATION.test(text)) {
+    issues.push('the 10-year figure is an AI estimate, so do not credit the simulation for it; say it is an AI estimate');
+  }
   return issues;
 }
 
@@ -120,7 +144,13 @@ export function templateExplanation(req: ExplainRequest): string {
   const { move, loanResult: loan } = req;
   if (move && loan) return copy.explain.moveAndLoan(move.kind, move.category, formatMoney(loan.monthly));
   if (move) {
-    return copy.explain.move(move.kind, move.category, formatMoney(Math.abs(move.effect10y)), move.effect10y >= 0);
+    return copy.explain.move(
+      move.kind,
+      move.category,
+      formatMoney(Math.abs(move.effect10y)),
+      move.effect10y >= 0,
+      move.source,
+    );
   }
   if (loan) {
     return copy.explain.loan(
@@ -139,19 +169,21 @@ export async function explain(req: ExplainRequest, client: LlmClient | null): Pr
   if (!client) return template();
 
   const facts = buildFacts(req);
+  const source = req.move?.source;
+  const system = explainSystem(source);
   const allowed = allowedForms(facts.numbers);
   const factsText = `Facts:\n${facts.lines.map((l) => `- ${l}`).join('\n')}`;
 
   let content = factsText;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    devLog('ai/explain', `prompt (attempt ${attempt})`, { system: SYSTEM, content });
+    devLog('ai/explain', `prompt (attempt ${attempt})`, { system, content });
     let response;
     try {
       response = await client.messages.create({
         model: llmModel(),
         max_tokens: 1024, // adaptive thinking counts toward this; the answer is two sentences
         output_config: { effort: 'low' },
-        system: SYSTEM,
+        system,
         messages: [{ role: 'user', content }],
       });
     } catch (error) {
@@ -164,7 +196,7 @@ export async function explain(req: ExplainRequest, client: LlmClient | null): Pr
 
     const issues = response.stop_reason === 'max_tokens'
       ? ['the answer was cut off']
-      : explanationIssues(text, allowed);
+      : explanationIssues(text, allowed, source);
     if (issues.length === 0) return { text, source: 'ai' };
 
     content = `${factsText}

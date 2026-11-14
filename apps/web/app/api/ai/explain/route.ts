@@ -1,4 +1,6 @@
-// POST /api/ai/explain  { move?: Move, loanResult?: LoanResult }  (at least one)
+// POST /api/ai/explain  { move?: Move & { source?: 'ai' | 'rules' }, loanResult?: LoanResult }  (at least one)
+//   A move's `source` is where its effect10y came from (the model's estimate or the rules engine);
+//   the sentence names it. Without `source` the wording is "In our simulation", as before.
 //   200 { text, source: 'ai' | 'template' }
 //       Exactly two sentences, using only numbers from the input (checked in code). Falls back
 //       to a deterministic template when there is no API key, the provider fails, or the

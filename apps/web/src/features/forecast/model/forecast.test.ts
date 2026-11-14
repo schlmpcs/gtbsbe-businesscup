@@ -597,6 +597,8 @@ describe('useFuture "Why?" (POST /api/ai/explain)', () => {
     expect(explain).toHaveBeenCalledTimes(1);
     expect((explain.mock.calls[0] as unknown[])[0]).toEqual({ move });
     expect(move.source).toBe('rules');
+    // The server words the sentence by this: the default route is the rules forecast.
+    expect(((explain.mock.calls[0] as unknown[])[0] as { move: { source: unknown } }).move.source).toBe('rules');
 
     // A profile change moves the numbers, but not until the new answer is here: until then the
     // move on screen is the same one and so is its sentence.

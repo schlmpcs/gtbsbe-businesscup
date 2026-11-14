@@ -5,7 +5,7 @@
 // canonical schemas from @lifeguessr/types. Those are the source of truth: they reject percent
 // rates (6.9 instead of 0.069), negative money and impossible terms.
 import {
-  COST_CATEGORIES, CostCategorySchema, DEBT_KINDS, MOVE_KINDS, ProfilePatchSchema, ProfileSchema,
+  COST_CATEGORIES, CostCategorySchema, DEBT_KINDS, ForecastSourceSchema, MOVE_KINDS, ProfilePatchSchema, ProfileSchema,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 
@@ -77,7 +77,10 @@ export type WireOutput<K extends ParseKind> = z.infer<(typeof WIRE_SCHEMAS)[K]>;
 
 const finite = z.number();
 
-/** Move, as the engine returns it (packages/types: Move). */
+/**
+ * Move, as the engine returns it (packages/types: Move), plus where its `effect10y` came from.
+ * `source` is optional: without it the explanation is worded as it always was ("In our simulation").
+ */
 export const MoveInputSchema = z.object({
   id: z.string().min(1).max(64),
   kind: z.enum(MOVE_KINDS),
@@ -85,6 +88,7 @@ export const MoveInputSchema = z.object({
   category: CostCategorySchema.optional(),
   effect10y: finite,
   patch: ProfilePatchSchema,
+  source: ForecastSourceSchema.optional(),
 });
 
 /** LoanResult without the schedule, which the explanation doesn't use (and isn't forwarded). */
