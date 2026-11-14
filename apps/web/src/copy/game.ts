@@ -261,6 +261,40 @@ export const game = {
     tiles: { green: '🟩', yellow: '🟨', red: '🟥' },
     score: (points: string, max: string) => `${points} / ${max}`,
   },
+
+  /** The share card PNG (GET /api/share, 9:16 and 1:1). Every number arrives formatted. */
+  shareCard: {
+    brand: 'LifeGuessr',
+    daily: (date: string) => `Daily · ${date}`,
+    guessLabel: 'My guess',
+    actualLabel: 'Their month',
+    perMonth: '/mo',
+    range: (low: string, high: string) => `Typical range ${low}–${high}`,
+    points: (points: string, max: string) => `${points} / ${max} points`,
+    verdict: { low: 'Guessed low', in: 'In range', high: 'Guessed high' },
+    clues: (n: number) => (n === 0 ? 'No rooms opened' : `${plural(n, 'room', 'rooms')} opened`),
+    cta: 'Guess what 5 strangers’ lives cost. New homes daily.',
+    disclaimer: 'Educational simulation, not financial advice.',
+  },
+
+  /** The daily leaderboard (GET /api/leaderboard): made-up handles, never an id. */
+  leaderboard: {
+    handle: (adjective: string, animal: string, n: number) => `${adjective} ${animal} ${n}`,
+    handleWords: {
+      adjectives: [
+        'Thrifty', 'Frugal', 'Savvy', 'Lucky', 'Bold', 'Clever', 'Calm', 'Brave', 'Quick', 'Witty',
+        'Steady', 'Sunny', 'Cozy', 'Swift', 'Keen', 'Jolly', 'Nimble', 'Plucky', 'Shrewd', 'Wise',
+        'Breezy', 'Chipper', 'Dapper', 'Gentle', 'Hearty', 'Mellow', 'Peppy', 'Snappy', 'Spry', 'Zesty',
+        'Canny', 'Merry',
+      ],
+      animals: [
+        'Otter', 'Fox', 'Badger', 'Heron', 'Lynx', 'Panda', 'Koala', 'Falcon', 'Beaver', 'Moose',
+        'Raccoon', 'Walrus', 'Gecko', 'Puffin', 'Bison', 'Ferret', 'Llama', 'Marmot', 'Owl', 'Quokka',
+        'Robin', 'Seal', 'Tapir', 'Wombat', 'Yak', 'Hare', 'Ibis', 'Jaguar', 'Kiwi', 'Lemur',
+        'Newt', 'Orca',
+      ],
+    },
+  },
 } as const;
 
 const tierNames: Record<Tier, string> = {

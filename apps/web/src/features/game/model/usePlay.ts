@@ -3,6 +3,7 @@
 
 import { CLUE_IDS, type ClueId, type Money } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ApiError } from '@/lib/api/http';
 import { usEasternDate } from '@/lib/dates';
 import { track, useTrackOnce } from '@/lib/events';
 import { toVMError } from '@/lib/model/errors';
@@ -27,7 +28,22 @@ export type UsePlayOptions = {
 };
 
 const guessScale = logScale(GUESS_MIN, GUESS_MAX);
+
+/** The server closed the set on screen (its day ended): load the new one instead of an error. */
+const isDayOver = (err: unknown) => err instanceof ApiError && err.code === 'day_over';
 const clampGuess = (v: Money) => snap(v, GUESS_MIN, GUESS_MAX, GUESS_STEP);
+
+/**
+ * Funnel: a home was guessed (with how many rooms were open when it was scored), and the day was
+ * finished when that was the last one. Read after the reveal is stored.
+ */
+function trackGuess(home: number, cluesOpened: number): void {
+  const game = useGameStore.getState();
+  track({ name: 'home_guessed', props: { home, cluesOpened } }, { once: `guess:${game.date}:${home}` });
+  if (game.cards.length > 0 && game.cards.every((c) => game.reveals[c.id])) {
+    track({ name: 'game_finished', props: { homes: game.cards.length } }, { once: `finished:${game.date}` });
+  }
+}
 
 export function usePlay(opts: UsePlayOptions = {}): PlayVM {
   const ready = useAppReady();
@@ -67,7 +83,9 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     client.daily(today).then(
       (set) => {
         if (cancelled) return;
-        useGameStore.getState().startDay(set.date, set.cards);
+        const store = useGameStore.getState();
+        store.startDay(set.date, set.cards);
+        if (set.progress) store.mergeProgress(set.progress);
         setLoaded({ attempt, error: null });
       },
       (err: unknown) => {
@@ -100,13 +118,15 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
       setOpening((o) => ({ ...o, [key]: true }));
       setClueErrors(({ [key]: _drop, ...rest }) => rest);
       const home = index + 1;
-      client.clue(current.id, clue).then(
+      client.clue(current.id, clue, useGameStore.getState().date).then(
         (reveal) => {
           useGameStore.getState().addClue(reveal);
           track({ name: 'clue_opened', props: { home, clue } }, { once: `clue:${key}` });
         },
         (err: unknown) => {
-          if (mounted.current) setClueErrors((e) => ({ ...e, [key]: toVMError(err) }));
+          if (!mounted.current) return;
+          if (isDayOver(err)) setAttempt((a) => a + 1);
+          else setClueErrors((e) => ({ ...e, [key]: toVMError(err) }));
         },
       ).finally(() => {
         if (mounted.current) setOpening(({ [key]: _done, ...rest }) => rest);
@@ -132,19 +152,18 @@ export function usePlay(opts: UsePlayOptions = {}): PlayVM {
     setSubmitting(current.id);
     setGuessErrors(({ [current.id]: _drop, ...rest }) => rest);
     const home = index + 1;
-    client.guess(current.id, value).then(
-      (reveal) => {
-        const game = useGameStore.getState();
-        game.setReveal(current.id, reveal);
-        const cluesOpened = (game.clues[current.id] ?? []).length;
-        track({ name: 'home_guessed', props: { home, cluesOpened } }, { once: `guess:${game.date}:${current.id}` });
-        const after = useGameStore.getState();
-        if (after.cards.length > 0 && after.cards.every((c) => after.reveals[c.id])) {
-          track({ name: 'game_finished', props: { homes: after.cards.length } }, { once: `finished:${after.date}` });
-        }
+    client.guess(current.id, value, state.date).then(
+      ({ guess, reveal }) => {
+        // The amount the source scored: a repeat answers the first guess, not this slider value.
+        const s = useGameStore.getState();
+        s.setGuess(current.id, guess);
+        s.setReveal(current.id, reveal);
+        trackGuess(home, reveal.cluesOpened.length);
       },
       (err: unknown) => {
-        if (mounted.current) setGuessErrors((e) => ({ ...e, [current.id]: toVMError(err) }));
+        if (!mounted.current) return;
+        if (isDayOver(err)) setAttempt((a) => a + 1);
+        else setGuessErrors((e) => ({ ...e, [current.id]: toVMError(err) }));
       },
     ).finally(() => {
       if (mounted.current) setSubmitting(null);

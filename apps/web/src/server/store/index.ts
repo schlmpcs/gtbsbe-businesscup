@@ -1,9 +1,10 @@
-// Server-only: the app's store (sessions and funnel events; the T5 game adds its own here).
+// Server-only: the app's store (sessions, the T5 daily game, T8 funnel events).
 //
 //   getStore()            the process-wide Store for STORE_URL (Postgres), or in memory in dev and
 //                         tests. Throws StoreUnavailableError('not_configured') in production
 //                         without STORE_URL: it never falls back to memory there.
 //   store.sessions        SessionStore (./sessions.ts)
+//   store.game            GameStore (./game.ts): clues opened, scored guesses, leaderboard
 //   store.events          EventStore (./events.ts): funnel events and the funnel report
 //   store.db              the Postgres connection (null in memory), for server modules that own
 //                         their tables, e.g. Pro entitlements (server/pro/store.ts)
@@ -15,6 +16,9 @@
 // below, and add a migration (./migrations/index.ts explains the rules).
 import { storeConfig } from './config';
 import { StoreUnavailableError, type StoreUnavailableReason } from './errors';
+import type { GameStore } from './game';
+import { createMemoryGameStore } from './game.memory';
+import { createPostgresGameStore } from './game.postgres';
 import { createDb, type Db, type DbOptions } from './postgres';
 import type { EventStore } from './events';
 import { createMemoryEventStore } from './events.memory';
@@ -27,11 +31,13 @@ export { StoreUnavailableError, type StoreUnavailableReason } from './errors';
 export { anonKey } from './anonKey';
 export type { Db, Tx } from './postgres';
 export type { SaveOptions, SaveResult, SessionState, SessionStore, SessionUpdate } from './sessions';
+export type { GameStore, Leaderboard, PlayerDay, PlayKey, StoredResult, SubmitOutcome } from './game';
 export type { EventStore, FunnelWindow, StoredEvent } from './events';
 
 export interface Store {
   readonly backend: 'postgres' | 'memory';
   readonly sessions: SessionStore;
+  readonly game: GameStore;
   readonly events: EventStore;
   /** The Postgres connection, or null for the memory store. */
   readonly db: Db | null;
@@ -45,6 +51,7 @@ export function createPostgresStore(url: string, opts: DbOptions = {}): Store {
   return {
     backend: 'postgres',
     sessions: createPostgresSessionStore(db),
+    game: createPostgresGameStore(db),
     events: createPostgresEventStore(db),
     db,
     check: () => db.check(),
@@ -56,6 +63,7 @@ export function createMemoryStore(): Store {
   return {
     backend: 'memory',
     sessions: createMemorySessionStore(),
+    game: createMemoryGameStore(),
     events: createMemoryEventStore(),
     db: null,
     check: async () => {},

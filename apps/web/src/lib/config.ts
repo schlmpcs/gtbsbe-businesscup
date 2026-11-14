@@ -6,8 +6,9 @@ export type GameSource = 'fixtures' | 'api';
 
 /**
  * `NEXT_PUBLIC_GAME_SOURCE=api` uses the server routes (/api/daily, /api/daily/clue,
- * /api/daily/guess; task T5). Anything else, including unset, plays on the fixture cards in the
- * browser, so the game works before T5 lands.
+ * /api/daily/guess; task T5): the server holds the answers, records clues, scores guesses and
+ * keeps the results the leaderboard and share cards read (needs the store, STORE_URL). Anything
+ * else, including unset, plays on the fixture cards in the browser with the same engine.
  */
 export function gameSource(): GameSource {
   return process.env.NEXT_PUBLIC_GAME_SOURCE === 'api' ? 'api' : 'fixtures';

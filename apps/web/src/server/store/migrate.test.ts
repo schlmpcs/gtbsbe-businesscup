@@ -10,8 +10,7 @@ const m = (version: number, name: string, sql: string): Migration => ({ version,
 describe('the migration list', () => {
   it('is valid: unique, ascending versions, snake_case names, SQL in each', () => {
     expect(() => checkMigrationList(MIGRATIONS)).not.toThrow();
-    // 3 is reserved for T5 (#18), which lands after 4 (T8); see the out-of-order test below.
-    expect(MIGRATIONS.map((x) => x.version)).toEqual([1, 2, 4]);
+    expect(MIGRATIONS.map((x) => x.version)).toEqual([1, 2, 3, 4]);
   });
 
   it.each([
@@ -49,7 +48,9 @@ describePostgres('migrate (Postgres)', () => {
     const { store, schema } = open(MIGRATIONS);
     await store.check();
     await store.check();
-    expect(await tables(schema)).toEqual(['funnel_events', 'pro_checkout_sessions', 'pro_entitlements', 'schema_migrations', 'sessions']);
+    expect(await tables(schema)).toEqual([
+      'funnel_events', 'game_clues', 'game_results', 'pro_checkout_sessions', 'pro_entitlements', 'schema_migrations', 'sessions',
+    ]);
     expect(await applied(schema)).toEqual(MIGRATIONS.map((x) => ({ version: x.version, name: x.name, checksum: checksumOf(x.sql) })));
 
     // A second process on the same database finds nothing to do.
@@ -84,25 +85,24 @@ describePostgres('migrate (Postgres)', () => {
     expect((await applied(schema)).map((r: { version: number }) => r.version)).toEqual([1, 2, 3]);
   });
 
-  it('runs a reserved lower version that lands after a higher one (T5 = 3 after T8 = 4), once', async () => {
+  it('runs a lower version that lands after a higher one (3 after 4), once', async () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     const schema = newSchemaName();
-    // Production today: this build's list (1, 2, 4).
-    const today = testPostgresStore({ migrations: MIGRATIONS, schema });
-    await today.store.check();
-    await today.store.close();
+    // A database migrated by a build where 4 had merged and 3 was still open: 1, 2, 4.
+    const without3 = MIGRATIONS.filter((x) => x.version !== 3);
+    const first = testPostgresStore({ migrations: without3, schema });
+    await first.store.check();
+    await first.store.close();
 
-    // Then #18 merges: 3 is inserted before 4 in the list. 3 runs; 1, 2 and 4 are not run again
-    // (they would fail: CREATE TABLE without IF NOT EXISTS) and their checksums still match.
-    const m3 = m(3, 'game_guesses', 'CREATE TABLE game_guesses (anon_key text PRIMARY KEY)');
-    const withT5 = [...MIGRATIONS.filter((x) => x.version < 3), m3, ...MIGRATIONS.filter((x) => x.version > 3)];
-    const later = open(withT5, schema);
+    // Then 3 lands. It runs; 1, 2 and 4 are not run again (they would fail: CREATE TABLE without
+    // IF NOT EXISTS) and their checksums still match.
+    const later = open(MIGRATIONS, schema);
     await later.store.check();
     expect((await applied(schema)).map((r: { version: number }) => r.version)).toEqual([1, 2, 3, 4]);
-    expect(await tables(schema)).toContain('game_guesses');
+    expect(await tables(schema)).toEqual(expect.arrayContaining(['funnel_events', 'game_clues', 'game_results']));
 
     // And a third process finds nothing left to do.
-    const again = testPostgresStore({ migrations: withT5, schema });
+    const again = testPostgresStore({ migrations: MIGRATIONS, schema });
     await again.store.check();
     await again.store.close();
     expect(await applied(schema)).toHaveLength(4);
