@@ -15,16 +15,16 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 
 | Done | ID | Task | Hours | Depends on | Done when |
 | --- | --- | --- | --- | --- | --- |
-| [ ] | Y1 | Engine: `costOfLife` + `cardToProfile` + range-based `scoreGuess` with clue multiplier | 2 | Contracts; T2 data later | Tests pass for 3 sample cards; low ≤ mid ≤ high; scoring continuous at the range edges |
-| [ ] | Y2 | Engine: `forecast` (inflation, income growth, debt, range band, today's-$) + `applyPatch` | 2.5 | Contracts; T3 loan (stub first) | Golden test stable; range narrows with real inputs |
-| [ ] | Y3 | Engine: `rankMoves` level 1 + unlock rules | 1.5 | Y2 | Top 3 sorted by `effect10y` |
-| [ ] | Y4 | Engine: `canAfford` | 1 | Y2; T3 | Correct verdict for 3 fixtures, incl. a card purchase that returns "no" |
-| [ ] | Y7 | View-model hooks S1–S12 | 1.5 | Contracts | Hooks work on fixtures |
-| [ ] | Y8 | Placeholder UI: game S2–S4 (hosts `<HouseScene>`, static-card fallback, guess slider, reveal, share grid) + share button | 2 | Y7; T5; T12 | Game playable on live link |
-| [ ] | Y9 | Placeholder UI: ladder S5–S9 | 1.5 | Y7; T6–T7 | Profile builds end to end |
-| [ ] | Y10 | Placeholder UI: S1 Today + S10 forecast + Next Moves | 2 | Y2, Y3 | Range band + top 3 render |
-| [ ] | Y11 | Placeholder UI: S11 Can I Afford It? + S12 Loan Lab | 2 | Y4; T3 | Compare 3 loans, gauge, slider work |
-| [ ] | Y12 | `/api/ai/parse` + `/api/ai/explain` | 1 | Contracts | Typed JSON or clear error; no numbers; parsed values confirmed by the user |
+| [x] | Y1 | Engine: `costOfLife` + `cardToProfile` + range-based `scoreGuess` with clue multiplier | 2 | Contracts; T2 data later | Tests pass for 3 sample cards; low ≤ mid ≤ high; scoring continuous at the range edges |
+| [x] | Y2 | Engine: `forecast` (inflation, income growth, debt, range band, today's-$) + `applyPatch` | 2.5 | Contracts; T3 loan (stub first) | Golden test stable; range narrows with real inputs |
+| [x] | Y3 | Engine: `rankMoves` level 1 + unlock rules | 1.5 | Y2 | Top 3 sorted by `effect10y` |
+| [x] | Y4 | Engine: `canAfford` | 1 | Y2; T3 | Correct verdict for 3 fixtures, incl. a card purchase that returns "no" |
+| [x] | Y7 | View-model hooks S1–S12 | 1.5 | Contracts | Hooks work on fixtures |
+| [x] | Y8 | Placeholder UI: game S2–S4 (hosts `<HouseScene>`, static-card fallback, guess slider, reveal, share grid) + share button | 2 | Y7; T5; T12 | Game playable on live link |
+| [x] | Y9 | Placeholder UI: ladder S5–S9 | 1.5 | Y7; T6–T7 | Profile builds end to end |
+| [x] | Y10 | Placeholder UI: S1 Today + S10 forecast + Next Moves | 2 | Y2, Y3 | Range band + top 3 render |
+| [x] | Y11 | Placeholder UI: S11 Can I Afford It? + S12 Loan Lab | 2 | Y4; T3 | Compare 3 loans, gauge, slider work |
+| [x] | Y12 | `/api/ai/parse` + `/api/ai/explain` | 1 | Contracts | Typed JSON or clear error; no numbers; parsed values confirmed by the user |
 | [ ] | Y14 | Figma skin pass | 2 | Figma frames | Screens match Figma; no model or engine file changed |
 
 ## Aibek (backend)

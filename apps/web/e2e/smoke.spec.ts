@@ -16,6 +16,9 @@ for (const [id, route] of Object.entries(SCREEN_ROUTES)) {
     const response = await page.goto(route);
     expect(response?.status()).toBe(200);
     // Placeholder screens put the ID in the heading; real screens just need one.
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    const h1 = page.getByRole('heading', { level: 1 });
+    await expect(h1).toBeVisible();
+    // Built screens (S1–S12) show their title only, never an internal screen ID.
+    if (Number(id.slice(1)) <= 12) await expect(h1).not.toHaveText(/\bS\d{1,2}\b/);
   });
 }

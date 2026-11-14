@@ -25,7 +25,7 @@ const lockInButton = () => screen.getByRole('button', { name: /^Lock in/ });
 describe('PlayScreen', () => {
   it('explores a home, opens a clue with its cost shown, guesses, and reveals', async () => {
     render(<Play />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('S2');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(t.screens.S2); // no screen ID shown
     await screen.findByText(t.progress(1, 5));
     expect(screen.getByText(t.multiplier.cost('10%'))).toBeInTheDocument();
 
@@ -40,7 +40,7 @@ describe('PlayScreen', () => {
     expect(lockInButton()).toHaveTextContent(t.guess.lockIn('$4,500'));
     fireEvent.click(lockInButton());
 
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('S3'));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(t.screens.S3));
     expect(screen.getByRole('list', { name: t.reveal.breakdownLabel })).toBeInTheDocument();
     expect(screen.getByRole('figure')).toHaveAccessibleName(/Your guess \$4,500/);
     expect(screen.getByText(/base points × 90% for 1 room opened/)).toBeInTheDocument();
@@ -85,7 +85,7 @@ describe('PlayScreen', () => {
 
   it('S4 streamer mode: big countdown that starts, and locks in at zero', async () => {
     render(<Play streamer countdownSeconds={2} />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('S4');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(t.screens.S4);
     const timer = await screen.findByRole('timer');
     expect(timer).toHaveTextContent(t.streamer.seconds(2));
     fireEvent.click(screen.getByRole('button', { name: t.streamer.start }));

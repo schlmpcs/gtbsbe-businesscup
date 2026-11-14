@@ -28,7 +28,7 @@ async function expectNoSideScroll(page: Page) {
 const h1 = (page: Page) => page.getByRole('heading', { level: 1 });
 const lockIn = (page: Page) => page.getByRole('button', { name: /^Lock in/ });
 
-test('play 3 homes with clues, see each reveal, finish the day and share', async ({ page }) => {
+test('play 3 homes with clues, see each reveal, finish the day and share', async ({ page, isMobile }) => {
   // Stand-in share sheet so the Share button's Web Share path is exercised on every browser.
   await page.addInitScript(() => {
     const shared: string[] = [];
@@ -43,7 +43,7 @@ test('play 3 homes with clues, see each reveal, finish the day and share', async
   });
 
   await page.goto('/play');
-  await expect(h1(page)).toContainText('S2');
+  await expect(h1(page)).toHaveText(t.screens.S2);
 
   const rooms = [t.clues.rooms.kitchen, t.clues.rooms.garage, t.clues.rooms.mailbox] as const;
   for (let i = 0; i < 3; i++) {
@@ -56,19 +56,21 @@ test('play 3 homes with clues, see each reveal, finish the day and share', async
     await expect(page.getByText(t.clues.opened)).toBeVisible();
     await expect(page.getByText('90%', { exact: true })).toBeVisible();
 
-    // Type an exact guess, then lock it in.
-    // Focus first: the box swaps its formatted text for the plain number on focus, then fill replaces it.
+    // Type an exact guess, then lock it in. Focusing the box swaps "1,200" for "1200" and selects it,
+    // so keys typed straight after the tap replace the old guess instead of appending to it.
     const input = page.getByRole('textbox', { name: t.guess.input });
-    await input.click();
+    if (isMobile) await input.tap();
+    else await input.click();
     await expect(input).toHaveValue(/^\d+$/);
-    await input.fill(String(3000 + i * 1500));
+    await page.keyboard.type(String(3000 + i * 1500));
+    await expect(input).toHaveValue(String(3000 + i * 1500));
     await input.blur();
     await expect(lockIn(page)).toHaveText(t.guess.lockIn(`$${(3000 + i * 1500).toLocaleString('en-US')}`));
     await expectNoSideScroll(page);
     await lockIn(page).click();
 
     // S3: the answer, the guess on the range, points, bars with sources.
-    await expect(h1(page)).toContainText('S3');
+    await expect(h1(page)).toHaveText(t.screens.S3);
     await expect(page.getByRole('figure', { name: /Your guess/ })).toBeVisible();
     await expect(page.getByText(/base points × 90% for 1 room opened/)).toBeVisible();
     await expect(page.getByRole('list', { name: t.reveal.breakdownLabel })).toBeVisible();
@@ -81,7 +83,7 @@ test('play 3 homes with clues, see each reveal, finish the day and share', async
   // Homes 4 and 5: guess blind with the slider (keyboard), no clues.
   for (let i = 3; i < 5; i++) {
     await expect(page.getByText(t.progress(i + 1, 5))).toBeVisible();
-    await expect(h1(page)).toContainText('S2');
+    await expect(h1(page)).toHaveText(t.screens.S2);
     const slider = page.getByRole('slider', { name: t.guess.slider });
     await slider.focus();
     await page.keyboard.press('ArrowRight');
@@ -108,7 +110,7 @@ test('play 3 homes with clues, see each reveal, finish the day and share', async
 
 test('S4 streamer mode loads big and counts down; lock in reveals', async ({ page }) => {
   await page.goto('/play?stream=1');
-  await expect(h1(page)).toContainText('S4');
+  await expect(h1(page)).toHaveText(t.screens.S4);
   const timer = page.getByRole('timer');
   await expect(timer).toHaveText(t.streamer.seconds(30));
   await page.getByRole('button', { name: t.streamer.start }).click();
@@ -121,5 +123,5 @@ test('S4 streamer mode loads big and counts down; lock in reveals', async ({ pag
   await lockIn(page).click();
   await expect(page.getByRole('button', { name: t.reveal.next })).toBeVisible();
   await expect(page.getByRole('figure', { name: /Your guess/ })).toBeVisible();
-  await expect(h1(page)).toContainText('S4');
+  await expect(h1(page)).toHaveText(t.screens.S4);
 });

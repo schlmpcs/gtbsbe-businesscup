@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type FocusEvent, type InputHTMLAttributes } from 'react';
+import { useLayoutEffect, useRef, useState, type FocusEvent, type InputHTMLAttributes, type MouseEvent } from 'react';
 import { cx } from './cx';
 import { useFieldControl } from './Field';
 import { clamp, cleanFloat, formatPlainNumber, parseTypedNumber } from './numbers';
@@ -26,9 +26,15 @@ export type NumberInputProps = Omit<
   suffix?: string;
 };
 
+/** Selects the whole text of a focused input (setSelectionRange: iOS ignores select() at times). */
+function selectAll(el: HTMLInputElement | null) {
+  if (el && el.ownerDocument.activeElement === el) el.setSelectionRange(0, el.value.length);
+}
+
 /**
  * A text box for numbers: shows "1,234" at rest, accepts "1234", "$1,234" or "1,234.50" while typing,
- * never jumps the caret, and clamps to min/max when you leave it. Put it inside a <Field> for its label.
+ * never jumps the caret, and clamps to min/max when you leave it. Focusing it (tap, click or Tab) selects
+ * the whole number, so typing replaces it instead of appending. Put it inside a <Field> for its label.
  */
 export function NumberInput({
   value,
@@ -42,6 +48,8 @@ export function NumberInput({
   className,
   onFocus,
   onBlur,
+  onMouseUp,
+  onKeyDown,
   disabled,
   ...rest
 }: NumberInputProps) {
@@ -49,6 +57,25 @@ export function NumberInput({
   // While the box has focus we show exactly what was typed (draft); otherwise the formatted value.
   const [draft, setDraft] = useState<string | null>(null);
   const edited = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Set on focus: select everything once the plain draft text is in the box (see the layout effect).
+  const selectPending = useRef(false);
+  // Set on focus until the first mouseup/keydown: Safari (desktop and iOS) collapses a selection made
+  // during focus on the mouseup that follows the click/tap, so that one mouseup is cancelled.
+  const keepSelection = useRef(false);
+
+  // Focus swaps "1,200" for "1200", and React writing the new value puts the caret at the end. So the
+  // selection is made after that commit (layout effect, before paint), and again on the next frame in
+  // case the browser placed the caret after our handlers ran (some mobile browsers do on tap).
+  useLayoutEffect(() => {
+    if (!selectPending.current || draft === null) return;
+    selectPending.current = false;
+    selectAll(inputRef.current);
+    const frame = requestAnimationFrame(() => {
+      if (keepSelection.current) selectAll(inputRef.current);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [draft]);
 
   const toModel = (n: number) => (percent ? cleanFloat(n / 100) : n);
   const toText = (v: number | null, grouped: boolean) =>
@@ -67,6 +94,8 @@ export function NumberInput({
       }
     }
     edited.current = false;
+    selectPending.current = false;
+    keepSelection.current = false;
     setDraft(null);
     onBlur?.(e);
   };
@@ -89,6 +118,7 @@ export function NumberInput({
       <input
         {...field}
         {...rest}
+        ref={inputRef}
         type="text"
         inputMode={min < 0 ? 'text' : 'decimal'}
         autoComplete="off"
@@ -97,11 +127,28 @@ export function NumberInput({
         value={draft ?? toText(value, true)}
         onFocus={(e) => {
           edited.current = false;
+          selectPending.current = true;
+          keepSelection.current = true;
           setDraft(toText(value, false));
+          selectAll(e.currentTarget); // covers a focus where the text doesn't change (no re-render)
           onFocus?.(e);
+        }}
+        onMouseUp={(e: MouseEvent<HTMLInputElement>) => {
+          if (keepSelection.current) {
+            keepSelection.current = false;
+            const el = e.currentTarget;
+            // Only while the selection we made is intact: a drag-select by the user is left alone.
+            if (el.selectionStart === 0 && el.selectionEnd === el.value.length) e.preventDefault();
+          }
+          onMouseUp?.(e);
+        }}
+        onKeyDown={(e) => {
+          keepSelection.current = false;
+          onKeyDown?.(e);
         }}
         onChange={(e) => {
           edited.current = true;
+          keepSelection.current = false;
           const text = e.target.value;
           setDraft(text);
           const typed = parseTypedNumber(text);

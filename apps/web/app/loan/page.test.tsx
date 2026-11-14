@@ -32,6 +32,7 @@ async function renderReady() {
 describe('/loan (S12)', () => {
   it('compares the 3 fixture offers side by side', async () => {
     await renderReady();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(t.screens.S12); // no screen ID shown
     const table = screen.getByRole('table', { name: t.compare.caption });
     for (const n of [1, 2, 3]) expect(within(table).getByRole('button', { name: t.compare.select(t.offerName(n)) })).toBeTruthy();
     expect(within(table).getByText('$863')).toBeTruthy(); // $28,000 at 6.9% for 36 months (ENGINEERING.md)

@@ -64,7 +64,7 @@ export function PlayScreen({ vm, guessOwnHref, ClueSlot = ClueBoard }: PlayScree
     >
       <header className="flex flex-col gap-xs">
         <h1 className={cx('font-semibold leading-tight', large ? 'text-4xl' : 'text-2xl')}>
-          <span className="text-text-muted">{screen}</span> {screenTitles[screen]}
+          {screenTitles[screen]}
         </h1>
         {showProgress && (
           <p className={cx('font-medium text-text-muted', large ? 'text-2xl' : 'text-base')}>
