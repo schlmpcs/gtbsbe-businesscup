@@ -1,14 +1,13 @@
-// Strings for the mock screens: S13 Decision (the car) and S14 Monthly check-in. Owner: Aibek (T11).
-// S15 (Pro) keeps its title here; its strings are in ./pro. Functions take numbers already
-// formatted by the UI (formatMoney / formatRate), never raw values.
-
+// Strings for the mock screens: S13 Decision (keep the car or lease) and S14 Monthly check-in.
+// Owner: Aibek (T11). S15 (Pro) keeps its title here; its strings are in ./pro. Functions take
+// numbers already formatted by the UI (formatMoney / formatRate), never raw values.
 const months = (n: number) => (n === 1 ? '1 month' : `${n} months`);
 
-const monthName = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-/** 'YYYY-MM' → "October 2026". */
-const formatMonth = (yyyyMm: string) => {
+const monthNameFormat = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' });
+/** 'YYYY-MM' → "October". */
+const monthName = (yyyyMm: string) => {
   const [y, m] = yyyyMm.split('-').map(Number);
-  return monthName.format(new Date(Date.UTC(y!, m! - 1, 1)));
+  return monthNameFormat.format(new Date(Date.UTC(y!, m! - 1, 1)));
 };
 
 export const mocks = {
@@ -18,11 +17,12 @@ export const mocks = {
     S15: 'Pro',
   },
 
-  /** Shown on both screens: they are previews of Pro features. */
+  monthName,
+
   preview: {
-    badge: 'Preview',
-    body: 'A preview of a Pro feature: the numbers are real, but nothing here is saved yet.',
-    proBody: 'Included in your Pro. This is an early version: nothing here is saved yet.',
+    sticker: 'Preview',
+    note: 'A preview of a Pro feature: the numbers are real, from your plan, but nothing here is saved yet. Educational simulation, not financial advice.',
+    proNote: 'Included in your Pro. An early version: nothing here is saved yet. Educational simulation, not financial advice.',
     cta: 'See Pro',
   },
 
@@ -32,145 +32,122 @@ export const mocks = {
     other: 'Something went wrong with this calculation.',
   },
 
-  decision: {
-    intro:
-      'Two ways to get your next car, side by side against keeping the one you have: what each costs, whether it fits this year, and where it leaves you in 10 years.',
-    /** Label of the purchase in the engine call (never shown as a result). */
-    purchaseLabel: 'Car',
-    kindsLabel: 'Decisions',
-    kinds: {
-      car: 'Car',
-      moving: 'Moving city',
-      kid: 'Having a kid',
-      jobOffer: 'Job offer',
-      wedding: 'Wedding',
+  decide: {
+    eyebrow: 'Decisions · Pro',
+    /** The demo profile's cars (the Figma frame); a user's own profile gets the generic title. */
+    title: 'Keep the Camry or lease a RAV4?',
+    titleOwn: 'Keep your car or lease a new one?',
+    vs: 'VS',
+    /** Labels of the engine purchases (never shown as results). */
+    purchaseLabels: { lease: 'Lease payment', signing: 'Due at signing' },
+    keep: {
+      title: 'Keep the 2021 Camry',
+      titleOwn: 'Keep your car',
+      loanLeft: 'Loan left',
+      loanLeftValue: (balance: string, monthsLeft: string) => `${balance} · ${monthsLeft}`,
+      noLoan: 'None',
+      payment: 'Loan payment',
+      running: 'Running costs',
+      afterPayoff: 'After payoff',
+      afterPayoffValue: (amount: string) => `+${amount} a month free`,
     },
-    comingWithPro: 'coming with Pro',
-    pathName: (id: 'A' | 'B') => `Path ${id}`,
-    pathHint: { A: 'Sample: a newer car on a long loan', B: 'Sample: a cheaper used car on a short loan' },
-    keepName: 'Keep your car',
-    editTitle: 'Your two paths',
+    lease: {
+      title: 'Lease a new RAV4',
+      titleOwn: 'Lease a new car',
+      lease: 'Lease',
+      leaseValue: (amount: string, term: string) => `${amount} a month · ${term}`,
+      dueAtSigning: 'Due at signing',
+      running: 'Running costs',
+      assumption: (signings: number) =>
+        `Assumes the trade-in pays off your car loan and you keep leasing: a new lease at the end of each term, with the amount due at signing paid ${signings === 1 ? 'once' : `${signings} times`} in 10 years.`,
+    },
+    perMonth: (amount: string) => `${amount} a month`,
+    months: (n: number) => months(n),
+    never: 'not within 10 years',
+    byYear: (year: number) => `by ${year}`,
+    vsOther: 'net worth vs the other path',
+    scoreLabel: 'The result',
+    score: {
+      advantage: (better: string) => `by choosing to ${better}`,
+      keepVerb: 'keep the Camry',
+      keepVerbOwn: 'keep your car',
+      leaseVerb: 'lease the RAV4',
+      leaseVerbOwn: 'lease a new car',
+      monthsLeft: 'until your car loan is paid off',
+      monthsLeftValue: (n: number) => `${n} mo`,
+      noLoan: 'no car loan',
+      saving: 'less every month after that, by keeping',
+      extra: 'more every month after that, by keeping',
+    },
+    footnote: (year: number) => `Net worth in ${year}, in today’s dollars, from the 10-year forecast of your plan.`,
     edit: {
-      price: 'Car price',
-      payWith: 'Pay with',
-      payWithOptions: { loan: 'A loan', cash: 'Cash' },
-      downPayment: 'Down payment',
-      apr: 'APR',
-      aprHint: 'The yearly rate on the offer, e.g. 6.9%.',
+      title: 'The lease',
+      intro: 'Illustrative terms, not a quote. Put in a real offer to make it yours.',
+      monthly: 'Lease payment',
+      monthlySuffix: '/mo',
       termMonths: 'Term',
       termSuffix: 'months',
-      fees: 'Fees',
-      feesHint: 'Rolled into the loan.',
+      dueAtSigning: 'Due at signing',
+      running: 'Running costs',
+      runningHint: 'Insurance, fuel and upkeep of the new car, per month.',
       errors: {
-        price: 'Enter a price of $0 or more.',
-        apr: 'Enter the APR (0% to 100%).',
-        termMonths: 'Enter a whole number of months (1 to 600).',
-        downPayment: 'The down payment can’t be more than the price.',
-        fees: 'Fees can’t be negative.',
+        monthly: 'Enter a payment of $0 or more.',
+        termMonths: 'Enter a whole number of months (1 to 120).',
+        dueAtSigning: 'Enter an amount of $0 or more.',
+        running: 'Enter an amount of $0 or more.',
       } as Record<string, string>,
-      fix: 'Fix the highlighted fields to see this path.',
-      reset: 'Back to the sample paths',
+      fix: 'Fix the highlighted fields to see the result.',
+      reset: 'Back to the example lease',
     },
-    compare: {
-      title: 'Side by side',
-      caption: 'Your car paths compared with keeping your car',
-      metric: 'Per path',
-      rows: {
-        verdict: 'Fits this year?',
-        monthly: 'Monthly payment',
-        totalCost: 'Total cost of the car',
-        totalInterest: 'Interest',
-        payoff: 'Paid off in',
-        debtLoad: 'Debt load',
-        in10y: 'Net worth in 10 years',
-        vsKeep: 'vs keeping your car',
-      },
-      none: '—',
-      noPayment: 'No payment',
-      payoffMonths: (n: number) => months(n),
-      never: 'Never',
-      totalCostHint: 'Everything you pay for the car: down payment, fees and interest included.',
-      fix: 'Fix this path',
-      failed: 'Can’t compute',
-    },
-    verdicts: {
-      fits: 'Yes, it fits',
-      wait: (n: number) => `Wait ${months(n)}`,
-      no: 'Not right now',
-    },
-    /** Why buying now fails, per rule. `cushion` gets "1 month", `red` gets "36%". */
-    failsOn: {
-      cushion: (cushion: string) => `It would drop your cash below your safety cushion (${cushion} of spending and bills).`,
-      debtLoad: (red: string) => `Its payments would push your debt payments above ${red} of your take-home pay.`,
-      cardRevolves: 'What lands on your card could not be paid off within 12 months.',
-    },
-    baselineFails: 'Your plan is already under strain in the next 12 months, with or without a car.',
-    cushionMonths: (n: number) => months(n),
-    verdictTitle: (name: string) => `${name}: fits this year?`,
-    leader: (name: string, gap: string) => `${name} leaves you ${gap} more in 10 years.`,
-    tie: 'Both paths leave you about the same in 10 years.',
-    leaderHint: 'Net worth in today’s dollars. The better path on paper; whether it fits this year is the verdict above.',
-    chartTitle: 'Net worth with each path',
-    chartFootnote:
-      'In today’s dollars. The band is the likely range from the numbers we estimated. A card balance a path creates is paid off from what you have left each month.',
-    assumptionsTitle: 'What this assumes',
-    assumptions: [
-      'You buy the car this month, as you chose to pay for it.',
-      'The car itself is not counted as savings: we treat it as spending, so a pricier car always costs more here.',
-      'Insurance, fuel and the loan on your current car stay as they are in your profile.',
-    ],
-    nextTitle: 'Next steps',
-    next: {
-      loan: { title: 'Loan Lab', body: 'Compare real loan offers for this car and try paying extra.' },
-      afford: { title: 'Can I Afford It?', body: 'Check the purchase month by month for the next year.' },
-    },
+    nextTitle: 'Next decisions:',
+    next: { moving: 'Move cities', kid: 'Have a kid', jobOffer: 'Job offer', wedding: 'Wedding' },
+    nextSoon: 'coming soon',
   },
 
   checkin: {
-    intro: 'Three minutes, once a month: how the month went, how your move is going, and where it leaves you in 10 years.',
-    stepsLabel: 'Check-in steps',
-    steps: { month: 'Your month', move: 'Your move', future: 'Your 10 years' },
-    stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
-    back: 'Back',
-    next: 'Next',
-    finish: 'Finish check-in',
-    restart: 'Start over',
-
-    month: {
-      title: (month: string) => `How ${formatMonth(month)} went`,
-      titleNoData: 'How this month is going',
-      sourceLabel: 'Statement months',
-      sources: { uploads: 'My uploads', sample: 'Sample statement' },
-      sampleNote: 'Sample data: the four full months of our sample bank statement, not your own. Upload yours to check in on your real month.',
-      noUploads: 'You haven’t uploaded a statement yet, so this shows the sample one.',
-      upload: 'Upload a statement',
-      projected: 'Spending this month',
-      projectedInProgress: 'Projected spending this month',
-      inProgressHint: 'Projected to the end of the month from the days so far.',
-      completeHint: 'The month is over: this is what you spent.',
-      noDataHint: 'From the monthly spending in your profile. Upload a statement to see your real month.',
-      vsAverage: 'Compared with your 3-month average',
-      /** `amount` is signed: +$240 = spending more than the average. */
-      vsAverageValue: (amount: string) => `${amount} vs your 3-month average`,
-      needHistory: (have: number) =>
-        `The average and drift flags need 3 full months before this one. There ${have === 1 ? 'is 1' : `are ${have === 0 ? 'none' : have}`} so far.`,
-      driftsTitle: 'Drifting from your usual',
-      noDrifts: 'No category is drifting from your usual.',
-      /** `amount` is signed: +$80 = more than usual. */
-      drift: (category: string, amount: string) => `${category}: ${amount} vs usual`,
-      over: 'over',
-      under: 'under',
-      takeHome: 'Take-home pay',
-      takeHomeSample: 'Take-home pay (sample paychecks)',
-    },
-
+    eyebrow: (month: string) => `${month} check-in`,
+    titleOver: (amount: string) => `You’re ${amount} over your usual month.`,
+    titleUnder: (amount: string) => `You’re ${amount} under your usual month.`,
+    titleEven: 'Right on your usual month.',
+    titleWasOver: (amount: string) => `You were ${amount} over your usual month.`,
+    titleWasUnder: (amount: string) => `You were ${amount} under your usual month.`,
+    titleNoAverage: (month: string) => `How ${month} is going`,
+    titleNoAverageDone: (month: string) => `How ${month} went`,
+    titleNoData: 'How this month is going',
+    scoreLabel: 'This month so far',
+    scoreLabelDone: 'The month',
+    projected: 'projected this month',
+    spent: 'spent this month',
+    average: 'your 3-month average',
+    over: 'over',
+    under: 'under',
+    progress: 'of the card paid this month',
+    needHistory: (have: number) =>
+      `Your usual month needs 3 full months of statements before this one. There ${have === 1 ? 'is 1' : `are ${have === 0 ? 'none' : have}`} so far, so this shows the projection only.`,
+    noDataHint: 'From the monthly spending in your profile. Add a statement to see your real month.',
+    sourceLabel: 'Statement months',
+    sources: { uploads: 'My statements', sample: 'Sample statement' },
+    sampleNote: 'Sample data: the four full months of our sample bank statement, not yours. Add your own to check in on your real month.',
+    driftTitle: 'What drifted',
+    vsAverage: 'vs your average',
+    onTrack: 'right on track',
+    categories: {
+      rentUtilities: 'Rent & utilities',
+      car: 'Car',
+      childcare: 'Childcare',
+      groceries: 'Groceries',
+      eatingOut: 'Eating out',
+      subscriptions: 'Subscriptions',
+      debtPayments: 'Debt payments',
+      other: 'Other',
+    } as Record<string, string>,
     move: {
-      title: 'Your move',
-      committedLabel: 'You committed to',
-      effect: (amount: string) => `${amount} in 10 years`,
-      cardPayoff: (withMove: string, without: string) => `With this move your card is paid off in ${withMove}, instead of ${without}.`,
-      payoffMonths: (n: number) => months(n),
+      sticker: 'Your move',
+      ofTotal: (paid: string, total: string) => `${paid} of ${total}`,
+      progressLabel: 'Card paid off this month',
+      pace: (withMove: string, without: string) => `At this pace the card is gone in ${withMove}, instead of ${without}.`,
       notWithin10y: 'more than 10 years',
+      effect: (amount: string) => `${amount} in 10 years`,
       spendingTarget: (category: string, target: string, planned: string) =>
         `Target: ${category.toLowerCase()} at ${target} a month (your plan says ${planned} now).`,
       actual: (amount: string) => `Your statement shows ${amount} this month.`,
@@ -181,37 +158,15 @@ export const mocks = {
       keepGoing: 'Not yet, keep it',
       doneTitle: 'Nice work',
       doneBody: (title: string) => `“${title}” is now part of your plan. Your forecast and next moves use it from here.`,
-      keepTitle: 'Keep going',
-      keepBody: 'Your move stays committed. Next month’s check-in will ask again.',
+      keepBody: 'Your move stays committed. Next month’s check-in asks again.',
       noneTitle: 'Pick a move to work on',
-      noneBody: 'Commit to one move and the next check-in tracks it.',
+      noneBody: 'Commit to one move and the check-in tracks it.',
       noMoves: 'No move helps right now. Moves show up when you have money left over each month or a card balance to pay down.',
       commit: 'I’m doing this',
       level2: 'Level 2 moves are unlocked.',
       seeAll: 'See all moves',
     },
-
-    future: {
-      title: 'Your 10 years',
-      headline: 'Net worth in 10 years',
-      hint: 'In today’s dollars',
-      chartTitle: 'Your net worth over the next 10 years',
-      seriesLabel: 'Your plan',
-      withMoveLabel: (title: string) => `With: ${title}`,
-      withMove: 'With your committed move',
-      footnote: 'In today’s dollars. The band is the likely range from the numbers we estimated.',
-    },
-
-    summary: {
-      title: 'Check-in done',
-      month: 'Your month',
-      move: 'Your move',
-      future: 'In 10 years',
-      moveDone: (title: string) => `Done: ${title}`,
-      moveKept: (title: string) => `Still on: ${title}`,
-      moveNone: 'No move yet',
-      note: 'This preview doesn’t save check-ins or remind you next month yet.',
-      future10y: 'See your forecast and next moves',
-    },
+    months: (n: number) => months(n),
+    addStatement: (month: string) => `Add ${month} statement`,
   },
 } as const;

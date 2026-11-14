@@ -1,122 +1,116 @@
-// View-model types for the mocks feature: S13 Decision (the car) and S14 Monthly check-in. Task: T11.
-// (S15, the paywall, is the pro feature.) ui/ may import only this file, @/ui-kit/** and @/copy
-// (lint-enforced). Hooks: useDecision() in ./useDecision.ts, useCheckin() in ./useCheckin.ts.
+// View-model types for the mocks feature: S13 Decision (keep the car or lease) and S14 Monthly
+// check-in. Task: T11 ("clickable on fixtures"). (S15, the paywall, is the pro feature.)
+// ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
+// Hooks: useDecide() in ./useDecide.ts, useCheckin() in ./useCheckin.ts.
 //
-// "Mock" means the feature is a preview (nothing is saved, no reminders), not that its numbers are
-// made up: every number here comes from @lifeguessr/engine on the user's profile, or on a fixture
-// that the screen labels as sample data.
-import type { AffordResult, CostCategory, ForecastPoint, MonthEnd, Money, Rate } from '@lifeguessr/types';
-import type { DebtLoadGaugeVM } from '@/lib/model/profile';
+// "Mock" means a preview (nothing is saved, no reminders), not made-up numbers: every number comes
+// from @lifeguessr/engine on the user's profile (the demo profile until they build their own), from
+// what they type, or from a fixture the screen labels (illustrative lease terms, sample statement).
+import type { CostCategory, ForecastPoint, MonthEnd, Money, Rate } from '@lifeguessr/types';
 import type { Loadable } from '@/lib/model/types';
 import type { MoveVM } from '@/features/forecast/model/types';
 
-export type { DebtLoadGaugeVM, DebtLoadZone } from '@/lib/model/profile';
 export type { Loadable, VMError } from '@/lib/model/types';
 export type { MoveTarget, MoveVM } from '@/features/forecast/model/types';
 export type { CostCategory, ForecastPoint, MonthEnd, Money, MoveKind } from '@lifeguessr/types';
 
-/** Where the preview note sends a free user, and whether to show it. */
+/** Where the preview note sends a free user. */
 export type ProPreviewVM = { isPro: boolean; href: string };
 
-// ----- S13 Decision ---------------------------------------------------------------------------
+// ----- S13 Decision: keep the car or lease a new one ------------------------------------------
 
-/** The decisions F10 lists. Only the car is built; the rest show as coming with Pro. */
-export type DecisionKind = 'car' | 'moving' | 'kid' | 'jobOffer' | 'wedding';
+/** F10's other decisions, shown as coming soon. */
+export type DecisionKind = 'moving' | 'kid' | 'jobOffer' | 'wedding';
 
-export type DecisionPathId = 'A' | 'B';
+/** The lease inputs. `null` = the box is empty. Money is per month except `dueAtSigning` (per term). */
+export type LeaseForm = { monthly: Money | null; termMonths: number | null; dueAtSigning: Money | null; running: Money | null };
+export type LeaseField = keyof LeaseForm;
 
-/** One way to get the car. `null` = the box is empty. Loan fields are ignored when paying cash. */
-export type CarPathForm = {
-  price: Money | null;
-  payWith: 'loan' | 'cash';
-  downPayment: Money;
-  apr: Rate | null;
-  termMonths: number | null;
-  fees: Money;
+export type DecideResultVM = {
+  keep: {
+    /** Σ balances of the profile's auto loans today. */
+    loanLeft: Money;
+    /** Months until they are paid off at the required payments (engine simulate); null = not within 10 years. */
+    monthsLeft: number | null;
+    /** Required auto-loan payments, per month. */
+    loanPayment: Money;
+    /** The profile's car running costs (insurance, fuel, upkeep), per month. */
+    running: Money;
+    runningIsEstimate: boolean;
+    /** Net worth at month 120, today's dollars (engine forecast). */
+    in10y: ForecastPoint;
+  };
+  lease: {
+    in10y: ForecastPoint;
+    /** How many times the amount due at signing is paid within the 10 years. */
+    signings: number;
+  };
+  /** keep.in10y.mid − lease.in10y.mid (positive = keeping is ahead). */
+  keepAdvantage10y: Money;
+  /** (lease payment + lease running costs) − today's running costs: what keeping saves each month once the loan is paid. */
+  monthlySavingAfterPayoff: Money;
+  better: 'keep' | 'lease';
+  /** |keepAdvantage10y| */
+  betterBy10y: Money;
+  /** Some input behind the two forecasts is an estimate. */
+  isEstimate: boolean;
 };
 
-/** What one path does, all from the engine on the user's profile. */
-export type DecisionPathResultVM = {
-  /** canAfford: buying it now as chosen. */
-  verdict: AffordResult['verdict'];
-  waitMonths: number | null;
-  failsOn: AffordResult['failsOn'] | null;
-  baselineFails: boolean;
-  /** loan(): the monthly payment; null when paying cash. */
-  monthly: Money | null;
-  /** loan(): 0 when paying cash. */
-  totalInterest: Money;
-  /** Everything paid for the car: down payment, fees and interest included (the price when paying cash). */
-  totalCost: Money;
-  /** loan(): months to pay off; null = the payment never covers the interest. Null when paying cash. */
-  payoffMonth: number | null;
-  /** Required debt payments / take-home pay with this path. */
-  debtLoad: DebtLoadGaugeVM;
-  /** Net worth, month 0–120, in today's dollars, with the car bought now as chosen. */
-  points: ForecastPoint[];
-  in10y: ForecastPoint;
-  /** in10y.mid − keeping your current car's in10y.mid (negative = the path costs you net worth). */
-  vsKeep10y: Money;
-};
-
-export type DecisionPathVM = {
-  id: DecisionPathId;
-  form: CarPathForm;
-  /** Form fields that are invalid: 'price', 'apr', 'termMonths', 'downPayment', 'fees'. */
-  invalidFields: string[];
-  /** Null while the form is invalid. */
-  result: Loadable<DecisionPathResultVM> | null;
-};
-
-/** Keeping the car you have: the plan as it is. */
-export type KeepCarVM = { points: ForecastPoint[]; in10y: ForecastPoint; debtLoad: DebtLoadGaugeVM };
-
-export type DecisionVM = {
+export type DecideVM = {
   status: 'loading' | 'ready';
-  /** Every decision type in order; `available` = built (the car). */
-  kinds: { id: DecisionKind; available: boolean }[];
-  kind: 'car';
-  keep: Loadable<KeepCarVM>;
-  paths: [DecisionPathVM, DecisionPathVM];
-  setPath: (id: DecisionPathId, patch: Partial<CarPathForm>) => void;
-  /** Back to the sample paths. */
-  resetPaths: () => void;
-  /**
-   * Which path leaves more net worth in 10 years (mid, today's dollars) and by how much (≥ 0).
-   * Null until both paths have a result.
-   */
-  comparison: { leader: DecisionPathId | 'tie'; gap10y: Money } | null;
-  /** Some input behind the forecasts is an estimate (the band is not zero). */
-  forecastIsEstimate: boolean;
-  /** Debt load inputs are estimates (take-home pay or a minimum payment). */
-  debtLoadIsEstimate: boolean;
-  /** Thresholds the verdict copy names (canAfford's rules). */
-  rules: { cushionMonths: number; debtLoadRed: Rate };
+  /** Still the demo profile: the screen names its cars (the Camry and the RAV4). */
+  isDemoProfile: boolean;
+  /** Calendar year at the 10-year horizon. */
+  horizonYear: number;
+  todaysDollars: true;
+  lease: {
+    form: LeaseForm;
+    /** Per field: still the illustrative sample value (not typed by the user). */
+    isEstimate: Record<LeaseField, boolean>;
+    invalidFields: LeaseField[];
+  };
+  setLease: (patch: Partial<LeaseForm>) => void;
+  /** Back to the illustrative lease terms. */
+  resetLease: () => void;
+  /** Null while a lease field is invalid. */
+  result: Loadable<DecideResultVM> | null;
+  nextDecisions: DecisionKind[];
   pro: ProPreviewVM;
 };
 
 // ----- S14 Monthly check-in -------------------------------------------------------------------
 
-export type CheckinStep = 'month' | 'move' | 'future';
-
 /** Statement months the check-in reads: the user's uploads, or the sample statement (labelled). */
 export type CheckinDataSource = 'uploads' | 'sample';
 
-/** Step 1: the month under review against the average of the months before it (engine monthEnd). */
+/** The month under review against the average of the 3 before it (engine monthEnd). */
 export type CheckinMonthVM = {
   source: CheckinDataSource;
   /** The user has uploaded at least one statement month. */
   hasUploads: boolean;
   /** 'YYYY-MM' of the month under review; null = no statement month (profile spending only). */
   month: string | null;
-  /** The month under review is the current calendar month (projected from the days so far). */
+  /** The month under review is the current calendar month (projected to its end). */
   inProgress: boolean;
-  /** Full months before it (monthEnd needs 3 for the average and drift flags). */
+  /** 'YYYY-MM' of the statement to add next (the month after the one under review, or this month). */
+  nextStatementMonth: string;
   historyMonths: number;
   historyNeeded: number;
   result: Loadable<MonthEnd>;
-  /** Take-home pay: from the profile, or the sample statement's paychecks for the month. */
-  takeHome: { value: Money; isEstimate: boolean } | null;
+};
+
+/** Headline numbers from monthEnd (null until there are 3 months of history). */
+export type CheckinCompareVM = {
+  projected: Money;
+  /** projected − vsAverage. */
+  average: Money;
+  /** vsAverage (positive = over). */
+  difference: Money;
+  /** By whole dollars. */
+  direction: 'over' | 'under' | 'even';
+  drifts: { category: CostCategory; delta: Money }[];
+  /** Tile categories that did not drift. */
+  onTrack: CostCategory[];
 };
 
 /** What the committed move is doing, from the engine. */
@@ -124,6 +118,12 @@ export type MoveProgressVM =
   | {
       kind: 'cardPayoff';
       debtId: string;
+      /** The card balance today. */
+      balance: Money;
+      /** Paid off it by the end of this month with the move (engine simulate). */
+      paidThisMonth: Money;
+      /** paidThisMonth / balance, 0–1. */
+      share: Rate;
       /** Months until the card is paid off with / without the move (null = not within 10 years). */
       payoffMonthWith: number | null;
       payoffMonthWithout: number | null;
@@ -135,23 +135,21 @@ export type MoveProgressVM =
       target: Money;
       /** The category's monthly amount in the profile now. */
       planned: Money;
-      /** What the user's statement shows for the month under review (null without an upload). */
+      /** The user's own finished statement month for the category (null otherwise). */
       actual: Money | null;
-      /** actual ≤ target (null without an upload). */
       onTrack: boolean | null;
     };
 
-/** This check-in's answer about the move: none yet, done (its patch entered the plan), or keep going. */
+/** This check-in's answer about the move. */
 export type CheckinMoveAnswer = 'none' | 'done' | 'keepGoing';
 
 export type CheckinMoveVM = {
-  /** The move the user committed to (null = none). */
   committed: MoveVM | null;
   progress: Loadable<MoveProgressVM | null> | null;
   /** Ranked moves to commit to when there is none (engine rankMoves). */
   suggestions: Loadable<MoveVM[]>;
   answer: CheckinMoveAnswer;
-  /** The move just marked done in this check-in (shown after the answer). */
+  /** The move marked done in this check-in. */
   doneMove: MoveVM | null;
   /** Highest unlocked move level (engine movesLevel). */
   level: 1 | 2;
@@ -160,29 +158,15 @@ export type CheckinMoveVM = {
   keepGoing: () => void;
 };
 
-/** Step 3: the 10-year forecast after this check-in (today's dollars), with the committed move. */
-export type CheckinFutureVM = {
-  points: ForecastPoint[];
-  in10y: ForecastPoint;
-  bandIsZero: boolean;
-  /** The forecast with the committed move applied; null without a committed move. */
-  withMove: { move: MoveVM; points: ForecastPoint[]; in10y: ForecastPoint } | null;
-};
-
 export type CheckinVM = {
   status: 'loading' | 'ready';
-  steps: readonly CheckinStep[];
-  step: CheckinStep;
-  goTo: (step: CheckinStep) => void;
-  next: () => void;
-  back: () => void;
-  /** The user finished the last step: show the summary. */
-  finished: boolean;
-  finish: () => void;
-  restart: () => void;
   month: CheckinMonthVM;
   setSource: (source: CheckinDataSource) => void;
+  compare: CheckinCompareVM | null;
   move: CheckinMoveVM;
-  future: Loadable<CheckinFutureVM>;
+  /** Where "Add statement" goes (S9 upload). */
+  uploadHref: string;
+  /** Where "see all moves" goes (S10). */
+  movesHref: string;
   pro: ProPreviewVM;
 };

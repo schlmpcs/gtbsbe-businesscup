@@ -7,12 +7,13 @@
 // The sample statement CSV is plain text, not JSON: read it with `readStatementSampleCsv` from
 // '@lifeguessr/data/fixtures/node' (Node only: tests, scripts, server routes).
 import {
-  AreaDataSchema, CategoryTotalsSchema, LifeCardSchema, LoanInputSchema, ProfileSchema,
-  type AreaData, type CategoryTotals, type LifeCard, type LoanInput, type Profile,
+  AreaDataSchema, CategoryTotalsSchema, LifeCardSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema,
+  type AreaData, type CategoryTotals, type LifeCard, type LoanInput, type Money, type Profile,
 } from '@lifeguessr/types';
+import { z } from 'zod';
 import areaDataJson from './areaData.sample.json';
-import cardDecisionJson from './carDecision.sample.json';
 import cardsJson from './cards.sample.json';
+import leaseScenarioJson from './leaseScenario.sample.json';
 import loanOffersJson from './loanOffers.sample.json';
 import profileJson from './profile.demo.json';
 import statementTotalsJson from './statementTotals.sample.json';
@@ -37,14 +38,29 @@ export const profileDemo: Readonly<Profile> = deepFreeze(ProfileSchema.parse(pro
 /** Three loan offers for the Loan Lab compare (same $28,000 car, different APR/term/fees). */
 export const loanOffersSample: readonly LoanInput[] = deepFreeze(LoanInputSchema.array().parse(loanOffersJson));
 
-/**
- * S13 (Decision: the car) starting offers, one per path: A = a newer car on a long loan, B = a cheaper
- * used car on a short one. Sample inputs the user edits, like the Loan Lab offers (not market data).
- */
-export const carDecisionSample: Readonly<{ pathA: LoanInput; pathB: LoanInput }> = deepFreeze({
-  pathA: LoanInputSchema.parse(cardDecisionJson.pathA),
-  pathB: LoanInputSchema.parse(cardDecisionJson.pathB),
+/** A car lease: the S13 decision's "lease" path. Money is monthly except `dueAtSigning` (once per term). */
+export type LeaseScenario = {
+  /** Lease payment, per month. */
+  monthly: Money;
+  termMonths: number;
+  /** Paid at signing, at the start of every term. */
+  dueAtSigning: Money;
+  /** Running costs of the leased car (insurance, fuel, upkeep), per month. */
+  running: Money;
+};
+
+export const LeaseScenarioSchema = z.object({
+  monthly: NonNegativeMoneySchema,
+  termMonths: z.number().int().min(1).max(120),
+  dueAtSigning: NonNegativeMoneySchema,
+  running: NonNegativeMoneySchema,
 });
+
+/**
+ * S13 (Decision: keep the car or lease a new one) starting lease terms. ILLUSTRATIVE, not a quote
+ * and not sourced: every value is an estimate until the user edits it on the screen.
+ */
+export const leaseScenarioSample: Readonly<LeaseScenario> = deepFreeze(LeaseScenarioSchema.parse(leaseScenarioJson));
 
 /**
  * Category totals of the four full months (Jul–Oct 2026) of statement.sample.csv, oldest first: what

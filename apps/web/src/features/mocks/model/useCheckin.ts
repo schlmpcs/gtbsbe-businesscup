@@ -1,34 +1,41 @@
-// S14 Monthly check-in: three steps over the engine.
-//   1. Your month: the latest statement month against the average of the months before it
-//      (engine monthEnd: projection, vs 3-month average, drift flags). Reads the user's uploads, or
-//      the sample statement's months (fixture, labelled) when there are none.
-//   2. Your move: progress on the committed move (engine simulate / applyPatch), then "did it" (its
-//      patch enters the profile, as on S1) or "keep going"; with no committed move, pick one
-//      (engine rankMoves through useNextMoves).
-//   3. Your 10 years: the forecast after this check-in, with the committed move as a second line.
-// Nothing is saved besides what the existing store actions save (commit, done): it is a preview.
-import { applyPatch, forecast, forecastMonths, hasEstimates, monthEnd, movesLevel, simulate, type CurrentMonth } from '@lifeguessr/engine';
-import type { CategoryTotals, Move, Profile } from '@lifeguessr/types';
+// S14 Monthly check-in, all from the engine:
+// - Your month: the latest statement month against the 3 full months before it (engine monthEnd:
+//   projection, vs 3-month average, drift flags). Reads the user's uploads, or the sample
+//   statement's months (fixture, labelled) when there are none.
+// - Your move: progress on the committed move (engine simulate / applyPatch), then "I did it" (its
+//   patch enters the profile, as on S1) or "not yet"; with no committed move, pick one of the ranked
+//   moves (engine rankMoves through useNextMoves).
+// Nothing is saved besides what the store's existing actions save (commit, done): it is a preview.
+import { applyPatch, forecastMonths, monthEnd, movesLevel, simulate, type CurrentMonth } from '@lifeguessr/engine';
+import type { CategoryTotals, CostCategory, MonthEnd, Move, Profile } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { DRIFT_HISTORY_MONTHS } from '@/features/ladder/model/useStatementUpload';
 import { moveTarget, toMoveVM, useNextMoves } from '@/features/forecast/model/useNextMoves';
 import { statementTotalsSample } from '@/fixtures';
 import { localMonthDay } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
-import { areaRates, displayForecast } from '@/lib/model/profile';
+import { areaRates } from '@/lib/model/profile';
 import type { Loadable } from '@/lib/model/types';
 import { SCREEN_ROUTES } from '@/lib/screens';
 import { useAppReady, useAppStore, usePro } from '@/state';
 import type {
-  CheckinDataSource, CheckinFutureVM, CheckinMonthVM, CheckinMoveAnswer, CheckinStep, CheckinVM, MoveProgressVM, MoveVM,
+  CheckinCompareVM, CheckinDataSource, CheckinMonthVM, CheckinMoveAnswer, CheckinVM, MoveProgressVM, MoveVM,
 } from './types';
 
-export const CHECKIN_STEPS: readonly CheckinStep[] = ['month', 'move', 'future'];
+/** Categories that get a tile on the check-in (drifted ones first, the rest as "on track"). */
+export const TILE_CATEGORIES: readonly CostCategory[] = ['eatingOut', 'subscriptions', 'groceries', 'car'];
 
 /** Days in a 'YYYY-MM' month (calendar arithmetic, not money math). */
 export function daysInMonth(yyyyMm: string): number {
   const [y, m] = yyyyMm.split('-').map(Number);
   return new Date(Date.UTC(y!, m!, 0)).getUTCDate();
+}
+
+/** The month after a 'YYYY-MM' month. */
+export function nextMonth(yyyyMm: string): string {
+  const [y, m] = yyyyMm.split('-').map(Number);
+  const d = new Date(Date.UTC(y!, m!, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 export type CheckinMonthInputs = {
@@ -59,7 +66,21 @@ export function checkinMonthInputs(months: readonly CategoryTotals[], today: { m
   };
 }
 
-/** Progress on a committed move: card payoff with vs without it, or the category against its target. */
+/** The headline numbers, once monthEnd has an average. */
+export function compareOf(m: MonthEnd): CheckinCompareVM | null {
+  if (m.vsAverage === null) return null;
+  const drifted = new Set(m.drifts.map((d) => d.category));
+  return {
+    projected: m.projectedSpend,
+    average: m.projectedSpend - m.vsAverage,
+    difference: m.vsAverage,
+    direction: Math.round(m.vsAverage) === 0 ? 'even' : m.vsAverage > 0 ? 'over' : 'under',
+    drifts: m.drifts.map((d) => ({ category: d.category, delta: d.delta })),
+    onTrack: TILE_CATEGORIES.filter((c) => !drifted.has(c)),
+  };
+}
+
+/** Progress on a committed move: the card this month and its payoff, or the category against its target. */
 export function moveProgress(
   p: Profile,
   move: Move,
@@ -70,9 +91,19 @@ export function moveProgress(
   if (target.kind === 'extraPayment') {
     const months = forecastMonths(10);
     const rates = areaRates(p);
-    const without = simulate(p, months, { rates }).payoffMonth[target.debtId] ?? null;
-    const withMove = simulate(applyPatch(p, move.patch), months, { rates }).payoffMonth[target.debtId] ?? null;
-    return { kind: 'cardPayoff', debtId: target.debtId, payoffMonthWith: withMove, payoffMonthWithout: without };
+    const without = simulate(p, months, { rates });
+    const withMove = simulate(applyPatch(p, move.patch), months, { rates });
+    const balance = withMove.path[0]!.debts[target.debtId] ?? 0;
+    const paidThisMonth = Math.max(0, balance - (withMove.path[1]!.debts[target.debtId] ?? 0));
+    return {
+      kind: 'cardPayoff',
+      debtId: target.debtId,
+      balance,
+      paidThisMonth,
+      share: balance > 0 ? paidThisMonth / balance : 1,
+      payoffMonthWith: withMove.payoffMonth[target.debtId] ?? null,
+      payoffMonthWithout: without.payoffMonth[target.debtId] ?? null,
+    };
   }
   // Only the user's own finished month says what they actually spent (not the sample, not a partial month).
   const actual =
@@ -95,10 +126,7 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
   const markMoveDone = useAppStore((s) => s.markMoveDone);
   const nextMoves = useNextMoves(profile);
   const isPro = usePro().isPro;
-  const now = opts.now;
 
-  const [step, setStep] = useState<CheckinStep>('month');
-  const [finished, setFinished] = useState(false);
   const [chosenSource, setChosenSource] = useState<CheckinDataSource | null>(null);
   const [answer, setAnswer] = useState<CheckinMoveAnswer>('none');
   const [doneMove, setDoneMove] = useState<MoveVM | null>(null);
@@ -107,29 +135,27 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
   // Uploads by default once there are any; the sample otherwise (and whenever the user picks it).
   const source: CheckinDataSource = hasUploads ? (chosenSource ?? 'uploads') : 'sample';
 
-  const review = useMemo(() => {
-    const months = source === 'uploads' ? statementMonths : statementTotalsSample;
-    return checkinMonthInputs(months, localMonthDay(now));
-  }, [source, statementMonths, now]);
+  const { month: todayMonth, day: todayDay } = localMonthDay(opts.now);
+  const review = useMemo(
+    () => checkinMonthInputs(source === 'uploads' ? statementMonths : statementTotalsSample, { month: todayMonth, day: todayDay }),
+    [source, statementMonths, todayMonth, todayDay],
+  );
 
-  const month: CheckinMonthVM = useMemo(() => {
-    const takeHome =
-      source === 'sample'
-        ? review.latest?.detectedPay !== undefined
-          ? { value: review.latest.detectedPay, isEstimate: false }
-          : null
-        : { ...profile.takeHomePay };
-    return {
+  const month: CheckinMonthVM = useMemo(
+    () => ({
       source,
       hasUploads,
       month: review.latest?.month ?? null,
       inProgress: review.inProgress,
+      nextStatementMonth: review.latest ? nextMonth(review.latest.month) : todayMonth,
       historyMonths: review.history.length,
       historyNeeded: DRIFT_HISTORY_MONTHS,
       result: runEngine(() => monthEnd(profile, review.history, review.thisMonth)),
-      takeHome,
-    };
-  }, [profile, review, source, hasUploads]);
+    }),
+    [profile, review, source, hasUploads, todayMonth],
+  );
+
+  const compare = useMemo(() => (month.result.status === 'ready' ? compareOf(month.result.data) : null), [month]);
 
   const committedMoveId = profile.committedMoveId;
   const committed: MoveVM | null = useMemo(
@@ -142,23 +168,6 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
     [committed, profile, review, source],
   );
 
-  const future: Loadable<CheckinFutureVM> = useMemo(
-    () =>
-      runEngine(() => {
-        const base = displayForecast(profile);
-        const withMove = committed
-          ? forecast(applyPatch(profile, committed.patch), 10, { todaysDollars: true, rates: areaRates(profile) })
-          : null;
-        return {
-          points: base.points,
-          in10y: base.in10y,
-          bandIsZero: !hasEstimates(profile),
-          withMove: withMove && committed ? { move: committed, points: withMove.points, in10y: withMove.in10y } : null,
-        };
-      }),
-    [profile, committed],
-  );
-
   const markDone = useCallback(() => {
     if (!committedMove) return;
     setDoneMove(toMoveVM(committedMove, profile));
@@ -166,33 +175,20 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
     setAnswer('done');
   }, [committedMove, profile, markMoveDone]);
 
-  const index = CHECKIN_STEPS.indexOf(step);
-  const goTo = useCallback((s: CheckinStep) => {
-    setStep(s);
-    setFinished(false);
-  }, []);
+  const { commit: commitMove } = nextMoves;
+  const commit = useCallback(
+    (id: string) => {
+      commitMove(id);
+      setAnswer('none');
+    },
+    [commitMove],
+  );
 
   return {
     status: ready ? 'ready' : 'loading',
-    steps: CHECKIN_STEPS,
-    step,
-    goTo,
-    next: () => {
-      if (index < CHECKIN_STEPS.length - 1) setStep(CHECKIN_STEPS[index + 1]!);
-    },
-    back: () => {
-      if (index > 0) setStep(CHECKIN_STEPS[index - 1]!);
-    },
-    finished,
-    finish: () => setFinished(true),
-    restart: () => {
-      setFinished(false);
-      setStep('month');
-      setAnswer('none');
-      setDoneMove(null);
-    },
     month,
     setSource: setChosenSource,
+    compare,
     move: {
       committed,
       progress,
@@ -200,11 +196,12 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
       answer,
       doneMove,
       level: movesLevel(profile),
-      commit: nextMoves.commit,
+      commit,
       markDone,
       keepGoing: () => setAnswer('keepGoing'),
     },
-    future,
+    uploadHref: SCREEN_ROUTES.S9,
+    movesHref: SCREEN_ROUTES.S10,
     pro: { isPro, href: SCREEN_ROUTES.S15 },
   };
 }

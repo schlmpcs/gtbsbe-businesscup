@@ -26,7 +26,7 @@ export function TextInput({
       value={value}
       onChange={(e) => onValueChange(e.target.value)}
       className={cx(
-        'w-full rounded-md border bg-bg px-md py-md text-base',
+        'w-full rounded-lg border-2 bg-surface px-md py-sm text-base',
         field['aria-invalid'] ? 'border-negative' : 'border-border',
         className,
       )}

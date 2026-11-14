@@ -205,8 +205,8 @@ export type CategoryTotals = { month: string; totals: Record<CostCategory, Money
 | `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
 | `canAfford` | Amir | `(p: Profile, x: Purchase) => AffordResult` |
 | `monthEnd` | Aibek | `(p: Profile, history: CategoryTotals[], current?: { month: string; day: number; totals: Record<CostCategory, Money> }) => MonthEnd` |
-| `loan` | Aibek | `(p: Profile, l: LoanInput) => LoanResult` |
-| `compareLoans` | Aibek | `(p: Profile, ls: LoanInput[]) => LoanResult[]` |
+| `loan` | Aibek | `(p: Profile, l: LoanInput, opts?: { rates?: Partial<ForecastRates> }) => LoanResult` (`effect10y` in today's dollars, like moves) |
+| `compareLoans` | Aibek | `(p: Profile, ls: LoanInput[], opts?: { rates?: Partial<ForecastRates> }) => LoanResult[]` (same order as `ls`) |
 | `payoffOrder` | Aibek | `(debts: Debt[], extra: Money, method: 'avalanche' \| 'snowball') => { order: string[] /* debt ids */; payoffMonth: number \| null; totalInterest: Money }` |
 
 All assumptions (inflation, returns, thresholds) live in `packages/engine/assumptions.ts` with a `Source` or an `assumption: true` flag. The UI shows them in a "How we calculate" panel.

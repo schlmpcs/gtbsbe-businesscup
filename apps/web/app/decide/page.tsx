@@ -1,13 +1,10 @@
 'use client';
 
-// S13 Decision: the car (`/decide`): thin route. The view-model hook feeds the presentational screen.
+// S13 Decision, car example (`/decide`): thin route. The view-model hook feeds the presentational screen.
 import Link from 'next/link';
-import { useDecision } from '@/features/mocks/model/useDecision';
-import { DecisionScreen, type DecisionLinks } from '@/features/mocks/ui/DecisionScreen';
-import { SCREEN_ROUTES } from '@/lib/screens';
-
-const links: DecisionLinks = { loan: SCREEN_ROUTES.S12, afford: SCREEN_ROUTES.S11 };
+import { useDecide } from '@/features/mocks/model/useDecide';
+import { DecideScreen } from '@/features/mocks/ui/DecideScreen';
 
 export default function DecidePage() {
-  return <DecisionScreen vm={useDecision()} links={links} Link={Link} />;
+  return <DecideScreen vm={useDecide()} Link={Link} />;
 }

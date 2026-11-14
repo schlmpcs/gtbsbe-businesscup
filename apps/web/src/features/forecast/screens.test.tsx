@@ -81,7 +81,7 @@ describe('TodayScreen (S1)', () => {
       },
       in10y: { month: 120, low: 1, mid: 2, high: 3 }, in10yBandIsZero: false, committedMove: null,
       markCommittedDone: () => {}, topMove: { status: 'ready' as const, data: null },
-      game: { date: null, played: 0, total: 0, finished: false },
+      game: { date: null, played: 0, total: 0, finished: false, homes: [] },
     };
     render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
     const drifts = screen.getByTestId('month-end-drifts');

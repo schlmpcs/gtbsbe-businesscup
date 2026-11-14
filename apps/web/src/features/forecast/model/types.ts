@@ -49,6 +49,9 @@ export type MonthEndVM = {
   takeHome: EstimatedMoney;
 };
 
+/** One of today's game homes, as the public card shows it before a guess (no cost facts). */
+export type TodayHomeVM = { id: string; metro: string; played: boolean };
+
 /** S1 Today. */
 export type TodayVM = {
   status: 'loading' | 'ready';
@@ -67,7 +70,14 @@ export type TodayVM = {
   /** Best move right now (first of rankMoves), or why there is none. */
   topMove: Loadable<MoveVM | null>;
   /** Daily game call to action. */
-  game: { date: string | null; played: number; total: number; finished: boolean };
+  game: {
+    date: string | null;
+    played: number;
+    total: number;
+    finished: boolean;
+    /** Today's homes in play order, once the day is loaded (empty before the first visit to /play). */
+    homes: TodayHomeVM[];
+  };
 };
 
 /** S10 You in 10 years + Next Moves. */

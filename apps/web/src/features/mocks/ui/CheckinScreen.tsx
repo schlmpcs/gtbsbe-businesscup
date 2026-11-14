@@ -1,204 +1,127 @@
 'use client';
 
-// S14 Monthly check-in: three steps (your month, your move, your 10 years), then a summary.
-// Presentational: every number comes from useCheckin(), which calls the engine (monthEnd, simulate,
-// rankMoves, forecast).
+// S14 Monthly check-in (Figma S14). Presentational: every number comes from useCheckin() (engine
+// monthEnd on the user's statements or the labelled sample statement; simulate / rankMoves for the
+// move).
+import { useId } from 'react';
 import { common, forecast, mocks } from '@/copy';
 import {
-  Button, buttonClassName, Card, Choice, cx, EstimateTag, ForecastChart, formatMoney, Money, Row, Stack, Stat,
+  Art, Button, buttonClassName, Card, Choice, cx, formatMoney, formatRate, Money, Scoreboard, Sticker, type ScoreboardItem,
 } from '@/ui-kit';
-import type {
-  CheckinMonthVM, CheckinMoveVM, CheckinVM, MonthEnd, MoveProgressVM, MoveVM,
-} from '../model/types';
-import { ErrorNote, Loading, RangeText, ScreenHeader, type LinkComponent } from './shared';
+import type { CheckinCompareVM, CheckinMoveVM, CheckinVM, MoveProgressVM, MoveVM } from '../model/types';
+import { PreviewBadge } from './PreviewBadge';
+import { ErrorNote, Loading, type LinkComponent } from './shared';
 
 const t = mocks.checkin;
-
-export type CheckinLinks = { upload: string; future: string };
-
-export type CheckinScreenProps = { vm: CheckinVM; links: CheckinLinks; Link: LinkComponent };
+const TILTS = [-0.8, 0.6, -0.4, 0.8];
 
 /** Title of a move from its kind (and category). */
 function moveTitle(move: Pick<MoveVM, 'kind' | 'category'>): string {
   return forecast.moves.title(move.kind, move.category ? common.categories[move.category] : undefined);
 }
 
-export function CheckinScreen({ vm, links, Link }: CheckinScreenProps) {
+function headline(vm: CheckinVM): string {
+  const { month, compare } = vm;
+  if (month.month === null) return t.titleNoData;
+  const name = mocks.monthName(month.month);
+  if (!compare) return month.inProgress ? t.titleNoAverage(name) : t.titleNoAverageDone(name);
+  if (compare.direction === 'even') return t.titleEven;
+  const amount = formatMoney(Math.abs(compare.difference));
+  if (month.inProgress) return compare.direction === 'over' ? t.titleOver(amount) : t.titleUnder(amount);
+  return compare.direction === 'over' ? t.titleWasOver(amount) : t.titleWasUnder(amount);
+}
+
+function Score({ vm }: { vm: CheckinVM }) {
+  const { month, compare, move } = vm;
+  if (month.result.status !== 'ready') return month.result.status === 'error' ? <ErrorNote error={month.result.error} /> : null;
+  const items: ScoreboardItem[] = [
+    { id: 'projected', value: <Money value={month.result.data.projectedSpend} />, label: month.inProgress || !month.month ? t.projected : t.spent },
+  ];
+  if (compare) {
+    items.push(
+      { id: 'average', value: <Money value={compare.average} />, label: t.average },
+      {
+        id: 'difference',
+        value: <Money value={compare.difference} signed />,
+        label: compare.difference > 0 ? t.over : t.under,
+        tone: compare.difference > 0 ? 'primary' : 'positive',
+      },
+    );
+  }
+  const p = move.progress?.status === 'ready' ? move.progress.data : null;
+  if (p?.kind === 'cardPayoff') items.push({ id: 'progress', value: formatRate(p.share, 0), label: t.progress, tone: 'positive' });
   return (
-    <main className="mx-auto w-full max-w-(--container-2xl) px-lg py-xl">
-      <Stack gap="xl">
-        <ScreenHeader title={mocks.screens.S14} intro={t.intro} pro={vm.pro} Link={Link} />
-        {vm.status === 'loading' ? (
-          <Loading />
-        ) : vm.finished ? (
-          <Summary vm={vm} links={links} Link={Link} />
-        ) : (
-          <>
-            <Stepper steps={vm.steps} step={vm.step} goTo={vm.goTo} />
-            {vm.step === 'month' && <MonthStep month={vm.month} setSource={vm.setSource} uploadHref={links.upload} Link={Link} />}
-            {vm.step === 'move' && <MoveStep move={vm.move} futureHref={links.future} Link={Link} />}
-            {vm.step === 'future' && <FutureStep future={vm.future} />}
-            <StepNav vm={vm} />
-          </>
-        )}
-      </Stack>
-    </main>
+    <div className="flex flex-col gap-sm">
+      <Scoreboard label={month.inProgress ? t.scoreLabel : t.scoreLabelDone} items={items} />
+      {!compare && <p className="text-sm text-text-muted">{month.month === null ? t.noDataHint : t.needHistory(month.historyMonths)}</p>}
+    </div>
   );
 }
 
-function Stepper({ steps, step, goTo }: Pick<CheckinVM, 'steps' | 'step' | 'goTo'>) {
-  const current = steps.indexOf(step);
+function Drifts({ compare }: { compare: CheckinCompareVM }) {
+  const driftId = useId();
+  const tiles = [
+    ...compare.drifts.map((d) => ({ category: d.category, delta: d.delta as number | null })),
+    ...compare.onTrack.map((category) => ({ category, delta: null })),
+  ];
   return (
-    <nav aria-label={t.stepsLabel}>
-      <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">{t.stepOf(current + 1, steps.length)}</p>
-      <ol className="mt-sm grid grid-cols-3 gap-xs">
-        {steps.map((s, i) => (
-          <li key={s}>
-            <button
-              type="button"
-              aria-current={s === step ? 'step' : undefined}
-              onClick={() => goTo(s)}
-              className={cx(
-                'w-full rounded-md px-sm py-sm text-left text-sm font-semibold leading-tight transition-colors',
-                s === step ? 'bg-primary text-on-primary' : i < current ? 'bg-surface-strong text-text' : 'bg-surface text-text-muted',
+    <section aria-labelledby={driftId} className="flex flex-col gap-lg">
+      <h2 id={driftId} className="text-3xl font-extrabold sm:text-4xl">
+        {t.driftTitle}
+      </h2>
+      <ul className="grid grid-cols-1 gap-lg sm:grid-cols-2 lg:grid-cols-4" data-testid="checkin-drifts">
+        {tiles.map((d, i) => (
+          <li key={d.category}>
+            <Card className="flex h-full flex-col gap-xs" style={{ transform: `rotate(${TILTS[i % TILTS.length]}deg)` }}>
+              <span className="text-lg font-semibold">{t.categories[d.category] ?? d.category}</span>
+              {d.delta === null ? (
+                <span className="font-display text-2xl font-extrabold leading-tight text-text-muted">{t.onTrack}</span>
+              ) : (
+                <>
+                  <span
+                    className={cx(
+                      'font-display text-4xl font-extrabold leading-tight tabular-nums sm:text-display sm:leading-display',
+                      d.delta > 0 ? 'text-primary' : 'text-positive',
+                    )}
+                  >
+                    <Money value={d.delta} signed />
+                  </span>
+                  <span className="text-sm text-text-muted">{t.vsAverage}</span>
+                </>
               )}
-            >
-              {t.steps[s]}
-            </button>
+            </Card>
           </li>
         ))}
-      </ol>
-    </nav>
+      </ul>
+    </section>
   );
 }
-
-function StepNav({ vm }: { vm: CheckinVM }) {
-  const i = vm.steps.indexOf(vm.step);
-  const last = i === vm.steps.length - 1;
-  return (
-    <Row justify="between">
-      <Button variant="ghost" onClick={vm.back} disabled={i === 0}>
-        {t.back}
-      </Button>
-      {last ? <Button onClick={vm.finish}>{t.finish}</Button> : <Button onClick={vm.next}>{t.next}</Button>}
-    </Row>
-  );
-}
-
-// ----- Step 1: your month ---------------------------------------------------------------------
-
-function MonthNumbers({ month, data }: { month: CheckinMonthVM; data: MonthEnd }) {
-  const m = t.month;
-  const enoughHistory = month.historyMonths >= month.historyNeeded;
-  return (
-    <Stack gap="md">
-      <div className="grid grid-cols-1 gap-lg sm:grid-cols-2">
-        <Stat
-          label={month.month === null ? m.projected : month.inProgress ? m.projectedInProgress : m.projected}
-          value={<Money value={data.projectedSpend} />}
-          size="lg"
-          hint={month.month === null ? m.noDataHint : month.inProgress ? m.inProgressHint : m.completeHint}
-        />
-        {month.takeHome && (
-          <Stat
-            label={month.source === 'sample' ? m.takeHomeSample : m.takeHome}
-            value={<Money value={month.takeHome.value} />}
-            isEstimate={month.takeHome.isEstimate}
-          />
-        )}
-      </div>
-      {data.vsAverage !== null ? (
-        <p className="text-sm" data-testid="checkin-vs-average">
-          <span className="text-text-muted">{m.vsAverage}: </span>
-          <span className={cx('font-semibold tabular-nums', data.vsAverage > 0 ? 'text-negative' : 'text-positive')}>
-            {m.vsAverageValue(formatMoney(data.vsAverage, { signed: true }))}
-          </span>
-        </p>
-      ) : (
-        month.month !== null && !enoughHistory && <p className="text-sm text-text-muted">{m.needHistory(month.historyMonths)}</p>
-      )}
-      {data.vsAverage !== null && (
-        <section aria-labelledby="checkin-drifts">
-          <h3 id="checkin-drifts" className="text-base font-semibold">
-            {m.driftsTitle}
-          </h3>
-          {data.drifts.length === 0 ? (
-            <p className="mt-xs text-sm text-text-muted">{m.noDrifts}</p>
-          ) : (
-            <ul className="mt-xs flex flex-col gap-xs" data-testid="checkin-drifts">
-              {data.drifts.map((d) => (
-                <li key={d.category} className="flex items-center justify-between gap-sm rounded-md bg-surface px-md py-sm text-sm">
-                  <span>{m.drift(common.categories[d.category], formatMoney(d.delta, { signed: true }))}</span>
-                  <span className={cx('text-xs font-semibold uppercase', d.delta > 0 ? 'text-negative' : 'text-positive')}>
-                    {d.delta > 0 ? m.over : m.under}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-    </Stack>
-  );
-}
-
-function MonthStep({
-  month,
-  setSource,
-  uploadHref,
-  Link,
-}: {
-  month: CheckinMonthVM;
-  setSource: CheckinVM['setSource'];
-  uploadHref: string;
-  Link: LinkComponent;
-}) {
-  const m = t.month;
-  return (
-    <Card title={month.month ? m.title(month.month) : m.titleNoData} data-testid="checkin-month">
-      <Stack gap="lg">
-        {month.hasUploads ? (
-          <Choice
-            legend={m.sourceLabel}
-            name="checkin-source"
-            value={month.source}
-            options={[
-              { value: 'uploads', label: m.sources.uploads },
-              { value: 'sample', label: m.sources.sample },
-            ]}
-            onChange={setSource}
-          />
-        ) : (
-          <p className="text-sm text-text-muted">{m.noUploads}</p>
-        )}
-        {month.source === 'sample' && (
-          <div role="note" className="flex flex-col items-start gap-sm rounded-md border border-dashed border-text-muted p-md text-sm">
-            <p>{m.sampleNote}</p>
-            <Link href={uploadHref} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
-              {m.upload}
-            </Link>
-          </div>
-        )}
-        {month.result.status === 'ready' ? (
-          <MonthNumbers month={month} data={month.result.data} />
-        ) : month.result.status === 'error' ? (
-          <ErrorNote error={month.result.error} />
-        ) : null}
-      </Stack>
-    </Card>
-  );
-}
-
-// ----- Step 2: your move ----------------------------------------------------------------------
 
 function Progress({ progress }: { progress: MoveProgressVM }) {
   const m = t.move;
   if (progress.kind === 'cardPayoff') {
-    const months = (n: number | null) => (n === null ? m.notWithin10y : m.payoffMonths(n));
-    return <p className="text-sm">{m.cardPayoff(months(progress.payoffMonthWith), months(progress.payoffMonthWithout))}</p>;
+    const pct = Math.min(100, Math.max(0, progress.share * 100));
+    const months = (n: number | null) => (n === null ? m.notWithin10y : t.months(n));
+    return (
+      <>
+        <p className="font-bold tabular-nums">{m.ofTotal(formatMoney(progress.paidThisMonth), formatMoney(progress.balance))}</p>
+        <div
+          role="progressbar"
+          aria-label={m.progressLabel}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(pct)}
+          aria-valuetext={formatRate(progress.share, 0)}
+          className="h-md overflow-hidden rounded-full bg-surface-strong"
+        >
+          <div className="h-full rounded-full bg-positive" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="text-sm text-text-muted">{m.pace(months(progress.payoffMonthWith), months(progress.payoffMonthWithout))}</p>
+      </>
+    );
   }
   return (
-    <Stack gap="xs">
+    <>
       <p className="text-sm">
         {m.spendingTarget(common.categories[progress.category], formatMoney(progress.target), formatMoney(progress.planned))}
       </p>
@@ -210,179 +133,148 @@ function Progress({ progress }: { progress: MoveProgressVM }) {
           </span>
         </p>
       )}
-    </Stack>
+    </>
   );
 }
 
-function MoveStep({ move, futureHref, Link }: { move: CheckinMoveVM; futureHref: string; Link: LinkComponent }) {
+function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: string; Link: LinkComponent }) {
   const m = t.move;
   const seeAll = (
-    <Link href={futureHref} className={cx(buttonClassName({ variant: 'ghost', size: 'sm' }), 'self-start')}>
+    <Link href={movesHref} className={cx(buttonClassName({ variant: 'ghost', size: 'sm' }), 'self-start')}>
       {m.seeAll}
     </Link>
   );
 
   if (move.answer === 'done' && move.doneMove) {
     return (
-      <Card title={m.doneTitle} tone="arena" data-testid="checkin-move">
-        <Stack gap="sm">
-          <p>{m.doneBody(moveTitle(move.doneMove))}</p>
-          {move.level === 2 && <p className="text-sm text-text-muted">{m.level2}</p>}
-        </Stack>
+      <Card as="section" aria-label={m.doneTitle} tone="arena" data-testid="checkin-move" className="flex flex-col gap-sm">
+        <Sticker tone="ink">{m.doneTitle}</Sticker>
+        <p className="text-xl font-bold">{m.doneBody(moveTitle(move.doneMove))}</p>
+        {move.level === 2 && <p className="text-sm text-text-muted">{m.level2}</p>}
       </Card>
     );
   }
 
   if (move.committed) {
     const c = move.committed;
+    const title = moveTitle(c);
     return (
-      <Card title={m.title} data-testid="checkin-move">
-        <Stack gap="md">
-          <Stat
-            label={m.committedLabel}
-            value={moveTitle(c)}
-            hint={m.effect(formatMoney(c.effect10y, { signed: true }))}
-          />
-          {move.progress?.status === 'ready' && move.progress.data && <Progress progress={move.progress.data} />}
-          {move.progress?.status === 'error' && <ErrorNote error={move.progress.error} />}
-          {move.answer === 'keepGoing' ? (
-            <div role="status" className="rounded-md bg-surface p-md text-sm">
-              <p className="font-semibold">{m.keepTitle}</p>
-              <p className="text-text-muted">{m.keepBody}</p>
+      <Card as="section" aria-label={title} data-testid="checkin-move" className="flex flex-col gap-md border-2 border-positive">
+        <div className="flex flex-wrap items-center justify-between gap-md">
+          <div className="flex items-center gap-md">
+            <Sticker tone="positive">{m.sticker}</Sticker>
+            <span className="text-xl font-bold">{title}</span>
+          </div>
+          <span className="text-sm font-semibold text-positive tabular-nums">{m.effect(formatMoney(c.effect10y, { signed: true }))}</span>
+        </div>
+        {move.progress?.status === 'ready' && move.progress.data && <Progress progress={move.progress.data} />}
+        {move.progress?.status === 'error' && <ErrorNote error={move.progress.error} />}
+        {move.answer === 'keepGoing' ? (
+          <p role="status" className="rounded-md bg-surface p-md text-sm">
+            {m.keepBody}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-sm">
+            <p className="font-semibold">{m.question}</p>
+            <div className="flex flex-wrap gap-sm">
+              <Button onClick={move.markDone}>{m.done}</Button>
+              <Button variant="secondary" onClick={move.keepGoing}>
+                {m.keepGoing}
+              </Button>
             </div>
-          ) : (
-            <Stack gap="sm">
-              <p className="font-semibold">{m.question}</p>
-              <Row>
-                <Button onClick={move.markDone}>{m.done}</Button>
-                <Button variant="secondary" onClick={move.keepGoing}>
-                  {m.keepGoing}
-                </Button>
-              </Row>
-            </Stack>
-          )}
-          {move.level === 2 && <p className="text-xs text-text-muted">{m.level2}</p>}
-          {seeAll}
-        </Stack>
+          </div>
+        )}
+        {move.level === 2 && <p className="text-xs text-text-muted">{m.level2}</p>}
+        {seeAll}
       </Card>
     );
   }
 
   return (
-    <Card title={m.noneTitle} data-testid="checkin-move">
-      <Stack gap="md">
-        <p className="text-sm text-text-muted">{m.noneBody}</p>
-        {move.suggestions.status === 'ready' ? (
-          move.suggestions.data.length === 0 ? (
-            <p className="text-sm text-text-muted">{m.noMoves}</p>
-          ) : (
-            <ul className="flex flex-col gap-sm">
-              {move.suggestions.data.map((s) => (
-                <li key={s.id} className="flex flex-wrap items-center justify-between gap-sm rounded-md bg-surface p-md">
-                  <div className="flex min-w-0 flex-col">
-                    <span className="font-semibold">{moveTitle(s)}</span>
-                    <span className="text-sm text-positive tabular-nums">{m.effect(formatMoney(s.effect10y, { signed: true }))}</span>
-                  </div>
-                  <Button size="sm" onClick={() => move.commit(s.id)} aria-label={`${m.commit}: ${moveTitle(s)}`}>
-                    {m.commit}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )
-        ) : move.suggestions.status === 'error' ? (
-          <ErrorNote error={move.suggestions.error} />
-        ) : null}
-        {seeAll}
-      </Stack>
+    <Card as="section" aria-label={m.noneTitle} data-testid="checkin-move" className="flex flex-col gap-md">
+      <div className="flex items-center gap-md">
+        <Sticker tone="positive">{m.sticker}</Sticker>
+        <span className="text-xl font-bold">{m.noneTitle}</span>
+      </div>
+      <p className="text-sm text-text-muted">{m.noneBody}</p>
+      {move.suggestions.status === 'ready' ? (
+        move.suggestions.data.length === 0 ? (
+          <p className="text-sm text-text-muted">{m.noMoves}</p>
+        ) : (
+          <ul className="flex flex-col gap-sm">
+            {move.suggestions.data.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-sm rounded-lg bg-surface-strong p-md">
+                <div className="flex min-w-0 flex-col">
+                  <span className="font-semibold">{moveTitle(s)}</span>
+                  <span className="text-sm text-positive tabular-nums">{m.effect(formatMoney(s.effect10y, { signed: true }))}</span>
+                </div>
+                <Button size="sm" onClick={() => move.commit(s.id)} aria-label={`${m.commit}: ${moveTitle(s)}`}>
+                  {m.commit}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : move.suggestions.status === 'error' ? (
+        <ErrorNote error={move.suggestions.error} />
+      ) : null}
+      {seeAll}
     </Card>
   );
 }
 
-// ----- Step 3: your 10 years ------------------------------------------------------------------
-
-function FutureStep({ future }: { future: CheckinVM['future'] }) {
-  const f = t.future;
-  if (future.status === 'error') return <ErrorNote error={future.error} />;
-  if (future.status !== 'ready') return null;
-  const d = future.data;
+export function CheckinScreen({ vm, Link }: { vm: CheckinVM; Link: LinkComponent }) {
+  const { month } = vm;
+  const ready = vm.status === 'ready';
   return (
-    <Card title={f.title} data-testid="checkin-future">
-      <Stack gap="md">
-        <div className="grid grid-cols-1 gap-lg sm:grid-cols-2">
-          <div>
-            <Stat label={f.headline} value={<Money value={d.in10y.mid} />} size="lg" hint={f.hint} isEstimate={!d.bandIsZero} />
-            <RangeText point={d.in10y} show={!d.bandIsZero} />
-          </div>
-          {d.withMove && (
-            <Stat
-              label={f.withMove}
-              value={<Money value={d.withMove.in10y.mid} />}
-              hint={moveTitle(d.withMove.move)}
-              tone="positive"
-            />
-          )}
+    <main className="mx-auto flex w-full max-w-(--container-7xl) flex-col gap-2xl px-lg py-xl">
+      <header className="flex flex-col gap-lg sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-md">
+          <PreviewBadge pro={vm.pro} Link={Link} />
+          {ready && month.month && <Sticker tone="ink">{t.eyebrow(mocks.monthName(month.month))}</Sticker>}
+          <h1 className="max-w-(--container-4xl) text-4xl leading-display sm:text-display lg:text-[calc(var(--text-display)*1.5)]">
+            {ready ? headline(vm) : mocks.screens.S14}
+          </h1>
         </div>
-        <ForecastChart
-          title={f.chartTitle}
-          series={{ label: f.seriesLabel, points: d.points }}
-          compare={d.withMove ? { label: f.withMoveLabel(moveTitle(d.withMove.move)), points: d.withMove.points } : undefined}
-          showBand={!d.bandIsZero}
-          footnote={f.footnote}
-        />
-      </Stack>
-    </Card>
-  );
-}
+        <Art name="checkin" framed tilt={4} className="w-1/2 max-w-(--container-3xs) shrink-0 self-end sm:w-full" />
+      </header>
 
-// ----- Summary --------------------------------------------------------------------------------
-
-function Summary({ vm, links, Link }: { vm: CheckinVM; links: CheckinLinks; Link: LinkComponent }) {
-  const s = t.summary;
-  const { month, move, future } = vm;
-  const moveLine =
-    move.answer === 'done' && move.doneMove
-      ? s.moveDone(moveTitle(move.doneMove))
-      : move.committed
-        ? s.moveKept(moveTitle(move.committed))
-        : s.moveNone;
-  return (
-    <Card title={s.title} tone="arena" data-testid="checkin-summary">
-      <Stack gap="lg">
-        <dl className="grid grid-cols-1 gap-md sm:grid-cols-3">
-          <div>
-            <dt className="text-sm text-text-muted">{s.month}</dt>
-            <dd className="font-display text-2xl font-extrabold tabular-nums">
-              {month.result.status === 'ready' ? <Money value={month.result.data.projectedSpend} /> : '—'}
-            </dd>
-            {month.result.status === 'ready' && month.result.data.vsAverage !== null && (
-              <dd className="text-sm">{t.month.vsAverageValue(formatMoney(month.result.data.vsAverage, { signed: true }))}</dd>
+      {!ready ? (
+        <Loading />
+      ) : (
+        <>
+          <div className="flex flex-col gap-md" data-testid="checkin-month">
+            {month.hasUploads ? (
+              <Choice
+                legend={t.sourceLabel}
+                name="checkin-source"
+                value={month.source}
+                options={[
+                  { value: 'uploads', label: t.sources.uploads },
+                  { value: 'sample', label: t.sources.sample },
+                ]}
+                onChange={vm.setSource}
+              />
+            ) : null}
+            {month.source === 'sample' && (
+              <p role="note" className="rounded-lg border-2 border-dashed border-border p-md text-sm text-text-muted">
+                {t.sampleNote}
+              </p>
             )}
+            <Score vm={vm} />
           </div>
-          <div>
-            <dt className="text-sm text-text-muted">{s.move}</dt>
-            <dd className="font-semibold">{moveLine}</dd>
+
+          {vm.compare && <Drifts compare={vm.compare} />}
+
+          <div className="grid grid-cols-1 items-center gap-xl lg:grid-cols-[2fr_1fr]">
+            <MoveCard move={vm.move} movesHref={vm.movesHref} Link={Link} />
+            <Link href={vm.uploadHref} className={buttonClassName({ size: 'lg', fullWidth: true })}>
+              {t.addStatement(mocks.monthName(month.nextStatementMonth))}
+              <span aria-hidden="true">→</span>
+            </Link>
           </div>
-          <div>
-            <dt className="flex items-center gap-sm text-sm text-text-muted">
-              {s.future}
-              {future.status === 'ready' && !future.data.bandIsZero && <EstimateTag />}
-            </dt>
-            <dd className="font-display text-2xl font-extrabold tabular-nums">
-              {future.status === 'ready' ? <Money value={future.data.in10y.mid} /> : '—'}
-            </dd>
-          </div>
-        </dl>
-        <p className="text-sm text-text-muted">{s.note}</p>
-        <Row>
-          <Link href={links.future} className={buttonClassName({ variant: 'dark' })}>
-            {s.future10y}
-          </Link>
-          <Button variant="secondary" onClick={vm.restart}>
-            {t.restart}
-          </Button>
-        </Row>
-      </Stack>
-    </Card>
+        </>
+      )}
+    </main>
   );
 }

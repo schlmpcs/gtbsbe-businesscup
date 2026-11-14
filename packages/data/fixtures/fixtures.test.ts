@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AREA_TIERS, COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import {
-  areaByZip, areaDataSample, carDecisionSample, cardsSample, loanOffersSample, profileDemo, statementTotalsSample,
+  areaByZip, areaDataSample, cardsSample, leaseScenarioSample, LeaseScenarioSchema, loanOffersSample, profileDemo, statementTotalsSample,
 } from './index';
 import { readStatementSampleCsv } from './node';
 
@@ -58,10 +58,10 @@ describe('fixtures', () => {
     expect(lines.some((l) => l.includes('AMAZON PRIME'))).toBe(true);
   });
 
-  it('include two car decision paths with different prices and terms', () => {
-    const { pathA, pathB } = carDecisionSample;
-    expect(pathA.amount).not.toBe(pathB.amount);
-    expect(pathA.termMonths).not.toBe(pathB.termMonths);
+  it('include an illustrative lease and reject a bad one', () => {
+    expect(leaseScenarioSample.termMonths).toBeGreaterThan(0);
+    expect(LeaseScenarioSchema.safeParse({ ...leaseScenarioSample, termMonths: 0 }).success).toBe(false);
+    expect(LeaseScenarioSchema.safeParse({ ...leaseScenarioSample, monthly: -1 }).success).toBe(false);
   });
 
   it('have statement totals equal to the sample CSV categorized with a fixed merchant table', () => {
