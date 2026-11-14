@@ -141,11 +141,16 @@ describe('plan', () => {
   it.skipIf(process.env.CI_SLOW === '1')('performance: a 25-year-old to 90 in < 10 ms', () => {
     const p: Profile = { ...structuredClone(profileDemo), age: { value: 25, isEstimate: false }, asOf: '2026-11' };
     const s = scenarioDemo;
-    for (let k = 0; k < 5; k++) plan(p, accountsDemo, s); // warm-up
-    const runs = 20;
-    const t0 = performance.now();
-    for (let k = 0; k < runs; k++) plan(p, accountsDemo, s);
-    expect((performance.now() - t0) / runs).toBeLessThan(10);
+    for (let k = 0; k < 10; k++) plan(p, accountsDemo, s); // warm-up (JIT)
+    // Median of per-run times: one GC pause or a busy CI core does not decide the result.
+    const times: number[] = [];
+    for (let k = 0; k < 31; k++) {
+      const t0 = performance.now();
+      plan(p, accountsDemo, s);
+      times.push(performance.now() - t0);
+    }
+    times.sort((x, y) => x - y);
+    expect(times[15]).toBeLessThan(10);
   });
 });
 
