@@ -48,6 +48,27 @@ export const cardAprDefault = {
   },
 } satisfies Assumption<Rate>;
 
+/**
+ * Default APR per debt kind when the user only types a balance (S8 quick add; shown as an estimate,
+ * editable). Card: the sourced G.19 rate above. The others are typical levels of the series named
+ * in the note, rounded; they are assumptions, not quotes. BNPL "pay in 4" plans charge no interest.
+ */
+export const debtAprDefaults = {
+  value: {
+    card: cardAprDefault.value,
+    auto: 0.08 as Rate,
+    student: 0.0639 as Rate,
+    personal: 0.12 as Rate,
+    bnpl: 0 as Rate,
+    mortgage: 0.065 as Rate,
+  },
+  assumption: true,
+  note:
+    'card: Fed G.19 (cardAprDefault). auto: about the G.19 60-month new-car rate (2025). student: federal ' +
+    'Direct Loan undergraduate rate 2025-26 (6.39%, studentaid.gov). personal: about the G.19 24-month ' +
+    'personal loan rate (2025). mortgage: about the Freddie Mac PMMS 30-year fixed (2025). bnpl: pay-in-4, 0%.',
+} satisfies Assumption<Record<'card' | 'auto' | 'student' | 'personal' | 'bnpl' | 'mortgage', Rate>>;
+
 /** Card minimum payment when the user skips it: interest for the month + 1% of balance, floor $25. */
 export const cardMinPayment = {
   value: { balanceShare: 0.01, includesInterest: true, floor: 25 as Money },
@@ -629,6 +650,7 @@ export const assumptions = {
   returnAnnualNominal,
   cashYieldAnnual,
   cardAprDefault,
+  debtAprDefaults,
   cardMinPayment,
   retirementShareDefault,
   estimateSpread,

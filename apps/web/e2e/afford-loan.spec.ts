@@ -56,6 +56,7 @@ test.describe('S12 Loan Lab', () => {
     }
     await expect(page.getByRole('meter')).toHaveCount(2);
 
+    await page.getByTestId('extra-disclosure').locator('summary').click(); // JF16: behind a disclosure
     const payoff = page.getByTestId('extra-payoff');
     await expect(payoff).toHaveText(loan.extra.payoffMonths(36));
     await page.getByRole('slider', { name: loan.extra.slider(loan.offerName(1)) }).fill('200');

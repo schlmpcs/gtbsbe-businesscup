@@ -1,6 +1,6 @@
 import type { DuelLetter, DuelRound } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
-import type { DuelProgress } from '@/features/game/model/duelClient';
+import { duelProgressFromWire } from '@/features/game/model/duelClient';
 import { duelScorer, findDuelPair, publicDuels } from '@/server/game/duel';
 import { toDuelProgress } from '@/server/game/duelProgress';
 import { createMemoryStore } from '@/server/store';
@@ -48,11 +48,8 @@ describe('DuelProgressWireSchema', () => {
 
   it('maps onto the browser’s DuelProgress by turning the round keys into numbers', async () => {
     const wire = DuelProgressWireSchema.parse(JSON.parse(JSON.stringify(await realProgress())));
-    // The shape #115's client does: nothing is guessed, every field of DuelProgress comes from the wire.
-    const progress = {
-      picks: Object.fromEntries(Object.entries(wire.picks).map(([round, pick]) => [Number(round), pick])),
-      hints: Object.fromEntries(Object.entries(wire.hints).map(([round, hint]) => [Number(round), hint])),
-    } satisfies DuelProgress;
+    // The HTTP duel client's mapper: nothing is guessed, every field of DuelProgress comes from the wire.
+    const progress = duelProgressFromWire(wire);
     expect(Object.keys(progress.picks)).toEqual(['1']);
     expect(progress.picks[1]!.choice).toBe('A');
     expect(progress.picks[1]!.result.resultId).toBe(wire.resultId);

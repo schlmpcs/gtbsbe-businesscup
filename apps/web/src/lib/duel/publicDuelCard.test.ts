@@ -2,7 +2,7 @@ import type { AreaData, LifeCard } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
 import { duel as t } from '@/copy/duel';
 import { createFixtureDuelClient } from '@/features/game/model/duelFixtureClient';
-import { duelCardsSample } from '@/fixtures/cards';
+import { duelCardsSample } from '@/fixtures/duelCards';
 import { areaForZip } from '@/lib/areas';
 import { duelFacts, hintOf, publicDuelCard } from './publicDuelCard';
 

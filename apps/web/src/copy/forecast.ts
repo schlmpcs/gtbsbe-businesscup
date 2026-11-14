@@ -222,6 +222,23 @@ export const forecast = {
     howLink: 'How we calculate',
     /** Shown while a new answer is on its way and the numbers on screen are the previous ones. */
     refreshing: 'Updating the forecast…',
+    /**
+     * JF14: one plain "why" line under the headline (amounts formatted by the UI, per month). `left` is
+     * take-home minus what goes out; `short` the gap when more goes out than comes in.
+     */
+    whyLeft: (takeHome: string, outflow: string, left: string) =>
+      `Why: you take home ${takeHome} a month and ${outflow} goes out, so about ${left} is left to save.`,
+    whyShort: (takeHome: string, outflow: string, short: string) =>
+      `Why: ${outflow} goes out each month but you take home ${takeHome}, so you fall ${short} short.`,
+    whyEven: (takeHome: string) => `Why: you take home ${takeHome} a month and about the same goes out.`,
+    /** Added to whyShort when the simulation's cash reaches zero within the horizon. */
+    cashRunsOut: (months: number) => ` At this pace your cash runs out in ${months === 1 ? '1 month' : `${months} months`}.`,
+    /** The one main action: the ranked moves below. */
+    seeMoves: 'See your next best moves',
+    /** JF16: secondary panels sit behind these disclosures. */
+    goalDisclosure: 'Set a goal',
+    chartDisclosure: 'Chart and range',
+    eventsDisclosure: 'Coming up in your life',
   },
 
   moves: {

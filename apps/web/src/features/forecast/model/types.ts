@@ -272,6 +272,12 @@ export type FutureVM = NextMovesVM & {
   explain: (moveId: string) => void;
   /** The engine assumptions behind these numbers, for the "How we calculate" panel. */
   howWeCalculate: HowWeCalculateVM;
+  /**
+   * JF14 "why" line: this month's take-home pay and what goes out (spending + debt payments), per month,
+   * from the rules simulation of the profile; `cashOutMonth` = the first month cash reaches 0 when more
+   * goes out than comes in (null otherwise or beyond the horizon). Null when the engine cannot run.
+   */
+  why: { takeHome: number; outflow: number; cashOutMonth: number | null } | null;
 };
 
 /** Two plain sentences about a move. `fromAi` = written by the model, else the server's template. */

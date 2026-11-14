@@ -7,7 +7,50 @@ import { cardsSample } from '@/fixtures/cards';
 import { areaForZip } from '@/lib/areas';
 import { track } from '@/lib/events';
 import { useAppReady, useAppStore, useGameStore } from '@/state';
-import type { ClosestLifeVM, LifeCandidateVM } from './types';
+import type { ClosestLifeVM, DifferentiatorVM, LifeCandidateVM } from './types';
+
+/** Rent differs by at least this share from same-size cards before we call the area pricier/cheaper. */
+const AREA_GAP = 0.1;
+
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length === 0 ? 0 : s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+};
+
+const sumOf = (c: Pick<LifeCandidateVM, 'items'>, category: LifeCandidateVM['items'][number]['category']) =>
+  c.items.filter((i) => i.category === category).reduce((t, i) => t + i.amount, 0);
+
+/**
+ * 1–2 chips per card that explain its price next to the others: the car (or no car), childcare, and
+ * the neighborhood tier (rent vs. the median of cards with the same bedrooms). Largest gap first;
+ * every amount is one of the card's own cost lines.
+ */
+export function differentiatorsFor(
+  list: readonly Pick<LifeCandidateVM, 'available' | 'bedrooms' | 'carPrice' | 'items'>[],
+): DifferentiatorVM[][] {
+  const live = list.filter((c) => c.available);
+  const carMedian = median(live.map((c) => sumOf(c, 'car')));
+  return list.map((c) => {
+    if (!c.available) return [];
+    const car = sumOf(c, 'car');
+    const carChip: [DifferentiatorVM, number] =
+      c.carPrice === null || car === 0 ? [{ kind: 'noCar' }, carMedian] : [{ kind: 'car', amount: car }, Math.abs(car - carMedian)];
+    const chips: [DifferentiatorVM, number][] = [carChip];
+    const childcare = sumOf(c, 'childcare');
+    if (childcare > 0) chips.push([{ kind: 'childcare', amount: childcare }, childcare]);
+    const peers = live.filter((o) => o.bedrooms === c.bedrooms);
+    if (peers.length >= 2) {
+      const rent = sumOf(c, 'rentUtilities');
+      const m = median(peers.map((o) => sumOf(o, 'rentUtilities')));
+      if (m > 0 && Math.abs(rent - m) >= AREA_GAP * m) {
+        chips.push([{ kind: rent > m ? 'pricierArea' : 'cheaperArea', amount: rent }, Math.abs(rent - m)]);
+      }
+    }
+    const ranked = chips.filter(([, gap]) => gap > 0).sort((a, b) => b[1] - a[1]).map(([d]) => d);
+    return (ranked.length > 0 ? ranked : [carChip[0]]).slice(0, 2);
+  });
+}
 
 type Source = { card: LifeCard; cost: CostBreakdown | null; fromToday: boolean };
 
@@ -51,9 +94,12 @@ export function useClosestLife(): ClosestLifeVM {
           : [],
         fromToday,
         isNearest: false,
+        differentiators: [],
         available: area !== null && breakdown !== null,
       };
     });
+    const chips = differentiatorsFor(list);
+    list.forEach((c, i) => (c.differentiators = chips[i]!));
     if (selfGuess === null) return list;
     // Nearest in ratio terms (log distance), like the game's scoring.
     const distance = (c: LifeCandidateVM) => (c.available ? Math.abs(Math.log(c.monthly.mid / selfGuess)) : Number.POSITIVE_INFINITY);
@@ -73,12 +119,16 @@ export function useClosestLife(): ClosestLifeVM {
     [sources, chooseClosestLife],
   );
 
+  const nearestCardId = candidates.find((c) => c.isNearest)?.cardId ?? null;
   return {
     status: ready ? 'ready' : 'loading',
     selfGuess,
     candidates,
-    nearestCardId: candidates.find((c) => c.isNearest)?.cardId ?? null,
+    nearestCardId,
     chosenCardId,
+    selectedCardId:
+      (candidates.some((c) => c.cardId === chosenCardId && c.available) ? chosenCardId : null) ??
+      nearestCardId ?? candidates.find((c) => c.available)?.cardId ?? null,
     choose,
   };
 }

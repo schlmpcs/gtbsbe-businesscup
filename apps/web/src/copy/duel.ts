@@ -23,6 +23,8 @@ export const duel = {
     state: { current: 'now', upcoming: 'to play', green: 'right', yellow: 'right with a hint', ink: 'missed' },
   },
   challenged: 'A friend challenged you. Beat their score on today’s five.',
+  /** The day on screen ended mid-play (after midnight in New York); these are the new day's duels. */
+  newDay: 'A new day started at midnight in New York. Here are today’s five.',
   /** S1's "All screens" list when /play is the duel (S2/S3 are its states). */
   screens: { S2: 'Which life costs more?', S3: 'Duel reveal' },
   /** The small muted footer under the duel: what the lives are, and where the round is scored. */
