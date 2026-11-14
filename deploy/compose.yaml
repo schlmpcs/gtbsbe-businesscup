@@ -1,0 +1,43 @@
+# The runtime half: what runs on the team server. deploy/deploy.sh copies this file to
+# $LIFEGUESSR_DIR/compose.yaml (default ~/lifeguessr) on the server, builds the image there, then
+# starts it. The image is built by deploy.sh, never pulled.
+#
+# No reverse proxy: Tailscale Funnel terminates HTTPS on the host and proxies `/` to
+# 127.0.0.1:3000, and the port is published on loopback only, so Funnel is the one way in.
+# Secrets and per-server values live in the server's .env beside this file, never in the repo.
+name: lifeguessr
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  app:
+    image: lifeguessr-app:latest
+    pull_policy: never
+    init: true
+    restart: unless-stopped
+    logging: *logging
+    env_file: .env
+    volumes:
+      - app-data:/data
+    # Loopback only: Funnel is the one way in from outside.
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    # The server is shared with other projects: cap the memory so a runaway process can't take it.
+    mem_limit: 1g
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  app-data:
