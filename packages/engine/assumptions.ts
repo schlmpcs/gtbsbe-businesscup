@@ -397,3 +397,12 @@ export const assumptions = {
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;
+
+/** Rent spread when Census quartile ratios are unavailable; an assumed range, not measured quartiles. */
+export const RENT_RANGE_FALLBACK = 0.2;
+/** Insurance premiums depend on coverage and driver details absent here; assumed ±20% range. */
+export const INSURANCE_TOLERANCE = 0.2;
+/** Grocery plans vary by household; assumed ±15% range around the sourced plan. */
+export const GROCERY_TOLERANCE = 0.15;
+/** Childcare varies by provider; assumed ±20% range around the county benchmark. */
+export const CHILDCARE_TOLERANCE = 0.2;
