@@ -26,7 +26,7 @@ function valueText(v: AssumptionValue): string {
 function Group({ title, items }: { title: string; items: AssumptionVM[] }) {
   return (
     <div>
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
+      <h3 className="text-sm font-semibold text-text-muted">{title}</h3>
       <dl className="mt-sm divide-y divide-border">
         {items.map((a) => (
           <div key={a.id} className="flex flex-col gap-xs py-sm" data-assumption={a.id}>

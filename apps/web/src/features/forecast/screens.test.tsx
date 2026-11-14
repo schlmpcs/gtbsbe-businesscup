@@ -7,7 +7,9 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { common, forecast as t } from '@/copy';
+import { formatMoney } from '@/ui-kit';
 import { getArea } from '@lifeguessr/data/areas';
+import { profileDemo } from '@/fixtures';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
@@ -16,6 +18,8 @@ import type { TodayVM } from './model/types';
 import type { ExplainFn } from './model/useMoveExplain';
 import { useFuture } from './model/useFuture';
 import { useToday } from './model/useToday';
+import { useNumberHero, useSampleLife } from './model/useYourNumber';
+import { SAMPLE_GOAL, sampleLife, yourNumber } from './model/yourNumber';
 import { FutureScreen } from './ui/FutureScreen';
 import { TodayScreen, type TodayLinks } from './ui/TodayScreen';
 
@@ -39,15 +43,31 @@ const links: TodayLinks = {
   profile: '/me/guess', upload: '/me/upload',
 };
 
-function Today() {
-  const vm = useToday({ now: new Date(2026, 10, 14) });
-  return <TodayScreen vm={vm} links={links} screens={[{ id: 'S1', href: '/' }, { id: 'S10', href: '/future' }]} Link={A} />;
+const NOW = new Date(2026, 10, 14);
+
+function Today({ onTour = () => {} }: { onTour?: () => void }) {
+  const vm = useToday({ now: NOW });
+  const sample = useSampleLife({ now: NOW });
+  return (
+    <TodayScreen
+      vm={vm}
+      sample={sample}
+      onTour={onTour}
+      links={links}
+      screens={[{ id: 'S1', href: '/' }, { id: 'S10', href: '/future' }]}
+      Link={A}
+    />
+  );
 }
 
 function Future({ explain }: { explain?: ExplainFn }) {
   const vm = useFuture({ explain });
-  return <FutureScreen vm={vm} links={{ today: '/', makeExact: '/me/upload' }} Link={A} />;
+  const hero = useNumberHero({ now: NOW });
+  return <FutureScreen vm={vm} hero={hero} links={{ today: '/', makeExact: '/me/upload' }} Link={A} />;
 }
+
+/** Props of TodayScreen that only the first visit uses. */
+const firstVisitProps = { sample: { status: 'loading' as const }, onTour: () => {} };
 
 /** A hand-made Today view-model: ready, with the forecast answered by the rules. */
 function todayVm(over: Partial<TodayVM> = {}): TodayVM {
@@ -72,20 +92,42 @@ const totals = (over: Partial<Record<CostCategory, number>>) =>
   Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
 
 describe('TodayScreen (S1) first visit', () => {
-  it('explains the app with Play and Try with sample data, and shows no numbers', async () => {
-    render(<Today />);
+  it('says “Know your number”, with Play, the sample life, the tour and the 3 steps', async () => {
+    const onTour = vi.fn();
+    render(<Today onTour={onTour} />);
     const f = t.today.firstVisit;
     expect(await screen.findByRole('heading', { level: 1, name: f.title })).toBeInTheDocument();
     expect(screen.getByText(f.body)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: new RegExp(`^${f.play}`) })).toHaveAttribute('href', '/play');
+    expect(screen.getByRole('link', { name: f.play })).toHaveAttribute('href', '/play');
     expect(screen.getByRole('link', { name: f.sample })).toHaveAttribute('href', '/future?sample=1');
     expect(screen.getByText(f.note)).toBeInTheDocument();
     const steps = within(screen.getByRole('region', { name: f.stepsLabel })).getAllByRole('listitem');
-    expect(steps.map((li) => li.textContent)).toEqual(f.steps.map((step, i) => `${i + 1}${step}`));
-    expect(screen.queryByText(/\$\d/)).not.toBeInTheDocument();
+    expect(steps.map((li) => li.textContent)).toEqual(f.steps.map((step, i) => `${i + 1}${step.title}${step.body}`));
+    // No numbers of the user's own, and no dev list of every screen.
     expect(screen.queryByTestId('in10y')).not.toBeInTheDocument();
     expect(screen.queryByTestId('month-end')).not.toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: t.today.allScreens }).querySelectorAll('a[data-screen]')).toHaveLength(2);
+    expect(screen.queryByRole('navigation', { name: t.today.allScreens })).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: f.tour }));
+    expect(onTour).toHaveBeenCalledOnce();
+  });
+
+  it('shows the sample life with the engine’s numbers on the demo profile, labeled as such', async () => {
+    render(<Today />);
+    const card = await screen.findByTestId('sample-life');
+    const c = t.today.firstVisit.card;
+    const want = sampleLife(profileDemo, NOW);
+    expect(within(card).getByRole('heading', { name: c.computed })).toBeInTheDocument();
+    expect(within(card).getByTestId('sample-month')).toHaveTextContent(formatMoney(want.month.value));
+    expect(within(card).getByTestId('sample-today')).toHaveTextContent(formatMoney(want.today));
+    expect(within(card).getByTestId('sample-number')).toHaveTextContent(formatMoney(want.in10y.mid));
+    expect(within(card).getByText(c.number(2036))).toBeInTheDocument();
+    expect(within(card).getByText(t.range(formatMoney(want.in10y.low), formatMoney(want.in10y.high)))).toBeInTheDocument();
+    expect(within(card).getAllByText(common.estimateTag).length).toBeGreaterThan(0);
+    expect(within(card).getByText(c.goal('$200,000', 2036))).toBeInTheDocument();
+    const moves = within(within(card).getByTestId('sample-moves')).getAllByRole('listitem');
+    expect(moves).toHaveLength(2);
+    expect(moves[0]).toHaveTextContent(c.moveEffect(formatMoney(want.moves[0]!.effect10y, { signed: true })));
+    expect(within(card).getByRole('link', { name: c.cta })).toHaveAttribute('href', '/future?sample=1');
   });
 
   it('shows the usual Today once the sample life is loaded, without the sample note (the banner says it)', async () => {
@@ -158,7 +200,7 @@ describe('TodayScreen (S1)', () => {
 
   it('says so, instead of a skeleton forever, when the forecast cannot be built', () => {
     const vm = todayVm({ forecastStatus: 'error', forecastError: { kind: 'unknown', message: 'x' }, source: null });
-    render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen {...firstVisitProps} vm={vm} links={links} screens={[]} Link={A} />);
     const card = screen.getByTestId('in10y');
     expect(within(card).getByRole('alert')).toHaveTextContent(t.errors.unknown);
     expect(card.querySelector('[aria-busy="true"]')).toBeNull();
@@ -171,9 +213,9 @@ describe('TodayScreen (S1)', () => {
       patch: { spending: { other: 100 } }, isCommitted: true,
       target: { kind: 'spendingTo' as const, category: 'other' as const, monthly: 100 }, source: 'rules' as const,
     };
-    const { rerender } = render(<TodayScreen vm={todayVm({ committedMove: committed })} links={links} screens={[]} Link={A} />);
+    const { rerender } = render(<TodayScreen {...firstVisitProps} vm={todayVm({ committedMove: committed })} links={links} screens={[]} Link={A} />);
     expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeEnabled();
-    rerender(<TodayScreen vm={todayVm({ committedMove: committed, actionsDisabled: true })} links={links} screens={[]} Link={A} />);
+    rerender(<TodayScreen {...firstVisitProps} vm={todayVm({ committedMove: committed, actionsDisabled: true })} links={links} screens={[]} Link={A} />);
     expect(screen.getByRole('button', { name: t.today.move.markDone })).toBeDisabled();
   });
 
@@ -192,9 +234,9 @@ describe('TodayScreen (S1)', () => {
   });
 
   it('shows the updating line from the view-model flag only', () => {
-    const { rerender } = render(<TodayScreen vm={todayVm()} links={links} screens={[]} Link={A} />);
+    const { rerender } = render(<TodayScreen {...firstVisitProps} vm={todayVm()} links={links} screens={[]} Link={A} />);
     expect(screen.queryByText(t.future.refreshing)).not.toBeInTheDocument();
-    rerender(<TodayScreen vm={todayVm({ isRefreshing: true })} links={links} screens={[]} Link={A} />);
+    rerender(<TodayScreen {...firstVisitProps} vm={todayVm({ isRefreshing: true })} links={links} screens={[]} Link={A} />);
     expect(within(screen.getByTestId('in10y')).getByText(t.future.refreshing)).toBeInTheDocument();
   });
 
@@ -210,7 +252,7 @@ describe('TodayScreen (S1)', () => {
         },
       },
     });
-    render(<TodayScreen vm={vm} links={links} screens={[]} Link={A} />);
+    render(<TodayScreen {...firstVisitProps} vm={vm} links={links} screens={[]} Link={A} />);
     const drifts = screen.getByTestId('month-end-drifts');
     expect(within(drifts).getByText(t.today.monthEnd.vsAverageValue('+$240'))).toBeInTheDocument();
     expect(within(drifts).getByText(t.today.monthEnd.drift(common.categories.eatingOut, '+$120'))).toBeInTheDocument();
@@ -284,6 +326,49 @@ describe('FutureScreen (S10)', () => {
     expect(within(how).getByText(t.how.labels.cardAprDefault)).toBeInTheDocument();
     expect(within(how).getAllByText(t.how.assumption).length).toBeGreaterThan(0);
     expect(within(how).getByRole('link', { name: /Federal Reserve G\.19/ })).toBeInTheDocument();
+  });
+
+  it('leads with “Your number in 2036” from the rules forecast, today next to it, and no goal until one is set', async () => {
+    render(<Future />);
+    const hero = await screen.findByTestId('your-number');
+    const h = t.future.hero;
+    const want = yourNumber(useAppStore.getState().profile, null, NOW);
+    expect(within(hero).getByText(h.number(2036))).toBeInTheDocument();
+    expect(within(hero).getByText(formatMoney(want.in10y.mid))).toBeInTheDocument();
+    expect(within(hero).getByText(t.range(formatMoney(want.in10y.low), formatMoney(want.in10y.high)))).toBeInTheDocument();
+    expect(within(hero).getByTestId('number-source')).toHaveTextContent(h.source);
+    expect(within(hero).getByTestId('number-today')).toHaveTextContent(formatMoney(want.today));
+    expect(within(hero).queryByTestId('number-goal')).not.toBeInTheDocument();
+  });
+
+  it('shows the sample goal for the sample life, and the user’s own goal once set, with the engine’s gap', async () => {
+    act(() => void useAppStore.getState().loadSample());
+    render(<Future />);
+    const hero = await screen.findByTestId('your-number');
+    const h = t.future.hero;
+    const profile = useAppStore.getState().profile;
+    const sample = yourNumber(profile, SAMPLE_GOAL, NOW).goal!;
+    const goal = within(hero).getByTestId('number-goal');
+    expect(goal).toHaveTextContent(h.sampleGoal('$200,000', 2036));
+    expect(goal).toHaveAttribute('data-verdict', sample.verdict);
+    expect(goal).toHaveTextContent(sample.gap > 0 ? h.short(formatMoney(sample.gap)) : h.ahead(formatMoney(-sample.gap)));
+
+    act(() => useAppStore.getState().setGoal({ target: 50_000, years: 5 }));
+    const own = yourNumber(profile, { target: 50_000, years: 5 }, NOW).goal!;
+    await waitFor(() => expect(within(hero).getByTestId('number-goal')).toHaveTextContent(h.goal('$50,000', 2031)));
+    expect(within(hero).getByTestId('number-goal')).toHaveAttribute('data-verdict', own.verdict);
+  });
+
+  it('keeps the hero on the rules forecast (labeled so) when the AI answers; the chart says AI estimate', async () => {
+    route = mockForecastRoute((body) => aiAnswer(body));
+    render(<Future />);
+    const chart = await screen.findByTestId('in10y');
+    await waitFor(() => expect(within(chart).getByTestId('forecast-source')).toHaveAttribute('data-source', 'ai'));
+    const hero = screen.getByTestId('your-number');
+    expect(within(hero).getByTestId('number-source')).toHaveTextContent(t.future.hero.source);
+    expect(within(hero).queryByText(t.source.ai)).not.toBeInTheDocument();
+    const want = yourNumber(useAppStore.getState().profile, null, NOW);
+    expect(within(hero).getByText(formatMoney(want.in10y.mid))).toBeInTheDocument();
   });
 
   it('commits a move, flags it, unlocks level 2, and marks it done', async () => {

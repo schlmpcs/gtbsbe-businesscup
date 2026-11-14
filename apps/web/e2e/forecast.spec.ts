@@ -31,7 +31,7 @@ async function noSideScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-test('first visit: Today explains the app; Try with sample data opens the forecast with the sample banner', async ({ page }) => {
+test('first visit: Know your number, with the sample life; See a sample life opens the forecast with the sample banner', async ({ page }) => {
   const f = t.today.firstVisit;
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(f.title);
@@ -39,13 +39,18 @@ test('first visit: Today explains the app; Try with sample data opens the foreca
   await expect(page.getByText(f.note)).toBeVisible();
   const hero = page.getByTestId('today-first-visit');
   await expect(hero.getByRole('link', { name: f.play, exact: true })).toHaveAttribute('href', '/play');
-  await expect(page.getByTestId('in10y')).toHaveCount(0); // no numbers on a first visit
+  await expect(page.getByTestId('in10y')).toHaveCount(0); // none of the user's numbers on a first visit
+  const card = page.getByTestId('sample-life');
+  await expect(card.getByRole('heading', { name: f.card.computed })).toBeVisible();
+  await expect(card.getByTestId('sample-number')).toHaveText(/^\$[\d,]+$/);
+  await expect(page.locator('a[data-screen]')).toHaveCount(0); // no dev list of every screen
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
   await noSideScroll(page);
 
   await hero.getByRole('link', { name: f.sample }).click();
   await expect(page).toHaveURL(/\/future$/); // ?sample=1 is dropped once the sample is loaded
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title);
+  await expect(page.getByTestId('your-number')).toContainText(/\$\d/);
   await expect(page.getByTestId('in10y')).toContainText(/\$\d/);
   const banner = page.getByTestId('sample-banner');
   await expect(banner).toContainText(common.sampleBanner.text);

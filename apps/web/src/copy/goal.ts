@@ -1,5 +1,12 @@
 export const goal = {
   title: 'Your net worth goal',
+  /** Goal setting and tracking is Pro (S15); free users see this lock notice on S10. */
+  lock: {
+    title: 'Track a goal with Pro',
+    body: 'Set a target, see whether you are on track, behind or within range, and which moves close the gap. Your number and your moves stay free.',
+    cta: 'See Pro',
+  },
+  checkingPro: 'Checking your Pro status…',
   target: 'Target in today’s dollars',
   years: 'Years',
   start: 'Set goal',

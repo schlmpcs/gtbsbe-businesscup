@@ -6,15 +6,22 @@ import {
   rankMoves,
 } from '@lifeguessr/engine';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
-import { useAppReady, useAppStore } from '@/state';
+import { useAppReady, useAppStore, usePro } from '@/state';
+import { SCREEN_ROUTES } from '@/lib/screens';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
 import { track, useTrackOnce } from '@/lib/events';
-import type { GoalVM } from './types';
+import type { GoalAccess, GoalVM } from './types';
 const TARGET_PRESETS = [50_000, 100_000, 250_000, 500_000, 1_000_000];
 const YEAR_PRESETS = [5, 10, 15, 20, 30];
-/** Independent rules-only goal model; never uses or modifies the AI forecast bundle. */
+/**
+ * Independent rules-only goal model; never uses or modifies the AI forecast bundle. Setting and
+ * tracking a goal is a Pro feature: for free users `access` is 'locked' and `setGoal` does nothing.
+ */
 export function useGoal(): GoalVM {
+  const pro = usePro();
+  // Unknown until the server answered or a cached hint was read; a failed status check counts as free.
+  const access: GoalAccess = pro.isPro ? 'open' : pro.known || pro.load === 'error' ? 'locked' : 'loading';
   const ready = useAppReady(),
     profile = useAppStore((s) => s.profile),
     goal = useAppStore((s) => s.goal);
@@ -37,7 +44,7 @@ export function useGoal(): GoalVM {
   );
   const status = result.status === 'ready' ? result.data?.status : null;
   useTrackOnce(
-    ready && !!status,
+    ready && access === 'open' && !!status,
     `goal-verdict:${goal?.years}:${status?.verdict}`,
     {
       name: 'goal_verdict_shown',
@@ -45,6 +52,7 @@ export function useGoal(): GoalVM {
     },
   );
   const setGoal = (next: Goal) => {
+    if (access !== 'open') return;
     const parsed = GoalSchema.safeParse(next);
     setInputError(!parsed.success);
     if (!parsed.success) return;
@@ -58,6 +66,8 @@ export function useGoal(): GoalVM {
   };
   const data = result.status === 'ready' ? result.data : null;
   return {
+    access,
+    proHref: SCREEN_ROUTES.S15,
     goal,
     setGoal,
     clearGoal,

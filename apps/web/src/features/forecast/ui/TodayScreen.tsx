@@ -16,7 +16,7 @@ import {
   Sticker,
   type ArtName,
 } from '@/ui-kit';
-import type { MonthEndVM, MoveVM, TodayHomeVM, TodayVM } from '../model/types';
+import type { Loadable, MonthEndVM, MoveVM, SampleLifeVM, TodayHomeVM, TodayVM } from '../model/types';
 import {
   bandText,
   ErrorNote,
@@ -28,6 +28,7 @@ import {
   tilt,
   type LinkComponent,
 } from './shared';
+import { SampleLifeCard } from './YourNumber';
 
 export type TodayLinks = {
   play: string;
@@ -45,14 +46,18 @@ export type TodayLinks = {
 
 export type TodayScreenProps = {
   vm: TodayVM;
+  /** The sample life for the first visit (engine numbers on the demo profile). */
+  sample: Loadable<SampleLifeVM>;
+  /** Open the 2-minute tour. */
+  onTour: () => void;
   links: TodayLinks;
   /** Every screen, for the compact "All screens" list (judges can reach each one). */
   screens: { id: ScreenId; href: string }[];
   Link: LinkComponent;
 };
 
-export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
-  if (vm.firstVisit) return <FirstVisit links={links} screens={screens} Link={Link} />;
+export function TodayScreen({ vm, sample, onTour, links, screens, Link }: TodayScreenProps) {
+  if (vm.firstVisit) return <FirstVisit links={links} sample={sample} onTour={onTour} Link={Link} />;
   const ready = vm.status === 'ready';
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl">
@@ -146,50 +151,53 @@ export function TodayScreen({ vm, links, screens, Link }: TodayScreenProps) {
   );
 }
 
-/** First visit: what the app is and the two ways in. No user numbers. */
-function FirstVisit({ links, screens, Link }: Omit<TodayScreenProps, 'vm'>) {
+/**
+ * First visit: "Know your number." with the two ways in, the tour, and a sample life whose numbers the
+ * rules engine computes from the demo profile (the user has no numbers yet).
+ */
+function FirstVisit({ links, sample, onTour, Link }: Pick<TodayScreenProps, 'links' | 'sample' | 'onTour' | 'Link'>) {
   const f = t.today.firstVisit;
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl" data-testid="today-first-visit">
       <Stack gap="3xl">
-        <section className="flex flex-col items-center gap-lg text-center">
-          <div aria-hidden="true" className="grid w-full max-w-(--container-md) grid-cols-[1fr_auto_1fr] items-center gap-md">
-            <div style={tilt(-3)} className="rounded-xl bg-surface p-sm shadow-md">
-              <Art name="brooklyn" imgClassName="aspect-square" />
+        <section className="grid items-center gap-2xl lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
+          <div className="flex flex-col items-start gap-lg">
+            <h1 className="font-display text-display leading-display font-extrabold sm:text-8xl sm:leading-display">{f.title}</h1>
+            <p className="max-w-(--container-lg) text-xl text-text-muted">{f.body}</p>
+            <div className="flex w-full flex-col gap-sm sm:w-auto sm:flex-row sm:flex-wrap">
+              <Link href={links.play} className={cx(buttonClassName({ variant: 'dark', size: 'lg' }), 'w-full sm:w-auto')}>
+                {f.play}
+                <span aria-hidden="true">→</span>
+              </Link>
+              <Link href={links.sample} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}>
+                {f.sample}
+              </Link>
             </div>
-            <span className="rounded-full bg-ink px-md py-sm font-display text-xl font-extrabold text-on-primary">{f.vs}</span>
-            <div style={tilt(3)} className="rounded-xl bg-surface p-sm shadow-md">
-              <Art name="boise" imgClassName="aspect-square" />
+            <div className="flex flex-wrap items-center gap-x-lg gap-y-xs">
+              <p className="text-sm font-semibold">{f.note}</p>
+              <Button variant="ghost" size="sm" onClick={onTour} data-testid="first-visit-tour">
+                {f.tour}
+              </Button>
             </div>
           </div>
-          <h1 className="font-display text-display leading-display font-extrabold sm:text-8xl sm:leading-display">{f.title}</h1>
-          <p className="max-w-(--container-lg) text-lg text-text-muted">{f.body}</p>
-          <div className="flex w-full flex-col items-center gap-sm sm:w-auto sm:flex-row">
-            <Link href={links.play} className={cx(buttonClassName({ variant: 'dark', size: 'lg' }), 'w-full sm:w-auto sm:min-w-sm')}>
-              {f.play}
-              <span aria-hidden="true">→</span>
-            </Link>
-            <Link href={links.sample} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}>
-              {f.sample}
-            </Link>
-          </div>
-          <p className="text-sm text-text-muted">{f.note}</p>
+          <SampleLifeCard vm={sample} href={links.sample} Link={Link} />
         </section>
 
         <section aria-label={f.stepsLabel}>
           <ol className="grid gap-lg sm:grid-cols-3">
             {f.steps.map((step, i) => (
-              <li key={step} className="flex items-center gap-md rounded-xl bg-surface p-lg shadow-md">
+              <li key={step.title} className="flex gap-md rounded-xl bg-surface p-lg shadow-md">
                 <span className="flex size-2xl shrink-0 items-center justify-center rounded-full bg-primary font-display text-xl font-extrabold text-on-primary">
                   {i + 1}
                 </span>
-                <span className="font-semibold">{step}</span>
+                <span className="flex flex-col gap-xs">
+                  <span className="font-semibold">{step.title}</span>
+                  <span className="text-sm text-text-muted">{step.body}</span>
+                </span>
               </li>
             ))}
           </ol>
         </section>
-
-        <AllScreens screens={screens} Link={Link} />
       </Stack>
     </main>
   );
@@ -200,7 +208,7 @@ function AllScreens({ screens, Link }: Pick<TodayScreenProps, 'screens' | 'Link'
   return (
     <nav aria-label={t.today.allScreens}>
       <details>
-        <summary className="min-h-11 cursor-pointer text-sm font-semibold uppercase tracking-wide text-text-muted">
+        <summary className="min-h-11 cursor-pointer text-sm font-semibold text-text-muted">
           {t.today.allScreens}
         </summary>
         <ul className="mt-sm flex flex-wrap gap-xs">
@@ -250,7 +258,7 @@ function HomesRow({ homes }: { homes: TodayHomeVM[] }) {
               >
                 <Art name={HOME_ART[i % HOME_ART.length]!} imgClassName="aspect-square" />
                 <div className="px-xs pb-xs">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">{h.home(i + 1)}</p>
+                  <p className="text-xs font-semibold text-text-muted">{h.home(i + 1)}</p>
                   <p className="font-display text-lg font-extrabold leading-tight">{home.metro}</p>
                   {home.played ? (
                     <Sticker tone="positive" className="mt-xs">
@@ -318,7 +326,7 @@ function MonthEnd({ data, uploadHref, Link }: { data: MonthEndVM; uploadHref: st
       ) : (
         <div data-testid="month-end-drifts">
           <p className="text-sm font-semibold tabular-nums">{m.vsAverageValue(formatMoney(data.vsAverage, { signed: true }))}</p>
-          <h3 className="mt-md text-sm font-bold uppercase tracking-wide text-text-muted">{m.driftsTitle}</h3>
+          <h3 className="mt-md text-sm font-bold text-text-muted">{m.driftsTitle}</h3>
           {data.drifts.length === 0 ? (
             <p className="text-sm text-text-muted">{m.noDrifts}</p>
           ) : (

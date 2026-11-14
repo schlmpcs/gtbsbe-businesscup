@@ -4,7 +4,8 @@
 // The links hide on narrow phones (the logo and Go Pro stay) so nothing scrolls sideways.
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { common } from '@/copy';
+import { common, tour } from '@/copy';
+import { useTourOpen } from '@/features/tour/model/useTour';
 import { buttonClassName, cx } from '@/ui-kit';
 
 const t = common.siteNav;
@@ -15,8 +16,9 @@ function isActive(pathname: string, href: string): boolean {
 
 export function SiteHeader() {
   const pathname = usePathname() ?? '/';
+  const { show: showTour } = useTourOpen();
   return (
-    <header className="mx-auto flex w-full max-w-(--container-7xl) items-center gap-lg px-lg pt-lg">
+    <header className="mx-auto flex w-full max-w-(--container-7xl) items-center gap-sm px-lg pt-lg sm:gap-lg">
       <Link href="/" aria-label={t.home} className="flex shrink-0 items-center gap-sm">
         <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
           <path d="M13 1.5L24.5 10V24.5H1.5V10Z" className="fill-primary" />
@@ -46,7 +48,15 @@ export function SiteHeader() {
           })}
         </ul>
       </nav>
-      <Link href="/pro" className={cx(buttonClassName({ variant: 'secondary', size: 'sm' }), 'ml-auto md:ml-0')}>
+      <button
+        type="button"
+        onClick={showTour}
+        data-testid="tour-open"
+        className={cx(buttonClassName({ variant: 'ghost', size: 'sm' }), 'ml-auto whitespace-nowrap md:ml-0')}
+      >
+        {tour.open}
+      </button>
+      <Link href="/pro" className={cx(buttonClassName({ variant: 'secondary', size: 'sm' }), 'whitespace-nowrap')}>
         {t.pro}
       </Link>
     </header>

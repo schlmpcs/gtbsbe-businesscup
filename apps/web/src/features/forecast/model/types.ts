@@ -221,7 +221,61 @@ export type AssumptionVM = {
 /** The assumptions behind the forecast and behind Next Moves. */
 export type HowWeCalculateVM = { forecast: AssumptionVM[]; moves: AssumptionVM[] };
 
+/** A goal's verdict and gap from the rules forecast (engine goalStatus), in today's dollars. */
+export type YourNumberGoalVM = {
+  target: Money;
+  years: number;
+  /** Calendar year of the goal's horizon. */
+  year: number;
+  verdict: GoalStatus['verdict'];
+  /** target − projected mid: positive = short of the goal, negative = ahead of it. */
+  gap: Money;
+  /** projected mid / target. */
+  progress: number;
+  projected: ForecastPoint;
+};
+
+/**
+ * "Your number": net worth today and in 10 years from the rules forecast (engine, today's dollars),
+ * never the AI one, and the goal's verdict when there is a goal.
+ */
+export type YourNumberVM = {
+  /** Calendar year 10 years from now (2036 in 2026). */
+  year: number;
+  today: Money;
+  /** True when cash or retirement savings is an estimate. */
+  todayIsEstimate: boolean;
+  in10y: ForecastPoint;
+  /** Some input is an estimate, so the 10-year number has a range. */
+  isEstimate: boolean;
+  goal: YourNumberGoalVM | null;
+};
+
+/** S1 first visit: the sample life's numbers, all from the engine on the demo profile. */
+export type SampleLifeVM = YourNumberVM & {
+  age: number;
+  /** This month's spending + debt payments (the number S7 shows as "your month"). */
+  month: EstimatedMoney;
+  takeHome: EstimatedMoney;
+  /** Top moves by 10-year gain (engine rankMoves), today's dollars. */
+  moves: { id: string; kind: MoveKind; category?: CostCategory; effect10y: Money }[];
+};
+
+/** S10 hero: the user's number (rules forecast) and their goal, or the sample goal while the sample life is on. */
+export type NumberHeroVM = {
+  number: Loadable<YourNumberVM>;
+  /** The goal shown is the sample life's (not one the user set). */
+  isSampleGoal: boolean;
+};
+
+/** Whether goal tracking is open (Pro), locked (free), or not known yet (Pro status loading). */
+export type GoalAccess = 'loading' | 'locked' | 'open';
+
 export type GoalVM = {
+  /** Goal setting and tracking is a Pro feature: free users see a lock notice. */
+  access: GoalAccess;
+  /** The paywall (S15). */
+  proHref: string;
   goal: Goal | null;
   setGoal: (goal: Goal) => void;
   clearGoal: () => void;

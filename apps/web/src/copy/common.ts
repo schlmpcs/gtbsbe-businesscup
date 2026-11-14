@@ -7,6 +7,8 @@ export const common = {
   appName: 'LifeGuessr',
   tagline: 'Money apps forecast your accounts. We forecast your decisions, and rank which one to make next.',
   disclaimer: 'Educational simulation, not financial advice.',
+  /** Before the disclaimer in the site footer (CLAUDE.md rule 5: every number has a source or an estimate tag). */
+  sourcesNote: 'Every number has a source.',
   /** The site header (Figma: logo, five links, Go Pro). */
   siteNav: {
     label: 'Main',
