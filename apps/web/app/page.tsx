@@ -27,6 +27,7 @@ const links: TodayLinks = {
   profile: SCREEN_ROUTES.S5,
   upload: SCREEN_ROUTES.S9,
   spend: '/spend',
+  bills: '/tools/bills',
 };
 
 export default function TodayPage() {

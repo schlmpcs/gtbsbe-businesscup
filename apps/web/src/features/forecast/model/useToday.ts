@@ -16,6 +16,7 @@ import { spendSummary } from '@/features/spend/model/summary';
 import { shownForecast } from './forecastAnswer';
 import type { CushionVM, Loadable, MonthEndVM, MoveVM, TodayVM } from './types';
 import { toMoveVM, useNextMoves } from './useNextMoves';
+import { useNextBill } from '@/features/bills/model/useBills';
 
 const NO_MOVES: MoveVM[] = [];
 const NO_HOMES: TodayVM['game']['homes'] = [];
@@ -37,6 +38,7 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
   const cards = useGameStore((s) => s.cards);
   const reveals = useGameStore((s) => s.reveals);
   const nextMoves = useNextMoves(profile);
+  const nextBill = useNextBill(opts.now);
   const { forecast, horizonYears } = nextMoves;
   const now = opts.now;
 
@@ -189,5 +191,6 @@ export function useToday(opts: { now?: Date; mode?: GameMode } = {}): TodayVM {
     cushion,
     game,
     daily,
+    nextBill,
   };
 }

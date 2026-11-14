@@ -18,6 +18,7 @@ import { ToolsStateSchema, type ToolsState } from '@lifeguessr/types';
 import { restoreTools } from './tools';
 import type { DailyEntry, SpendItem } from '@lifeguessr/types';
 import { appendEntries, restoreDailyEntries, withoutEntries } from './daily';
+import { initialBillsSettings, restoreBills, type BillsSettings } from './bills';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { cloneProfileDemo } from '@/fixtures';
@@ -67,6 +68,8 @@ export type AppData = {
   foldedNotes: FoldedNote[];
   /** The daily spending log (/spend, Home quick-add), oldest first. Browser only, never synced. */
   dailyEntries: DailyEntry[];
+  /** Bills calendar: due days the user set per bill and their paydays (client state only). */
+  bills: BillsSettings;
 };
 
 /** State for this page load only (not persisted). */
@@ -133,6 +136,10 @@ export type AppActions = {
   addDailyEntries: (items: SpendItem[], date: string) => string[];
   /** Remove log entries (undo of an add, or a delete). */
   removeDailyEntries: (ids: string[]) => void;
+  /** Bills calendar: the day a bill is due (1-31), or null to go back to the default day. */
+  setBillDueDay: (billId: string, day: number | null) => void;
+  /** Bills calendar: the user's paydays (days of the month), or null to go back to the assumed 1st and 15th. */
+  setPaydays: (days: number[] | null) => void;
   /** Back to the demo profile and empty lists (keeps the anonymous id). */
   reset: () => void;
 };
@@ -157,6 +164,7 @@ export function initialAppData(): AppData {
     isSample: false,
     foldedNotes: [],
     dailyEntries: [],
+    bills: initialBillsSettings(),
   };
 }
 
@@ -207,6 +215,8 @@ const persistedFields = {
   isSample: z.boolean(),
   foldedNotes: z.array(FoldedNoteSchema).max(MAX_LIFE_EVENTS),
   dailyEntries: z.unknown().transform(restoreDailyEntries),
+  // Added after version 1 went out: older saved state has no `bills`, which gives the defaults.
+  bills: z.unknown().transform(restoreBills),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -324,6 +334,14 @@ export const useAppStore = create<AppState>()(
         return true;
       },
       clearSample: () => set({ isSample: false }),
+      setBillDueDay: (billId, day) =>
+        set((s) => {
+          const dueDays = { ...s.bills.dueDays };
+          if (day === null) delete dueDays[billId];
+          else dueDays[billId] = day;
+          return { bills: restoreBills({ ...s.bills, dueDays }) };
+        }),
+      setPaydays: (days) => set((s) => ({ bills: restoreBills({ ...s.bills, paydays: days }) })),
       setGoal: goal => set({goal:GoalSchema.parse(goal)}),
       clearGoal: () => set({goal:null}),
       setTool: (key,value) => set(s=>({tools:{...s.tools,[key]:ToolsStateSchema.shape[key].parse(value)}})),
@@ -358,6 +376,7 @@ export const useAppStore = create<AppState>()(
         isSample: s.isSample,
         foldedNotes: s.foldedNotes,
         dailyEntries: s.dailyEntries,
+        bills: s.bills,
       }),
       merge: mergePersisted,
     },
