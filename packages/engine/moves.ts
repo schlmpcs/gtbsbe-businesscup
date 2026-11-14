@@ -14,6 +14,10 @@
 //                        (`opts.subscriptionsDetected`). The Profile has no statement flag and
 //                        `isEstimate: false` also means "typed in the Quick Sliders", so it can't tell.
 //
+// rankMoves is `rankCandidates(p, moveCandidates(p, opts), rulesEffect)`. The split lets the AI
+// forecast path rank the same candidates by its own effects (the candidates and the ranking rules
+// stay the engine's; only the effect numbers come from elsewhere).
+//
 // Ids are stable: `payCardFirst:<debt id>`, `cutCategory:<category>`, `cancelSubscriptions`.
 // Done moves (`doneMoveIds`) never come back; the next candidate of that kind takes their place
 // (the next card by APR, the next largest category). The committed move (`committedMoveId`) is
@@ -60,7 +64,7 @@ export const MOVE_LEVELS = {
 export const DISCRETIONARY_CATEGORIES = ['eatingOut', 'subscriptions', 'other'] as const satisfies readonly CostCategory[];
 
 /** Effects below this many dollars (they show as $0) are dropped, along with floating-point dust. */
-const MIN_EFFECT_10Y: Money = 1;
+export const MIN_EFFECT_10Y: Money = 1;
 
 /** Tie-break order when two moves have the same effect. */
 const KIND_ORDER: readonly MoveKind[] = MOVE_KINDS;
@@ -87,10 +91,11 @@ export function isLevelUnlocked(p: Pick<Profile, 'doneMoveIds' | 'committedMoveI
   return level <= movesLevel(p);
 }
 
-type Candidate = Omit<Move, 'effect10y'>;
+/** A move that has not been measured yet: everything but its 10-year effect. */
+export type MoveCandidate = Omit<Move, 'effect10y'>;
 
 /** payCardFirst for every card with a balance, highest APR first (ties: profile order). */
-function payCardFirstCandidates(p: Profile, rates: Partial<ForecastRates> | undefined): Candidate[] {
+function payCardFirstCandidates(p: Profile, rates: Partial<ForecastRates> | undefined): MoveCandidate[] {
   const cards = p.debts
     .map((d, i) => ({ d, i }))
     .filter(({ d }) => d.kind === 'card' && d.balance > 0)
@@ -113,7 +118,7 @@ function payCardFirstCandidates(p: Profile, rates: Partial<ForecastRates> | unde
   }));
 }
 
-function cutCategoryCandidates(p: Profile, excluded: ReadonlySet<CostCategory>): Candidate[] {
+function cutCategoryCandidates(p: Profile, excluded: ReadonlySet<CostCategory>): MoveCandidate[] {
   return DISCRETIONARY_CATEGORIES
     .filter((c) => !excluded.has(c) && p.spending[c].value > 0)
     .map((c, i) => ({ c, i, value: p.spending[c].value }))
@@ -127,7 +132,7 @@ function cutCategoryCandidates(p: Profile, excluded: ReadonlySet<CostCategory>):
     }));
 }
 
-function cancelSubscriptionsCandidate(p: Profile, detected: boolean): Candidate[] {
+function cancelSubscriptionsCandidate(p: Profile, detected: boolean): MoveCandidate[] {
   const value = p.spending.subscriptions.value;
   if (!detected || !(value > 0)) return [];
   return [{
@@ -140,34 +145,44 @@ function cancelSubscriptionsCandidate(p: Profile, detected: boolean): Candidate[
 }
 
 /**
- * Level 1 moves for the profile, sorted by `effect10y` (today's dollars, descending), at most
- * MOVES_SHOWN. Moves that are done, don't apply, or don't raise net worth in 10 years are left out.
- * Pure: the profile is not mutated. See the header for the candidates and the committed move.
+ * The level 1 moves that apply to the profile, not yet measured: per kind the best open candidate
+ * (plus the committed one when it is another of that kind), and cancelSubscriptions when a
+ * statement found subscriptions. Done moves are left out. Order: payCardFirst, cutCategory,
+ * cancelSubscriptions. Pure: the profile is not mutated. See the header.
  */
-export function rankMoves(p: Profile, opts: RankMovesOptions = {}): Move[] {
+export function moveCandidates(p: Profile, opts: RankMovesOptions = {}): MoveCandidate[] {
   const done = new Set(p.doneMoveIds);
-  const open = (c: Candidate) => !done.has(c.id);
+  const open = (c: MoveCandidate) => !done.has(c.id);
   // Per kind: the best open candidate, plus the committed one if it is another of that kind.
-  const pick = (list: Candidate[]) => {
+  const pick = (list: MoveCandidate[]) => {
     const openList = list.filter(open);
     const first = openList[0];
     const committed = openList.find((c) => c.id === p.committedMoveId);
-    return [first, committed !== first ? committed : undefined].filter((c): c is Candidate => c !== undefined);
+    return [first, committed !== first ? committed : undefined].filter((c): c is MoveCandidate => c !== undefined);
   };
 
   const cancel = cancelSubscriptionsCandidate(p, opts.subscriptionsDetected ?? false).filter(open);
   const excluded = new Set<CostCategory>(cancel.length > 0 ? ['subscriptions'] : []);
-  const candidates = [
+  return [
     ...pick(payCardFirstCandidates(p, opts.rates)),
     ...pick(cutCategoryCandidates(p, excluded)),
     ...cancel,
   ];
-  if (candidates.length === 0) return [];
+}
 
-  const forecastOpts: ForecastOptions = { todaysDollars: true, rates: opts.rates };
-  const base = forecast(p, 10, forecastOpts).in10y.mid;
+/**
+ * Ranks measured candidates: `effectOf` gives each candidate's 10-year effect, effects below
+ * MIN_EFFECT_10Y (and NaN) are dropped, the rest sorted by effect descending (ties: kind order,
+ * then id), at most MOVES_SHOWN. The committed move is always kept while it survives the filter:
+ * outside the top 3 it takes the third slot (the list stays sorted). `effectOf` runs once per candidate.
+ */
+export function rankCandidates(
+  p: Profile,
+  candidates: readonly MoveCandidate[],
+  effectOf: (c: MoveCandidate) => Money,
+): Move[] {
   const ranked: Move[] = candidates
-    .map((c) => ({ ...c, effect10y: forecast(applyPatch(p, c.patch), 10, forecastOpts).in10y.mid - base }))
+    .map((c) => ({ ...c, effect10y: effectOf(c) }))
     .filter((m) => m.effect10y >= MIN_EFFECT_10Y)
     .sort((a, b) =>
       b.effect10y - a.effect10y ||
@@ -178,4 +193,20 @@ export function rankMoves(p: Profile, opts: RankMovesOptions = {}): Move[] {
   const committed = ranked.find((m) => m.id === p.committedMoveId);
   if (committed && !top.includes(committed)) top[MOVES_SHOWN - 1] = committed;
   return top;
+}
+
+/**
+ * Level 1 moves for the profile, sorted by `effect10y` (today's dollars, descending), at most
+ * MOVES_SHOWN. Moves that are done, don't apply, or don't raise net worth in 10 years are left out.
+ * Pure: the profile is not mutated. See the header for the candidates and the committed move.
+ */
+export function rankMoves(p: Profile, opts: RankMovesOptions = {}): Move[] {
+  const forecastOpts: ForecastOptions = { todaysDollars: true, rates: opts.rates };
+  // The base forecast is computed once, on the first measurement: no candidates, no forecast.
+  let base: Money | undefined;
+  const rulesEffect = (c: MoveCandidate): Money => {
+    base ??= forecast(p, 10, forecastOpts).in10y.mid;
+    return forecast(applyPatch(p, c.patch), 10, forecastOpts).in10y.mid - base;
+  };
+  return rankCandidates(p, moveCandidates(p, opts), rulesEffect);
 }

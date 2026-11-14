@@ -18,6 +18,8 @@ import {
   FUNNEL_EVENT_NAMES, FUNNEL_STEPS, type FunnelReportSchema, type SERVER_EVENT_NAMES,
   type ClientEventEnvelope, type ClientFunnelEvent, type EventsErrorCode, type EventsRequest, type FunnelReport,
   type ServerFunnelEvent,
+  ForecastBundleSchema, ForecastPointSchema, ForecastSchema, YearAnchorSchema,
+  type Forecast, type ForecastBundle, type ForecastPoint, type ForecastSource, type YearAnchor,
 } from './index';
 
 // These assertions are checked by `pnpm typecheck` (tsc covers test files): a contract change
@@ -42,6 +44,14 @@ describe('schemas match the contracts', () => {
     expectTypeOf<CategoryTotals>().toExtend<z.input<typeof CategoryTotalsSchema>>();
     expectTypeOf<z.infer<typeof ProStatusSchema>>().toExtend<ProStatus>();
     expectTypeOf<ProStatus>().toExtend<z.input<typeof ProStatusSchema>>();
+    expectTypeOf<z.infer<typeof ForecastPointSchema>>().toExtend<ForecastPoint>();
+    expectTypeOf<ForecastPoint>().toExtend<z.input<typeof ForecastPointSchema>>();
+    expectTypeOf<z.infer<typeof ForecastSchema>>().toExtend<Forecast>();
+    expectTypeOf<Forecast>().toExtend<z.input<typeof ForecastSchema>>();
+    expectTypeOf<z.infer<typeof YearAnchorSchema>>().toExtend<YearAnchor>();
+    expectTypeOf<YearAnchor>().toExtend<z.input<typeof YearAnchorSchema>>();
+    expectTypeOf<z.infer<typeof ForecastBundleSchema>>().toExtend<ForecastBundle>();
+    expectTypeOf<ForecastBundle>().toExtend<z.input<typeof ForecastBundleSchema>>();
     expectTypeOf<z.infer<typeof StatementCategorizeRequestSchema>>().toExtend<StatementCategorizeRequest>();
     expectTypeOf<StatementCategorizeRequest>().toExtend<z.input<typeof StatementCategorizeRequestSchema>>();
     expectTypeOf<z.infer<typeof StatementCategorizeResponseSchema>>().toExtend<StatementCategorizeResponse>();
@@ -64,6 +74,8 @@ describe('schemas match the contracts', () => {
     expectTypeOf<SessionErrorCode>().toEqualTypeOf<(typeof SESSION_ERROR_CODES)[number]>();
     expect(new Set(COST_CATEGORIES).size).toBe(COST_CATEGORIES.length);
     expect(new Set(STATEMENT_CLASSES).size).toBe(STATEMENT_CLASSES.length);
+    expectTypeOf<ForecastBundle['source']>().toEqualTypeOf<ForecastSource>();
+    expectTypeOf<z.infer<typeof ForecastBundleSchema>['source']>().toEqualTypeOf<ForecastSource>();
   });
 });
 
@@ -174,6 +186,74 @@ describe('schemas reject the mistakes they exist for', () => {
       payWith: { loan: { amount: 28_000, apr: 0.069, termMonths: 36 } },
     }).success).toBe(true);
     expect(PurchaseSchema.safeParse({ label: 'Gym', amount: 30, recurring: 'weekly', payWith: 'cash' }).success).toBe(false);
+  });
+});
+
+describe('forecast schemas', () => {
+  const point = (month: number, mid = 1_000 + month): ForecastPoint => ({ month, mid, low: mid - 100, high: mid + 100 });
+  const forecast = (n = 121): Forecast => {
+    const points = Array.from({ length: n }, (_, month) => point(month));
+    return { points, in10y: points[120] ?? point(120), todaysDollars: false };
+  };
+  // The engine's `rulesBundle` result is parsed in packages/engine/bundle.test.ts (the engine depends
+  // on this package, not the other way round); this is the same shape built by hand.
+  const bundle = (): ForecastBundle => ({ source: 'rules', base: forecast(), scenarios: { a: forecast(), b: forecast() } });
+
+  it('ForecastBundleSchema accepts a rules bundle (no model) and an AI bundle (with a model)', () => {
+    expect(ForecastBundleSchema.safeParse(bundle()).success).toBe(true);
+    expect(ForecastBundleSchema.safeParse({ ...bundle(), source: 'ai', model: 'claude-test' }).success).toBe(true);
+    expect(ForecastBundleSchema.safeParse({ ...bundle(), scenarios: {} }).success).toBe(true);
+  });
+
+  it('rejects a point with NaN or Infinity', () => {
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const b = bundle();
+      b.base.points[50] = { ...b.base.points[50]!, mid: bad };
+      expect(ForecastBundleSchema.safeParse(b).success).toBe(false);
+      const inScenario = bundle();
+      inScenario.scenarios.a!.points[7] = { ...inScenario.scenarios.a!.points[7]!, high: bad };
+      expect(ForecastBundleSchema.safeParse(inScenario).success).toBe(false);
+      expect(ForecastPointSchema.safeParse({ month: 3, mid: 1, low: bad, high: 2 }).success).toBe(false);
+    }
+  });
+
+  it('requires the point month to be a non-negative integer', () => {
+    for (const month of [-1, 1.5, Number.NaN]) {
+      expect(ForecastPointSchema.safeParse({ month, mid: 1, low: 0, high: 2 }).success).toBe(false);
+      const b = bundle();
+      b.base.points[10] = { ...b.base.points[10]!, month };
+      expect(ForecastBundleSchema.safeParse(b).success).toBe(false);
+    }
+    expect(ForecastPointSchema.safeParse({ month: 0, mid: 1, low: 0, high: 2 }).success).toBe(true);
+    expect(ForecastPointSchema.safeParse({ month: 120, mid: 1, low: 0, high: 2 }).success).toBe(true);
+  });
+
+  it('rejects a bundle whose source is not ai or rules', () => {
+    expect(ForecastBundleSchema.safeParse({ ...bundle(), source: 'x' }).success).toBe(false);
+    expect(ForecastBundleSchema.safeParse({ ...bundle(), source: undefined }).success).toBe(false);
+  });
+
+  it('rejects a forecast with fewer than 121 points, and accepts a longer horizon', () => {
+    expect(ForecastSchema.safeParse(forecast(120)).success).toBe(false);
+    expect(ForecastSchema.safeParse(forecast(121)).success).toBe(true);
+    expect(ForecastSchema.safeParse(forecast(241)).success).toBe(true);
+    const short = bundle();
+    short.scenarios.b = forecast(60);
+    expect(ForecastBundleSchema.safeParse(short).success).toBe(false);
+  });
+
+  it('rejects a forecast missing in10y or todaysDollars', () => {
+    const { in10y: _in10y, ...noIn10y } = forecast();
+    const { todaysDollars: _flag, ...noFlag } = forecast();
+    expect(ForecastSchema.safeParse(noIn10y).success).toBe(false);
+    expect(ForecastSchema.safeParse(noFlag).success).toBe(false);
+  });
+
+  it('YearAnchorSchema takes a structurally valid anchor and rejects NaN, strings and a fractional year', () => {
+    expect(YearAnchorSchema.safeParse({ year: 3, low: -10, mid: 0, high: 10 }).success).toBe(true);
+    expect(YearAnchorSchema.safeParse({ year: 3, low: Number.NaN, mid: 0, high: 10 }).success).toBe(false);
+    expect(YearAnchorSchema.safeParse({ year: 3, low: '1', mid: 0, high: 10 }).success).toBe(false);
+    expect(YearAnchorSchema.safeParse({ year: 2.5, low: 0, mid: 0, high: 10 }).success).toBe(false);
   });
 });
 

@@ -22,7 +22,7 @@ Build all logic and data behind fixed contracts first, with placeholder screens,
 - Zustand (or React context) for client state; local storage holds the anonymous ID and a profile cache.
 - Vitest (engine) and Playwright (one end-to-end demo path).
 - A self-hosted Postgres store on the team's own server for sessions, Pro entitlements, leaderboard and events (T4; `STORE_URL`, `pg` driver, server code in `apps/web/src/server/store/`).
-- One server-side LLM client: Anthropic Claude (`ANTHROPIC_API_KEY`, model in `ANTHROPIC_MODEL`); responses validated with zod.
+- One server-side LLM client: Anthropic Claude (`ANTHROPIC_API_KEY`, model in `ANTHROPIC_MODEL`); responses validated with zod. It also produces the 10-year forecast for the demo (`/api/ai/forecast`, optional `ANTHROPIC_FORECAST_MODEL`); the rules engine is the fallback.
 - Charts: one wrapper component (e.g. Recharts or visx) behind `<ForecastChart>` so restyling stays local.
 
 ## Deployment
@@ -171,6 +171,12 @@ export type MonthEnd = { projectedSpend: Money; vsAverage: Money | null;  // nul
 export type LoanInput = { amount: Money; apr: Rate; termMonths: number;
   fees?: Money; downPayment?: Money; extraPayment?: Money };
   // financed principal = amount − downPayment + fees (fees are rolled into the loan)
+export type ForecastSource = 'ai' | 'rules';
+export type YearAnchor = { year: number; low: Money; mid: Money; high: Money }; // what the model returns: years 1–10, nominal
+export type ForecastBundle = {            // /api/ai/forecast response; nominal dollars (todaysDollars: false)
+  source: ForecastSource; model?: string;
+  base: Forecast; scenarios: Record<string, Forecast>;   // scenarios keyed by candidate move id
+};
 export type LoanResult = { monthly: Money; totalInterest: Money; totalCost: Money;
   payoffMonth: number | null;    // null = the payment never covers the interest
   debtLoadBefore: Rate; debtLoadAfter: Rate; effect10y: Money;
@@ -211,7 +217,7 @@ export type SessionState = { profile?: Profile; wishlist: Purchase[]; revision: 
 | `cardToProfile` | Amir | `(card: LifeCard, area: AreaData) => Profile` (Closest Life; car loan becomes an `auto` debt, all fields `isEstimate: true`) |
 | `scoreGuess` | Amir | `(guess: Money, cost: CostBreakdown, cluesOpened: number) => GuessResult` |
 | `sceneOf` | Aibek | `(card: LifeCard, area: AreaData) => { public: PublicCard; clues: Record<ClueId, ClueReveal> }` (deterministic; the only place scene props come from) |
-| `forecast` | Amir | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` |
+| `forecast` | Amir | `(p: Profile, years = 10 /* ≥ 10 */, opts?: { todaysDollars?: boolean; extra?: Purchase[] }) => Forecast` (the rules provider: fallback and yardstick; the headline forecast comes from `/api/ai/forecast`) |
 | `applyPatch` | Amir | `(p: Profile, patch: ProfilePatch) => Profile` |
 | `rankMoves` | Amir | `(p: Profile, opts?: { rates?: Partial<ForecastRates>; subscriptionsDetected?: boolean }) => Move[]` (level 1, top 3; `effect10y` in today's dollars; the committed move is the one with `id === p.committedMoveId`) |
 | `movesLevel` / `isLevelUnlocked` | Amir | `(p: Profile) => 1 \| 2` / `(p: Profile, level: 1 \| 2 \| 3) => boolean` |
@@ -225,6 +231,8 @@ All assumptions (inflation, returns, thresholds) live in `packages/engine/assump
 
 ## Server routes
 
+| `moveCandidates` / `rankCandidates` | Amir | `(p: Profile, opts?: RankMovesOptions) => MoveCandidate[]` / `(p: Profile, candidates: MoveCandidate[], effectOf: (c: MoveCandidate) => Money) => Move[]`. `rankMoves` is both with the rules forecast as `effectOf`; the AI path supplies `effectOf` from the bundle. `MoveCandidate = Omit<Move, 'effect10y'>`. |
+| `anchorIssues` / `anchorsToForecast` / `deflateForecast` / `forecastSanityIssues` / `scenarioEffectIssues` / `rulesBundle` / `forecastFacts` | Amir | Pure helpers for the AI forecast: check the model's `YearAnchor[]`, expand it to a nominal `Forecast` (month 0 = today's balance sheet), convert a `Forecast` to today's dollars, compare a forecast and a move's effect with the rules forecast, wrap the rules forecast as a `ForecastBundle` (the fallback), and strip a `Profile` to what the model sees. See ENGINEERING.md → AI forecast. |
 Every route validates its input with zod. All POST routes and `/api/share` are rate-limited per anonymous ID and IP, with the strictest limits on `/api/ai/*` and `/api/statement/categorize` (they cost LLM calls).
 
 | Route | Owner | In → out |
@@ -239,7 +247,8 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `POST /api/events` | Aibek | `{ anonId, events: [{ id, name, props? }] }` (1–25) → `{ ok: true, accepted }`. Names from `CLIENT_EVENT_NAMES`; props are small enums and counts only (`EventsRequestSchema`), so no personal data; `id` = the browser's UUID per event, so a resent batch is stored once. The browser batches them (`src/lib/events.ts`, on with `NEXT_PUBLIC_EVENTS_SOURCE=api`, off under GPC / Do Not Track); the Pro routes record `checkout_started`, `pro_purchased` and `pro_promo_redeemed` themselves. 503 when the store is down. |
 | `GET /api/events/funnel` | Aibek | query `days` (1–90, default 7) → `FunnelReport`: distinct anonymous ids per event and per `FUNNEL_STEPS` step (with how many went through every earlier step, and the conversion), plus clues per home, blind-guess, finish and share rates. Aggregates only. |
 | `POST /api/ai/parse` | Amir | `{ kind: 'life' \| 'purchase' \| 'loan', text }` → `ProfilePatch` / `Purchase` / `LoanInput` (zod-validated). The parsed values are shown to the user to confirm before they enter the profile. |
-| `POST /api/ai/explain` | Amir | `ExplainRequest { move?, loanResult? }` → `{ text, source }` (2 sentences, no new numbers; a debt load with no take-home pay is `null`) |
+| `POST /api/ai/explain` | Amir | `ExplainRequest { move? (optional `source: 'ai' \| 'rules'` words the sentence), loanResult? }` → `{ text, source }` (2 sentences, no new numbers; a debt load with no take-home pay is `null`) |
+| `POST /api/ai/forecast` | Amir | `{ profile, rates?, scenarios?: { id, patch }[] }` → `ForecastBundle` (nominal dollars). Validated in code, cached, falls back to the rules forecast (`source: 'rules'`). Has its own rate limiter so it cannot use up the parse and explain budget. |
 | `GET /api/pro/status` | Amir | header `x-anon-id` → `{ status: ProStatus, checkoutAvailable, demo: { enabled, code? } }` |
 | `POST /api/pro/checkout` | Amir | `{ plan }` → `{ url }`, a Stripe Checkout Session in test mode to redirect to |
 | `POST /api/pro/confirm` | Amir | `{ sessionId }` → `{ status }`; the server retrieves the session from Stripe and checks it is test-mode, complete, paid and this anonymous ID's |
@@ -275,7 +284,7 @@ packages/data scripts ──► packages/data/out/areas.json (cached, committed)
 cards.json (server) ──► sceneOf ──► /api/daily (PublicCard) + /api/daily/clue (ClueReveal) ──► HouseScene (S2)
                  └──► costOfLife + scoreGuess in /api/daily/guess ──► game reveal (S3)
                                    │
-sliders / balance sheet / CSV ──► Profile ──► engine.forecast / rankMoves / canAfford / loan
+sliders / balance sheet / CSV ──► Profile ──► /api/ai/forecast (S1, S10; rules fallback) · engine (S5 preview, canAfford, loan, monthEnd)
                                    │                         │
                          /api/session (persist)        view-model hooks ──► ui
 CSV (browser parse, mask names) ──► StatementItem[] ──► /api/statement/categorize ──► CategoryTotals[] ──► Profile
@@ -290,3 +299,4 @@ CSV (browser parse, mask names) ──► StatementItem[] ──► /api/stateme
 - Bank connect (after the hackathon): read-only through an aggregator (e.g. Plaid). The access token stays server-side, transactions go through the same categorizer, and only category totals are persisted, like CSVs. "What we keep" must then say that transactions pass through the server, since the CSV line "the file never leaves your browser" does not hold for it. In the 24h build it is a disabled "coming soon" button.
 - The anonymous ID lives in local storage; there are no accounts. It is sent in a header or body, never in a URL (share links use a separate `resultId`), because it also keys the saved profile.
 - Pro keeps, per anonymous ID: the plan, how it was unlocked (`stripe_test` or `demo`), when, and the Stripe test Checkout Session ID. No card data or email ever reaches our server; the test checkout page belongs to Stripe.
+- The forecast request sends the profile's numbers (income, balances, debts, spending, area inflation) and no names or account numbers to the model provider, which does not train on API data. Zero data retention is not enabled, so no copy claims it; the "What we keep" panel says only that these numbers go to the provider and that we don't store them.

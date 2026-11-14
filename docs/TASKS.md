@@ -26,6 +26,12 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 | [x] | Y11 | Placeholder UI: S11 Can I Afford It? + S12 Loan Lab | 2 | Y4; T3 | Compare 3 loans, gauge, slider work |
 | [x] | Y12 | `/api/ai/parse` + `/api/ai/explain` | 1 | Contracts | Typed JSON or clear error; no numbers; parsed values confirmed by the user |
 | [x] | Y14 | Figma skin pass | 2 | Figma frames | Screens match Figma; no model or engine file changed |
+| [ ] | Y15 | AI forecast: contracts + pure engine helpers (`ForecastBundle`, `anchorsToForecast`, `deflateForecast`, `forecastSanityIssues`, `moveCandidates` / `rankCandidates`; `rankMoves` unchanged) | — | Y2, Y3 | Helpers tested incl. envelope rejects x3 / ÷1000 / over-wide band and wrong-effect moves; `rankMoves` tests untouched and green |
+| [ ] | Y16 | AI forecast: `POST /api/ai/forecast` (prompt, wire schema, checks, one retry, rules fallback, own rate limit) | — | Y12, Y15 | Valid → `source: 'ai'`, month 0 exact; invalid twice / no key / provider error → `source: 'rules'`; no live model in tests |
+| [ ] | Y17 | AI forecast: cache + in-flight dedup keyed by profile hash | — | Y16 | Same profile → same bundle; concurrent identical requests call the model once; fallbacks never cached |
+| [ ] | Y18 | AI forecast: client fetch + `useForecastBundle`; async S1/S10 view-models; source labels; local rules fallback | — | Y16, Y7 | Slider spam shows only the newest answer; offline / 429 → rules, labeled; today's-$ toggle makes no request |
+| [ ] | Y19 | AI forecast: eval script (run-to-run spread, gap to rules, band narrows after upload), outside CI | — | Y16 | Report printed for the fixture profiles; baseline recorded for the later ML model |
+| [ ] | Y20 | AI forecast: explanations name the source (`MoveInputSchema.source`, wording by source) | — | Y18 | AI move → "Our AI estimate…"; no `source` → current wording; numbers guard unchanged |
 | [ ] | P1 | Pro paywall demo (replaces the S15 part of T11): Stripe Checkout in test mode + promo code, `/api/pro/*`, entitlement store, S15 screen, wishlist gate | — | Y7 | Test checkout and the promo code both unlock Pro; a live key is refused; wishlist save locked until Pro |
 
 ## Aibek (backend)
@@ -57,6 +63,8 @@ Split: **Amir** (ML/AI + SWE) ~19 h (~57%), **Aibek** (backend) ~14.5 h (~43%) +
 `[~]` means partly done. T6 (#19): the sample and three synthetic exports parse and are tested; two anonymized real exports and masking payee names on bill-pay, check and deposit lines remain (listed on the issue).
 
 After T8–T12, Aibek owns integration and bugs and pairs on Y14.
+
+Y15–Y20 (AI forecast, Amir) put a server forecaster behind S1 and S10. They have to land before the Sync 3 logic freeze, with the rules forecast as the fallback. The Hours column is left blank for them on purpose.
 
 ## Timeline
 

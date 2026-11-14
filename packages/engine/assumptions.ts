@@ -331,6 +331,44 @@ export const oneOffOutlierMultiple = {
   assumption: true,
 } satisfies Assumption<number>;
 
+// ----- Y15: AI forecast sanity envelope (anchors.ts) -------------------------------------------
+
+/** How far an AI forecast may stray from the rules forecast before it is rejected. */
+export type AiForecastSanity = {
+  /** Yearly mid may lie this share of |rules mid| outside the rules band. */
+  relative: number;
+  /** The tolerance never goes below this many months of take-home pay (net worth near 0 or a zero band). */
+  floorMonths: number;
+  /** The AI band may be this many times as wide as the rules band; the limit never goes below the tolerance. */
+  bandMaxRatio: number;
+  /** A scenario's 10-year effect must be between these multiples of the rules effect (same sign)... */
+  effectRatioMin: number;
+  effectRatioMax: number;
+  /** ...unless it is within this many dollars of it. */
+  effectFloor: Money;
+};
+
+/**
+ * Guards against wrong-unit or runaway model answers (thousands, ×10, a flipped sign), not a claim
+ * about how accurate a forecast is: loose enough that a sensible answer passes, tight enough to catch
+ * those. Deliberately NOT in `assumptions` below: it is a developer guard, not a number the "How we
+ * calculate" list should show a user.
+ */
+export const aiForecastSanity = {
+  value: {
+    relative: 0.5,
+    floorMonths: 12,
+    bandMaxRatio: 3,
+    effectRatioMin: 0.25,
+    effectRatioMax: 4,
+    effectFloor: 1_000 as Money,
+  },
+  assumption: true,
+  note: 'Guard values, tunable against the fixtures: they only have to reject wrong-unit and runaway answers, not grade accuracy.',
+} satisfies Assumption<AiForecastSanity>;
+
+// ----- end Y15 --------------------------------------------------------------------------------
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
