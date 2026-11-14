@@ -31,9 +31,27 @@ describe('/loan on the real engine and store', () => {
     expect(screen.queryByRole('heading', { name: t.payoffOrder.title })).toBeNull();
     const table = within(section).getByRole('table', { name: t.planner.compare.caption });
     const debtFree = within(within(table).getByRole('row', { name: new RegExp(`^${t.planner.compare.rows.debtFree}`) })).getAllByRole('cell');
-    // 43 months after November 2026, the same for all three at extra $0 (usePayoffPlanner.engine.test.ts).
-    expect(debtFree.map((c) => c.textContent)).toEqual(['June 2030', 'June 2030', 'June 2030']);
+    // It opens at the suggested $25 a month (half of the $75.80 left once offer A is paid, in $25 steps): avalanche and
+    // snowball are 42 months after November 2026, minimums only 43 (usePayoffPlanner.engine.test.ts).
+    expect(within(section).getByRole('slider', { name: t.planner.extra.label })).toHaveValue('25');
+    expect(within(section).getByTestId('payoff-extra-suggested').textContent).toBe(t.planner.extra.suggested.share('50%', '$76'));
+    expect(debtFree.map((c) => c.textContent)).toEqual(['May 2030', 'May 2030', 'June 2030']);
+    // Avalanche and snowball match on the demo debts, and the screen says why.
+    expect(within(section).getByTestId('payoff-tie').textContent).toBe(t.planner.tie.sameOrder);
+    expect(within(section).getByTestId('payoff-savings').textContent).toMatch(/less interest.*1 month sooner/);
     expect(section.textContent).not.toMatch(/NaN|Infinity|undefined/);
+  });
+
+  it('at $0 extra says why all three columns match, in place of a "the same" comparison', async () => {
+    const section = await planner();
+    fireEvent.change(within(section).getByRole('slider', { name: t.planner.extra.label }), { target: { value: '0' } });
+    const table = within(section).getByRole('table', { name: t.planner.compare.caption });
+    const cells = () => within(within(table).getByRole('row', { name: new RegExp(`^${t.planner.compare.rows.debtFree}`) })).getAllByRole('cell').map((c) => c.textContent);
+    await waitFor(() => expect(cells()).toEqual(['June 2030', 'June 2030', 'June 2030']));
+    expect(within(section).getByTestId('payoff-tie').textContent).toBe(t.planner.tie.noExtra);
+    expect(within(section).queryByTestId('payoff-savings')).toBeNull();
+    // A pick now, not the suggestion: the line about where the amount came from is gone.
+    expect(within(section).queryByTestId('payoff-extra-suggested')).toBeNull();
   });
 
   it('moves the debt-free date when the extra moves, and leaves the selected offer\'s own extra alone', async () => {

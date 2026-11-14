@@ -100,7 +100,7 @@ After the Duel's day result, the bridge runs through these steps (they keep thei
 | S6 | Closest life | `/me/closest` | ladder | Real |
 | S7 | Quick sliders | `/me/sliders` | ladder | Real |
 | S8 | Balance sheet (edits the accounts of P2) | `/me/balance` | ladder | Real |
-| S9 | Statement upload + "What we keep" + "Try with sample statement" (imports into P3) | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: not shown until built) |
+| S9 | Statement first: fork (bank CSV or by hand), upload + "What we keep" + "Try with sample statement", follow-up questions on review (imports into P3) | `/me/upload` | upload (logic) + ladder (ui) | Real (bank connect: not shown until built) |
 
 ### Old routes
 
@@ -255,6 +255,7 @@ export type Transaction = { date: string; description: string; amount: Money };
 export type StatementItem = { label: string; amount: Money; month: string; day: number };
 export type CategoryTotals = { month: string; totals: Record<CostCategory, Money>; // month = 'YYYY-MM'
   oneOffs: { label: string; amount: Money }[]; detectedPay?: Money;
+  firstDay?: number;             // day of the month's earliest statement line (a statement starting mid-month)
   lastDay?: number };            // day of the month's latest statement line (how far the statement goes)
 
 // POST /api/session (T4). revision counts saves (0 = nothing saved); updatedAt is ISO 8601 UTC.
@@ -394,6 +395,7 @@ export type Transaction = { id: string; date: string /* YYYY-MM-DD */; label: st
 | `accountsToProfile` / `profileToAccounts` / `netWorthSummary` | Aibek | MP8: keeps every existing engine function working unchanged; the round trip keeps every forecast number |
 | `budgetRows` / `budgetRowsForYear` | Aibek | `(planned: Record<CostCategory, Money>, actual: CategoryTotals \| null, today: { day: number; daysInMonth: number }) => { income: BudgetRow; rows: BudgetRow[]; totals }` (MP9) |
 | `cashFlowSummary` | Aibek | `(totals: CategoryTotals[], period) => CashFlowSummary` (MP9; incl. the Sankey data) |
+| `suggestedPayoffExtra` | Aibek | `(p: Profile, debts: Debt[], opts?: { step?: Money; rates?: Partial<ForecastRates> }) => { extra: Money; surplus: Money; share: Rate }`: where the payoff planner's extra starts before the person picks one (`share` × this month's surplus with `debts` in place of the profile's, rounded down to `step`; 0 when nothing is left). See ENGINEERING.md → Loan amortization. |
 
 All assumptions (inflation, returns, thresholds) live in `packages/engine/assumptions.ts` with a `Source` or an `assumption: true` flag. The UI shows them in a "How we calculate" panel.
 
@@ -413,7 +415,7 @@ Every route validates its input with zod. All POST routes and `/api/share` are r
 | `GET /api/leaderboard` | Aibek | query `date` (default today), `limit` (1–100, default 50) (+ own `anonId` in a header) → `{ ok, date, players, entries, rank, todayStats }`, summed from stored guesses. Ties on points share a rank; handles are made up from a hash (no id, no PII). The client never sends a score. It reads slider results only (`store.game`), so nothing in the app links to it while `/play` is the duel; the leaderboard screen is after the cut line and needs duel picks. |
 | `GET /api/share` | Aibek | query `resultId, format` (`9x16` default, `1x1`) → PNG (1080×1920 or 1080×1080, `next/og`) from a stored result, so share cards can't be faked. The id is looked up as a **duel day** first (`store.duel.findDuelDay`: "Which life costs more?", the date, "4 of 5", total points and the tile grid, colored by the same `duelTileColor` as the day result; a day still being played shows its played rounds only), then as a **slider guess** (`store.game.findResult`); both miss → 404, a malformed id → 404 without a query. The duel card shows no amounts, choices, metros or anything about the player. A slider card and a finished duel day (all five picked) are cached as immutable for a year; a duel day still being played answers `no-store`, since its picture changes with every pick under the same URL. The duel's day result downloads the 9:16 card and shares it as a file (`navigator.share({ files })`) where `navigator.canShare` accepts files, else shares the text grid (`result_shared` either way). 400 bad format, 429, 503 when the store is down |
 | `POST /api/session` | Aibek | `{ anonId, profile?, wishlist? }` → `{ ok: true, ...SessionState }`. `anonId` = `crypto.randomUUID()` (a UUID, required). `{ anonId }` alone loads; each field sent replaces the saved one whole. 402 `not_paid` when the save would add to the wishlist without Pro; 503 `unavailable` when the store is down or not configured. `GET /api/session` with the `x-anon-id` header loads too. |
-| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed', classes?: { label, class: StatementClass }[] /* how each distinct masked label was sorted */ }`; keyword rules without an API key; nothing stored |
+| `POST /api/statement/categorize` | Aibek | `{ items: StatementItem[] }` (≤ 5,000) → `{ months: CategoryTotals[] /* one per month */, categorizedBy: 'ai' \| 'rules' \| 'mixed', classes?: { label, class: StatementClass }[] /* how each distinct masked label was sorted */, lines?: { cls, oneOffHint }[] /* each item's class, in request order */, followUps?: StatementFollowUp[] /* ≤ 3 questions found and priced in code, worded by the model when there is one */ }`; keyword rules and template wording without an API key; nothing stored |
 | `GET /api/statement/sample` | Amir | → `text/csv`: `packages/data/fixtures/statement.sample.csv`, prerendered at build. S9's "Try with sample statement" reads it as a File through the same browser path as an upload |
 | `POST /api/events` | Aibek | `{ anonId, events: [{ id, name, props? }] }` (1–25) → `{ ok: true, accepted }`. Names from `CLIENT_EVENT_NAMES`; props are small enums and counts only (`EventsRequestSchema`), so no personal data; `id` = the browser's UUID per event, so a resent batch is stored once. The browser batches them (`src/lib/events.ts`, on with `NEXT_PUBLIC_EVENTS_SOURCE=api`, off under GPC / Do Not Track); the Pro routes record `checkout_started`, `pro_purchased`, `pro_demo_purchased` and `pro_promo_redeemed` themselves. 503 when the store is down. |
 | `GET /api/events/funnel` | Aibek | query `days` (1–90, default 7) → `FunnelReport`: distinct anonymous ids per event and per `FUNNEL_STEPS` step (with how many went through every earlier step, and the conversion), plus clues per home, blind-guess, finish and share rates. Aggregates only. |

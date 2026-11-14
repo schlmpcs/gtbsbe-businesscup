@@ -14,7 +14,7 @@ beforeEach(resetClientState);
 
 describe('usePayoffPlanner while the profile loads', () => {
   it('is loading, asks the engine nothing and sends no event', () => {
-    const { options, comparePayoff, extraToFinishBy, track } = plannerOptions();
+    const { options, comparePayoff, extraToFinishBy, suggestedPayoffExtra, track } = plannerOptions();
     const { result } = renderHook(() => {
       const lab = useLoanLab();
       return usePayoffPlanner(lab, options);
@@ -25,6 +25,9 @@ describe('usePayoffPlanner while the profile loads', () => {
     expect(result.current!.columns).toEqual([]);
     expect(comparePayoff).not.toHaveBeenCalled();
     expect(extraToFinishBy).not.toHaveBeenCalled();
+    // No suggestion off the placeholder profile either: it would flash one amount and then another.
+    expect(suggestedPayoffExtra).not.toHaveBeenCalled();
+    expect(result.current!.suggestion).toBeNull();
     expect(track).not.toHaveBeenCalled();
   });
 });
