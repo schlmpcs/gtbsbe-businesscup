@@ -18,6 +18,11 @@ export function thisMonth(p: Profile): SimulationMonth {
   return simulate(p, 1, { rates: { inflationAnnual: inflationForZip(p.zip) } }).path[1]!;
 }
 
+/** Today's net worth (cash + retirement − debts): the simulation's month-0 entry. */
+export function netWorthToday(p: Profile): number {
+  return simulate(p, 0).path[0]!.netWorth;
+}
+
 export type DebtLoadZone = 'green' | 'yellow' | 'red';
 
 /** Debt-load zone: green < 0.20, yellow 0.20–0.36, red > 0.36 (assumptions: debtLoadThresholds). */

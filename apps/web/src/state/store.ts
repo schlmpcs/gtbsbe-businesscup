@@ -34,6 +34,8 @@ export type AppData = {
   closestCardId: string | null;
   /** Uploaded statement months (category totals only, `oneOffs` emptied), oldest first. Feeds monthEnd. */
   statementMonths: CategoryTotals[];
+  /** A statement upload found subscription charges (enables the cancelSubscriptions move). */
+  subscriptionsDetected: boolean;
   wishlist: WishlistItem[];
   /** The Next Move the user committed to (its id is also `profile.committedMoveId`). */
   committedMove: Move | null;
@@ -76,6 +78,7 @@ export function initialAppData(): AppData {
     selfGuess: null,
     closestCardId: null,
     statementMonths: [],
+    subscriptionsDetected: false,
     wishlist: [],
     committedMove: null,
   };
@@ -105,6 +108,7 @@ const persistedFields = {
   selfGuess: z.number().positive().nullable(),
   closestCardId: z.string().nullable(),
   statementMonths: z.array(CategoryTotalsSchema),
+  subscriptionsDetected: z.boolean(),
   wishlist: z.array(WishlistItemSchema),
   committedMove: MoveSchema.nullable(),
 } satisfies { [K in keyof AppData]: z.ZodType };
@@ -144,7 +148,12 @@ export const useAppStore = create<AppState>()(
           // Only category totals are kept (CLAUDE.md → Privacy): one-off labels are dropped.
           const totalsOnly = months.map((m): CategoryTotals => ({ ...m, oneOffs: [] }));
           const statementMonths = mergeStatementHistory(s.statementMonths, totalsOnly);
-          return { statementMonths, profile: mergeStatementTotals(s.profile, statementMonths), profileOrigin: 'user' };
+          return {
+            statementMonths,
+            subscriptionsDetected: statementMonths.some((m) => (m.totals.subscriptions ?? 0) > 0),
+            profile: mergeStatementTotals(s.profile, statementMonths),
+            profileOrigin: 'user',
+          };
         }),
       addToWishlist: (purchase) => {
         const id = newId();
@@ -181,6 +190,7 @@ export const useAppStore = create<AppState>()(
         selfGuess: s.selfGuess,
         closestCardId: s.closestCardId,
         statementMonths: s.statementMonths,
+        subscriptionsDetected: s.subscriptionsDetected,
         wishlist: s.wishlist,
         committedMove: s.committedMove,
       }),

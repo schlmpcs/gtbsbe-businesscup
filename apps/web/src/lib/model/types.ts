@@ -5,13 +5,14 @@ import type { CostCategory, Money } from '@lifeguessr/types';
 /**
  * Why a view-model could not produce its data. The UI maps `kind` to copy; no sentences here.
  * - notImplemented: an engine function is still being built (its task id is in `task`).
- * - unavailable: the server route does not exist yet (404/405/501).
+ * - unavailable: the route does not exist yet or is switched off (404/405/501/503).
  * - network: the request failed or returned another non-2xx status.
  * - invalidResponse: the response did not match the contract (zod).
  * - rateLimited: 429.
  * - alreadyGuessed: the server already has a guess for this card today (409).
  * - badInput: the server rejected the input (400/422), e.g. text the parser could not read.
- * - nothingFound: the text parser returned no values (offer the manual form).
+ * - nothingFound: the text parser found no values (offer the manual form).
+ * - incomplete: the text lacks a required value; `missing` lists paths such as 'apr' or 'payWith.loan'.
  * - unknown: anything else (message for logs, not for display).
  */
 export type VMError =
@@ -23,6 +24,7 @@ export type VMError =
   | { kind: 'alreadyGuessed' }
   | { kind: 'badInput' }
   | { kind: 'nothingFound' }
+  | { kind: 'incomplete'; missing: string[] }
   | { kind: 'unknown'; message: string };
 
 /** Data that may still be loading or may have failed. */
@@ -50,6 +52,8 @@ export type ParseConfirmVM<T> = {
   status: 'idle' | 'parsing' | 'confirming' | 'error';
   /** The parsed values awaiting confirmation (status 'confirming'). */
   parsed: T | null;
+  /** Paths in `parsed` the parser inferred rather than read literally (e.g. 'termMonths'): highlight them. */
+  inferred: string[];
   error: VMError | null;
   setText: (text: string) => void;
   /** Send `text` to the parser. Ignored when the text is blank or a parse is running. */

@@ -1,26 +1,27 @@
 // Free text → /api/ai/parse → show the parsed values → apply only after the user confirms.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isEmptyParse, parseText, type ParseKind, type ParseResultOf } from '@/lib/api/aiParse';
+import { isEmptyParse, parseText, type ParseKind, type ParseOptions, type ParseResult, type ParseValueOf } from '@/lib/api/aiParse';
 import { getAnonId } from '@/state/anonId';
 import { toVMError } from './errors';
 import type { ParseConfirmVM, VMError } from './types';
 
-/** The text parser function (swappable in tests). */
-export type ParseFn = <K extends ParseKind>(kind: K, text: string, opts: { anonId?: string; signal?: AbortSignal }) => Promise<ParseResultOf[K]>;
+/** The text parser (swappable in tests). */
+export type ParseFn = <K extends ParseKind>(kind: K, text: string, opts: ParseOptions) => Promise<ParseResult<K>>;
 
 export function useParseConfirm<K extends ParseKind>(
   kind: K,
-  onConfirm: (value: ParseResultOf[K]) => void,
-  parse: ParseFn = parseText,
-): ParseConfirmVM<ParseResultOf[K]> {
+  onConfirm: (value: ParseValueOf[K]) => void,
+  opts: { parse?: ParseFn; debts?: ParseOptions['debts'] } = {},
+): ParseConfirmVM<ParseValueOf[K]> {
+  const parse = opts.parse ?? parseText;
   const [text, setText] = useState('');
-  const [status, setStatus] = useState<ParseConfirmVM<ParseResultOf[K]>['status']>('idle');
-  const [parsed, setParsed] = useState<ParseResultOf[K] | null>(null);
+  const [status, setStatus] = useState<ParseConfirmVM<ParseValueOf[K]>['status']>('idle');
+  const [parsed, setParsed] = useState<ParseResult<K> | null>(null);
   const [error, setError] = useState<VMError | null>(null);
   const abort = useRef<AbortController | null>(null);
-  const onConfirmRef = useRef(onConfirm);
+  const latest = useRef({ onConfirm, debts: opts.debts });
   useEffect(() => {
-    onConfirmRef.current = onConfirm;
+    latest.current = { onConfirm, debts: opts.debts };
   });
   useEffect(() => () => abort.current?.abort(), []);
 
@@ -33,15 +34,15 @@ export function useParseConfirm<K extends ParseKind>(
     setStatus('parsing');
     setError(null);
     setParsed(null);
-    parse(kind, trimmed, { anonId: getAnonId(), signal: controller.signal }).then(
-      (value) => {
+    parse(kind, trimmed, { anonId: getAnonId(), signal: controller.signal, debts: latest.current.debts }).then(
+      (result) => {
         if (controller.signal.aborted) return;
-        if (isEmptyParse(kind, value)) {
+        if (isEmptyParse(kind, result.value)) {
           setError({ kind: 'nothingFound' });
           setStatus('error');
           return;
         }
-        setParsed(value);
+        setParsed(result);
         setStatus('confirming');
       },
       (err: unknown) => {
@@ -54,7 +55,7 @@ export function useParseConfirm<K extends ParseKind>(
 
   const confirm = useCallback(() => {
     if (status !== 'confirming' || parsed === null) return;
-    onConfirmRef.current(parsed);
+    latest.current.onConfirm(parsed.value);
     setParsed(null);
     setText('');
     setStatus('idle');
@@ -67,5 +68,9 @@ export function useParseConfirm<K extends ParseKind>(
     setStatus('idle');
   }, []);
 
-  return { text, status, parsed, error, setText, submit, confirm, cancel };
+  return {
+    text, status, error, setText, submit, confirm, cancel,
+    parsed: parsed?.value ?? null,
+    inferred: parsed?.inferred ?? [],
+  };
 }

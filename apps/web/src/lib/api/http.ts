@@ -6,12 +6,21 @@ export class ApiError extends Error {
   /** HTTP status, or 0 when the request never got a response. `invalid` = the body broke the contract. */
   readonly status: number;
   readonly invalid: boolean;
+  /** The parsed JSON error body, when the server sent one (e.g. `{ ok: false, error: { code } }`). */
+  readonly body: unknown;
 
-  constructor(message: string, status: number, invalid = false) {
+  constructor(message: string, status: number, invalid = false, body: unknown = undefined) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.invalid = invalid;
+    this.body = body;
+  }
+
+  /** `error.code` from an `{ ok: false, error: { code } }` body, if any. */
+  get code(): string | undefined {
+    const err = (this.body as { error?: { code?: unknown } } | undefined)?.error;
+    return typeof err?.code === 'string' ? err.code : undefined;
   }
 }
 
@@ -37,7 +46,15 @@ async function request<S extends z.ZodType>(
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     throw new ApiError(`Network error for ${url}`, 0);
   }
-  if (!res.ok) throw new ApiError(`${init.method ?? 'GET'} ${url} → ${res.status}`, res.status);
+  if (!res.ok) {
+    let errorBody: unknown;
+    try {
+      errorBody = await res.json();
+    } catch {
+      errorBody = undefined;
+    }
+    throw new ApiError(`${init.method ?? 'GET'} ${url} → ${res.status}`, res.status, false, errorBody);
+  }
 
   let body: unknown;
   try {

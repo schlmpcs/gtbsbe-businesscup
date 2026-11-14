@@ -10,7 +10,13 @@ export function toVMError(err: unknown): VMError {
   }
   if (err instanceof ApiError) {
     if (err.invalid) return { kind: 'invalidResponse' };
-    if (err.status === 404 || err.status === 405 || err.status === 501) return { kind: 'unavailable' };
+    // /api/ai/* error codes ({ ok: false, error: { code, missing? } }).
+    if (err.code === 'nothing_found') return { kind: 'nothingFound' };
+    if (err.code === 'incomplete') {
+      const missing = (err.body as { error?: { missing?: unknown } }).error?.missing;
+      return { kind: 'incomplete', missing: Array.isArray(missing) ? missing.filter((m): m is string => typeof m === 'string') : [] };
+    }
+    if (err.status === 404 || err.status === 405 || err.status === 501 || err.status === 503) return { kind: 'unavailable' };
     if (err.status === 409) return { kind: 'alreadyGuessed' };
     if (err.status === 400 || err.status === 422) return { kind: 'badInput' };
     if (err.status === 429) return { kind: 'rateLimited' };
