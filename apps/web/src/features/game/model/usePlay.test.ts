@@ -8,7 +8,8 @@ import { ANON, setupGameTestEnv, TODAY } from '@/server/game/testUtils';
 import { useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { createRouteFetch } from '@/test/gameRoutes';
-import { createFixtureGameClient, createHttpGameClient, type GameClient } from './client';
+import { createHttpGameClient, type GameClient } from './client';
+import { createFixtureGameClient } from './fixtureClient';
 import { GUESS_DEFAULT, GUESS_MAX, GUESS_MIN } from './constants';
 import { usePlay } from './usePlay';
 

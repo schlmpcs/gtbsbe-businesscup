@@ -7,7 +7,8 @@ import { common, game as t } from '@/copy';
 import { ANON, setupGameTestEnv, TODAY } from '@/server/game/testUtils';
 import { resetClientState } from '@/test/clientState';
 import { createRouteFetch } from '@/test/gameRoutes';
-import { createFixtureGameClient, createHttpGameClient, type GameClient } from './model/client';
+import { createHttpGameClient, type GameClient } from './model/client';
+import { createFixtureGameClient } from './model/fixtureClient';
 import { usePlay } from './model/usePlay';
 import { PlayScreen } from './ui/PlayScreen';
 

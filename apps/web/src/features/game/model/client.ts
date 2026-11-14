@@ -1,22 +1,17 @@
 // Game data source with two implementations behind one interface:
 // - http: the T5 routes (docs/ARCHITECTURE.md → Server routes). The server holds the answers,
 //   records opened clues, scores the guess and keeps the one result per card.
-// - fixtures: the same contract computed in the browser from the fixture cards with the real
-//   engine (sceneOf + costOfLife + scoreGuess), so the game plays without a server.
-// Pick one with NEXT_PUBLIC_GAME_SOURCE=fixtures|api (default fixtures; see lib/config).
-import { costOfLife, sceneOf, scoreGuess } from '@lifeguessr/engine';
-import type { ClueId, ClueReveal, GuessReveal, LifeCard, Money, PublicCard } from '@lifeguessr/types';
-import { cardsSample } from '@/fixtures';
+// - fixtures (./fixtureClient): the same contract computed in the browser from the fixture cards
+//   with the real engine (sceneOf + costOfLife + scoreGuess), so the game plays without a server.
+// Pick one with NEXT_PUBLIC_GAME_SOURCE=fixtures|api (default fixtures; see lib/config). The fixture
+// client holds the answers, so this module never imports it statically: see loadFixtureClient.
+import type { ClueId, ClueReveal, Money, PublicCard } from '@lifeguessr/types';
 import {
   ClueRevealSchema, DailyResponseSchema, GuessReplySchema, type DailyProgress, type PlayedGuess,
 } from '@/lib/api/gameSchemas';
-import { ApiError, getJson, postJson } from '@/lib/api/http';
-import { areaForZip } from '@/lib/areas';
+import { getJson, postJson } from '@/lib/api/http';
 import { gameSource, type GameSource } from '@/lib/config';
-import { dayNumber } from '@/lib/dates';
-import { readStorage, writeStorage } from '@/lib/safeStorage';
 import { getAnonId } from '@/state/anonId';
-import { CARDS_PER_DAY } from './constants';
 
 export type { DailyProgress, PlayedGuess } from '@/lib/api/gameSchemas';
 
@@ -75,112 +70,38 @@ export function createHttpGameClient(opts: { anonId?: () => string; base?: strin
   };
 }
 
-// ----- fixtures ---------------------------------------------------------------------------------
+// ----- source selection --------------------------------------------------------------------------
 
-/** The fixture "server" log (opened clues and results), kept per day so a reload can't reset clues. */
-type FixtureLog = {
-  date: string;
-  cardIds: string[];
-  clues: Record<string, ClueId[]>;
-  results: Record<string, GuessReveal>;
-  /** The amount each result scored. */
-  guesses: Record<string, Money>;
-};
+/**
+ * Loads the fixture game client, or null in an API build. Next inlines NEXT_PUBLIC_GAME_SOURCE at
+ * build time, so in a build with NEXT_PUBLIC_GAME_SOURCE=api the test below is the constant
+ * `"api" === "api"` and the bundler drops the import() branch: ./fixtureClient and the sample cards
+ * it plays (the fixture game's answers) get no browser chunk at all. Keep the env read inline here;
+ * behind a function call the bundler could not see the constant. CI builds in API mode and checks
+ * the chunks (apps/web/scripts/check-client-bundle.mjs).
+ */
+const loadFixtureClient: (() => Promise<{ createFixtureGameClient: () => GameClient }>) | null =
+  process.env.NEXT_PUBLIC_GAME_SOURCE === 'api' ? null : () => import('./fixtureClient');
 
-export const FIXTURE_LOG_KEY = 'lifeguessr.fixtureGame';
-
-/** The day's cards: `count` consecutive fixture cards starting at a date-seeded offset. */
-export function fixtureDailyCards(date: string, cards: readonly LifeCard[] = cardsSample, count = CARDS_PER_DAY): LifeCard[] {
-  if (cards.length === 0) return [];
-  const start = ((dayNumber(date) % cards.length) + cards.length) % cards.length;
-  return Array.from({ length: Math.min(count, cards.length) }, (_, i) => cards[(start + i) % cards.length]!);
-}
-
-export function createFixtureGameClient(opts: { cards?: readonly LifeCard[]; persist?: boolean } = {}): GameClient {
-  const cards = opts.cards ?? cardsSample;
-  const persist = opts.persist ?? true;
-  let log: FixtureLog | null = null;
-
-  const save = () => {
-    if (persist && log) writeStorage(FIXTURE_LOG_KEY, JSON.stringify(log));
-  };
-  const restore = (date: string): FixtureLog | null => {
-    if (!persist) return null;
-    try {
-      const saved = JSON.parse(readStorage(FIXTURE_LOG_KEY) ?? 'null') as FixtureLog | null;
-      if (saved && saved.date === date && Array.isArray(saved.cardIds)) {
-        // Results went through JSON: Infinity became null.
-        for (const r of Object.values(saved.results ?? {})) r.result.logError ??= Number.POSITIVE_INFINITY;
-        return { date, cardIds: saved.cardIds, clues: saved.clues ?? {}, results: saved.results ?? {}, guesses: saved.guesses ?? {} };
-      }
-    } catch {
-      // corrupt log: start the day fresh
-    }
-    return null;
-  };
-
-  const resolve = (cardId: string) => {
-    if (!log || !log.cardIds.includes(cardId)) throw new ApiError(`Card ${cardId} is not in today's set`, 404);
-    const card = cards.find((c) => c.id === cardId);
-    const area = card ? areaForZip(card.zip) : null;
-    if (!card || !area) throw new ApiError(`No fixture data for card ${cardId}`, 404);
-    return { card, area };
-  };
-
+/** A client whose implementation loads on first use; a failed load (e.g. a chunk error) is retried on the next call. Exported for tests. */
+export function lazyGameClient(source: GameSource, load: () => Promise<GameClient>): GameClient {
+  let pending: Promise<GameClient> | null = null;
+  const get = () =>
+    (pending ??= load().catch((err: unknown) => {
+      pending = null;
+      throw err;
+    }));
   return {
-    source: 'fixtures',
-    async daily(today) {
-      const set = fixtureDailyCards(today, cards);
-      // The day's log: this client's own (a second daily() is a reload), else the saved one.
-      log = (log?.date === today ? log : null) ?? restore(today)
-        ?? { date: today, cardIds: set.map((c) => c.id), clues: {}, results: {}, guesses: {} };
-      save();
-      const scenes = new Map(set.map((c) => {
-        const area = areaForZip(c.zip);
-        if (!area) throw new ApiError(`No fixture AreaData for ZIP ${c.zip}`, 404);
-        return [c.id, sceneOf(c, area)] as const;
-      }));
-      const progress: DailyProgress = { clues: {}, guesses: {} };
-      for (const [cardId, opened] of Object.entries(log.clues)) {
-        const scene = scenes.get(cardId);
-        if (scene) progress.clues[cardId] = opened.map((clue) => scene.clues[clue]);
-      }
-      for (const [cardId, reveal] of Object.entries(log.results)) {
-        const guess = log.guesses[cardId];
-        if (guess !== undefined) progress.guesses[cardId] = { guess, reveal };
-      }
-      return { date: today, cards: set.map((c) => scenes.get(c.id)!.public), progress };
-    },
-    async clue(cardId, clue) {
-      const { card, area } = resolve(cardId);
-      const opened = log!.clues[cardId] ?? [];
-      // Like the server: clues opened after the guess don't change the score.
-      if (!log!.results[cardId] && !opened.includes(clue)) log!.clues[cardId] = [...opened, clue];
-      save();
-      return sceneOf(card, area).clues[clue];
-    },
-    async guess(cardId, guess) {
-      const { card, area } = resolve(cardId);
-      const done = log!.results[cardId];
-      // One guess per card: repeat the stored result and the amount it scored.
-      if (done) return { guess: log!.guesses[cardId] ?? guess, reveal: done };
-      const cluesOpened = log!.clues[cardId] ?? [];
-      const cost = costOfLife(card, area);
-      const reveal: GuessReveal = {
-        resultId: `fixture-${log!.date}-${cardId}`,
-        cost,
-        result: scoreGuess(guess, cost, cluesOpened.length),
-        card,
-        cluesOpened,
-      };
-      log!.results[cardId] = reveal;
-      log!.guesses[cardId] = guess;
-      save();
-      return { guess, reveal };
-    },
+    source,
+    daily: async (today) => (await get()).daily(today),
+    clue: async (cardId, clue, date) => (await get()).clue(cardId, clue, date),
+    guess: async (cardId, guess, date) => (await get()).guess(cardId, guess, date),
   };
 }
 
 export function createGameClient(source: GameSource = gameSource()): GameClient {
-  return source === 'api' ? createHttpGameClient() : createFixtureGameClient();
+  if (source === 'api') return createHttpGameClient();
+  const load = loadFixtureClient;
+  if (!load) throw new Error('This build plays the server game (NEXT_PUBLIC_GAME_SOURCE=api); it has no fixture game.');
+  return lazyGameClient('fixtures', async () => (await load()).createFixtureGameClient());
 }

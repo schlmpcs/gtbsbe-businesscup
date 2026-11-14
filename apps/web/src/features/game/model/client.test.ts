@@ -2,11 +2,12 @@ import { costOfLife, scoreGuess } from '@lifeguessr/engine';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getArea } from '@lifeguessr/data/areas';
 import { dailyCards } from '@lifeguessr/data/cards';
-import { cardById, cardsSample } from '@/fixtures';
+import { cardById, cardsSample } from '@/fixtures/cards';
 import { dayNumber } from '@/lib/dates';
 import { ANON, setupGameTestEnv, TODAY } from '@/server/game/testUtils';
 import { createRouteFetch } from '@/test/gameRoutes';
-import { createFixtureGameClient, createGameClient, createHttpGameClient, fixtureDailyCards } from './client';
+import { createGameClient, createHttpGameClient, lazyGameClient } from './client';
+import { createFixtureGameClient, fixtureDailyCards } from './fixtureClient';
 
 const DATE = '2026-11-14';
 const ID = '11111111-2222-4333-8444-555555555555';
@@ -105,6 +106,41 @@ describe('http game client', () => {
   it('is what createGameClient builds for NEXT_PUBLIC_GAME_SOURCE=api', () => {
     expect(createGameClient('api').source).toBe('api');
     expect(createGameClient('fixtures').source).toBe('fixtures');
+  });
+});
+
+describe('createGameClient source selection', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('loads the fixture game on first use and plays the same set', async () => {
+    const lazy = createGameClient('fixtures');
+    const set = await lazy.daily(DATE);
+    expect(set.cards.map((c) => c.id)).toEqual(fixtureDailyCards(DATE).map((c) => c.id));
+    const { reveal } = await lazy.guess(set.cards[0]!.id, 3000);
+    expect(reveal.card.id).toBe(set.cards[0]!.id);
+  });
+
+  it('has no fixture game in an API build (NEXT_PUBLIC_GAME_SOURCE=api at build time)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_GAME_SOURCE', 'api');
+    vi.resetModules();
+    const fresh = await import('./client');
+    expect(fresh.createGameClient().source).toBe('api');
+    expect(() => fresh.createGameClient('fixtures')).toThrow(/NEXT_PUBLIC_GAME_SOURCE=api/);
+  });
+
+  it('retries a failed load (a chunk error) on the next call', async () => {
+    const real = createFixtureGameClient({ persist: false });
+    const load = vi.fn<() => Promise<typeof real>>()
+      .mockRejectedValueOnce(new Error('ChunkLoadError'))
+      .mockResolvedValue(real);
+    const lazy = lazyGameClient('fixtures', load);
+    await expect(lazy.daily(DATE)).rejects.toThrow('ChunkLoadError');
+    expect((await lazy.daily(DATE)).cards).toHaveLength(5);
+    await lazy.clue((await lazy.daily(DATE)).cards[0]!.id, 'garage');
+    expect(load).toHaveBeenCalledTimes(2); // loaded once after the failure, then reused
   });
 });
 

@@ -1,7 +1,8 @@
 import { costOfLife } from '@lifeguessr/engine';
 import type { LifeCard, Source } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
-import { areaByZip, cardsSample } from '@/fixtures';
+import { areaByZip } from '@/fixtures';
+import { cardsSample } from '@/fixtures/cards';
 import { GUESS_MAX, GUESS_MIN } from './constants';
 import { aggregateCategories, buildDay, buildReveal, cardFacts, clueCostOf, clueFacts, clueMultiplier, revealScale } from './derive';
 import type { CostItemVM } from './types';
