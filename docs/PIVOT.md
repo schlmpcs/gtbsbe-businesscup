@@ -81,7 +81,7 @@ Every step must leave the live link working.
 
 1. Scan the QR code, play one home of the daily game (30 s). Guess your own month.
 2. Three sliders → the Dashboard shows your net worth and this month.
-3. Plan: the line to age 90. Add "Buy a home" in 2029: the mortgage, tax and insurance come from data for your area, and the line drops.
+3. Plan: the line to age 90. Add "Buy a home" in 2033: the mortgage, tax and insurance come from data for your area, and the line drops.
 4. Next Moves: the top move and its dollar effect.
 5. Chance of success: 1,000 paths, the success %; change the seed and get the same result with "fixed seed" on.
 6. Upload the sample CSV → Transactions, Cash Flow Sankey, Budget planned vs actual.

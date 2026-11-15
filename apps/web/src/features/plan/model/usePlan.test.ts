@@ -28,17 +28,26 @@ describe('usePlan', () => {
   it('shows the four KPI cards from the fixture plan, formatted, with tones and tooltips', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     const vm = ready(result.current);
-    // plan.demo.json kpis: netWorthEndOfYear −3,104.48; atRetirement (age 67) 782,333.56; atEnd (age 90)
-    // 854,847.73; shortfall at age 35 (the 2029 home's $123,080 down payment is more than the cash then, so
-    // the plan runs short from 2029 on while the home's equity keeps net worth up).
+    // plan.demo.json kpis: netWorthEndOfYear −3,102.91; atRetirement (age 67) 936,904.28; atEnd (age 90)
+    // 1,138,569.22; shortfallAge null (the 2033 home's $75,000 down payment is covered by cash and
+    // investments, so the plan never runs short: "Past 90").
     expect(vm.kpis.map((k) => [k.id, k.value, k.tone])).toEqual([
-      ['netWorthEndOfYear', '−$3,104', 'bad'],
-      ['netWorthAtRetirement', '$782,334', 'good'],
-      ['netWorthAtEnd', '$854,848', 'good'],
-      ['shortfall', 'Age 35', 'bad'],
+      ['netWorthEndOfYear', '−$3,103', 'bad'],
+      ['netWorthAtRetirement', '$936,904', 'good'],
+      ['netWorthAtEnd', '$1,138,569', 'good'],
+      ['shortfall', 'Past 90', 'good'],
     ]);
     expect(vm.kpis.every((k) => k.tooltip.length > 0 && k.tooltipKey === k.id)).toBe(true);
     expect(vm.disclaimer).toMatch(/educational simulation/i);
+  });
+
+  it('the shortfall card names the age the plan runs short: the Compare pair (Baseline + a kid) at 39', () => {
+    // scenario.alt.json adds a kid in 2030: 840.67 of childcare + 850 of other costs = 1,690.67 a month, more
+    // than the month's surplus, so cash, investments and retirement are drawn down from 2030 and the
+    // $75,000 down payment in 2033 runs past them: shortfall from age 32 + (2033 − 2026) = 39 (plan() output).
+    const { result } = renderHook(() => usePlan('with-kid'));
+    const shortfall = ready(result.current).kpis.find((k) => k.id === 'shortfall')!;
+    expect([shortfall.value, shortfall.tone, shortfall.raw]).toEqual(['Age 39', 'bad', 39]);
   });
 
   it('builds the chart, its event markers and x ticks, and the three tables', () => {
@@ -46,11 +55,11 @@ describe('usePlan', () => {
     const vm = ready(result.current);
     // 2026 (age 32) to 2084 (age 90) = 59 plan years.
     expect(vm.chart.points).toHaveLength(59);
-    expect(vm.chart.points[0]).toMatchObject({ year: 2026, age: 32, netWorthLabel: '−$3,104', belowZero: true });
-    expect(vm.chart.points[0]!.netWorth).toBeCloseTo(-3104.48, 2);
-    expect(vm.chart.points[1]!.belowZero).toBe(false); // 2027: 13,895.85
+    expect(vm.chart.points[0]).toMatchObject({ year: 2026, age: 32, netWorthLabel: '−$3,103', belowZero: true });
+    expect(vm.chart.points[0]!.netWorth).toBeCloseTo(-3102.91, 2);
+    expect(vm.chart.points[1]!.belowZero).toBe(false); // 2027: 14,042.21
     expect(vm.chart.markers.map((m) => [m.id, m.year, m.icon]).sort()).toEqual([
-      ['ev-buy-home', 2029, 'home'],
+      ['ev-buy-home', 2033, 'home'],
       ['ev-retire', 2061, 'beach'],
       ['ev-social-security', 2061, 'shield'],
     ]);
@@ -61,8 +70,9 @@ describe('usePlan', () => {
     expect(vm.tables.accounts.rows).toHaveLength(59);
     expect(vm.tables.accounts.columns.map((c) => c.name)).toContain('Checking');
     // Today's $1,300 in checking, in today's dollars at the end of December (2 months from asOf November):
-    // 1,300 ÷ 1.03^(2/12) = 1,293.61.
-    expect(vm.tables.accounts.rows[0]!.cells['checking-1']).toMatchObject({ start: '$1,294', end: '$1,942' });
+    // 1,300 ÷ 1.03^(2/12) = 1,293.61. Cash gets 30% of the 2026 net of 1,874.65 (below), shared by balance:
+    // 1,874.65 × 0.3 × 1,300 / 3,800 = 192.40 to checking; with 6.63 of cash yield it ends at 1,492.63.
+    expect(vm.tables.accounts.rows[0]!.cells['checking-1']).toMatchObject({ start: '$1,294', deposits: '$192', end: '$1,493' });
     // The home and its mortgage are rows of the account table, named after the event.
     expect(vm.tables.accounts.columns.filter((c) => c.accountId.startsWith('ev-buy-home:')).map((c) => [c.name, c.group]))
       .toEqual([['Home', 'realEstate'], ['Mortgage', 'mortgage']]);
@@ -75,9 +85,9 @@ describe('usePlan', () => {
       ['Spending', '$7,283'], ['Debt payments', '$1,204'], ['One-time costs and down payments', '$0'],
     ]);
     expect(vm.tables.events.map((e) => [e.id, e.year, e.age])).toEqual([
-      ['ev-buy-home', 2029, 35], ['ev-retire', 2061, 67], ['ev-social-security', 2061, 67],
+      ['ev-buy-home', 2033, 39], ['ev-retire', 2061, 67], ['ev-social-security', 2061, 67],
     ]);
-    expect(vm.tables.events[0]!.summary).toBe('$615,400 home, 20% down'); // 123,080 / 615,400 = 0.2
+    expect(vm.tables.events[0]!.summary).toBe('$375,000 home, 20% down'); // 75,000 / 375,000 = 0.2
   });
 
   it('returns notFound for an unknown scenario', () => {
@@ -121,8 +131,8 @@ describe('usePlan', () => {
     const vm = ready(result.current);
     expect(vm.display.value).toBe('future');
     // Retirement is the end of 2061, 12 × 36 − 10 = 422 months after asOf November 2026:
-    // 782,333.56 × 1.03^(422/12) = 782,333.56 × 2.827759 = 2,212,250.81.
-    expect(vm.kpis[1]!.value).toBe('$2,212,251');
+    // 936,904.28 × 1.03^(422/12) = 936,904.28 × 2.827759 = 2,649,339.57.
+    expect(vm.kpis[1]!.value).toBe('$2,649,340');
   });
 });
 
