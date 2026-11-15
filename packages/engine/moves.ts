@@ -60,6 +60,19 @@ export const MOVE_LEVELS = {
   reshopInsurance: 2,
 } as const satisfies Record<MoveKind, Move['level']>;
 
+/**
+ * Whether a move kind can apply to the profile at all. negotiateRent is for renters only: an owner
+ * (`p.home`, JF4) pays no rent. Every other kind applies to everyone (its own candidate rules decide).
+ */
+export function moveKindApplies(kind: MoveKind, p: Pick<Profile, 'home'>): boolean {
+  return kind !== 'negotiateRent' || !p.home;
+}
+
+/** The level 2 kinds to preview for the profile, in MOVE_KINDS order (negotiateRent only for renters). */
+export function level2KindsFor(p: Pick<Profile, 'home'>): MoveKind[] {
+  return MOVE_KINDS.filter((k) => MOVE_LEVELS[k] === 2 && moveKindApplies(k, p));
+}
+
 /** Categories cutCategory may cut, in tie-break order. */
 export const DISCRETIONARY_CATEGORIES = ['eatingOut', 'subscriptions', 'other'] as const satisfies readonly CostCategory[];
 
@@ -152,7 +165,7 @@ function cancelSubscriptionsCandidate(p: Profile, detected: boolean): MoveCandid
  */
 export function moveCandidates(p: Profile, opts: RankMovesOptions = {}): MoveCandidate[] {
   const done = new Set(p.doneMoveIds);
-  const open = (c: MoveCandidate) => !done.has(c.id);
+  const open = (c: MoveCandidate) => !done.has(c.id) && moveKindApplies(c.kind, p);
   // Per kind: the best open candidate, plus the committed one if it is another of that kind.
   const pick = (list: MoveCandidate[]) => {
     const openList = list.filter(open);

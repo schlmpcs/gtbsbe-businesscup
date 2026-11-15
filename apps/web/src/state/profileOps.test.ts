@@ -1,9 +1,11 @@
 import { cardMinPaymentFor } from '@lifeguessr/engine';
+import { getArea } from '@lifeguessr/data/areas';
 import { COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifeguessr/types';
 import { describe, expect, it } from 'vitest';
 import { cloneProfileDemo } from '@/fixtures';
 import {
-  addDebt, applyUserPatch, mergeStatementHistory, mergeStatementTotals, setSpending, setSubscriptionsLine, skipField, updateDebt,
+  addDebt, applyUserPatch, estimatedMinPayment, mergeStatementHistory, mergeStatementTotals, setHome, setSpending,
+  setSubscriptionsLine, skipField, updateDebt,
 } from './profileOps';
 
 const totals = (over: Partial<Record<CostCategory, number>>): Record<CostCategory, number> =>
@@ -83,5 +85,45 @@ describe('profileOps', () => {
     const a2 = { month: '2026-10', totals: totals({ other: 3 }), oneOffs: [] };
     const merged = mergeStatementHistory([a, b], [a2]);
     expect(merged.map((m) => [m.month, m.totals.other])).toEqual([['2026-09', 2], ['2026-10', 3]]);
+  });
+});
+
+describe('setHome (JF4)', () => {
+  const area = getArea('75206'); // median home $615,400, tax 1.625%/yr, insurance $292.82/mo, 1-bed rent $2,070
+
+  it('own: area-median home, housing line = owner costs; typed value and HOA recompute it; rent puts the old line back', () => {
+    const p = cloneProfileDemo(); // rentUtilities $1,950 measured
+    const owned = setHome(p, 'mortgage', area, {}, null);
+    expect(owned.profile.home).toMatchObject({ tenure: 'mortgage', value: { value: 615_400, isEstimate: true }, hoaMonthly: 0 });
+    // tax 615,400×0.01625/12 = 833.354 + insurance 292.82 + upkeep 615,400×0.01/12 = 512.833 + utilities 4,931/12 = 410.917
+    expect(owned.profile.spending.rentUtilities.value).toBeCloseTo(2049.924, 2);
+    expect(owned.profile.spending.rentUtilities.isEstimate).toBe(true);
+    expect(owned.rentBefore).toEqual({ value: 1950, isEstimate: false });
+
+    const typed = setHome(owned.profile, 'mortgage', area, { value: 400_000, hoaMonthly: 150 }, owned.rentBefore);
+    expect(typed.profile.home?.value).toEqual({ value: 400_000, isEstimate: false });
+    // 541.667 + 292.82 + 333.333 + 150 + 410.917
+    expect(typed.profile.spending.rentUtilities.value).toBeCloseTo(1728.737, 2);
+    expect(typed.rentBefore).toEqual({ value: 1950, isEstimate: false }); // edits keep the rent from before owning
+
+    const outright = setHome(typed.profile, 'outright', area, {}, typed.rentBefore);
+    expect(outright.profile.home).toMatchObject({ tenure: 'outright', value: { value: 400_000, isEstimate: false }, hoaMonthly: 150 });
+
+    const rent = setHome(outright.profile, 'rent', area, {}, outright.rentBefore);
+    expect(rent.profile.home).toBeUndefined();
+    expect('home' in rent.profile).toBe(false);
+    expect(rent.profile.spending.rentUtilities).toEqual({ value: 1950, isEstimate: false });
+    expect(rent.rentBefore).toBeNull();
+  });
+
+  it('rent without a kept line falls back to the area rent for the bedrooms (1 by default), an estimate', () => {
+    const owned = setHome(cloneProfileDemo(), 'outright', area, {}, null).profile;
+    expect(setHome(owned, 'rent', area, {}, null).profile.spending.rentUtilities).toEqual({ value: 2070, isEstimate: true });
+  });
+
+  it('a skipped mortgage payment is amortized over 30 years, not the card formula', () => {
+    // 300,000 at 6.5%: r = 0.065/12, P·r / (1 − (1+r)^−360) = 1,896.20
+    expect(estimatedMinPayment(300_000, 0.065, 'mortgage')).toBeCloseTo(1896.2, 1);
+    expect(estimatedMinPayment(3_000, 0.2, 'card')).toBe(cardMinPaymentFor(3_000, 0.2));
   });
 });

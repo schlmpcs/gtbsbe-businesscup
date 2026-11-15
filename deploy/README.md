@@ -94,13 +94,15 @@ These runners execute pull-request code, so they are kept away from production:
 
 - They run as their own user (`lgci` on the team server), which is not in the `docker` group. Its
   jobs use that user's rootless Docker (`docker.service`, a user unit), which cannot see or touch
-  the live app's containers, its volumes or `lgrunner`'s `.env`. Published ports bind to
-  `127.0.0.1` only.
+  the live app's containers, its volumes or `lgrunner`'s `.env`. Its default bind address is
+  `127.0.0.1` (`~/.config/docker/daemon.json`), and CI's own containers bind there explicitly.
 - All of that user's processes, its Docker and the jobs' containers share one cgroup capped at
   12 CPU threads and 16 GB of memory, so a busy CI run cannot starve the live app.
 - Each runner exports its own `E2E_PORT` (runner `n` uses `3100+n`), and each job's Postgres
-  service publishes a random port, so parallel jobs never collide. Playwright runs 4 workers per
-  job.
+  (`.github/scripts/ci-postgres.sh`) listens on `127.0.0.1:5100+n`, so parallel jobs never collide.
+  CI does not use `services:` containers: under rootless Docker their "random" host port can clash
+  with a port the host already uses, and on the per-job network GitHub creates they were published
+  on `0.0.0.0`. Playwright runs 4 workers per job.
 - Once the repo is public, the "Require approval for all outside collaborators" setting above
   matters for these runners too: without it a fork's pull request runs on the server.
 

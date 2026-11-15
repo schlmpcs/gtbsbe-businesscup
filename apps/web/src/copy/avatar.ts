@@ -52,7 +52,7 @@ export const avatar = {
     unavailable: 'Avatar storage is unavailable. Try again later.',
   } as Record<string, string>,
   rules:
-    'Avatar amounts are rounded after calculation: balances to $1,000 below $100,000 and $5,000 above, monthly costs to $50, rent share to 5 percentage points. Net worth is cash plus retirement minus debts. Inputs outside the publishing bounds are refused. Pick statistics require at least 20 completed picks; they are not available yet.',
+    'Avatar amounts are rounded after calculation: balances to $1,000 below $100,000 and $5,000 above, monthly costs to $50, rent share to 5 percentage points. Net worth is cash plus retirement plus the value of a home you own, minus debts. Inputs outside the publishing bounds are refused. Pick statistics require at least 20 completed picks; they are not available yet.',
   keep: 'Published avatar: age band, metro, rounded net worth, monthly cost, rent share, debt total, car, children and adults. Stored on the server until you unpublish or it expires.',
   manage: 'Manage or unpublish your avatar',
 } as const;

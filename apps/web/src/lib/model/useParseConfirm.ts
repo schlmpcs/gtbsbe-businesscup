@@ -1,19 +1,26 @@
 // Free text → /api/ai/parse → show the parsed values → apply only after the user confirms.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isEmptyParse, parseText, type ParseKind, type ParseOptions, type ParseResult, type ParseValueOf } from '@/lib/api/aiParse';
+import { parseImage, type ImageParseKind } from '@/lib/api/aiParseImage';
 import { getAnonId } from '@/state/anonId';
 import { toVMError } from './errors';
 import type { ParseConfirmVM, VMError } from './types';
 
 /** The text parser (swappable in tests). */
 export type ParseFn = <K extends ParseKind>(kind: K, text: string, opts: ParseOptions) => Promise<ParseResult<K>>;
+/** The screenshot parser (swappable in tests); only kinds the image route reads (JF9: 'loan'). */
+export type ParseImageFn = (kind: 'loan', file: File, opts: { anonId?: string; signal?: AbortSignal }) => Promise<ParseValueOf['loan']>;
+
+const IMAGE_KINDS: readonly ParseKind[] = ['loan'] satisfies ImageParseKind[];
 
 export function useParseConfirm<K extends ParseKind>(
   kind: K,
   onConfirm: (value: ParseValueOf[K]) => void,
-  opts: { parse?: ParseFn; debts?: ParseOptions['debts'] } = {},
+  opts: { parse?: ParseFn; parseImage?: ParseImageFn; debts?: ParseOptions['debts'] } = {},
 ): ParseConfirmVM<ParseValueOf[K]> {
   const parse = opts.parse ?? parseText;
+  const readImage = opts.parseImage ?? (parseImage as ParseImageFn);
+  const [fromImage, setFromImage] = useState(false);
   const [text, setText] = useState('');
   const [status, setStatus] = useState<ParseConfirmVM<ParseValueOf[K]>['status']>('idle');
   const [parsed, setParsed] = useState<ParseResult<K> | null>(null);
@@ -43,6 +50,7 @@ export function useParseConfirm<K extends ParseKind>(
           return;
         }
         setParsed(result);
+        setFromImage(false);
         setStatus('confirming');
       },
       (err: unknown) => {
@@ -52,6 +60,33 @@ export function useParseConfirm<K extends ParseKind>(
       },
     );
   }, [kind, parse, status, text]);
+
+  const submitFile = useCallback(
+    (file: File) => {
+      if (status === 'parsing') return;
+      abort.current?.abort();
+      const controller = new AbortController();
+      abort.current = controller;
+      setStatus('parsing');
+      setError(null);
+      setParsed(null);
+      readImage('loan', file, { anonId: getAnonId(), signal: controller.signal }).then(
+        (value) => {
+          if (controller.signal.aborted) return;
+          // Every value came off the image: none is "inferred", the UI asks to check them all.
+          setParsed({ value: value as ParseValueOf[K], inferred: [] });
+          setFromImage(true);
+          setStatus('confirming');
+        },
+        (err: unknown) => {
+          if (controller.signal.aborted) return;
+          setError(toVMError(err));
+          setStatus('error');
+        },
+      );
+    },
+    [readImage, status],
+  );
 
   const confirm = useCallback(() => {
     if (status !== 'confirming' || parsed === null) return;
@@ -69,7 +104,8 @@ export function useParseConfirm<K extends ParseKind>(
   }, []);
 
   return {
-    text, status, error, setText, submit, confirm, cancel,
+    text, status, error, setText, submit, confirm, cancel, fromImage,
+    ...(IMAGE_KINDS.includes(kind) ? { submitFile } : {}),
     parsed: parsed?.value ?? null,
     inferred: parsed?.inferred ?? [],
   };

@@ -1,11 +1,14 @@
 // Pure Profile updates the client makes on the user's behalf. Values the user states are measured
 // (`isEstimate: false`); values we fill in stay estimates. None of these invent a number: they
 // copy user input or measured statement totals, and averages of those totals.
-import { applyPatch, cardMinPaymentFor, statementAverages } from '@lifeguessr/engine';
+import {
+  amortizedPayment, applyPatch, cardMinPaymentFor, debtTermMonthsDefault, defaultHome, inflationAnnualOf, ownerCosts,
+  statementAverages,
+} from '@lifeguessr/engine';
 import {
   COST_CATEGORIES, LifeEventSchema, MAX_LIFE_EVENTS,
-  type CategoryTotals, type CostCategory, type Debt, type LifeEvent, type LifeEventPreset, type Money, type Profile,
-  type ProfilePatch, type Rate, type YearMonth,
+  type AreaData, type CategoryTotals, type CostCategory, type Debt, type Estimate, type Home, type HomeTenure, type LifeEvent,
+  type LifeEventPreset, type Money, type Profile, type ProfilePatch, type Rate, type YearMonth,
 } from '@lifeguessr/types';
 
 /** Scalar Profile fields the balance sheet edits. */
@@ -56,11 +59,14 @@ export function applyUserPatch(p: Profile, patch: ProfilePatch): Profile {
 
 /**
  * Today's estimate of a skipped minimum payment: the card issuer formula (interest + 1% of the
- * balance, floor $25; engine `cardMinPaymentFor`). It is the only payment assumption the engine
- * has, so other loan kinds use it too until the user types their payment; it stays an estimate.
+ * balance, floor $25; engine `cardMinPaymentFor`), used for every kind but a mortgage until the user
+ * types their payment. A mortgage (JF4) is amortized over the default 30-year term instead (the card
+ * formula would ask $4,600 a month on $300,000). It stays an estimate.
  */
-export function estimatedMinPayment(balance: Money, apr: Rate): Money {
-  return cardMinPaymentFor(balance, apr);
+export function estimatedMinPayment(balance: Money, apr: Rate, kind?: Debt['kind']): Money {
+  return kind === 'mortgage'
+    ? amortizedPayment(balance, apr, debtTermMonthsDefault.value.mortgage)
+    : cardMinPaymentFor(balance, apr);
 }
 
 /** A new debt id for a kind that is unique in the profile: 'card-2', 'student-1', ... */
@@ -78,7 +84,7 @@ export type DebtInput = { kind: Debt['kind']; balance: Money; apr: Rate; minPaym
 function debtFrom(id: string, input: DebtInput, extraPayment?: Money): Debt {
   const minPayment =
     input.minPayment === null
-      ? { value: estimatedMinPayment(input.balance, input.apr), isEstimate: true }
+      ? { value: estimatedMinPayment(input.balance, input.apr, input.kind), isEstimate: true }
       : measured(input.minPayment);
   return { id, kind: input.kind, balance: input.balance, apr: input.apr, minPayment, ...(extraPayment ? { extraPayment } : {}) };
 }
@@ -96,6 +102,54 @@ export function updateDebt(p: Profile, id: string, input: DebtInput): Profile {
 
 export function removeDebt(p: Profile, id: string): Profile {
   return { ...p, debts: p.debts.filter((d) => d.id !== id) };
+}
+
+// ----- Home (JF4, #136) ----------------------------------------------------------------------------
+
+/** Home fields the user types on S8; each becomes measured. */
+export type HomeInput = { value?: Money; hoaMonthly?: Money; appreciation?: Rate };
+
+/** The housing line of an owner: `ownerCosts(home, area).total`, an estimate unless every line is measured. */
+export function ownerHousingLine(home: Home, area: AreaData | null): Estimate<Money> {
+  const costs = ownerCosts(home, area ?? undefined);
+  return { value: costs.total, isEstimate: costs.lines.some((l) => l.isEstimate) };
+}
+
+/** The rent a renter starts from in this area: HUD gross rent for their bedrooms (S6 default: 1), an estimate. */
+export function areaRentLine(p: Profile, area: AreaData | null): Estimate<Money> | null {
+  if (!area) return null;
+  const bedrooms = p.householdFacts?.bedrooms ?? 1;
+  return { value: area.rentByBedrooms[bedrooms].value, isEstimate: true };
+}
+
+/**
+ * Rent or own (S8 "Your home"). Owning keeps the current home with the new tenure, else starts from
+ * `defaultHome` (area median value and appreciation, estimates); typed fields in `input` become
+ * measured; the housing line becomes the owner costs. Renting drops `home` and puts back the rent:
+ * `rentBefore` (the line as it was before owning, which may be the person's own number), else the
+ * area's default rent, else the line as it is. Returns the rent to keep for a later switch back.
+ */
+export function setHome(
+  p: Profile, tenure: HomeTenure, area: AreaData | null, input: HomeInput, rentBefore: Estimate<Money> | null,
+): { profile: Profile; rentBefore: Estimate<Money> | null } {
+  if (tenure === 'rent') {
+    if (!p.home) return { profile: p, rentBefore };
+    const { home: _home, ...rest } = p;
+    const rent = rentBefore ?? areaRentLine(p, area) ?? p.spending.rentUtilities;
+    return { profile: { ...rest, spending: { ...p.spending, rentUtilities: { ...rent } } }, rentBefore: null };
+  }
+  const base = p.home ? { ...p.home, tenure } : defaultHome(tenure, area ?? undefined, inflationAnnualOf(area))!;
+  const home: Home = {
+    ...base,
+    ...(input.value !== undefined ? { value: measured(input.value) } : {}),
+    ...(input.appreciation !== undefined ? { appreciation: measured(input.appreciation) } : {}),
+    ...(input.hoaMonthly !== undefined ? { hoaMonthly: input.hoaMonthly } : {}),
+  };
+  return {
+    profile: { ...p, home, spending: { ...p.spending, rentUtilities: ownerHousingLine(home, area) } },
+    // The rent is kept from the moment the person starts owning, not overwritten by later edits.
+    rentBefore: p.home ? rentBefore : { ...p.spending.rentUtilities },
+  };
 }
 
 /** Months merged into the stored history: one entry per month (the newest upload wins), oldest first. */

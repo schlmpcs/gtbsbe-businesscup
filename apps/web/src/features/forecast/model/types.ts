@@ -7,11 +7,13 @@ import type {
   LifeEventKind, LifeEventPreset, Money, Move, MoveKind, Profile, Rate, Source, YearMonth,
 } from '@lifeguessr/types';
 import type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
+import type { SourcedValue } from '@/lib/model/home';
 import type { FoldedNote, LifeEventCategory, ProfileOrigin } from '@/state';
 import type { SpendSummaryVM } from '@/features/spend/model/types';
 import type { NextBillVM } from '@/features/bills/model/types';
 
 export type { EstimatedField, EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
+export type { SourcedValue } from '@/lib/model/home';
 export type { FoldedNote, LifeEventCategory, ProfileOrigin } from '@/state';
 export type { SpendSummaryVM } from '@/features/spend/model/types';
 export type {
@@ -279,6 +281,12 @@ export type FutureVM = NextMovesVM & {
    * beyond 10 years, whatever horizon is picked). Null when the engine cannot run.
    */
   why: { takeHome: number; outflow: number; cashOutMonth: number | null } | null;
+  /**
+   * JF4: the home the person owns, which the forecast counts in net worth (value today, growing at
+   * `appreciation` a year), each with its estimate flag and source. Null while renting. Also tells the
+   * screen to label the housing line as owner costs, not rent.
+   */
+  home: { value: SourcedValue<Money>; appreciation: SourcedValue<Rate> } | null;
 };
 
 /** Two plain sentences about a move. `fromAi` = written by the model, else the server's template. */

@@ -32,7 +32,7 @@ import { BASE_FORECAST_ID, type ForecastRequest } from './schemas';
  * `PROMPT_FINGERPRINT` is a safety net under it for the system prompt and the output schema (it
  * does not cover the request text built in `forecastPrompt` or `retryContent`: bump for those).
  */
-export const PROMPT_VERSION = 4;
+export const PROMPT_VERSION = 5;
 
 /**
  * Timeout of the first model call. Measured 2026-11-14 with the demo profile: Claude Opus 5.5 at
@@ -94,7 +94,7 @@ export function forecastOutputFormat() {
 const SYSTEM = `You are the forecaster inside an educational budget simulator for US adults. You estimate how a person's net worth could develop over the next 10 years. This is an educational simulation, not financial advice: do not recommend lenders, investments or securities, and add no commentary.
 
 Rules:
-- Net worth = cash + retirement balance − all debt balances. It can be negative when debts exceed assets. Today's value is given; you forecast the end of each year, years 1 through 10 only. Do not return year 0.
+- Net worth = cash + retirement balance + the home's value (only when a "home" is given) − all debt balances. It can be negative when debts exceed assets. Today's value is given; you forecast the end of each year, years 1 through 10 only. Do not return year 0.
 - Use nominal US dollars (not adjusted for inflation), written as plain dollar amounts, never in thousands or millions.
 - For every year give low, mid and high, with low ≤ mid ≤ high. mid is your best estimate.
 - Answer shape: for each id, "years" holds exactly 10 entries, for years 1 to 10 in order; each entry is [low, mid, high], three plain dollar numbers.
@@ -125,6 +125,14 @@ export const PROMPT_FINGERPRINT: string = promptFingerprint(SYSTEM, forecastOutp
 export const EVENTS_FACT_LINE =
   '"events" are changes the person expects, in today\'s dollars (they grow with inflation, or with take-home pay growth for pay, from today like every amount): "startsInMonths" counts months from now; a "pay" or "spending" value replaces the current take-home pay or that spending category from that month on (a scenario\'s patch changes today\'s values, so an event on the same field replaces the patched amount from its month); a "oneOff" happens once in that month, a cost paid from cash or income added to cash.';
 
+/**
+ * The line that tells the model how to read `home` (JF4: the person owns their home; in
+ * `forecastFacts`); sent only when the profile has one. Part of the request text: change it → bump
+ * `PROMPT_VERSION`.
+ */
+export const HOME_FACT_LINE =
+  '"home" is the home the person owns: its "value" is an asset in net worth today and grows by its "appreciation" every year (compounded, nominal); a mortgage on it is one of the "debts" (kind "mortgage"), so its payments pay the balance down and build equity. spending.rentUtilities holds the owner costs (property tax, insurance, upkeep, HOA, utilities), not rent.';
+
 /** A rate as the decimal the data uses, with the percent next to it for the reader: `0.0345 (3.45%)`. */
 const rateText = (rate: Rate): string => `${rate} (${+(rate * 100).toFixed(2)}%)`;
 
@@ -146,10 +154,10 @@ export function forecastPrompt(req: ForecastRequest): { system: string; content:
     : `Scenarios. Each is the situation above with its patch applied from today on. A patch sets spending categories to the given monthly amounts, adds extraPayment dollars a month to the debt with that id, replaces that debt's apr, or sets retirementShare, the share of each month's surplus saved for retirement:
 ${req.scenarios.map((s) => `- "${s.id}": ${JSON.stringify(s.patch)}`).join('\n')}`;
 
-  const content = `Situation today. Money is in US dollars: amounts are per month, balances are as of today. Rates are decimals per year (0.2436 = 24.36%). "isEstimate": true marks a guess, false an exact value. spending.debtPayments is informational only: debt payments come from "debts" (minPayment plus any extraPayment), so do not count them twice.${facts.events ? `\n${EVENTS_FACT_LINE}` : ''}
+  const content = `Situation today. Money is in US dollars: amounts are per month, balances are as of today. Rates are decimals per year (0.2436 = 24.36%). "isEstimate": true marks a guess, false an exact value. spending.debtPayments is informational only: debt payments come from "debts" (minPayment plus any extraPayment), so do not count them twice.${facts.home ? `\n${HOME_FACT_LINE}` : ''}${facts.events ? `\n${EVENTS_FACT_LINE}` : ''}
 ${JSON.stringify(facts)}
 
-Net worth today (cash + retirement − debts): ${formatMoney(todayNetWorth(req))}.
+Net worth today (cash + retirement${facts.home ? ' + home' : ''} − debts): ${formatMoney(todayNetWorth(req))}.
 
 The simulator's assumptions, for orientation:
 - Inflation ${rateText(rates.inflationAnnual)} a year: prices rise at it.

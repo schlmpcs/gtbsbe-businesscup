@@ -24,14 +24,16 @@ export type DebtFormProps = {
   estimateMinPayment: BalanceSheetVM['estimateMinPayment'];
   onSave: (input: DebtInput) => void;
   onCancel: () => void;
+  /** A line under the title, e.g. "Read from your statement. Check the numbers." */
+  note?: string;
 };
 
-export function DebtForm({ title, kinds, bounds, initial, aprDefaults, estimateMinPayment, onSave, onCancel }: DebtFormProps) {
+export function DebtForm({ title, kinds, bounds, initial, aprDefaults, estimateMinPayment, onSave, onCancel, note }: DebtFormProps) {
   const [draft, setDraft] = useState<Draft>(initial);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
   const aprIsEstimate = draft.apr === null;
   const apr = draft.apr ?? aprDefaults[draft.kind];
-  const minEstimate = draft.balance !== null ? estimateMinPayment(draft.balance, apr) : null;
+  const minEstimate = draft.balance !== null ? estimateMinPayment(draft.balance, apr, draft.kind) : null;
 
   return (
     <form
@@ -44,6 +46,7 @@ export function DebtForm({ title, kinds, bounds, initial, aprDefaults, estimateM
       }}
     >
       <h3 className="text-base font-semibold">{title}</h3>
+      {note && <p className="text-sm text-text-muted">{note}</p>}
       <Stack gap="md">
         <Choice
           legend={t.kindLabel}
