@@ -24,7 +24,7 @@ export default function StartPage() {
       decisionChart={vm.lifeline.status === 'ready' ? (
         <LifeLineChart
           chart={vm.lifeline.chart}
-          drag={{ min: vm.lifeline.slider.min, max: vm.lifeline.slider.max, onAge: vm.lifeline.setAge, hint: lifelineCopy.chart.dragHint }}
+          drag={{ min: vm.lifeline.slider.min, max: vm.lifeline.slider.max, onAge: vm.lifeline.setAge, hint: lifelineCopy.chart.dragHint, showHint: false }}
         />
       ) : null}
       warmup={<DuelWarmup vm={duel} onContinue={vm.finishWarmup} continueLabel={copy.warmup.cta} sticker={copy.warmup.sticker} />}

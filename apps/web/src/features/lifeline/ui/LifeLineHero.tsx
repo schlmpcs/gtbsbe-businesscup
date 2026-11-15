@@ -4,7 +4,7 @@
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { lifeline as t } from '@/copy';
-import { Art, Button, cx, EstimateTag, Icon, type IconName, Sticker } from '@/ui-kit';
+import { Art, Button, cx, EstimateTag, Icon, type IconName, Sticker, useTweenText } from '@/ui-kit';
 import type { LifeLineChartVM, LifeLineKpiVM, LifeLineTone, LifeLineVM } from '../model/types';
 
 type Ready = Extract<LifeLineVM, { status: 'ready' }>;
@@ -147,8 +147,13 @@ const PAD = { l: 64, r: 16, t: 56, b: 34 };
 const MARKER_COLOR = { primary: 'var(--color-primary)', violet: 'var(--color-chart-5)', positive: 'var(--color-positive)' } as const;
 const MARKER_ICON: Record<'home' | 'kid' | 'beach' | 'other', IconName> = { home: 'home', kid: 'kid', beach: 'beach', other: 'spark' };
 
-/** Drag the "Buy a home" pill along the ages (snaps to whole years, clamped to the slider's range). */
-export type LifeLineChartDrag = { min: number; max: number; onAge: (age: number) => void; hint: string };
+/**
+ * Drag the "Buy a home" pill along the ages (snaps to whole years, clamped to the slider's range).
+ * `showHint: false` keeps the hint as the pill's tooltip only (a screen with its own drag affordance).
+ */
+export type LifeLineChartDrag = { min: number; max: number; onAge: (age: number) => void; hint: string; showHint?: boolean };
+/** Below this many px between the plan's age and the picked one, the arrow would be only its head: draw the ring alone. */
+const MIN_ARROW_PX = 28;
 
 /** The Life line chart (also used by the onboarding's decision step). */
 export function LifeLineChart({ chart, drag }: { chart: LifeLineChartVM; drag?: LifeLineChartDrag }) {
@@ -219,23 +224,24 @@ export function LifeLineChart({ chart, drag }: { chart: LifeLineChartVM; drag?: 
       {chart.xTicks.map((tk) => (
         <text key={tk.age} x={x(tk.age)} y={H - 10} textAnchor="middle" className="fill-text-muted text-[12px]">{tk.label}</text>
       ))}
-      {band && <path d={band} fill="var(--color-chart-band)" opacity="0.6" />}
+      {band && <path d={band} fill="var(--color-chart-band)" opacity="0.6" className="ll-tween" />}
       {below && <path d={below} fill="url(#ll-hatch)" />}
       {chart.before && (
         <path d={path(chart.before)} fill="none" stroke="var(--color-chart-6)" strokeWidth="3" strokeDasharray="7 7" strokeLinecap="round" />
       )}
-      <path d={path(chart.selected)} fill="none" stroke="var(--color-primary)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={path(chart.selected)} fill="none" stroke="var(--color-primary)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" className="ll-tween" />
 
       {chart.markers.map((m) => {
         const mx = x(m.age);
         const my = yAt(chart.selected, m.age);
         const top = 22;
         const draggable = Boolean(drag) && m.icon === 'home';
+        // The marker slides to its new age (CSS transform on the group, eased by .ll-tween); inside it x = 0.
         return (
-          <g key={m.id}>
-            <line x1={mx} x2={mx} y1={my} y2={top + 14} stroke={MARKER_COLOR[m.tone]} strokeDasharray="2 4" strokeWidth="1.5" />
+          <g key={m.id} className="ll-tween" style={{ transform: `translate(${mx.toFixed(1)}px, 0px)` }}>
+            <path d={`M0,${my.toFixed(1)} V${top + 14}`} className="ll-tween" fill="none" stroke={MARKER_COLOR[m.tone]} strokeDasharray="2 4" strokeWidth="1.5" />
             <g
-              transform={`translate(${mx},${top})`}
+              transform={`translate(0,${top})`}
               {...(draggable ? {
                 onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp,
                 className: cx('touch-none', dragging ? 'cursor-grabbing' : 'cursor-grab'),
@@ -247,9 +253,9 @@ export function LifeLineChart({ chart, drag }: { chart: LifeLineChartVM; drag?: 
               <rect x={-54} y={-15} width={108} height={30} rx={15} fill={draggable && dragging ? 'var(--color-primary-soft)' : 'var(--color-surface)'} stroke={MARKER_COLOR[m.tone]} strokeWidth={draggable ? 2.5 : 2} />
               <Icon name={MARKER_ICON[m.icon]} x={-44} y={-8} size={16} stroke={MARKER_COLOR[m.tone]} strokeWidth={2.2} />
               <text x={8} y={5} textAnchor="middle" className="pointer-events-none fill-text text-[13px] font-bold">{m.label}</text>
-              {draggable && !dragging && <text x={0} y={30} textAnchor="middle" className="pointer-events-none fill-primary text-[11px] font-bold">{'⟷ '}{drag!.hint}</text>}
+              {draggable && !dragging && drag!.showHint !== false && <text x={0} y={30} textAnchor="middle" className="pointer-events-none fill-primary text-[11px] font-bold">{'⟷ '}{drag!.hint}</text>}
             </g>
-            <circle cx={mx} cy={my} r={5.5} fill="var(--color-surface)" stroke={MARKER_COLOR[m.tone]} strokeWidth="3" />
+            <circle cx={0} cy={0} r={5.5} fill="var(--color-surface)" stroke={MARKER_COLOR[m.tone]} strokeWidth="3" className="ll-tween" style={{ transform: `translate(0px, ${my.toFixed(1)}px)` }} />
           </g>
         );
       })}
@@ -273,22 +279,37 @@ export function LifeLineChart({ chart, drag }: { chart: LifeLineChartVM; drag?: 
           {chart.runsOut.label}
         </text>
       )}
-      {chart.dragged && (
-        <g>
-          <line x1={x(chart.dragged.fromAge)} x2={x(chart.dragged.toAge) - (chart.dragged.toAge > chart.dragged.fromAge ? 8 : -8)}
-            y1={H - PAD.b - 8} y2={H - PAD.b - 8} stroke="var(--color-ink)" strokeWidth="2" markerEnd="url(#ll-arrow)" />
-          <circle cx={x(chart.dragged.fromAge)} cy={H - PAD.b - 8} r={6} fill="var(--color-surface)" stroke="var(--color-chart-6)" strokeWidth="3" />
-        </g>
-      )}
+      {chart.dragged && (() => {
+        // The plan's age: a ring on the axis, labelled ("your plan: 38"), and an arrow to the picked age
+        // when there is room for more than its head (a short one used to show as a stray ▶).
+        const fx = x(chart.dragged.fromAge);
+        const tx = x(chart.dragged.toAge);
+        const cy = H - PAD.b - 8;
+        const right = tx > fx;
+        const labelW = chart.dragged.label.length * 6.6;
+        // The label sits on the side away from the arrow, inside the plot.
+        const lx = right ? Math.max(PAD.l + labelW, fx - 10) : Math.min(W - PAD.r - labelW, fx + 10);
+        return (
+          <g>
+            {Math.abs(tx - fx) >= MIN_ARROW_PX && (
+              <line x1={fx + (right ? 8 : -8)} x2={tx - (right ? 8 : -8)} y1={cy} y2={cy} stroke="var(--color-ink)" strokeWidth="2" markerEnd="url(#ll-arrow)" />
+            )}
+            <circle cx={fx} cy={cy} r={6} fill="var(--color-surface)" stroke="var(--color-chart-6)" strokeWidth="3" />
+            <text x={lx} y={cy + 4} textAnchor={right ? 'end' : 'start'} className="pointer-events-none fill-text-muted text-[11px] font-bold">{chart.dragged.label}</text>
+          </g>
+        );
+      })()}
     </svg>
   );
 }
 
-function Callout({ x, y, label, dark = false, W }: { x: number; y: number; label: string; dark?: boolean; W: number }) {
-  const w = label.length * 7.4 + 20;
+function Callout({ x, y, label: target, dark = false, W }: { x: number; y: number; label: string; dark?: boolean; W: number }) {
+  // The value eases between drags; the box is sized by the final text so it never jitters.
+  const label = useTweenText(target);
+  const w = target.length * 7.4 + 20;
   const left = Math.min(x, W - w - 4);
   return (
-    <g transform={`translate(${left},${y})`}>
+    <g className="ll-tween" style={{ transform: `translate(${left.toFixed(1)}px, ${y.toFixed(1)}px)` }}>
       <rect x={0} y={-14} width={w} height={28} rx={8} fill={dark ? 'var(--color-ink)' : 'var(--color-surface-strong)'} />
       <text x={w / 2} y={5} textAnchor="middle" className={cx('text-[13px] font-bold tabular-nums', dark ? 'fill-on-primary' : 'fill-text-muted')}>{label}</text>
     </g>
