@@ -1,7 +1,7 @@
 // Strings for Budget (MP11, MP17). Category names are in planner.categories, group names in planner.budgetGroups.
 export const budget = {
   title: 'Budget',
-  intro: 'What you planned for each category against what you spent.',
+  intro: 'Your plan for the month against what you really spent.',
   modes: { month: 'Month', year: 'Year' },
   modeLegend: 'Show',
   today: 'Today',
@@ -10,10 +10,18 @@ export const budget = {
   income: 'Income',
   spending: 'Spending',
   columns: { planned: 'Planned', actual: 'Actual', remaining: 'Remaining' },
+  /** The KPI strip. */
+  kpis: { planned: 'Planned', spent: 'Spent', left: 'Left to spend', over: 'Over budget' },
+  kpisLabel: 'Budget totals',
+  donutTitle: 'Spending by group',
+  donutLabel: 'Share of spending by budget group',
+  donutCenter: 'Spent',
+  donutEmpty: 'No spending yet this period.',
+  periodLabel: 'Period',
   statuses: { under: 'Under', onPace: 'On pace', over: 'Over' },
   create: 'Create budget from my spending',
   emptyTitle: 'No budget yet',
-  empty: 'Start from what you spend now. You can change every line.',
+  empty: 'Start from what you spend now, then change any line. It takes one tap.',
   /** Shown beside "Create budget": the plan starts from the profile, the actuals from imported lines. */
   emptyLinks: { guess: 'Set up my numbers first', upload: 'Import a statement' },
   noActuals: 'No spending in this period yet. Import a statement to fill the Actual column.',

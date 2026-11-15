@@ -1,6 +1,7 @@
 // The dashboard's building blocks: a widget card (title row, optional selector, body, link to the full
 // screen), an empty state (icon, one bold line, one muted line, one button) and the icons they use.
-// Presentational only.
+// Presentational only. Card look and the staggered entrance are the shell's global utilities
+// (card, card-pad, animate-enter); the chart motion is in app/globals.css (dashboard motion).
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { dashboard as t } from '@/copy';
 import { buttonClassName, cx } from '@/ui-kit';
@@ -70,8 +71,8 @@ export function Widget({ id, title, icon, action, link, Link, index, className, 
     <section
       aria-labelledby={headingId}
       data-testid={`dashboard-${id}`}
-      className={cx('dash-card flex min-w-0 flex-col gap-lg rounded-xl bg-surface p-lg shadow-md sm:p-xl', className)}
-      style={{ '--dash-i': index } as CSSProperties}
+      className={cx('card card-pad animate-enter flex min-w-0 flex-col gap-lg', className)}
+      style={{ '--enter-delay': `${index * 60}ms` } as CSSProperties}
     >
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-sm">
         <h2 id={headingId} className="flex items-center gap-sm text-lg font-bold leading-tight">

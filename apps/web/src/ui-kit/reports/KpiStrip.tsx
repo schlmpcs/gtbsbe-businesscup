@@ -25,7 +25,7 @@ export function KpiStrip({ items, className, ...rest }: { items: readonly KpiIte
   return (
     <dl
       className={cx(
-        'grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-border shadow-md',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-(--card-radius) border border-border bg-border shadow-(--card-shadow)',
         cols,
         items.length % 2 === 1 && 'max-sm:[&>div:first-child]:col-span-2',
         MOTION.rise,

@@ -2,6 +2,7 @@
 
 // P8 Plan (`/plan`), P9 Compare (`/plan?view=compare`) and P10 Chance of success (`/plan?view=chance`):
 // thin route. The plan view-model hooks feed the presentational screen; the view lives in the URL.
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useState } from 'react';
 import { useAiLine } from '@/features/plan/model/useAiLine';
@@ -55,6 +56,7 @@ export default function PlanPage({ searchParams }: { searchParams: SearchParams 
       compareWithId={compareWithId}
       onCompareWith={setPicked}
       chance={chance}
+      Link={Link}
     />
   );
 }

@@ -4,7 +4,20 @@ import type { Cadence, SubscriptionFlag } from '@lifeguessr/types';
 // account instead of a statement line (those carry their own text).
 export const recurring = {
   title: 'Recurring',
-  intro: 'Bills, subscriptions and pay that come back every month.',
+  intro: 'Bills, subscriptions and pay that come back every month, on one calendar.',
+  kpis: {
+    remaining: 'Remaining due this month',
+    expenses: 'Bills this month',
+    creditCards: 'Card payments',
+    income: 'Income expected',
+  },
+  kpisLabel: 'Recurring this month',
+  remainingHint: (n: number) => (n === 0 ? 'Nothing left to pay' : `${n} ${n === 1 ? 'payment' : 'payments'} to go`),
+  upcomingTitle: 'Coming up',
+  upcomingNone: 'Nothing else due this month.',
+  upcomingLabel: 'Bills still due this month',
+  calendarTitle: 'This month',
+  allTitle: 'Everything recurring',
   sections: { income: 'Income', expenses: 'Expenses', creditCards: 'Credit cards' },
   labels: { takeHomePay: 'Take-home pay', rent: 'Rent and utilities', loan: 'Loan payment', card: 'Card minimum payment' },
   views: { list: 'List', calendar: 'Calendar' },

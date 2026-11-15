@@ -1,6 +1,6 @@
 // The dashboard's small charts: inline SVG, no axes library. Presentational: every value comes from the
 // view-model; only the drawing scale (value → pixel) is worked out here. Motion is CSS only (see
-// ./DashboardMotion.tsx): lines are revealed left to right, bars grow, rings fill; all of it is off
+// app/globals.css, "dashboard motion"): lines are revealed left to right, bars grow, rings fill; all of it is off
 // under prefers-reduced-motion, where the final state shows at once.
 import type { CSSProperties, ReactNode } from 'react';
 import { cx } from '@/ui-kit';

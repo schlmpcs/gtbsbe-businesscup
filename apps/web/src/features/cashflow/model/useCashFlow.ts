@@ -26,7 +26,7 @@ export function useCashFlow({ today }: { today?: string } = {}): CashFlowVM {
   const accounts = useAccountsStore((s) => s.accounts);
   const goalLinks = useGoalLinks((s) => s.links);
   const [period, setPeriod] = useState<CashFlowPeriodKind>('monthly');
-  const [view, setView] = useState<CashFlowView>('bars');
+  const [view, setView] = useState<CashFlowView>('sankey');
   const [breakdown, setBreakdown] = useState<CashFlowBreakdown>('category');
   const month = (today ?? usEasternDate()).slice(0, 7);
 

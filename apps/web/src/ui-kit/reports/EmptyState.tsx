@@ -22,7 +22,7 @@ export type EmptyStateProps = {
 export function EmptyState({ title, body, art, actions, ghost, headingLevel = 2, className, ...rest }: EmptyStateProps) {
   const Heading = `h${headingLevel}` as const;
   return (
-    <section className={cx('relative isolate overflow-hidden rounded-xl bg-surface p-xl shadow-md sm:p-2xl', MOTION.rise, className)} {...rest}>
+    <section className={cx('card relative isolate overflow-hidden p-xl sm:p-2xl', MOTION.rise, className)} {...rest}>
       {ghost && (
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center p-lg opacity-[0.14] grayscale-[0.3]">
           {ghost}

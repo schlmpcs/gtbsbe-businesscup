@@ -2,7 +2,7 @@
 
 // Plan › Compare (useCompare): two scenarios overlaid, the sentence and the difference table.
 import { plan as copy } from '@/copy';
-import { Button, Card, Field, cx, useFieldControl } from '@/ui-kit';
+import { Button, Field, cx, useFieldControl } from '@/ui-kit';
 import type { CompareVM, ScenariosVM } from '../model/types';
 import { LineChart } from './LineChart';
 import { SELECT_CLASS } from './PlanField';
@@ -19,21 +19,26 @@ export function CompareView({ vm, scenarios, compareWithId, onCompareWith }: Com
   const t = copy.screen.compare;
   if (!scenarios.canCompare) {
     return (
-      <Card title={copy.compare.title}>
-        <div className="flex flex-col items-start gap-md">
-          <p className="text-sm text-text-muted">{copy.compare.needTwo}</p>
-          <Button onClick={() => scenarios.add()}>{t.addScenario}</Button>
-        </div>
-      </Card>
+      <section aria-labelledby="compare-title" className="card card-pad flex flex-col items-center gap-sm py-3xl text-center">
+        <span aria-hidden="true" className="flex size-3xl items-center justify-center rounded-full bg-primary-soft font-display text-xl font-extrabold text-primary">
+          2
+        </span>
+        <h2 id="compare-title" className="text-lg font-bold">{copy.compare.title}</h2>
+        <p className="text-sm text-text-muted">{copy.compare.needTwo}</p>
+        <Button onClick={() => scenarios.add()}>{t.addScenario}</Button>
+      </section>
     );
   }
   const others = scenarios.items.filter((s) => s.id !== scenarios.activeId);
 
   return (
-    <div className="flex flex-col gap-xl">
-      <Card title={copy.compare.title}>
-        <div className="flex flex-col gap-lg">
+    <div className="flex min-w-0 flex-col gap-lg">
+      <section aria-labelledby="compare-title" className="card card-pad flex min-w-0 flex-col gap-lg">
+        <div className="flex flex-col gap-xs">
+          <h2 id="compare-title" className="text-lg font-bold">{copy.compare.title}</h2>
           <p className="text-sm text-text-muted">{t.intro}</p>
+        </div>
+        <div className="flex flex-col gap-lg">
           <div className="flex flex-wrap items-end gap-md">
             <Field label={t.withLabel} className="min-w-48 flex-1 sm:flex-none">
               <CompareSelect value={compareWithId ?? others[0]?.id ?? ''} options={others} onChange={onCompareWith} />
@@ -49,17 +54,19 @@ export function CompareView({ vm, scenarios, compareWithId, onCompareWith }: Com
             <p className="text-sm text-text-muted">{copy.notFound}</p>
           ) : (
             <>
-              <p className="font-display text-xl font-bold leading-tight sm:text-2xl" data-testid="compare-sentence">
+              <p className="rounded-lg bg-primary-soft p-md font-display text-xl font-bold leading-tight sm:p-lg sm:text-2xl" data-testid="compare-sentence">
                 {vm.sentence}
               </p>
               <LineChart
-                title={copy.compare.title}
+                title={t.chartTitle}
                 series={[
-                  { id: 'a', label: vm.a.name, color: 'var(--color-chart-1)', points: vm.series.map((p) => ({ x: p.year, y: p.a })) },
-                  { id: 'b', label: vm.b.name, color: 'var(--color-chart-2)', dashed: true, points: vm.series.map((p) => ({ x: p.year, y: p.b })) },
+                  { id: 'a', label: vm.a.name, color: 'var(--color-primary)', strong: true, points: vm.series.map((p) => ({ x: p.year, y: p.a })) },
+                  { id: 'b', label: vm.b.name, color: 'var(--color-chart-1)', dashed: true, points: vm.series.map((p) => ({ x: p.year, y: p.b })) },
                 ]}
-                xTicks={vm.series.filter((p, i) => i === 0 || p.age % 5 === 0).map((p) => ({ x: p.year, label: String(p.age) }))}
-                xCaption={copy.screen.chart.axisAge}
+                legend
+                heightClass="h-64 sm:h-80"
+                belowZeroLabel={copy.screen.chart.belowZero}
+                xTicks={vm.series.filter((p, i) => i === 0 || p.age % 5 === 0).map((p) => ({ x: p.year, label: String(p.year) }))}
                 xLabel={(year) => copy.screen.chart.tooltipHeader(year, vm.series.find((p) => p.year === year)?.age ?? 0)}
               />
               <div className="overflow-x-auto">
@@ -89,7 +96,7 @@ export function CompareView({ vm, scenarios, compareWithId, onCompareWith }: Com
             </>
           )}
         </div>
-      </Card>
+      </section>
     </div>
   );
 }

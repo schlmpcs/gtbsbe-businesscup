@@ -68,14 +68,16 @@ describe('PlanScreen', () => {
     expect(screen.queryByText(t.chart.aiNote)).toBeNull();
   });
 
-  it('shows the four rules-based KPIs, the chart with event markers and the AI estimate line', () => {
+  it('shows the rules-based KPI strip, the chart with event markers and the AI estimate line', () => {
     const points = [{ year: 2026, netWorth: -3000 }, { year: 2030, netWorth: 60000 }];
     const { container } = render(<Harness ai={{ status: 'shown', points }} />);
     expect(screen.getByRole('heading', { level: 1, name: t.title })).toBeTruthy();
     const kpis = container.querySelectorAll('[data-kpi]');
-    expect(kpis).toHaveLength(4);
+    // Four numbers (this year, at retirement, retirement age, at the end) + the "money lasts until" pill.
+    expect([...kpis].map((k) => (k as HTMLElement).dataset.kpi)).toEqual(['shortfall', 'netWorthEndOfYear', 'netWorthAtRetirement', 'retireAge', 'netWorthAtEnd']);
     for (const k of kpis) expect(within(k as HTMLElement).getByText(t.kpiSource)).toBeTruthy();
-    expect(within(kpis[0] as HTMLElement).getByText(copy.kpi.netWorthEndOfYear.label)).toBeTruthy();
+    expect(within(container.querySelector('[data-kpi="netWorthEndOfYear"]') as HTMLElement).getByText(copy.kpi.netWorthEndOfYear.label)).toBeTruthy();
+    expect(within(container.querySelector('[data-kpi="retireAge"]') as HTMLElement).getByText(t.kpis.retireAgeValue(67))).toBeTruthy();
 
     expect(screen.getByRole('figure', { name: t.chart.title })).toBeTruthy();
     // Markers for the demo scenario's events (Retire, Social Security, Buy a home).
@@ -108,8 +110,39 @@ describe('PlanScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(copy.events.haveKid.title) }));
     expect(screen.getByText(copy.editor.fields.childcareMonthly!)).toBeTruthy();
     expect(screen.getByRole('heading', { name: t.editor.previewTitle })).toBeTruthy();
-    // The new event is in the list.
+    // The new event is in the list (Events tab).
+    fireEvent.click(screen.getByRole('tab', { name: t.tabs.events }));
     expect(screen.getByRole('button', { name: t.events.edit(copy.events.haveKid.title) })).toBeTruthy();
+  });
+
+  it('year-by-year table: years as columns, Assets opens into groups and accounts', () => {
+    render(<Harness />);
+    const table = screen.getByRole('region', { name: t.tabs.accounts });
+    expect(within(table).getByRole('columnheader', { name: /2026/ })).toBeTruthy();
+    expect(within(table).getByRole('rowheader', { name: t.tables.netWorth })).toBeTruthy();
+    // Assets is open; its groups are closed until clicked.
+    const cash = within(table).getByRole('button', { name: t.tables.expand(copy.groups.cash) });
+    fireEvent.click(cash);
+    expect(within(table).getByRole('button', { name: t.tables.collapse(copy.groups.cash) }).getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(within(table).getByRole('button', { name: t.tables.collapse(copy.tables.accounts.assets) }));
+    expect(within(table).queryByRole('button', { name: t.tables.collapse(copy.groups.cash) })).toBeNull();
+  });
+
+  it('Assumptions panel: collapsible sections and an inflation slider that writes the assumption', () => {
+    render(<Harness />);
+    const panel = screen.getByRole('complementary', { name: t.assumptions.title });
+    for (const title of [t.assumptions.timelineTitle, t.assumptions.inflationTitle, t.assumptions.growthTitle]) {
+      expect(within(panel).getByText(title)).toBeTruthy();
+    }
+    const slider = within(panel).getByRole('slider', { name: new RegExp(t.assumptions.inflationSlider) });
+    fireEvent.change(slider, { target: { value: '0.04' } });
+    expect((within(panel).getByRole('slider', { name: new RegExp(t.assumptions.inflationSlider) }) as HTMLInputElement).value).toBe('0.04');
+  });
+
+  it('links "Check a decision" to /afford and /loan', () => {
+    render(<Harness />);
+    expect(screen.getByRole('link', { name: new RegExp(t.decisions.afford.title) }).getAttribute('href')).toBe('/afford');
+    expect(screen.getByRole('link', { name: new RegExp(t.decisions.loan.title) }).getAttribute('href')).toBe('/loan');
   });
 
   it('Compare view: the sentence and the difference table', () => {
@@ -129,6 +162,14 @@ describe('PlanScreen', () => {
     expect(screen.getByTestId('chance-pct').textContent).toMatch(/%$/);
     expect(screen.getByRole('meter')).toBeTruthy();
     expect(screen.getByRole('figure', { name: t.chance.fanTitle })).toBeTruthy();
+    // Three histograms, each with the plan's own value; settings live in the side panel.
+    const hist = document.querySelectorAll('[data-histogram]');
+    expect(hist).toHaveLength(3);
+    expect(within(hist[0] as HTMLElement).getByText(/^Plan \$/)).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: t.chance.settingsTitle })).toBeTruthy();
+    // Range mode swaps the sampled paths for the p10–p90 band.
+    fireEvent.click(screen.getByRole('button', { name: t.chance.modes.range }));
+    expect(screen.getByText(t.chance.band)).toBeTruthy();
   });
 
   it('switches views from the view switch', () => {

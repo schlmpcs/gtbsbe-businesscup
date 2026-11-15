@@ -1,9 +1,10 @@
 'use client';
 
 // A number that counts up to its value when it first shows (and glides when it changes). Display only:
-// the value is the view-model's, `format` is a kit formatter; the exact final text is always in the DOM
-// for screen readers (and tests). With prefers-reduced-motion it shows the final value at once.
-import { useLayoutEffect, useRef, useState } from 'react';
+// the value is the view-model's and `format` a kit formatter. React renders the exact final text; the
+// animation only rewrites that text node frame by frame (no re-renders) and always ends on the final
+// text. Skipped with prefers-reduced-motion, without requestAnimationFrame, and in jsdom (tests).
+import { useLayoutEffect, useRef } from 'react';
 
 export type CountUpProps = {
   value: number;
@@ -12,48 +13,47 @@ export type CountUpProps = {
   duration?: number;
 };
 
-const reduced = () =>
-  typeof window === 'undefined' ||
-  typeof window.requestAnimationFrame !== 'function' ||
-  (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
+const canAnimate = () =>
+  typeof window !== 'undefined' &&
+  typeof window.requestAnimationFrame === 'function' &&
+  !/jsdom/i.test(window.navigator.userAgent) &&
+  !(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
 
 export function CountUp({ value, format, duration = 700 }: CountUpProps) {
-  const [shown, setShown] = useState<number | null>(null);
+  const ref = useRef<HTMLSpanElement>(null);
   const from = useRef(0);
-
-  // A layout effect, so the first paint already starts from the old value instead of flashing the final one.
+  const formatRef = useRef(format);
   useLayoutEffect(() => {
-    if (!Number.isFinite(value) || reduced()) {
-      from.current = value;
-      setShown(null);
-      return;
-    }
+    formatRef.current = format;
+  });
+
+  useLayoutEffect(() => {
+    const node = ref.current?.firstChild;
     const start = from.current;
-    if (start === value) {
-      setShown(null);
+    if (!node || !Number.isFinite(value) || start === value || !canAnimate()) {
+      from.current = value;
       return;
     }
+    const write = (v: number) => {
+      node.nodeValue = formatRef.current(v);
+    };
+    write(start); // before the first paint, so the final number never flashes first
     const t0 = performance.now();
-    let frame = 0;
-    setShown(start);
-    const step = (now: number) => {
+    let frame = requestAnimationFrame(function step(now) {
       const p = Math.min(1, (now - t0) / duration);
       const v = start + (value - start) * (1 - Math.pow(1 - p, 3));
-      from.current = p < 1 ? v : value;
+      from.current = v;
       if (p < 1) {
-        setShown(v);
+        write(v);
         frame = requestAnimationFrame(step);
-      } else setShown(null);
-    };
-    frame = requestAnimationFrame(step);
+      } else {
+        from.current = value;
+        write(value);
+      }
+    });
+    // React has already written the next value's text when this runs, so only stop the frames.
     return () => cancelAnimationFrame(frame);
   }, [value, duration]);
 
-  if (shown === null) return <>{format(value)}</>;
-  return (
-    <>
-      <span className="sr-only">{format(value)}</span>
-      <span aria-hidden="true">{format(shown)}</span>
-    </>
-  );
+  return <span ref={ref}>{format(value)}</span>;
 }

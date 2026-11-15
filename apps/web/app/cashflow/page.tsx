@@ -6,7 +6,7 @@ import { useCashFlow } from '@/features/cashflow/model/useCashFlow';
 import { CashFlowScreen } from '@/features/cashflow/ui/CashFlowScreen';
 import { PLANNER_ROUTES } from '@/features/dashboard/model/links';
 
-const links = { guess: PLANNER_ROUTES.guessOwnMonth, upload: '/me/upload' };
+const links = { guess: PLANNER_ROUTES.guessOwnMonth, upload: '/me/upload', transactions: PLANNER_ROUTES.transactions };
 
 export default function CashFlowPage() {
   return <CashFlowScreen vm={useCashFlow()} links={links} Link={Link} />;

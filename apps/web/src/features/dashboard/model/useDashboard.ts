@@ -97,6 +97,7 @@ export function useDashboard({ today: todayArg, now }: { today?: string; now?: D
       thisMonth: at('thisMonth', day),
       lastMonth: points.reduce((last, p) => p.lastMonth ?? last, 0),
       lastMonthToDate: at('lastMonth', day),
+      vsLastMonthToDate: at('thisMonth', day) - at('lastMonth', day),
       month,
       previousMonth,
       points,

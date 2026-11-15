@@ -11,7 +11,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { common } from '@/copy';
 import { useLedger } from '@/features/transactions/model/transactionsStore';
-import { SCREEN_ROUTES } from '@/lib/screens';
 import { useSampleBanner } from '@/state';
 
 const t = common.sampleBanner;

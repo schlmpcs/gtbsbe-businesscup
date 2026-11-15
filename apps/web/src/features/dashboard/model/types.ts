@@ -142,6 +142,8 @@ export type DashboardVM = {
     lastMonth: Money;
     /** Spent in last month up to the same day: the fair comparison with `thisMonth`. */
     lastMonthToDate: Money;
+    /** thisMonth - lastMonthToDate: more (> 0) or less than last month by the same day. */
+    vsLastMonthToDate: Money;
     /** 'YYYY-MM' of the month on the card and of the one before. */
     month: YearMonth;
     previousMonth: YearMonth;

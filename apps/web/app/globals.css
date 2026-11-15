@@ -183,6 +183,10 @@
   from { stroke-dashoffset: 1; }
   to { stroke-dashoffset: 0; }
 }
+/* A ring gauge: the arc's dash grows from nothing to its inline stroke-dasharray. */
+@keyframes ob-ring {
+  from { stroke-dasharray: 0 1; }
+}
 @keyframes ob-pop {
   0% { opacity: 0; transform: scale(0.85); }
   60% { opacity: 1; transform: scale(1.04); }
@@ -202,6 +206,7 @@
 .ob-grow-x { transform-origin: left center; animation: ob-grow-x 800ms cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: var(--ob-delay, 0ms); }
 /* An SVG path with pathLength="1": drawn from its start. */
 .ob-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: ob-draw 1600ms cubic-bezier(0.4, 0, 0.2, 1) both; animation-delay: var(--ob-delay, 0ms); }
+.ob-ring { animation: ob-ring 1200ms cubic-bezier(0.4, 0, 0.2, 1) both; }
 .ob-pop { animation: ob-pop 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: var(--ob-delay, 0ms); }
 .ob-build { animation: ob-build 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .ob-float { animation: ob-float 4s ease-in-out infinite; }
@@ -210,7 +215,21 @@
 .ob-press:active { transform: translateY(2px) scale(0.98); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ob-enter, .ob-chapter, .ob-grow-x, .ob-draw, .ob-pop, .ob-build, .ob-float { animation: none !important; }
+  .ob-enter, .ob-chapter, .ob-grow-x, .ob-draw, .ob-ring, .ob-pop, .ob-build, .ob-float { animation: none !important; }
   .ob-press, .ob-press:active { transition: none; transform: none; }
 }
 /* ==== end onboarding motion ==== */
+
+/* ==== dashboard motion ==== */
+/* /dashboard widgets (features/dashboard/ui): lines revealed left to right, bars grow, rings and the
+   Chance gauge fill. The final state is the element's normal style; reduced motion shows it at once. */
+@keyframes dash-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes dash-grow { from { transform: scaleX(0); } }
+@keyframes dash-ring { from { stroke-dashoffset: 100; } }
+.dash-reveal { animation: dash-reveal 900ms cubic-bezier(0.4, 0, 0.2, 1) 150ms both; }
+.dash-grow { transform-origin: left center; animation: dash-grow 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.dash-ring { animation: dash-ring 900ms cubic-bezier(0.2, 0.7, 0.2, 1) 150ms both; }
+@media (prefers-reduced-motion: reduce) {
+  .dash-reveal, .dash-grow, .dash-ring { animation: none !important; }
+}
+/* ==== end dashboard motion ==== */

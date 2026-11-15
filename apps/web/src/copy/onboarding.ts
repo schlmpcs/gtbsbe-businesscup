@@ -35,7 +35,9 @@ export const onboarding = {
       4: { short: 'Your future', title: 'Where it takes you.' },
     } as Record<1 | 2 | 3 | 4, { short: string; title: string }>,
     back: '← Back',
-    exit: 'Leave the story',
+    home: (app: string) => `${app}, home`,
+    skip: 'Skip',
+    skipLabel: (n: number) => `Skip chapter ${n}`,
   },
 
   practice: {

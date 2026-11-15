@@ -1,10 +1,13 @@
 'use client';
 
-// P5 Budget (/budget): planned vs actual per category, grouped, with a "where you should be today" marker.
-// Presentational: every number comes from useBudget(); the route passes its Link and the empty-state links.
+// P5 Budget (/budget), reports layout: a KPI strip (planned / spent / left), the income line, one card
+// per budget group with bars that grow in (red past the plan, a thin "today" marker), and a donut of
+// spending by group. Presentational: every number comes from useBudget(); the route passes its Link and
+// the empty-state links.
 import type { ComponentType, ReactNode } from 'react';
 import { budget as t, planner } from '@/copy';
-import { Button, buttonClassName, Card, Choice, cx, formatMoney, NumberInput, PageHeader, Row, Stack, Stat } from '@/ui-kit';
+import { Button, buttonClassName, cx, formatMoney, NumberInput, PageHeader } from '@/ui-kit';
+import { CountUp, Donut, EmptyState, GROUP_TONE, KpiStrip, Meter, Panel, Segmented, TONE_BG, type ChartTone } from '@/ui-kit/reports';
 import type { BudgetGroupVM, BudgetIncomeRowVM, BudgetMode, BudgetRowVM, BudgetStatus, BudgetVM } from '../model/types';
 
 export type BudgetLinks = { guess: string; upload: string };
@@ -15,76 +18,88 @@ export type BudgetScreenProps = {
   Link: ComponentType<{ href: string; className?: string; children?: ReactNode }>;
 };
 
-const STATUS_TEXT: Record<BudgetStatus, string> = { under: 'text-positive', onPace: 'text-text-muted', over: 'text-negative' };
+const STATUS_CHIP: Record<BudgetStatus, string> = {
+  under: 'bg-positive-soft text-positive',
+  onPace: 'bg-surface-strong text-text-muted',
+  over: 'bg-negative/10 text-negative',
+};
+
+const money = (v: number) => formatMoney(v);
 
 export function BudgetScreen({ vm, links, Link }: BudgetScreenProps) {
   return (
-    <main className="mx-auto w-full max-w-(--container-5xl) px-lg py-xl sm:py-3xl">
-      <Stack gap="xl">
-        <PageHeader title={t.title} intro={t.intro} />
-        <PeriodBar vm={vm} />
-        {!vm.ready ? (
-          <div role="status" aria-live="polite" className="h-96 animate-pulse rounded-xl bg-surface">
-            <span className="sr-only">{t.loading}</span>
-          </div>
-        ) : (
-          <>
-            {!vm.hasBudget && (
-              <Card data-testid="budget-empty" title={t.emptyTitle}>
-                <Stack gap="md">
-                  <p className="text-text-muted">{t.empty}</p>
-                  <Row gap="md">
-                    <Button onClick={vm.createBudget}>{t.create}</Button>
-                    <Link href={links.guess} className={buttonClassName({ variant: 'ghost' })}>
-                      {t.emptyLinks.guess}
-                    </Link>
-                  </Row>
-                </Stack>
-              </Card>
-            )}
-            {vm.totals.actual === 0 && vm.income.actual === 0 && (
-              <Card tone="muted" data-testid="budget-no-actuals">
-                <Row gap="md" justify="between">
-                  <p className="text-sm text-text-muted">{t.noActuals}</p>
-                  <Link href={links.upload} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
-                    {t.emptyLinks.upload}
+    <main className="page flex flex-col gap-xl">
+      <PageHeader title={t.title} intro={t.intro} aside={<PeriodBar vm={vm} />} />
+      {!vm.ready ? (
+        <div role="status" aria-live="polite" className="flex flex-col gap-lg">
+          <div className="h-28 animate-pulse rounded-(--card-radius) bg-surface" />
+          <div className="h-96 animate-pulse rounded-(--card-radius) bg-surface" />
+          <span className="sr-only">{t.loading}</span>
+        </div>
+      ) : (
+        <>
+          {!vm.hasBudget && (
+            <EmptyState
+              data-testid="budget-empty"
+              art="house-blueprint"
+              title={t.emptyTitle}
+              body={t.empty}
+              actions={
+                <>
+                  <Button onClick={vm.createBudget}>{t.create}</Button>
+                  <Link href={links.guess} className={buttonClassName({ variant: 'ghost' })}>
+                    {t.emptyLinks.guess}
                   </Link>
-                </Row>
-              </Card>
-            )}
-            <Card data-testid="budget-totals">
-              <div className="grid grid-cols-3 gap-md">
-                <Stat label={t.columns.planned} value={formatMoney(vm.totals.planned)} size="md" />
-                <Stat label={t.columns.actual} value={formatMoney(vm.totals.actual)} size="md" />
-                <Stat
-                  label={t.columns.remaining}
-                  value={formatMoney(vm.totals.remaining)}
-                  tone={vm.totals.remaining < 0 ? 'negative' : 'default'}
-                  size="md"
-                />
-              </div>
-            </Card>
-            <Card title={t.income} headingLevel={2}>
-              <IncomeLine row={vm.income} />
-            </Card>
-            {vm.groups.map((g) => (
-              <GroupCard key={g.id} group={g} vm={vm} />
-            ))}
-            <p className="text-xs text-text-muted">
-              {t.todayMarker} {vm.mode === 'year' && vm.hasBudget ? t.perMonthHint : null}
-            </p>
-            <p className="text-xs text-text-muted">{planner.educational}</p>
-          </>
-        )}
-      </Stack>
+                </>
+              }
+            />
+          )}
+          {vm.totals.actual === 0 && vm.income.actual === 0 && (
+            <div data-testid="budget-no-actuals" className="card flex flex-wrap items-center justify-between gap-md px-lg py-md">
+              <p className="min-w-0 flex-1 text-sm text-text-muted">{t.noActuals}</p>
+              <Link href={links.upload} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
+                {t.emptyLinks.upload}
+              </Link>
+            </div>
+          )}
+          <KpiStrip
+            data-testid="budget-totals"
+            aria-label={t.kpisLabel}
+            items={[
+              { id: 'planned', label: t.kpis.planned, value: <CountUp value={vm.totals.planned} format={money} /> },
+              { id: 'spent', label: t.kpis.spent, value: <CountUp value={vm.totals.actual} format={money} /> },
+              {
+                id: 'left',
+                label: vm.totals.remaining < 0 ? t.kpis.over : t.kpis.left,
+                value: <CountUp value={vm.totals.remaining < 0 ? -vm.totals.remaining : vm.totals.remaining} format={money} />,
+                tone: vm.totals.remaining < 0 ? 'negative' : 'positive',
+              },
+            ]}
+          />
+          <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-xl lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="flex min-w-0 flex-col gap-xl">
+              <Panel title={t.income} delay={60}>
+                <IncomeLine row={vm.income} />
+              </Panel>
+              {vm.groups.map((g, i) => (
+                <GroupCard key={g.id} group={g} vm={vm} delay={120 + i * 60} />
+              ))}
+            </div>
+            <SpendingDonut vm={vm} />
+          </div>
+          <p className="text-xs text-text-muted">
+            {t.todayMarker} {vm.mode === 'year' && vm.hasBudget ? t.perMonthHint : null} {planner.educational}
+          </p>
+        </>
+      )}
     </main>
   );
 }
 
 function PeriodBar({ vm }: { vm: BudgetVM }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-md">
-      <Choice<BudgetMode>
+    <div className="flex flex-wrap items-center gap-md">
+      <Segmented<BudgetMode>
         legend={t.modeLegend}
         name="budget-mode"
         value={vm.mode}
@@ -94,14 +109,14 @@ function PeriodBar({ vm }: { vm: BudgetVM }) {
         ]}
         onChange={vm.setMode}
       />
-      <Row gap="sm" wrap={false}>
-        <Button variant="ghost" size="sm" aria-label={t.prev} onClick={vm.prev}>
+      <div className="flex items-center gap-xs" role="group" aria-label={t.periodLabel}>
+        <Button variant="ghost" size="sm" className="min-h-11 min-w-11" aria-label={t.prev} onClick={vm.prev}>
           ‹
         </Button>
-        <h2 data-testid="budget-period" className="min-w-0 text-center text-lg font-bold">
+        <h2 data-testid="budget-period" className="min-w-32 text-center text-lg font-bold">
           {vm.monthLabel}
         </h2>
-        <Button variant="ghost" size="sm" aria-label={t.next} onClick={vm.next}>
+        <Button variant="ghost" size="sm" className="min-h-11 min-w-11" aria-label={t.next} onClick={vm.next}>
           ›
         </Button>
         {!vm.isCurrent && (
@@ -109,42 +124,88 @@ function PeriodBar({ vm }: { vm: BudgetVM }) {
             {t.today}
           </Button>
         )}
-      </Row>
+      </div>
     </div>
   );
 }
 
-function GroupCard({ group, vm }: { group: BudgetGroupVM; vm: BudgetVM }) {
-  const editable = vm.hasBudget && vm.mode === 'month';
+function SpendingDonut({ vm }: { vm: BudgetVM }) {
+  const groups = vm.groups.filter((g) => g.totals.actual > 0);
   return (
-    <Card
+    <Panel title={t.donutTitle} delay={120} className="lg:sticky lg:top-lg" data-testid="budget-donut">
+      <div className="flex flex-col items-center gap-lg">
+        <Donut
+          label={t.donutLabel}
+          className="max-w-56"
+          segments={vm.groups.map((g) => ({ id: g.id, value: g.totals.actual, tone: GROUP_TONE[g.id] }))}
+        >
+          <span className="section-label">{t.donutCenter}</span>
+          <span className="font-display text-2xl font-extrabold tabular-nums">{formatMoney(vm.totals.actual)}</span>
+        </Donut>
+        {groups.length === 0 ? (
+          <p className="text-sm text-text-muted">{t.donutEmpty}</p>
+        ) : (
+          <ul className="flex w-full flex-col gap-sm text-sm">
+            {groups.map((g) => (
+              <li key={g.id} className="flex items-center justify-between gap-md">
+                <span className="flex min-w-0 items-center gap-sm">
+                  <span aria-hidden="true" className={cx('size-2.5 shrink-0 rounded-full', TONE_BG[GROUP_TONE[g.id]])} />
+                  {planner.budgetGroups[g.id]}
+                </span>
+                <span className="tabular-nums">{formatMoney(g.totals.actual)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+function GroupCard({ group, vm, delay }: { group: BudgetGroupVM; vm: BudgetVM; delay: number }) {
+  const editable = vm.hasBudget && vm.mode === 'month';
+  const over = group.totals.remaining < 0;
+  return (
+    <Panel
       title={planner.budgetGroups[group.id]}
+      delay={delay}
       action={
-        <span className="text-sm text-text-muted tabular-nums">
+        <span className={cx('text-sm tabular-nums', over ? 'font-semibold text-negative' : 'text-text-muted')}>
           {t.ofPlanned(formatMoney(group.totals.actual), formatMoney(group.totals.planned))}
         </span>
       }
     >
-      <ul className="flex flex-col gap-lg" aria-label={planner.budgetGroups[group.id]}>
+      <ul className="-my-sm flex flex-col divide-y divide-border" aria-label={planner.budgetGroups[group.id]}>
         {group.rows.map((row) => (
-          <li key={row.category}>
-            <BudgetLine row={row} editable={editable} onPlanned={(v) => vm.setPlanned(row.category, v)} />
+          <li key={row.category} className="py-md">
+            <BudgetLine row={row} tone={GROUP_TONE[group.id]} editable={editable} onPlanned={(v) => vm.setPlanned(row.category, v)} />
           </li>
         ))}
       </ul>
-    </Card>
+    </Panel>
   );
 }
 
-function BudgetLine({ row, editable, onPlanned }: { row: BudgetRowVM; editable: boolean; onPlanned: (v: number) => void }) {
+function BudgetLine({
+  row,
+  tone,
+  editable,
+  onPlanned,
+}: {
+  row: BudgetRowVM;
+  tone: ChartTone;
+  editable: boolean;
+  onPlanned: (v: number) => void;
+}) {
   const name = planner.categories[row.category];
+  const over = row.status === 'over' && row.progress > 1;
   return (
-    <div data-testid={`budget-row-${row.category}`} className="flex flex-col gap-xs">
-      <div className="flex items-baseline justify-between gap-md">
-        <span className="min-w-0 font-medium">{name}</span>
-        <span className={cx('shrink-0 text-xs font-semibold', STATUS_TEXT[row.status])}>{t.statuses[row.status]}</span>
+    <div data-testid={`budget-row-${row.category}`} className="flex flex-col gap-sm">
+      <div className="flex items-center justify-between gap-md">
+        <span className="min-w-0 truncate font-medium">{name}</span>
+        <span className={cx('shrink-0 rounded-full px-sm py-0.5 text-xs font-semibold', STATUS_CHIP[row.status])}>{t.statuses[row.status]}</span>
       </div>
-      <Bar progress={row.progress} marker={row.planned > 0 ? row.todayMarker : null} over={row.status === 'over'} />
+      <Meter value={row.progress} tone={over ? 'negative' : tone} marker={row.planned > 0 ? row.todayMarker : null} size="md" />
       <div className="flex flex-wrap items-center justify-between gap-sm text-sm">
         <span className="tabular-nums text-text-muted">{t.ofPlanned(formatMoney(row.actual), formatMoney(row.planned))}</span>
         <span className={cx('tabular-nums font-semibold', row.remaining < 0 ? 'text-negative' : 'text-text')}>
@@ -170,25 +231,12 @@ function BudgetLine({ row, editable, onPlanned }: { row: BudgetRowVM; editable: 
 
 function IncomeLine({ row }: { row: BudgetIncomeRowVM }) {
   return (
-    <div data-testid="budget-income" className="flex flex-col gap-xs">
-      <Bar progress={row.progress} marker={row.planned > 0 ? row.todayMarker : null} over={false} />
+    <div data-testid="budget-income" className="flex flex-col gap-sm">
+      <Meter value={row.progress} tone="positive" marker={row.planned > 0 ? row.todayMarker : null} size="md" />
       <div className="flex flex-wrap items-center justify-between gap-sm text-sm">
         <span className="tabular-nums text-text-muted">{t.ofPlanned(formatMoney(row.actual), formatMoney(row.planned))}</span>
         {row.remaining > 0 && <span className="tabular-nums font-semibold">{t.toCome(formatMoney(row.remaining))}</span>}
       </div>
-    </div>
-  );
-}
-
-/** Spent share of the plan; past 100% the bar is full and red. The thin line is "today". */
-function Bar({ progress, marker, over }: { progress: number; marker: number | null; over: boolean }) {
-  const width = `${Math.min(100, Math.max(0, progress * 100))}%`;
-  return (
-    <div aria-hidden="true" className="relative h-sm w-full overflow-hidden rounded-full bg-surface-strong">
-      <div className={cx('h-full rounded-full', over && progress > 1 ? 'bg-negative' : 'bg-chart-1')} style={{ width }} />
-      {marker !== null && marker > 0 && marker < 1 && (
-        <div className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${marker * 100}%` }} />
-      )}
     </div>
   );
 }

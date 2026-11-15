@@ -1,5 +1,6 @@
 // Chart tones of the report screens (Cash flow, Budget, Recurring, Goals, Accounts, Transactions): one
 // name per token color, with the literal Tailwind classes (so the scanner sees them). Colors only.
+import type { StatementClass } from '@lifeguessr/types';
 export type ChartTone = 'c1' | 'c2' | 'c3' | 'c4' | 'c5' | 'c6' | 'positive' | 'negative' | 'warning' | 'primary' | 'ink' | 'muted';
 
 export const TONE_BG: Record<ChartTone, string> = {
@@ -38,3 +39,16 @@ export const MOTION = {
   /** A card or section rising into place. */
   rise: 'transition-[opacity,translate] duration-500 ease-out starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none',
 } as const;
+
+/**
+ * One color per statement class, by budget group (essentials blue, lifestyle pink, debt purple; pay
+ * green, transfers grey), so a category chip, a Sankey band and a donut slice agree on every screen.
+ */
+export const CLASS_TONE: Record<StatementClass, ChartTone> = {
+  rentUtilities: 'c1', groceries: 'c1', car: 'c1', childcare: 'c1',
+  eatingOut: 'c2', subscriptions: 'c2', other: 'c2',
+  debtPayments: 'c5',
+  pay: 'positive', transfer: 'c6',
+};
+/** The same colors per budget group. */
+export const GROUP_TONE: Record<'essentials' | 'lifestyle' | 'debt', ChartTone> = { essentials: 'c1', lifestyle: 'c2', debt: 'c5' };

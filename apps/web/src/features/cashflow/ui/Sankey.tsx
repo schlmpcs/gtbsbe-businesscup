@@ -7,10 +7,8 @@
 // another. A list under the chart gives the same flows as text for screen readers.
 import { cashflow as t, planner } from '@/copy';
 import { cx, formatMoney } from '@/ui-kit';
-import { MOTION, TONE_BG, TONE_FILL, useWidth, type ChartTone } from '@/ui-kit/reports';
+import { GROUP_TONE, MOTION, TONE_BG, TONE_FILL, useWidth, type ChartTone } from '@/ui-kit/reports';
 import type { BudgetGroupId, CashFlowFlowTargetVM, CashFlowFlowVM } from '../model/types';
-
-export const GROUP_TONE: Record<BudgetGroupId, ChartTone> = { essentials: 'c1', lifestyle: 'c2', debt: 'c5' };
 
 export const targetTone = (target: CashFlowFlowTargetVM): ChartTone =>
   target.kind === 'savings' ? 'positive' : target.kind === 'oneOffs' ? 'c3' : GROUP_TONE[target.group];
@@ -87,8 +85,8 @@ export function Sankey({ flow }: { flow: CashFlowFlowVM }) {
   const rightLabels = spread(right.map((b) => b.y + b.h / 2 - LABEL / 2 + 4), LABEL, TOP - 4, height);
 
   // Where each band enters and leaves the Income node: stacked without gaps, in order.
-  let inY = mid.y;
-  let outY = mid.y;
+  const midIn = stack(sources.map((s) => s.value), unit, mid.y, 0);
+  const midOut = stack(targets.map((x) => x.value), unit, mid.y, 0);
 
   return (
     <div ref={ref} className="w-full min-w-0">
@@ -104,8 +102,7 @@ export function Sankey({ flow }: { flow: CashFlowFlowVM }) {
         >
           {sources.map((s, i) => {
             const b = left[i]!;
-            const y1 = inY;
-            inY += b.h;
+            const y1 = midIn[i]!.y;
             return (
               <path
                 key={`in-${s.id}`}
@@ -119,8 +116,7 @@ export function Sankey({ flow }: { flow: CashFlowFlowVM }) {
           })}
           {targets.map((x, i) => {
             const b = right[i]!;
-            const y0 = outY;
-            outY += b.h;
+            const y0 = midOut[i]!.y;
             return (
               <path
                 key={`out-${x.kind}-${x.id}`}
