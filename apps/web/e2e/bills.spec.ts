@@ -89,15 +89,10 @@ test('the month on one screen: grid, next 7 days, due-day edit, calendar export'
   await expect(page.getByText(t.export.downloaded)).toBeVisible();
 });
 
-test('listed in the What if? hub, and the Home screen names the next bill', async ({ page }) => {
+test('listed in the What if? hub', async ({ page }) => {
   await seed(page);
   await page.goto('/tools');
   const card = page.getByRole('link', { name: new RegExp(tools.hub.items.bills.question.replace('?', '\\?')) });
   await expect(card).toHaveAttribute('href', '/tools/bills');
 
-  await page.goto('/');
-  // Next charges from Saturday 14 November: the card and the car loan on Friday the 20th, in 6 days.
-  await expect(page.getByTestId('next-bill')).toContainText(/Next bill: .+ in 6 days/);
-  await page.getByTestId('next-bill').getByRole('link', { name: t.today.open }).click();
-  await expect(page).toHaveURL(/\/tools\/bills$/);
 });

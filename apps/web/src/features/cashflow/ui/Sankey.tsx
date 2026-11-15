@@ -42,15 +42,14 @@ function stack(values: readonly number[], unit: number, y0: number, gap: number)
   });
 }
 
-/** Places labels near their wanted y without overlapping, kept inside [min, max]. */
-function spread(wanted: readonly number[], size: number, min: number, max: number): number[] {
-  const out = wanted.map((w) => Math.max(min, w));
-  for (let i = 1; i < out.length; i++) out[i] = Math.max(out[i]!, out[i - 1]! + size);
-  const overflow = (out[out.length - 1] ?? 0) + size - max;
-  if (overflow > 0) {
-    out[out.length - 1] = out[out.length - 1]! - overflow;
-    for (let i = out.length - 2; i >= 0; i--) out[i] = Math.min(out[i]!, out[i + 1]! - size);
-  }
+/** Stacks node heights top to bottom: at least GAP apart, and node centers at least one label apart. */
+function place(heights: readonly number[], y0: number): Box[] {
+  const out: Box[] = [];
+  heights.forEach((h, i) => {
+    const prev = out[i - 1];
+    const y = prev === undefined ? y0 : Math.max(prev.y + prev.h + GAP, prev.y + prev.h / 2 + LABEL - h / 2);
+    out.push({ y, h });
+  });
   return out;
 }
 
@@ -72,17 +71,20 @@ export function Sankey({ flow }: { flow: CashFlowFlowVM }) {
   const labelW = narrow ? 112 : 168;
   const xR = W - labelW - NODE; // right nodes
   const xM = Math.round((narrow ? 0.34 : 0.4) * xR); // the Income node
-  const body = Math.max(narrow ? 220 : 280, targets.length * (LABEL + 4));
-  const unit = (body - GAP * Math.max(0, targets.length - 1)) / total;
+  // Flows take FLOW px in all; the right column then spaces its nodes so every two-line label sits
+  // beside its own node (small nodes get a bigger gap), which sets the drawing's height.
+  const FLOW = narrow ? 200 : 260;
+  const unit = FLOW / total;
+  const right = place(targets.map((x) => Math.max(2, x.value * unit)), TOP);
+  const last = right[right.length - 1]!;
+  const body = last.y + last.h - TOP;
+  const height = TOP + body + 10;
   const midH = total * unit;
-  const height = TOP + body + 8;
-
-  const right = stack(targets.map((x) => x.value), unit, TOP, GAP);
   const mid = { y: TOP + (body - midH) / 2, h: midH };
   const leftGap = 24;
   const leftH = total * unit + leftGap * Math.max(0, sources.length - 1);
   const left = stack(sources.map((s) => s.value), unit, TOP + (body - leftH) / 2, leftGap);
-  const rightLabels = spread(right.map((b) => b.y + b.h / 2 - LABEL / 2 + 4), LABEL, TOP - 4, height);
+  const rightLabels = right.map((b) => b.y + b.h / 2 - LABEL / 2 + 4);
 
   // Where each band enters and leaves the Income node: stacked without gaps, in order.
   const midIn = stack(sources.map((s) => s.value), unit, mid.y, 0);

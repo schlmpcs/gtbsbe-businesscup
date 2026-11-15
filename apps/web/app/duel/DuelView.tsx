@@ -6,9 +6,8 @@
 // (/duel?c={resultId}): whose score the player is trying to beat.
 import { useDuel } from '@/features/game/model/useDuel';
 import { DuelScreen } from '@/features/game/ui/DuelScreen';
-import { SCREEN_ROUTES } from '@/lib/screens';
 
 export function DuelView({ challengeId }: { challengeId?: string }) {
   const vm = useDuel({ challengeId });
-  return <DuelScreen vm={vm} guessOwnHref={SCREEN_ROUTES.S5} />;
+  return <DuelScreen vm={vm} guessOwnHref="/start?ch=2" />;
 }

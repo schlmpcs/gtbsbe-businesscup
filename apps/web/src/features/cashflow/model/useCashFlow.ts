@@ -33,7 +33,11 @@ export function useCashFlow({ today }: { today?: string } = {}): CashFlowVM {
   const totals = useMemo(() => transactionTotals(lines), [lines]);
   const summaries = useMemo(() => periodsFor(period, month).map((p) => cashFlowSummary(totals, p)), [totals, period, month]);
   const current = summaries[summaries.length - 1]!;
-  const previous = summaries[summaries.length - 2] ?? null;
+  // The period before only counts when it has lines: an empty year before the first statement is "no earlier period", not $0.
+  const previous = useMemo(() => {
+    const p = summaries[summaries.length - 2];
+    return p && totals.some((m) => m.month >= p.period.from && m.month <= p.period.to) ? p : null;
+  }, [summaries, totals]);
 
   const bars = useMemo<CashFlowBarVM[]>(
     () =>

@@ -11,7 +11,7 @@
 // (memory store) with E2E_BASE_URL. The fixture duel has its own spec, duel.spec.ts.
 import { expect, test, type Page, type Response } from '@playwright/test';
 import { duel as t } from '../src/copy/duel';
-import { forecast } from '../src/copy/forecast';
+import { dashboard as d } from '../src/copy/dashboard';
 
 test.skip(process.env.NEXT_PUBLIC_DUEL_SOURCE !== 'api', 'the build plays the duel in the browser (NEXT_PUBLIC_DUEL_SOURCE=api plays it against the server)');
 
@@ -159,11 +159,10 @@ test('/play is the duel against the server, and S1 Today counts the rounds the s
 
   // One scored pick: Today (S1) shows rounds, not homes, and sends the player back to /play.
   await pickAOnServer(page, 1);
-  await page.goto('/');
-  const p = forecast.today.playDuel;
-  const game = page.getByTestId('play');
-  await expect(game).toContainText(forecast.today.duel.title);
-  await expect(game.getByRole('link', { name: p.continue(1, 5) })).toHaveAttribute('href', '/play');
+  await page.goto('/dashboard');
+  const game = page.getByTestId('dashboard-game');
+  await expect(game).toContainText(d.duelProgress(1, 5));
+  await expect(game.getByRole('link', { name: d.duelContinue })).toHaveAttribute('href', '/play');
   await expect(page.getByText(/today’s homes/i)).toHaveCount(0);
   await expect(page.locator('a[href*="stream=1"]')).toHaveCount(0);
   // The count comes from what the server replied, kept for S1; nothing of the answers is kept.
@@ -172,7 +171,7 @@ test('/play is the duel against the server, and S1 Today counts the rounds the s
   expect(mirror).not.toMatch(/total|breakdown|lesson/);
 
   // Back to the game: the server resumes at round 2; finish the day, and Today says it is done.
-  await game.getByRole('link', { name: p.continue(1, 5) }).click();
+  await game.getByRole('link', { name: d.duelContinue }).click();
   // Round 1's reveal is back on screen (this tab's view) or round 2 is already open; either way go on.
   const next = page.getByRole('button', { name: t.reveal.next });
   await expect(next.or(page.getByText(t.round(2, 5))).first()).toBeVisible();
@@ -182,9 +181,9 @@ test('/play is the duel against the server, and S1 Today counts the rounds the s
     await page.getByRole('button', { name: round === 5 ? t.reveal.finish : t.reveal.next }).click();
   }
   await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
-  await page.goto('/');
-  await expect(page.getByTestId('play').getByText(p.doneScore(5, 5))).toBeVisible();
-  await expect(page.getByTestId('play').getByRole('link', { name: p.doneCta })).toHaveAttribute('href', '/play');
+  await page.goto('/dashboard');
+  await expect(page.getByTestId('dashboard-game').getByText(d.duelDone)).toBeVisible();
+  await expect(page.getByTestId('dashboard-game').getByRole('link', { name: d.duelSeeResult })).toHaveAttribute('href', '/play');
 });
 
 test('a challenge link: a stranger sees the friend’s real score, then the day result sets the two side by side', async ({ page, browser, context }) => {

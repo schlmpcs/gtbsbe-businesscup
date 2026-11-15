@@ -90,6 +90,9 @@ describe('useCashFlow', () => {
     expect(expenses!.change).toBeCloseTo(2544.96 - 3948.01, 2);
     expect(savings!.change).toBeCloseTo(-144.96 - 851.99, 2);
     expect(rate!.change).toBeCloseTo(-144.96 / 2400 - 851.99 / 4800, 10);
+    // 2025 has no lines, so the year has nothing to compare with (not a change from $0).
+    act(() => result.current.setPeriod('yearly'));
+    expect(result.current.kpis.map((k) => [k.previous, k.change])).toEqual([[null, null], [null, null], [null, null], [null, null]]);
   });
 
   it('shapes the Sankey flow by category and by group', () => {

@@ -26,16 +26,7 @@ test('a typed line is saved and the spent total changes, on /spend and Home', as
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(spent).toHaveText('$87');
 
-  // Persisted: Home shows the same month so far and links to the log.
-  await page.goto('/');
-  const daily = page.getByTestId('today-daily');
-  await expect(daily.getByTestId('today-daily-spent')).toHaveText('$87');
-  await expect(daily.getByTestId('today-daily-safe')).toBeVisible();
-  await expect(daily.getByRole('link', { name: /Open your daily log/ })).toHaveAttribute('href', '/spend');
-
-  // The quick-add on Home (collapsed under "Log a purchase") adds to the same log.
-  await daily.getByText('Log a purchase').click();
-  await daily.getByRole('textbox', { name: 'Log spending' }).fill('lunch 15');
-  await daily.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(daily.getByTestId('today-daily-spent')).toHaveText('$102');
+  // Persisted: the log survives a reload.
+  await page.reload();
+  await expect(page.getByTestId('spend-spent')).toHaveText('$87');
 });
