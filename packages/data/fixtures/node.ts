@@ -50,3 +50,27 @@ export function readSyntheticStatement(file: string): string {
 export function readSyntheticAnswerKey(): string {
   return readFileSync(join(syntheticStatementsDir, 'labels', 'answer-key.csv'), 'utf8');
 }
+
+/**
+ * The synthetic statements the demo bank link serves (apps/web/src/features/bankDemo: each fictional
+ * demo bank reads one of them through the CSV pipeline). One `new URL(literal, import.meta.url)` per
+ * file so Next's bundler copies each into GET /api/statement/demo/<bank> (a folder path would not be).
+ */
+const DEMO_STATEMENT_URLS = {
+  'hh01-austin-single-renter.csv': new URL('./synthetic-statements/hh01-austin-single-renter.csv', import.meta.url),
+  'hh02-queens-retail-roommates.csv': new URL('./synthetic-statements/hh02-queens-retail-roommates.csv', import.meta.url),
+  'hh04-bronx-nurse-single-parent.csv': new URL('./synthetic-statements/hh04-bronx-nurse-single-parent.csv', import.meta.url),
+  'hh08-la-new-grad-roommates.csv': new URL('./synthetic-statements/hh08-la-new-grad-roommates.csv', import.meta.url),
+  'hh13-elk-grove-single-income-family.csv': new URL('./synthetic-statements/hh13-elk-grove-single-income-family.csv', import.meta.url),
+  'hh21-chandler-young-family.csv': new URL('./synthetic-statements/hh21-chandler-young-family.csv', import.meta.url),
+  'hh31-austin-software-engineer.csv': new URL('./synthetic-statements/hh31-austin-software-engineer.csv', import.meta.url),
+} as const;
+
+export type DemoStatementFile = keyof typeof DEMO_STATEMENT_URLS;
+export const DEMO_STATEMENT_FILES = Object.keys(DEMO_STATEMENT_URLS) as DemoStatementFile[];
+
+/** A demo bank's statement text (raw, BOM and line endings untouched); null for a file not served. */
+export function readDemoStatementCsv(file: string): string | null {
+  const url = (DEMO_STATEMENT_URLS as Record<string, URL>)[file];
+  return url ? readFileSync(fileURLToPath(url), 'utf8') : null;
+}

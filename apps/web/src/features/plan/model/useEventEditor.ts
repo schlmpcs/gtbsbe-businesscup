@@ -1,45 +1,54 @@
 // The event panel: an event's fields with their sources and estimate tags, the monthly breakdown of a
-// home purchase (buyHomeBreakdown, MP4) or of a financed expense (expenseFinancingBreakdown), the down
-// payment as $ and % (kept in sync), and the with-vs-without preview (previewEvent, MP6).
+// home purchase, the down payment as $ and % (kept in sync), and the with-vs-without preview. The
+// breakdown is the engine's buyHomeBreakdown, the preview two plan() runs (with the event on, and
+// without it), and a field shows the Source of the engine's default (defaultEventSources) while its
+// value is still that default.
 //
 // Down payment sync (plain arithmetic, the engine is not involved): dollars = pct × price and
 // pct = dollars ÷ price. Dollars are the stored field, so a new price keeps the dollars and moves the %.
-import {
-  buyHomeBreakdown, defaultEventSources, expenseFinancingBreakdown, previewEvent, type DefaultEventSources,
-} from '@lifeguessr/engine';
-import type { PlanEvent, PlanEventOf, Scenario } from '@lifeguessr/types';
+import { buyHomeBreakdown, defaultEvent, defaultEventSources, type DefaultEventSources } from '@lifeguessr/engine';
+import type { PlanEvent, PlanEventOf } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { plan as copy } from '@/copy';
-import { track } from '@/lib/events';
-import { iconOf, money, pct, shortfallLabel, shortfallYearsDelta, signedMoney, toneOf } from './planFormat';
-import { calendarOf, planFor, usePlanInputs, yearRangeOf, type PlanInputs } from './planInputs';
+import { ageAt, calendarOf, clampYearTo, eventContext, NO_MOVES, planOf, usePlanInputs, type PlanCalendar } from './planEngine';
+import { iconOf, money, pct, signedMoney, toneOf } from './planFormat';
 import { usePlanStore } from './planStore';
-import { eventContextOf } from './useEventCatalog';
-import { clampYear, movedEvent, withEventYear } from './usePlan';
+import { movedEvent } from './usePlan';
 import type {
-  EventBreakdownVM, EventEditorVM, EventFieldVM, EventFinancingVM, EventPreviewVM, PlanFieldValue,
+  EventBreakdownVM, EventEditorVM, EventFieldVM, EventPreviewVM, PlanFieldValue, Source,
 } from './types';
 
-type YearRange = { min: number; max: number };
 type FieldSpec = Omit<EventFieldVM, 'display' | 'label' | 'isEstimate'> & { display?: string; isEstimate?: boolean };
 
 const moneyField = (key: string, value: number, extra: Partial<FieldSpec> = {}): FieldSpec => ({ key, kind: 'money', value, min: 0, ...extra });
 const rateField = (key: string, value: number, extra: Partial<FieldSpec> = {}): FieldSpec => ({ key, kind: 'rate', value, min: 0, max: 1, ...extra });
 
-/**
- * The event's fields. `sources` (defaultEventSources) says where each default came from: the area's
- * data (ACS home value and tax rate, NAIC insurance, DOL childcare) or one of the engine's assumptions.
- */
-function specsOf(e: PlanEvent, range: YearRange, sources: DefaultEventSources): FieldSpec[] {
+/** The engine's default for this event type and the Source of each default amount. */
+export type EventDefaults = { values: PlanEvent; sources: DefaultEventSources };
+
+const plain = (v: unknown): unknown => (v !== null && typeof v === 'object' && 'value' in v ? (v as { value: unknown }).value : v);
+const same = (a: unknown, b: unknown) =>
+  typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) < 1e-6 : a === b;
+
+/** The field's Source while its value is still the engine's default; after an edit it is the person's number. */
+function sourceOf(e: PlanEvent, key: string, d: EventDefaults): Partial<FieldSpec> {
+  const source: Source | undefined = d.sources[key];
+  if (!source) return {};
+  const now = plain((e as Record<string, unknown>)[key]);
+  const was = plain((d.values as Record<string, unknown>)[key]);
+  return same(now, was) ? { source } : {};
+}
+
+function specsOf(e: PlanEvent, cal: PlanCalendar, d: EventDefaults): FieldSpec[] {
   const h = copy.editor.hints;
-  const src = (key: string): Partial<FieldSpec> => (sources[key] ? { source: sources[key] } : {});
-  const yearField: FieldSpec = { key: 'year', kind: 'year', value: e.year, min: range.min, max: range.max, ...src('year') };
-  const endYearField = (value: number): FieldSpec => ({ key: 'endYear', kind: 'year', value, min: range.min, max: range.max, ...src('endYear') });
+  const src = (key: string) => sourceOf(e, key, d);
+  const yearField = (ev: PlanEvent): FieldSpec => ({ key: 'year', kind: 'year', value: ev.year, min: cal.firstYear, max: cal.lastYear, ...src('year') });
+  const endYearField = (value: number): FieldSpec => ({ key: 'endYear', kind: 'year', value, min: cal.firstYear, max: cal.lastYear, ...src('endYear') });
   switch (e.type) {
-    case 'income': return [yearField, moneyField('monthly', e.monthly, src('monthly')), ...(e.endYear !== undefined ? [endYearField(e.endYear)] : [])];
+    case 'income': return [yearField(e), moneyField('monthly', e.monthly, src('monthly')), ...(e.endYear !== undefined ? [endYearField(e.endYear)] : [])];
     case 'expense':
       return [
-        yearField,
+        yearField(e),
         moneyField('amount', e.amount, src('amount')),
         { key: 'cadence', kind: 'choice', value: e.cadence, options: [{ value: 'once', label: copy.editor.cadence.once }, { value: 'monthly', label: copy.editor.cadence.monthly }] },
         ...(e.endYear !== undefined ? [endYearField(e.endYear)] : []),
@@ -53,12 +62,12 @@ function specsOf(e: PlanEvent, range: YearRange, sources: DefaultEventSources): 
       ];
     case 'buyHome':
       return [
-        yearField,
+        yearField(e),
         moneyField('homeValue', e.homeValue, src('homeValue')),
         moneyField('downPayment', e.downPayment, { hint: h.downPayment, ...src('downPayment') }),
-        rateField('downPaymentPct', e.homeValue > 0 ? e.downPayment / e.homeValue : 0, { hint: h.downPayment, ...src('downPayment') }),
+        rateField('downPaymentPct', e.homeValue > 0 ? e.downPayment / e.homeValue : 0, { hint: h.downPayment }),
         { key: 'payCash', kind: 'toggle', value: e.payCash },
-        { key: 'termYears', kind: 'choice', value: e.termYears, options: [{ value: 15, label: '15 years' }, { value: 30, label: '30 years' }], ...src('termYears') },
+        { key: 'termYears', kind: 'choice', value: e.termYears, ...src('termYears'), options: [{ value: 15, label: '15 years' }, { value: 30, label: '30 years' }] },
         rateField('rate', e.rate, { max: 0.3, hint: h.rate, ...src('rate') }),
         rateField('propertyTaxRate', e.propertyTaxRate, { max: 0.1, ...src('propertyTaxRate') }),
         moneyField('insuranceMonthly', e.insuranceMonthly.value, { isEstimate: e.insuranceMonthly.isEstimate, ...src('insuranceMonthly') }),
@@ -67,16 +76,16 @@ function specsOf(e: PlanEvent, range: YearRange, sources: DefaultEventSources): 
       ];
     case 'haveKid':
       return [
-        yearField,
+        yearField(e),
         moneyField('childcareMonthly', e.childcareMonthly.value, { isEstimate: e.childcareMonthly.isEstimate, ...src('childcareMonthly') }),
         { key: 'childcareYears', kind: 'count', value: e.childcareYears, min: 0, max: 18, ...src('childcareYears') },
         moneyField('otherMonthly', e.otherMonthly.value, { isEstimate: e.otherMonthly.isEstimate, ...src('otherMonthly') }),
       ];
-    case 'newJob': return [yearField, moneyField('takeHomePay', e.takeHomePay, src('takeHomePay'))];
-    case 'careerBreak': return [yearField, endYearField(e.endYear)];
-    case 'windfall': return [yearField, moneyField('amount', e.amount, src('amount'))];
-    case 'retire': return [yearField];
-    case 'socialSecurity': return [yearField, moneyField('monthly', e.monthly.value, { isEstimate: e.monthly.isEstimate, ...src('monthly') })];
+    case 'newJob': return [yearField(e), moneyField('takeHomePay', e.takeHomePay, src('takeHomePay'))];
+    case 'careerBreak': return [yearField(e), endYearField(e.endYear)];
+    case 'windfall': return [yearField(e), moneyField('amount', e.amount, src('amount'))];
+    case 'retire': return [yearField(e)];
+    case 'socialSecurity': return [yearField(e), moneyField('monthly', e.monthly.value, { isEstimate: e.monthly.isEstimate, ...src('monthly') })];
   }
 }
 
@@ -91,8 +100,8 @@ function displayOf(f: FieldSpec): string {
   }
 }
 
-function fieldVMs(e: PlanEvent, range: YearRange, sources: DefaultEventSources): EventFieldVM[] {
-  return specsOf(e, range, sources).map((f) => ({
+function fieldVMs(e: PlanEvent, cal: PlanCalendar, d: EventDefaults): EventFieldVM[] {
+  return specsOf(e, cal, d).map((f) => ({
     ...f,
     label: copy.editor.fields[f.key] ?? f.key,
     display: displayOf(f),
@@ -108,8 +117,9 @@ const nonNeg = (v: PlanFieldValue): number | null => {
 /** A typed estimate is the person's own number from then on. */
 const typed = (v: number) => ({ value: v, isEstimate: false });
 
-/** `e` with `field` set to `value`; unknown fields and values of the wrong type leave it unchanged. Years are clamped to `range`. */
-export function applyEventUpdate(e: PlanEvent, field: string, value: PlanFieldValue, range: YearRange): PlanEvent {
+/** `e` with `field` set to `value`; unknown fields and values of the wrong type leave it unchanged. Years are clamped to `cal`. */
+export function applyEventUpdate(e: PlanEvent, field: string, value: PlanFieldValue, cal: PlanCalendar): PlanEvent {
+  const clampYear = (y: number) => clampYearTo(cal, y);
   if (field === 'name') {
     const name = typeof value === 'string' ? value.trim() : '';
     const { name: _old, ...rest } = e;
@@ -117,11 +127,11 @@ export function applyEventUpdate(e: PlanEvent, field: string, value: PlanFieldVa
   }
   if (field === 'year') {
     const y = num(value);
-    return y === null ? e : movedEvent(e, clampYear(y, range));
+    return y === null ? e : movedEvent(e, clampYear(y));
   }
   if (field === 'endYear' && 'endYear' in e) {
     const y = num(value);
-    return y === null ? e : ({ ...e, endYear: Math.max(e.year, clampYear(y, range)) } as PlanEvent);
+    return y === null ? e : ({ ...e, endYear: Math.max(e.year, clampYear(y)) } as PlanEvent);
   }
   switch (e.type) {
     case 'income': {
@@ -160,7 +170,7 @@ export function applyEventUpdate(e: PlanEvent, field: string, value: PlanFieldVa
       const n = nonNeg(value);
       if (n === null) return e;
       if (field === 'childcareMonthly') return { ...e, childcareMonthly: typed(n) };
-      if (field === 'childcareYears') return { ...e, childcareYears: Math.min(18, Math.round(n)) };
+      if (field === 'childcareYears') return { ...e, childcareYears: Math.round(n) };
       if (field === 'otherMonthly') return { ...e, otherMonthly: typed(n) };
       return e;
     }
@@ -196,79 +206,37 @@ function breakdownOf(e: PlanEventOf<'buyHome'>): EventBreakdownVM {
   };
 }
 
-function financingOf(e: PlanEventOf<'expense'>): EventFinancingVM | null {
-  const f = expenseFinancingBreakdown(e);
-  if (!f) return null;
-  const line = (key: EventFinancingVM['lines'][number]['key'], amount: number) =>
-    ({ key, label: copy.financingBreakdown[key], amountLabel: money(amount), amount });
-  return { lines: [line('downPayment', f.downPayment), line('financed', f.financed), line('monthlyPayment', f.monthlyPayment), line('totalInterest', f.totalInterest)] };
-}
-
-/** previewEvent's KPIs with the event on and without it, and the two plans behind them as series. */
-function previewOf(inputs: PlanInputs, scenario: Scenario, event: PlanEvent): EventPreviewVM {
-  const { endAge } = scenario.assumptions;
-  const pv = previewEvent(inputs.profile, inputs.accounts, scenario, event, inputs.area);
-  const k1 = pv.withEvent;
-  const k0 = pv.without;
-  // The same two scenarios previewEvent plans: the event on in its place, and the event removed.
-  const withPlan = planFor(inputs, { ...scenario, events: scenario.events.map((e) => (e.id === event.id ? ({ ...e, enabled: true } as PlanEvent) : e)) });
-  const withoutPlan = planFor(inputs, { ...scenario, events: scenario.events.filter((e) => e.id !== event.id) });
-  const p = copy.editor.preview;
-  const short = shortfallYearsDelta(k1.shortfallAge, k0.shortfallAge, endAge);
-  const dRet = k1.netWorthAtRetirement - k0.netWorthAtRetirement;
-  const dEnd = k1.netWorthAtEnd - k0.netWorthAtEnd;
-  return {
-    rows: [
-      { id: 'netWorthAtRetirement', label: p.netWorthAtRetirement, withLabel: money(k1.netWorthAtRetirement), withoutLabel: money(k0.netWorthAtRetirement),
-        deltaLabel: signedMoney(dRet), tone: toneOf(dRet) },
-      { id: 'netWorthAtEnd', label: p.netWorthAtEnd, withLabel: money(k1.netWorthAtEnd), withoutLabel: money(k0.netWorthAtEnd),
-        deltaLabel: signedMoney(dEnd), tone: toneOf(dEnd) },
-      { id: 'shortfall', label: p.shortfall, withLabel: shortfallLabel(k1.shortfallAge, endAge), withoutLabel: shortfallLabel(k0.shortfallAge, endAge),
-        deltaLabel: short.label, tone: toneOf(short.years) },
-    ],
-    series: withPlan.years.map((y, i) => ({ year: y.year, age: y.age, withEvent: y.netWorth, withoutEvent: withoutPlan.years[i]!.netWorth })),
-    leftOverMonthly: pv.leftOverMonthly,
-    leftOverMonthlyLabel: copy.leftOverMonthly(money(pv.leftOverMonthly)),
-  };
-}
-
 export function useEventEditor(id: string | null): EventEditorVM {
-  const inputs = usePlanInputs();
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
   const editEvent = usePlanStore((s) => s.editEvent);
   const edit = usePlanStore((s) => s.edit);
   const setOpenEvent = usePlanStore((s) => s.setOpenEvent);
   const event = scenario?.events.find((e) => e.id === id);
   const scenarioId = scenario?.id;
-  const cal = useMemo(() => calendarOf(inputs.profile), [inputs.profile]);
-
-  /** One plan_event_edited per event per page load: its type only, never a value. */
-  const edited = useCallback(() => {
-    const e = usePlanStore.getState().scenarios.find((s) => s.id === scenarioId)?.events.find((x) => x.id === id);
-    if (e) track({ name: 'plan_event_edited', props: { type: e.type } }, { once: `plan_event_edited:${e.id}` });
-  }, [scenarioId, id]);
+  const moves = usePlanStore((s) => (scenarioId ? s.movesApplied[scenarioId] : undefined) ?? NO_MOVES);
+  const inputs = usePlanInputs();
+  const endAge = scenario?.assumptions.endAge ?? 0;
+  const cal = useMemo(() => calendarOf(inputs.profile, endAge), [inputs.profile, endAge]);
 
   const update = useCallback(
     (field: string, value: PlanFieldValue) => {
       if (!scenarioId || id === null) return;
-      edit(scenarioId, (s) => {
-        // Retire's year is the retirement age: moving it moves the age with it (withEventYear).
-        const y = num(value);
-        if (field === 'year' && y !== null) return withEventYear(s, id, y, cal);
-        const e = s.events.find((x) => x.id === id);
-        if (!e) return s;
-        const next = applyEventUpdate(e, field, value, yearRangeOf(cal, s.assumptions.endAge));
-        return next === e ? s : { ...s, events: s.events.map((x) => (x.id === id ? next : x)) };
-      });
-      edited();
+      editEvent(scenarioId, id, (e) => applyEventUpdate(e, field, value, cal));
+      // Retire's year is the retirement age: keep the two together.
+      const y = num(value);
+      if (field === 'year' && y !== null) {
+        edit(scenarioId, (s) =>
+          s.events.some((e) => e.id === id && e.type === 'retire')
+            ? { ...s, assumptions: { ...s.assumptions, retireAge: ageAt(cal, clampYearTo(cal, y)) } }
+            : s,
+        );
+      }
     },
-    [scenarioId, id, edit, cal, edited],
+    [scenarioId, id, editEvent, edit, cal],
   );
   const toggleEnabled = useCallback(() => {
-    if (!scenarioId || id === null) return;
-    editEvent(scenarioId, id, (e) => ({ ...e, enabled: !e.enabled }));
-    edited();
-  }, [scenarioId, id, editEvent, edited]);
+    if (scenarioId && id !== null) editEvent(scenarioId, id, (e) => ({ ...e, enabled: !e.enabled }));
+  }, [scenarioId, id, editEvent]);
   const remove = useCallback(() => {
     if (!scenarioId || id === null) return;
     edit(scenarioId, (s) => ({ ...s, events: s.events.filter((e) => e.id !== id) }));
@@ -277,8 +245,31 @@ export function useEventEditor(id: string | null): EventEditorVM {
 
   return useMemo((): EventEditorVM => {
     if (!scenario || !event || id === null) return { status: 'notFound', message: copy.editor.notFound };
-    const range = yearRangeOf(cal, scenario.assumptions.endAge);
-    const sources = defaultEventSources(event.type, eventContextOf(inputs, scenario.assumptions));
+
+    // Turning the eye off keeps the preview of what the event would do: "with" has it on either way.
+    const withPlan = event.enabled
+      ? planOf(inputs, scenario, moves)
+      : planOf(inputs, { ...scenario, events: scenario.events.map((e) => (e.id === id ? { ...e, enabled: true } : e)) }, moves);
+    const withoutPlan = planOf(inputs, { ...scenario, events: scenario.events.filter((e) => e.id !== id) }, moves);
+    const ctx = eventContext(inputs, scenario);
+    const defaults: EventDefaults = { values: defaultEvent(event.type, ctx), sources: defaultEventSources(event.type, ctx) };
+    const k1 = withPlan.kpis;
+    const k0 = withoutPlan.kpis;
+    const p = copy.editor.preview;
+    const shortLabel = (age: number | null) => (age === null ? copy.kpi.shortfall.never(scenario.assumptions.endAge) : copy.kpi.shortfall.age(age));
+    const yrs = (k1.shortfallAge ?? scenario.assumptions.endAge + 1) - (k0.shortfallAge ?? scenario.assumptions.endAge + 1);
+    const preview: EventPreviewVM = {
+      rows: [
+        { id: 'netWorthAtRetirement', label: p.netWorthAtRetirement, withLabel: money(k1.netWorthAtRetirement), withoutLabel: money(k0.netWorthAtRetirement),
+          deltaLabel: signedMoney(k1.netWorthAtRetirement - k0.netWorthAtRetirement), tone: toneOf(k1.netWorthAtRetirement - k0.netWorthAtRetirement) },
+        { id: 'netWorthAtEnd', label: p.netWorthAtEnd, withLabel: money(k1.netWorthAtEnd), withoutLabel: money(k0.netWorthAtEnd),
+          deltaLabel: signedMoney(k1.netWorthAtEnd - k0.netWorthAtEnd), tone: toneOf(k1.netWorthAtEnd - k0.netWorthAtEnd) },
+        { id: 'shortfall', label: p.shortfall, withLabel: shortLabel(k1.shortfallAge), withoutLabel: shortLabel(k0.shortfallAge),
+          deltaLabel: yrs === 0 ? '—' : p.years(`${yrs > 0 ? '+' : '−'}${Math.abs(yrs)}`), tone: toneOf(yrs) },
+      ],
+      series: withPlan.years.map((y, i) => ({ year: y.year, age: y.age, withEvent: y.netWorth, withoutEvent: withoutPlan.years[i]!.netWorth })),
+    };
+
     const downPaymentPct = event.type === 'buyHome' ? (event.homeValue > 0 ? event.downPayment / event.homeValue : 0) : null;
     return {
       status: 'ready',
@@ -288,15 +279,14 @@ export function useEventEditor(id: string | null): EventEditorVM {
       title: copy.events[event.type].title,
       name: event.name ?? '',
       enabled: event.enabled,
-      fields: fieldVMs(event, range, sources),
+      fields: fieldVMs(event, cal, defaults),
       breakdown: event.type === 'buyHome' ? breakdownOf(event) : null,
-      financing: event.type === 'expense' ? financingOf(event) : null,
       downPaymentPct,
       downPaymentPctLabel: downPaymentPct === null ? null : pct(downPaymentPct, 1),
-      preview: previewOf(inputs, scenario, event),
+      preview,
       update,
       toggleEnabled,
       remove,
     };
-  }, [scenario, event, id, inputs, cal, update, toggleEnabled, remove]);
+  }, [scenario, event, id, moves, inputs, cal, update, toggleEnabled, remove]);
 }

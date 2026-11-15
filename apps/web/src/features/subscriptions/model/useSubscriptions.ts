@@ -6,8 +6,8 @@
 // Detection first: a statement already read on this page (S9) is used straight away and the tool opens on
 // what it found; otherwise it opens on the upload. The guess, the ticks and the reveal need no profile and
 // no upload, and stay as the fallback. Everything a statement finds stays in this browser (`store`). The cancel plan is one Next Move
-// candidate (`plan.candidate`); its 10-year number is measured by `useCancelResult`, which a screen
-// mounts only while something is marked, so this hook never asks the forecast route.
+// candidate (`plan.candidate`); what it does to the person's plan is measured on this device by
+// `usePlanImpact` (engine plan() with and without it) and added to the active /plan scenario from there.
 //
 // Everything that comes from outside the feature is a parameter (`SubscriptionsDeps`): the catalogue
 // of known services (M4), the tool's slice of the local store (M2), the statement categorizer client
@@ -19,7 +19,6 @@ import {
   type StatementClass, type SubscriptionFinding,
 } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { patchesEqual } from '@/features/forecast/model/forecastAnswer';
 import { categorizeStatement } from '@/lib/api/statement';
 import { downloadRenewalsCalendar } from '@/lib/download';
 import { track as defaultTrack, trackTool as defaultTrackTool } from '@/lib/events';
@@ -28,7 +27,7 @@ import { toVMError } from '@/lib/model/errors';
 import { useAppReady, useAppStore } from '@/state';
 import { getAnonId } from '@/state/anonId';
 import {
-  CANCEL_MOVE_ID, cancelCandidate, combineFindings, displayNameOf, forgottenIds, isCounted, markedFindings, marksWithout,
+  cancelCandidate, combineFindings, displayNameOf, forgottenIds, isCounted, markedFindings, marksWithout,
   missBucketOf, missFactor, monthlyOf, pruneMarks, tickServices,
 } from './audit';
 import { GUESS_PRESETS, SURVEY } from './constants';
@@ -58,7 +57,19 @@ export type SubscriptionsDeps = {
    * tool has no findings yet, it is audited on open and the tool starts on "What we found". Default: none.
    */
   importedStatement?: () => StatementRead | null;
+  /**
+   * The person's ledger (Transactions), as the masked lines the detector reads. When it holds lines and
+   * the tool has no findings yet, or its findings are older than the ledger's last line, the ledger is
+   * audited on open: no upload needed, and the findings agree with Recurring. Default: none.
+   */
+  ledger?: LedgerForAudit;
 };
+
+/** The ledger as the audit reads it: loaded or not, its lines (null when empty) and its latest date. */
+export type LedgerForAudit = { ready: boolean; read: StatementRead | null; latest: string | null };
+
+const dayOf = (d: { month: string; day: number } | null | undefined): string | null =>
+  d ? `${d.month}-${String(d.day).padStart(2, '0')}` : null;
 
 const STEP_ORDER: readonly SubscriptionsStep[] = ['statement', 'findings', 'guess', 'ticks', 'reveal', 'plan'];
 
@@ -85,7 +96,6 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   const ready = useAppReady();
   const profileOrigin = useAppStore((s) => s.profileOrigin);
   const subscriptionsDetected = useAppStore((s) => s.subscriptionsDetected);
-  const committedMove = useAppStore((s) => s.committedMove);
   const applySubscriptionsAudit = useAppStore((s) => s.applySubscriptionsAudit);
 
   // ----- saved state ------------------------------------------------------------------------------
@@ -303,6 +313,24 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     }
   }, [ready, takeImported, auditStatement, emit]);
 
+  // The ledger: audited once it has loaded, when it is newer than the findings kept (or there are none).
+  const ledger = deps.ledger;
+  const ledgerAudited = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready || !ledger?.ready || !ledger.read || ledger.read.items.length === 0 || ledger.latest === null) return;
+    const key = `${ledger.latest}|${ledger.read.items.length}`;
+    if (ledgerAudited.current === key) return;
+    ledgerAudited.current = key;
+    const kept = dayOf(latest.current.audit?.asOf);
+    if (kept !== null && kept >= ledger.latest) return;
+    emit({ name: 'subs_started', props: { path: 'statement' } }, 'subs:started:statement');
+    try {
+      auditStatement(ledger.read);
+    } catch {
+      // the store refused it: the upload is still there
+    }
+  }, [ready, ledger, auditStatement, emit]);
+
   const uploadStatement = useCallback(
     (file: File) => {
       abort.current?.abort();
@@ -339,6 +367,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     // Fewer months than charges the detector needs for a pattern: a monthly series cannot show in it.
     isShort: hasAudit && monthsCovered < subsMinCharges.value,
     asOf: state.audit?.asOf ?? null,
+    fromLedger: ledger?.latest != null && dayOf(state.audit?.asOf) === ledger.latest,
     upload: uploadStatement,
     dismissError,
   };
@@ -425,10 +454,6 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
   );
 
   const profileSubscriptions = profile.spending.subscriptions;
-  // The committed move is a snapshot: its patch is absolute and was sized for the marks and the subscriptions
-  // line of that moment. It is "added" only while the plan would commit the same patch today.
-  const cancelPlanCommitted = profile.committedMoveId === CANCEL_MOVE_ID && committedMove?.id === CANCEL_MOVE_ID;
-  const moveAdded = cancelPlanCommitted && candidate !== null && patchesEqual(committedMove.patch, candidate.patch);
   const plan: PlanVM = {
     options: findingsView.active.concat(findingsView.tickedOnly).filter((f) => f.counted),
     markedCount: marked.length,
@@ -440,8 +465,6 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     isSampleProfile: profileOrigin === 'demo',
     markCancel,
     unmarkCancel,
-    moveAdded,
-    moveOutdated: cancelPlanCommitted && !moveAdded,
   };
 
   // ----- apply to the profile ---------------------------------------------------------------------

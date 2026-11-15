@@ -26,6 +26,18 @@ export function writeStorage(key: string, value: string): void {
   }
 }
 
+/** Like writeStorage, but says whether the value was stored (false: no storage, blocked or over quota). */
+export function tryWriteStorage(key: string, value: string): boolean {
+  try {
+    const s = storage();
+    if (!s) return false;
+    s.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function removeStorage(key: string): void {
   try {
     storage()?.removeItem(key);

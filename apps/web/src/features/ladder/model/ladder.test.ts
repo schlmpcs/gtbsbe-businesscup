@@ -16,11 +16,12 @@ import { useAppStore, useGameStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { detectedDebtPayments, useBalanceSheet } from './useBalanceSheet';
 import { differentiatorsFor, useClosestLife } from './useClosestLife';
+import { guessPayoff } from './useGuessPayoff';
 import { useGuessYourself } from './useGuessYourself';
 import { useLadderProgress } from './useLadderProgress';
 import { useQuickSliders } from './useQuickSliders';
 import type { StatementFileResult } from '@/features/upload/model/types';
-import { readableLabel, useStatementUpload } from './useStatementUpload';
+import { readableLabel, statementSummary, useStatementUpload } from './useStatementUpload';
 
 beforeEach(resetClientState);
 
@@ -95,6 +96,24 @@ describe('useClosestLife (S6): About you + the starting life from it', () => {
     expect(c.monthly).toEqual(costOfLife(lifeCardFromFacts(facts, area), area).total);
     expect(useAppStore.getState().profile.householdFacts).toEqual(facts);
     expect(useAppStore.getState().profile.zip).toBe('75216');
+  });
+
+  it('age and pay: empty with our typical value as the placeholder until the person gives theirs', async () => {
+    const { result } = renderHook(() => useClosestLife());
+    await waitForReady(result);
+    // The demo profile's 32 / 5,200 are measured, but they are the sample family's: not shown as typed.
+    const demo = useAppStore.getState().profile;
+    expect(result.current.about.age).toMatchObject({ value: null, estimate: demo.age.value, isEstimate: true });
+    expect(result.current.about.takeHomePay).toMatchObject({ value: null, estimate: demo.takeHomePay.value, isEstimate: true });
+    // Typing the very value the sample had still counts as typed.
+    act(() => result.current.setAge(demo.age.value));
+    expect(result.current.about.age).toMatchObject({ value: demo.age.value, isEstimate: false });
+    act(() => result.current.setZip('75216'));
+    act(() => result.current.choose());
+    expect(useAppStore.getState().profile.age).toEqual({ value: demo.age.value, isEstimate: false });
+    // The built life's pay is our estimate: still a placeholder, the same as on S8.
+    expect(result.current.about.takeHomePay).toMatchObject({ value: null, isEstimate: true });
+    expect(useAppStore.getState().profile.takeHomePay.isEstimate).toBe(true);
   });
 
   it('a ZIP we do not cover uses a covered one with the same first three digits, and says so', async () => {
@@ -400,6 +419,23 @@ describe('useStatementUpload (S9)', () => {
     expect(useAppStore.getState().subscriptionsDetected).toBe(true);
   });
 
+  it('the review opens with the average month: over the full months, else all of them', () => {
+    const m = (month: string, total: number, averaged: boolean) => ({ month, totals: totals({}), total, oneOffs: [], detectedPay: null, averaged });
+    expect(statementSummary([])).toBeNull();
+    expect(statementSummary([m('2026-08', 500, true), m('2026-09', 700, true), m('2026-10', 90, false)])).toEqual({ averageMonth: 600, fullMonths: 2 });
+    expect(statementSummary([m('2026-10', 90, false)])).toEqual({ averageMonth: 90, fullMonths: 0 });
+  });
+
+  it('review exposes the summary; apply clears it', async () => {
+    const { result } = renderHook(() => useStatementUpload());
+    await waitForReady(result);
+    expect(result.current.summary).toBeNull();
+    act(() => result.current.submitTotals(months));
+    expect(result.current.summary).toEqual({ averageMonth: 630, fullMonths: 3 });
+    act(() => result.current.apply());
+    expect(result.current.summary).toBeNull();
+  });
+
   it('rejects malformed totals', async () => {
     const { result } = renderHook(() => useStatementUpload());
     await waitForReady(result);
@@ -594,7 +630,7 @@ describe('useLadderProgress', () => {
       ['S9', '/me/upload', false], // your spending: imported from a statement (or set by hand on S7)
       ['S8', '/me/balance', false], // the demo profile has measured fields, but they are a sample
     ]);
-    expect(result.current.futureHref).toBe('/future');
+    expect(result.current.futureHref).toBe('/start?ch=4');
     expect(result.current.byHandHref).toBe('/me/sliders');
     expect(result.current.in10ySource).toBe('rules'); // the ladder's number is the engine's preview, never the model's
 
@@ -616,10 +652,14 @@ describe('useLadderProgress', () => {
     // Spending set by hand (S7) completes the spending step, as a statement would.
     expect(result.current.rungs.find((r) => r.screen === 'S9')!.done).toBe(true);
     expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
+    // Age and pay are asked on S6: typing them does not do S8 (savings and debts).
     act(() => useAppStore.getState().setField('takeHomePay', 6000));
-    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(true);
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
     expect(result.current.estimates.left).toBe(start.estimates.total - 2);
     act(() => useAppStore.getState().skipField('takeHomePay'));
+    act(() => useAppStore.getState().setField('cash', 2500));
+    expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(true);
+    act(() => useAppStore.getState().skipField('cash'));
     expect(result.current.rungs.find((r) => r.screen === 'S8')!.done).toBe(false);
     // Adding a debt counts, even with its minimum payment left to us (an estimate).
     let id = '';
@@ -634,6 +674,7 @@ describe('useLadderProgress', () => {
     act(() => useAppStore.getState().setField('takeHomePay', 6000));
     expect(result.current.bandWidth).toBeLessThan(result.current.bandWidthAllEstimated);
     expect(result.current.bandNarrowed).toBeGreaterThan(0);
+    act(() => useAppStore.getState().setField('retirement', 20000));
 
     act(() =>
       useAppStore.getState().applyStatementTotals([
@@ -673,6 +714,20 @@ describe('debtsChanged / startingDebts', () => {
     expect(startingDebts('no-such-card', cardsSample)).toBeNull();
     const withCar = cardsSample.find((c) => c.car)!;
     expect(startingDebts(withCar.id, cardsSample)).toEqual(cardToProfile(withCar, getArea(withCar.zip)).debts);
+  });
+});
+
+describe('guessPayoff (the S5 guess on later steps)', () => {
+  it('null without a guess or against a sample family; an estimate against the built household; measured once own', () => {
+    const demo = cloneProfileDemo();
+    expect(guessPayoff(null, demo, [], OWN_LIFE_CARD_ID)).toBeNull();
+    expect(guessPayoff(3000, demo, [], null)).toBeNull(); // the demo family's month is not the person's
+    const area = getArea('75216');
+    const built = cardToProfile(lifeCardFromFacts({ adults: 1, kids: [], bedrooms: 1, hasCar: true }, area), area);
+    const cost = COST_CATEGORIES.filter((c) => c !== 'debtPayments').reduce((t, c) => t + built.spending[c].value, 0);
+    expect(guessPayoff(3000, built, [], OWN_LIFE_CARD_ID)).toEqual({ guess: 3000, actual: cost, difference: cost - 3000, isEstimate: true });
+    const month: CategoryTotals = { month: '2026-10', totals: totals({ groceries: 400 }), oneOffs: [] };
+    expect(guessPayoff(3000, built, [month], OWN_LIFE_CARD_ID)?.isEstimate).toBe(false);
   });
 });
 

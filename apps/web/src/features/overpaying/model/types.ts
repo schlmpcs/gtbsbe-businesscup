@@ -4,7 +4,7 @@
 import type { coveredMetros } from '@lifeguessr/data/areas';
 import type { OverpayingInput, overpayingCheck } from '@lifeguessr/engine';
 import type {
-  AreaData, Benchmark, BenchmarkLine, ClientFunnelEvent, HouseholdFacts, KidAge, Money, Source, ToolId, ToolsState,
+  AreaData, Benchmark, BenchmarkLine, ClientFunnelEvent, CostCategory, HouseholdFacts, KidAge, Money, Source, ToolId, ToolsState,
 } from '@lifeguessr/types';
 import type { Loadable } from '@/lib/model/types';
 
@@ -33,7 +33,7 @@ export type OverpayingInputsVM = {
 };
 
 /** Where a pre-filled amount came from; null once the person typed their own or there was no profile. */
-export type PrefillSource = 'profile' | 'profileEstimate' | null;
+export type PrefillSource = 'profile' | 'profileEstimate' | 'ledger' | null;
 
 export type PrefillVM = {
   /** The ZIP box still shows the profile's ZIP. */
@@ -120,6 +120,10 @@ export type BenchmarkRowVM = {
 export type SkippedLineVM = { line: BenchmarkLine; reason: 'notEntered' | 'noData' | 'noKids' };
 
 export type OverpayingSummaryVM = {
+  /** The plain answer: above (at least one line above its range), below (every line below), typical (otherwise). */
+  verdict: 'above' | 'typical' | 'below';
+  /** One concrete next step per line above its range, the biggest yearly gap first, with the range's middle to aim for. */
+  nextSteps: { line: BenchmarkLine; mid: Money }[];
   /** Lines compared. */
   compared: number;
   /** Of those, above the typical range. */
@@ -229,4 +233,9 @@ export type OverpayingOptions = {
    * (and the ZIP) whatever the profile's origin, since the person typed them. Saved inputs still win.
    */
   household?: { facts: HouseholdFacts; zip: string | null } | null;
+  /** Monthly averages of the person's transactions by category: prefill rent, groceries and childcare (measured). */
+  ledger?: Partial<Record<CostCategory, Money>> | null;
 };
+
+/** "What it does to your plan" for one line above its range (./planMoves, measured by plan()). */
+export type { PlanImpactVM } from '@/features/subscriptions/model/usePlanImpact';

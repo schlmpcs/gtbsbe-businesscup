@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { duel as t } from '@/copy';
 import { Button, Card, cx, formatRate } from '@/ui-kit';
 import type { DuelCardVM, DuelHintVM, DuelVM } from '../model/types';
 import { DuelCard } from './DuelCard';
+import { DuelIcon } from './DuelIcons';
 import { DuelChallengeLine } from './DuelChallenge';
 import { DuelReveal, DuelRevealBand, DuelRevealHeader } from './DuelReveal';
 import { DuelSummary } from './DuelSummary';
@@ -32,8 +33,12 @@ const BIG_STICKER = 'rounded-full px-lg py-sm text-sm font-bold uppercase tracki
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
-/** Below the cards: the white hint pill and what a right pick scores now; once used, an orange sticker. */
+/**
+ * Below the cards: the hint as a secondary button, what it opens (the neighborhood price level, one
+ * more fact on each card) and what a right pick scores now; once used, an orange sticker.
+ */
 function HintRow({ hint, onOpen }: { hint: DuelHintVM; onOpen: () => void }) {
+  const explainId = useId();
   if (hint.used) {
     return (
       <p role="status">
@@ -42,15 +47,19 @@ function HintRow({ hint, onOpen }: { hint: DuelHintVM; onOpen: () => void }) {
     );
   }
   return (
-    <div className="flex flex-col items-center gap-md sm:flex-row">
-      <button
-        type="button"
+    <div className="flex w-full max-w-(--container-xl) flex-col items-center gap-sm text-center">
+      <Button
+        variant="secondary"
+        size="lg"
         onClick={onOpen}
         disabled={hint.status === 'opening'}
-        className="inline-flex items-center justify-center rounded-lg bg-surface px-2xl py-lg text-lg font-bold text-text shadow-md transition-colors hover:bg-primary-soft disabled:cursor-wait disabled:opacity-60"
+        aria-describedby={explainId}
+        className="inline-flex w-full items-center justify-center gap-sm bg-surface disabled:cursor-wait disabled:opacity-60 sm:w-auto"
       >
+        <DuelIcon name="bulb" className="size-lg shrink-0 text-primary" />
         {hint.status === 'opening' ? t.hint.opening : hint.status === 'error' ? t.hint.error : t.hint.offer(formatRate(hint.cost, 0))}
-      </button>
+      </Button>
+      <p id={explainId} className="text-sm text-text-muted">{t.hint.explain}</p>
       <p className="text-sm font-medium text-text-muted">{t.hint.worth(fmt(hint.pointsNow))}</p>
     </div>
   );
@@ -124,7 +133,7 @@ export function DuelScreen({ vm, guessOwnHref }: DuelScreenProps) {
           {reveal && <DuelRevealBand reveal={reveal} onNext={vm.next} />}
 
           {ready && vm.phase !== 'summary' && vm.cards && (
-            <div className="relative mx-auto grid w-full max-w-(--container-6xl) grid-cols-1 items-stretch md:grid-cols-2 md:gap-2xl lg:gap-[calc(var(--spacing-3xl)*1.25)]">
+            <div className="relative mx-auto grid w-full max-w-(--container-6xl) grid-cols-1 items-stretch md:grid-cols-2 md:gap-x-2xl lg:gap-x-[calc(var(--spacing-3xl)*1.25)]">
               {renderCard(vm.cards[0])}
               <VSBadge className="pointer-events-none relative z-20 -my-lg justify-self-center md:absolute md:left-1/2 md:top-1/2 md:my-0 md:-translate-x-1/2 md:-translate-y-1/2" />
               {renderCard(vm.cards[1])}

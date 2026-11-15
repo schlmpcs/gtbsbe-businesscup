@@ -4,7 +4,8 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { forecast as forecastCopy, ladder, subscriptions as t } from '@/copy';
+import { ladder, planImpact as pi, subscriptions as t } from '@/copy';
+import { resetPlanStore, usePlanStore } from '@/features/plan/model/planStore';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
 import { mockForecastRoute } from '@/test/forecastApi';
@@ -21,8 +22,14 @@ function Tool({ categorize = fakeCategorize(), catalogue = testCatalogue }: { ca
 
 let route: ReturnType<typeof mockForecastRoute>;
 
+const movesOnPlan = () => {
+  const st = usePlanStore.getState();
+  return st.movesApplied[st.activeId] ?? [];
+};
+
 beforeEach(() => {
   resetClientState();
+  resetPlanStore();
   track.mockClear();
   route = mockForecastRoute();
 });
@@ -89,55 +96,25 @@ describe('SubscriptionsScreen: the cold path', () => {
   });
 });
 
-describe('SubscriptionsScreen: no forecast request before there is something to measure', () => {
+describe('SubscriptionsScreen: what it does to the plan', () => {
   const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 50)); });
 
-  it('opening the page, guessing, ticking and opening an empty plan send nothing to the forecast route', async () => {
+  it('is measured on this device: marking sends nothing to the forecast route', async () => {
     const user = userEvent.setup();
     render(<Tool />);
-    await settle();
     await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
     await user.click(screen.getByRole('button', { name: t.guess.next }));
     await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
     await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
     expect(screen.getByText(t.plan.empty)).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: t.plan.mark('Spotify') }));
+    expect(await screen.findByTestId('cancel-impact')).toHaveTextContent(pi.title);
+    expect(screen.getByTestId('impact-10y')).toHaveTextContent(/^\+\$/);
     await settle();
     expect(route.calls).toEqual([]);
   });
 
-  it('the first mark on the plan step asks once, for one scenario: the cancel plan', async () => {
-    const user = userEvent.setup();
-    render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
-    await user.click(screen.getByRole('button', { name: t.guess.next }));
-    await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
-    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
-    await settle();
-    expect(route.calls).toHaveLength(0);
-    await user.click(screen.getByRole('checkbox', { name: t.plan.mark('Spotify') }));
-    await waitFor(() => expect(route.calls).toHaveLength(1));
-    expect((route.calls[0] as { scenarios: { id: string }[] }).scenarios.map((x) => x.id)).toEqual(['cancelSubscriptions:audit']);
-    expect(await screen.findByText(t.plan.in10y)).toBeInTheDocument();
-  });
-
-  it('a mark that is saved but not on screen (another step) asks nothing', async () => {
-    const user = userEvent.setup();
-    render(<Tool />);
-    await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
-    await user.click(screen.getByRole('button', { name: t.guess.next }));
-    await user.click(screen.getByRole('checkbox', { name: 'Spotify' }));
-    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
-    await user.click(screen.getByRole('checkbox', { name: t.plan.mark('Spotify') }));
-    await waitFor(() => expect(route.calls).toHaveLength(1));
-    await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.ticks) }));
-    await user.click(screen.getByRole('checkbox', { name: 'Netflix' })); // the profile is the same; nothing new to measure
-    await settle();
-    expect(route.calls).toHaveLength(1);
-  });
-});
-
-describe('SubscriptionsScreen: the next move follows the plan', () => {
-  it('marking more after adding the move offers to update it', async () => {
+  it('add to my plan; marking more after adding offers to update it', async () => {
     const user = userEvent.setup();
     render(<Tool />);
     await user.click(await screen.findByRole('button', { name: t.statement.byHand }));
@@ -147,17 +124,17 @@ describe('SubscriptionsScreen: the next move follows the plan', () => {
     await user.click(screen.getByRole('button', { name: new RegExp(t.stepper.steps.plan) }));
     const plan = screen.getByRole('heading', { name: t.plan.title }).closest('section')!;
     await user.click(within(plan).getByRole('checkbox', { name: t.plan.mark('Netflix') }));
-    await waitFor(() => expect(within(plan).getByRole('button', { name: t.plan.addAsMove })).toBeEnabled());
-    await user.click(within(plan).getByRole('button', { name: t.plan.addAsMove }));
-    expect(within(plan).getByText(t.plan.moveAdded)).toBeInTheDocument();
+    await user.click(within(plan).getByRole('button', { name: pi.add }));
+    expect(within(plan).getByText(pi.added)).toBeInTheDocument();
+    expect(within(plan).getByRole('link', { name: new RegExp(pi.open) })).toHaveAttribute('href', '/plan');
+    expect(movesOnPlan().map((m) => m.id)).toEqual(['cancelSubscriptions:audit']);
 
     await user.click(within(plan).getByRole('checkbox', { name: t.plan.mark('Spotify') }));
-    expect(within(plan).queryByText(t.plan.moveAdded)).not.toBeInTheDocument();
-    expect(within(plan).getByText(t.plan.moveOutdated)).toBeInTheDocument();
-    await waitFor(() => expect(within(plan).getByRole('button', { name: t.plan.updateMove })).toBeEnabled());
-    await user.click(within(plan).getByRole('button', { name: t.plan.updateMove }));
-    expect(within(plan).getByText(t.plan.moveAdded)).toBeInTheDocument();
-    expect(within(plan).queryByText(t.plan.moveOutdated)).not.toBeInTheDocument();
+    expect(within(plan).queryByText(pi.added)).not.toBeInTheDocument();
+    expect(within(plan).getByText(pi.outdated)).toBeInTheDocument();
+    await user.click(within(plan).getByRole('button', { name: pi.update }));
+    expect(within(plan).getByText(pi.added)).toBeInTheDocument();
+    expect(movesOnPlan()).toHaveLength(1);
   });
 });
 
@@ -187,8 +164,8 @@ describe('SubscriptionsScreen: estimate tags', () => {
     for (const label of [t.plan.marked(1), t.plan.yearLabel]) {
       expect(within(within(plan).getByText(label).parentElement!).getByText('estimate'), label).toBeInTheDocument();
     }
-    expect(within(plan).getByText('$11.99')).toBeInTheDocument();
-    expect(within(plan).getByText('$143.88')).toBeInTheDocument();
+    expect(within(plan).getByText('$12')).toBeInTheDocument(); // $11.99 a month, whole dollars
+    expect(within(plan).getByText('$144')).toBeInTheDocument();
   });
 
   it('a measured saving (a charge seen every month) has no tag', async () => {
@@ -218,7 +195,8 @@ describe('SubscriptionsScreen: the statement, the findings and the plan', () => 
 
     const findings = (await screen.findByRole('heading', { name: t.findings.title })).closest('section')!;
     expect(within(findings).getByText(t.findings.headline(5, 3))).toBeInTheDocument();
-    expect(within(findings).getByText('$69.54')).toBeInTheDocument();
+    expect(within(findings).getByTestId('subs-kpis')).toHaveTextContent('$70'); // $69.54 a month
+    expect(within(findings).getByTestId('subs-chart')).toBeInTheDocument();
     expect(within(findings).getByText(t.findings.flag.seenOnce('yearly', 'August'))).toBeInTheDocument();
     // Prime and Apple were found and not ticked.
     expect(within(findings).getAllByText(t.findings.forgot)).toHaveLength(2);
@@ -229,18 +207,18 @@ describe('SubscriptionsScreen: the statement, the findings and the plan', () => 
     await user.click(within(plan).getByRole('checkbox', { name: t.plan.mark('Netflix') }));
     await user.click(within(plan).getByRole('checkbox', { name: t.plan.mark('Spotify') }));
     expect(within(plan).getByText(t.plan.marked(2))).toBeInTheDocument();
-    expect(within(plan).getByText('$29.98')).toBeInTheDocument(); // 17.99 + 11.99
-    expect(within(plan).getByText('$359.76')).toBeInTheDocument(); // × 12
+    expect(within(plan).getByText('$30')).toBeInTheDocument(); // 17.99 + 11.99 = 29.98
+    expect(within(plan).getByText('$360')).toBeInTheDocument(); // × 12
 
-    // The 10-year number with who measured it, and the wording that never tells anyone to cancel.
-    expect(await within(plan).findByText(t.plan.in10y)).toBeInTheDocument();
-    expect(within(plan).getByText(forecastCopy.source.rules)).toBeInTheDocument();
-    expect(within(plan).getByText(t.plan.todaysDollars, { exact: false })).toBeInTheDocument();
-    expect(within(plan).getByText(t.plan.sampleProfile)).toBeInTheDocument();
+    // What it does to the plan, rules-based, on the sample plan, and the wording that never tells anyone to cancel.
+    const impact = within(plan).getByTestId('cancel-impact');
+    expect(within(impact).getByText(pi.source)).toBeInTheDocument();
+    expect(within(impact).getByText(pi.sample)).toBeInTheDocument();
+    expect(within(plan).getByTestId('cancel-saving')).toHaveTextContent(t.findings.saveLine(2, '$360', '$30'));
 
-    await user.click(within(plan).getByRole('button', { name: t.plan.addAsMove }));
-    expect(within(plan).getByText(t.plan.moveAdded)).toBeInTheDocument();
-    expect(useAppStore.getState().profile.committedMoveId).toBe('cancelSubscriptions:audit');
+    await user.click(within(plan).getByRole('button', { name: pi.add }));
+    expect(within(plan).getByText(pi.added)).toBeInTheDocument();
+    expect(movesOnPlan().map((m) => m.id)).toEqual(['cancelSubscriptions:audit']);
 
     // "Use this in my plan": a sheet that says what changes; Cancel has the focus; nothing changes until Update.
     await user.click(within(plan).getByRole('button', { name: t.plan.useInPlan }));
@@ -281,10 +259,10 @@ describe('SubscriptionsScreen: the statement, the findings and the plan', () => 
     expect(within(findings).getByText(t.findings.headline(0, 0))).toBeInTheDocument();
     expect(within(findings).getByText(t.findings.toConfirmQuestion)).toBeInTheDocument();
     expect(within(findings).getByText(t.findings.notCounted)).toBeInTheDocument();
-    expect(within(findings).getByText(/\$0\.00 a month/)).toBeInTheDocument();
+    expect(within(findings).getByTestId('subs-kpis')).toHaveTextContent(/Per month\$0/);
     await user.click(within(findings).getByRole('button', { name: `${t.findings.yes}: MYSTERY APP` }));
     expect(within(findings).getByText(t.findings.headline(1, 0))).toBeInTheDocument();
-    expect(within(findings).getByText(/\$4\.99 a month/)).toBeInTheDocument();
+    expect(within(findings).getByTestId('subs-kpis')).toHaveTextContent(/Per month\$5/);
   });
 
   it('with nothing counted there is no cancel plan to make: the button is off and the screen says why', async () => {
@@ -373,11 +351,11 @@ describe('SubscriptionsScreen: privacy copy says what the privacy design says', 
     expect(t.keep.sent).toMatch(/amount, month and day of month/);
     expect(t.keep.sent).toMatch(/don’t store the labels or the lines/);
     expect(t.keep.sent).toMatch(/Anthropic/);
-    // The cancel plan's forecast request carries the profile numbers.
+    // The cancel plan is measured on this device: nothing is sent for it.
     expect(within(keep).getByText(t.keep.forecastSent)).toBeInTheDocument();
-    expect(t.keep.forecastSent).toMatch(/numbers in your profile/);
     expect(t.keep.forecastSent).toMatch(/cancel plan/);
-    expect(t.keep.forecastSent).toMatch(/Anthropic/);
+    expect(t.keep.forecastSent).toMatch(/on this device/);
+    expect(t.keep.forecastSent).toMatch(/Nothing is sent/);
     // Never saved; and the claim about names is the masker's, no stronger.
     expect(text).toMatch(/statement file or its lines/);
     expect(t.keep.never.join(' ')).not.toMatch(/personal names|account numbers/);

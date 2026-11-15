@@ -1,21 +1,24 @@
-// S8 Balance sheet (Design v3, Figma 202:2117): white cards for age and take-home pay, savings and
-// debts, each value on a cream row (label left, number right; a skipped field shows an estimate tag,
-// a typed one can be skipped back to our estimate). Debts, confirm not type (JF17): payments found in
-// the statement come up as a card to confirm; "+ kind" chips open a form where only the balance is
-// typed (APR and minimum prefilled, tagged estimate, editable); edit / remove; the debt-load gauge.
-// JF4 "Your home": rent / own with a mortgage / own outright; when owning, the home value and HOA on
-// cream rows, the appreciation and the monthly owner costs with their estimate tags and sources, and
-// "Add your mortgage" (the debt form preset to a mortgage) when none is listed.
-// Right: an ink card with today's net worth, then the house being built.
+// S8 Balance sheet (Design v3, Figma 202:2117): savings and debts. Age and take-home pay are asked once,
+// on About you (S6): here one read-only line shows them, with a link back. Savings is a white card with
+// each value on a cream row (label left, number right; a skipped value is grey, with one estimate tag
+// for the card rather than one per row; a typed one can be skipped back to our estimate). Debts, confirm
+// not type (JF17): payments found in the statement come up as a card to confirm; "+ kind" chips open a
+// form where only the balance is typed (APR and minimum prefilled, tagged estimate, editable); edit /
+// remove; the debt-load gauge. JF4 "Your home": rent / own with a mortgage / own outright; when owning,
+// the home value and HOA on cream rows, the appreciation and the monthly owner costs with their estimate
+// tags and sources, and "Add your mortgage" (the debt form preset to a mortgage) when none is listed.
+// Right: an ink card with today's net worth, the S5 guess against the month, then the house being built.
 import { useId, useState, type ReactNode } from 'react';
 import { ladder } from '@/copy';
 import {
   Art, Button, Choice, cx, EstimateTag, formatMoney, formatRate, Gauge, NumberInput, SourceNote, Sticker, type Source,
 } from '@/ui-kit';
 import type {
-  BalanceFieldKey, BalanceSheetVM, DebtInput, DebtRowVM, HomeSectionVM, HomeSummary, LadderProgressVM, ScannedDebt, VMError,
+  BalanceFieldKey, BalanceSheetVM, DebtInput, DebtRowVM, GuessPayoffVM, HomeSectionVM, HomeSummary, LadderProgressVM,
+  ScannedDebt, VMError,
 } from '../model/types';
 import { DebtForm } from './DebtForm';
+import { GuessPayoff } from './GuessPayoff';
 import { LadderShell } from './LadderShell';
 
 const t = ladder.balance;
@@ -23,21 +26,52 @@ const t = ladder.balance;
 export type BalanceSheetProps = {
   vm: BalanceSheetVM;
   progress: LadderProgressVM;
+  /** The S5 guess against the month (its own hook); null without a guess. */
+  payoff?: GuessPayoffVM | null;
 };
 
-function SheetCard({ title, children }: { title: string; children: ReactNode }) {
+function SheetCard({ title, estimate = false, children }: { title: string; estimate?: boolean; children: ReactNode }) {
   const id = useId();
   return (
     <section aria-labelledby={id} className="flex flex-col gap-md rounded-xl bg-surface p-xl shadow-md">
       <h2 id={id} className="text-lg font-bold">
         {title}
       </h2>
+      {/* One estimate tag for the card (its sr-only text explains it once), not one per row. */}
+      {estimate && (
+        <p className="flex flex-wrap items-center gap-sm text-sm text-text-muted" data-testid="sheet-estimates">
+          <EstimateTag className="bg-surface" />
+          {t.estimatedNote}
+        </p>
+      )}
       {children}
     </section>
   );
 }
 
-export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
+/** Age and pay, asked on About you: shown here read-only, with the way back to change them. */
+function FromAbout({ vm, href }: { vm: BalanceSheetVM; href: string | undefined }) {
+  const { age, takeHomePay } = vm.fields;
+  return (
+    <section
+      aria-label={t.fromAboutLabel}
+      data-testid="from-about"
+      className="flex flex-wrap items-center justify-between gap-sm rounded-xl bg-surface px-xl py-md text-sm shadow-md"
+    >
+      <span className="flex flex-wrap items-center gap-sm text-text-muted tabular-nums">
+        {t.fromAbout(String(age.value), formatMoney(takeHomePay.value))}
+        {(age.isEstimate || takeHomePay.isEstimate) && <EstimateTag className="bg-surface" />}
+      </span>
+      {href && (
+        <a href={href} className="min-h-11 content-center font-semibold text-text hover:text-primary">
+          {t.fromAboutLink}
+        </a>
+      )}
+    </section>
+  );
+}
+
+export function BalanceSheet({ vm, progress, payoff = null }: BalanceSheetProps) {
   // Which debt row is being edited, or 'new:<kind>' for the quick add form.
   const [editing, setEditing] = useState<string | null>(null);
   const newKind = vm.debtKinds.find((k) => editing === `new:${k}`);
@@ -73,16 +107,14 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
             </p>
             <p className="text-sm text-on-primary/60">{t.netWorthNote}</p>
           </section>
+          {payoff && <GuessPayoff payoff={payoff} />}
           <Art name="house-build" className="mx-auto hidden w-full max-w-(--container-md) lg:block" />
         </>
       }
     >
-      <SheetCard title={t.payTitle}>
-        <BalanceField field="age" vm={vm} />
-        <BalanceField field="takeHomePay" vm={vm} />
-      </SheetCard>
+      <FromAbout vm={vm} href={progress.rungs.find((r) => r.screen === 'S6')?.href} />
 
-      <SheetCard title={t.savingsTitle}>
+      <SheetCard title={t.savingsTitle} estimate={vm.fields.cash.isEstimate || vm.fields.retirement.isEstimate}>
         <BalanceField field="cash" vm={vm} />
         <BalanceField field="retirement" vm={vm} />
       </SheetCard>
@@ -218,7 +250,8 @@ function BalanceField({ field, vm }: { field: BalanceFieldKey; vm: BalanceSheetV
   const isAge = field === 'age';
   const inputId = useId();
   const hintId = useId();
-  const hint = isEstimate ? t.estimatedHint : isAge ? undefined : t.hints[field];
+  // A typical value is grey; the card's one tag explains it (no tag or hint per row).
+  const hint = isAge ? undefined : t.hints[field];
   return (
     <div
       data-field={field}
@@ -226,12 +259,9 @@ function BalanceField({ field, vm }: { field: BalanceFieldKey; vm: BalanceSheetV
       className="flex flex-wrap items-center justify-between gap-md rounded-lg bg-bg px-lg py-md"
     >
       <div className="flex min-w-0 flex-col gap-xs">
-        <span className="flex flex-wrap items-center gap-sm">
-          <label htmlFor={inputId} className="text-base text-text-muted">
-            {t.fields[field]}
-          </label>
-          {isEstimate && <EstimateTag className="bg-surface" />}
-        </span>
+        <label htmlFor={inputId} className="text-base text-text-muted">
+          {t.fields[field]}
+        </label>
         {hint && (
           <span id={hintId} className="text-xs text-text-muted">
             {hint}

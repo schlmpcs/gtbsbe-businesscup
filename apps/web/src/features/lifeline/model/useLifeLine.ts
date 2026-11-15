@@ -1,21 +1,21 @@
 // Home "Life line" hero: one decision (when to buy a home) dragged along the years, and the whole plan to
 // the end age redrawn for the year picked. Every number is the engine's:
 // - the two lines and the KPIs are plan() of the active /plan scenario with "Buy a home" at the picked
-//   year and at the plan's year (eventAtYear), on the same inputs /plan uses (planInputs.ts);
-// - Chance of success and the p10–p90 band come from decisionSweep() in the Monte Carlo Web Worker, one
-//   fixed seed for every year so a change between two years is the decision's, not noise.
+//   year and at the plan's year (eventAtYear), on the same inputs /plan uses (planEngine.ts);
+// - Chance of success and the p10–p90 band come from decisionSweep(), run on the next task after the
+//   plan paints (like /plan's Chance run), one fixed seed for every year so a change between two years
+//   is the decision's, not noise.
 // A plan without "Buy a home" gets the engine's default one (defaultEvent: the area's median home, its
 // tax and insurance), three years from now, as a draft: "Put it in my plan" adds it to the scenario.
 // Rounding and wording happen here (copy.lifeline); the UI only lays the numbers out.
-import { buyHomeBreakdown, defaultEvent, eventAtYear, plan } from '@lifeguessr/engine';
+import { buyHomeBreakdown, decisionSweep, defaultEvent, eventAtYear, plan } from '@lifeguessr/engine';
 import type { DecisionSweepPoint, PlanEventOf, PlanResult, Scenario } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { lifeline as copy } from '@/copy';
 import { formatMoney, formatRate } from '@/lib/format';
-import { startMonteCarloJob } from '@/features/plan/model/monteCarloJob';
-import { calendarOf, usePlanInputs, type PlanInputs } from '@/features/plan/model/planInputs';
-import { DEFAULT_CHANCE_SETTINGS, usePlanStore } from '@/features/plan/model/planStore';
-import { GOOD_SUCCESS_RATE } from '@/features/plan/model/useChanceOfSuccess';
+import { calendarOf, usePlanInputs, type PlanInputs } from '@/features/plan/model/planEngine';
+import { DEFAULT_CHANCE_SETTINGS, usePlanReady, usePlanStore } from '@/features/plan/model/planStore';
+import { effectiveSettings, GOOD_SUCCESS_RATE } from '@/features/plan/model/useChanceOfSuccess';
 import type { LifeLineChartVM, LifeLineKpiVM, LifeLinePoint, LifeLineTone, LifeLineVM } from './types';
 
 /** Paths per year of the sweep: enough for a steady percentage, light enough for ~1 s on a phone. */
@@ -77,7 +77,7 @@ export function lifeLineData(args: {
 }): Omit<Extract<LifeLineVM, { status: 'ready' }>, 'setAge' | 'applyToPlan'> {
   const { decision, inputs, selectedYear, plans, chance, years } = args;
   const { selected: sel, base } = plans;
-  const cal = calendarOf(inputs.profile);
+  const cal = calendarOf(inputs.profile, 0);
   const ageOf = (year: number) => year - cal.birthYear;
   const baseYear = decision.event.year;
   const moved = selectedYear !== baseYear;
@@ -248,7 +248,7 @@ type SweepState = { of: HomeDecision; inputs: PlanInputs; result: Map<number, Ch
 
 export function useLifeLine(): LifeLineVM {
   const inputs = usePlanInputs();
-  const ready = usePlanStore((s) => s.ready);
+  const ready = usePlanReady();
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
   const fixedSeed = usePlanStore((s) => s.fixedSeed);
   const edit = usePlanStore((s) => s.edit);
@@ -258,22 +258,26 @@ export function useLifeLine(): LifeLineVM {
   const decision = useMemo(() => (ready && scenario && inputs.profile.asOf ? homeDecision(inputs, scenario) : null), [ready, scenario, inputs]);
   const years = useMemo(() => {
     if (!decision) return [];
-    const cal = calendarOf(inputs.profile);
-    return sweepYears(decision.event.year, cal.asOfYear, cal.birthYear + decision.scenario.assumptions.retireAge);
+    const cal = calendarOf(inputs.profile, 0);
+    return sweepYears(decision.event.year, cal.firstYear, cal.birthYear + decision.scenario.assumptions.retireAge);
   }, [decision, inputs.profile]);
 
-  // The Chance of success at every slider year, in the worker. A new plan or new inputs restart it.
+  // The Chance of success at every slider year, on the next task so the plan lines paint first. A new
+  // plan or new inputs cancel a pending run and start again.
   useEffect(() => {
     if (!decision || years.length === 0) return;
-    const settings = { ...DEFAULT_CHANCE_SETTINGS, paths: LIFELINE_PATHS, seed: fixedSeed };
-    return startMonteCarloJob(
-      { kind: 'decisionSweep', inputs, scenario: decision.scenario, eventId: decision.eventId, years, settings },
-      (res) => setSweep({
-        of: decision,
-        inputs,
-        result: res.kind === 'decisionSweep' ? new Map(res.points.map((p) => [p.year, p.chance])) : 'error',
-      }),
-    );
+    const settings = effectiveSettings({ ...DEFAULT_CHANCE_SETTINGS, paths: LIFELINE_PATHS, seed: fixedSeed }, decision.scenario, inputs.area);
+    const timer = setTimeout(() => {
+      let result: SweepState['result'];
+      try {
+        const points = decisionSweep(inputs.profile, inputs.accounts, decision.scenario, decision.eventId, years, inputs.area, settings);
+        result = new Map(points.map((p) => [p.year, p.chance!]));
+      } catch {
+        result = 'error';
+      }
+      setSweep({ of: decision, inputs, result });
+    }, 0);
+    return () => clearTimeout(timer);
   }, [decision, years, inputs, fixedSeed]);
 
   const baseYear = decision?.event.year ?? 0;
@@ -282,7 +286,7 @@ export function useLifeLine(): LifeLineVM {
   const setAge = useCallback(
     (age: number) => {
       if (!decision) return;
-      const cal = calendarOf(inputs.profile);
+      const cal = calendarOf(inputs.profile, 0);
       setPicked(age + cal.birthYear);
     },
     [decision, inputs.profile],

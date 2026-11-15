@@ -21,6 +21,9 @@ export type QuickSlidersProps = { vm: QuickSlidersVM; progress: LadderProgressVM
 export function QuickSliders({ vm, progress }: QuickSlidersProps) {
   const { month, savings, guessGap, selfGuess } = vm;
   const short = month.surplus < 0;
+  // When every slider is still our typical value, one tag for the block says so (not one per slider);
+  // once some are measured, the tags tell which ones are still ours.
+  const allEstimates = vm.sliders.length > 0 && vm.sliders.every((s) => s.isEstimate);
 
   const summary = (
     <section
@@ -82,6 +85,12 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
             {t.fromStatement(vm.statementMonths)}
           </p>
         )}
+        {allEstimates && (
+          <p data-testid="sliders-all-estimates" className="mb-lg flex flex-wrap items-center gap-sm text-sm text-text-muted">
+            <EstimateTag />
+            {t.allEstimates}
+          </p>
+        )}
         <ul aria-label={t.slidersLabel} className="flex flex-col gap-lg">
           {vm.sliders.map((s, i) => (
             <li key={s.category}>
@@ -96,7 +105,7 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
                 min={s.min}
                 max={s.max}
                 step={s.step}
-                isEstimate={s.isEstimate}
+                isEstimate={s.isEstimate && !allEstimates}
                 hideBounds
                 formatValue={(v) => formatMoney(v)}
                 onValueChange={(v) => vm.setSpending(s.category, v)}

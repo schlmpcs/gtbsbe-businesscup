@@ -21,11 +21,12 @@ function TextInput({ value, onValueChange, maxLength }: { value: string; onValue
   );
 }
 
-const SPENDING: { field: QuickField; label: string; hint?: string }[] = [
-  { field: 'rentUtilities', label: t.form.rentUtilities },
-  { field: 'groceries', label: t.form.groceries },
+const MORE: { field: QuickField; label: string; hint?: string }[] = [
   { field: 'childcare', label: t.form.childcare },
   { field: 'otherSpending', label: t.form.otherSpending, hint: t.form.otherSpendingHint },
+  { field: 'cash', label: t.form.cash },
+  { field: 'retirement', label: t.form.retirement },
+  { field: 'debtBalance', label: t.form.debtBalance },
 ];
 
 function MoneyField({ vm, field, label, hint, error }: { vm: PartnerFormVM; field: QuickField; label: string; hint?: string; error?: string }) {
@@ -43,11 +44,24 @@ function MoneyField({ vm, field, label, hint, error }: { vm: PartnerFormVM; fiel
   );
 }
 
+const DISCLOSURE = 'group rounded-lg border border-border bg-bg/60 open:bg-transparent';
+const SUMMARY =
+  'flex min-h-11 cursor-pointer list-none items-center justify-between gap-md px-md py-sm [&::-webkit-details-marker]:hidden';
+
+function Chevron() {
+  return (
+    <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none">
+      ▾
+    </span>
+  );
+}
+
 export function PartnerForm({ vm, goalKeepHint = false }: { vm: PartnerFormVM; goalKeepHint?: boolean }) {
+  const problem = vm.showProblem ? vm.problem : null;
   return (
     <Card title={t.form.title} headingLevel={2} data-testid="together-form">
       <Stack gap="xl">
-        <Field label={t.form.nickname} hint={t.form.nicknameHint} error={vm.problem === 'nickname' ? t.form.problems.nickname : undefined}>
+        <Field label={t.form.nickname} hint={t.form.nicknameHint} error={problem === 'nickname' ? t.form.problems.nickname : undefined}>
           <TextInput value={vm.nickname} onValueChange={vm.setNickname} maxLength={40} />
         </Field>
 
@@ -70,44 +84,58 @@ export function PartnerForm({ vm, goalKeepHint = false }: { vm: PartnerFormVM; g
           </p>
         ) : (
           <Stack gap="lg">
-            <MoneyField vm={vm} field="takeHomePay" label={t.form.takeHomePay} hint={t.form.takeHomePayHint} error={vm.problem === 'takeHomePay' ? t.form.problems.takeHomePay : undefined} />
-            <p className="text-sm text-text-muted">{t.form.sharedHint}</p>
+            <p className="text-sm text-text-muted">{t.form.essentialsHint}</p>
+            <MoneyField vm={vm} field="takeHomePay" label={t.form.takeHomePay} hint={t.form.takeHomePayHint} error={problem === 'takeHomePay' ? t.form.problems.takeHomePay : undefined} />
             <div className="grid gap-lg sm:grid-cols-2">
-              {SPENDING.map((s) => (
-                <MoneyField key={s.field} vm={vm} field={s.field} label={s.label} hint={s.hint} />
-              ))}
-              <MoneyField vm={vm} field="cash" label={t.form.cash} />
-              <MoneyField vm={vm} field="retirement" label={t.form.retirement} />
-              <MoneyField vm={vm} field="debtBalance" label={t.form.debtBalance} />
-              <Field
-                label={t.form.debtApr}
-                hint={t.form.debtAprHint(formatRate(vm.defaultApr.value, 2), vm.defaultApr.sourceName, vm.defaultApr.year)}
-                isEstimate={vm.quick.debtBalance !== null && vm.quick.debtBalance > 0 && vm.quick.debtApr === null}
-              >
-                <NumberInput value={vm.quick.debtApr} onValueChange={(v) => vm.setQuick('debtApr', v)} percent max={1} suffix="%" />
-              </Field>
-              <Field
-                label={t.form.debtPayment}
-                hint={t.form.debtPaymentHint}
-                isEstimate={vm.quick.debtBalance !== null && vm.quick.debtBalance > 0 && vm.quick.debtPayment === null}
-              >
-                <NumberInput value={vm.quick.debtPayment} onValueChange={(v) => vm.setQuick('debtPayment', v)} prefix="$" maxFractionDigits={0} max={10_000_000} />
-              </Field>
+              <MoneyField vm={vm} field="rentUtilities" label={t.form.rentUtilities} />
+              <MoneyField vm={vm} field="groceries" label={t.form.groceries} />
             </div>
+            <p className="text-sm text-text-muted">{t.form.sharedHint}</p>
+            <details className={DISCLOSURE} data-testid="together-more">
+              <summary className={SUMMARY}>
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-semibold">{t.form.moreTitle}</span>
+                  <span className="text-xs text-text-muted">{t.form.moreHint(vm.filledOptional)}</span>
+                </span>
+                <Chevron />
+              </summary>
+              <div className="grid gap-lg px-md pb-lg pt-sm sm:grid-cols-2">
+                {MORE.map((s) => (
+                  <MoneyField key={s.field} vm={vm} field={s.field} label={s.label} hint={s.hint} />
+                ))}
+                <Field
+                  label={t.form.debtApr}
+                  hint={t.form.debtAprHint(formatRate(vm.defaultApr.value, 2), vm.defaultApr.sourceName, vm.defaultApr.year)}
+                  isEstimate={vm.quick.debtBalance !== null && vm.quick.debtBalance > 0 && vm.quick.debtApr === null}
+                >
+                  <NumberInput value={vm.quick.debtApr} onValueChange={(v) => vm.setQuick('debtApr', v)} percent max={1} suffix="%" />
+                </Field>
+                <Field
+                  label={t.form.debtPayment}
+                  hint={t.form.debtPaymentHint}
+                  isEstimate={vm.quick.debtBalance !== null && vm.quick.debtBalance > 0 && vm.quick.debtPayment === null}
+                >
+                  <NumberInput value={vm.quick.debtPayment} onValueChange={(v) => vm.setQuick('debtPayment', v)} prefix="$" maxFractionDigits={0} max={10_000_000} />
+                </Field>
+              </div>
+            </details>
           </Stack>
         )}
 
-        <Stack gap="md" as="fieldset" className="min-w-0 border-0 p-0">
-          <legend className="mb-sm text-sm font-semibold">{t.form.goalTitle}</legend>
-          <div className="grid gap-lg sm:grid-cols-2">
-            <Field label={t.form.goalTarget} error={vm.problem === 'goal' ? t.form.problems.goal : undefined} hint={goalKeepHint ? t.form.goalKeepHint : undefined}>
+        <details className={DISCLOSURE} data-testid="together-goal-form">
+          <summary className={SUMMARY}>
+            <span className="text-sm font-semibold">{t.form.goalTitle}</span>
+            <Chevron />
+          </summary>
+          <div className="grid gap-lg px-md pb-lg pt-sm sm:grid-cols-2">
+            <Field label={t.form.goalTarget} error={problem === 'goal' ? t.form.problems.goal : undefined} hint={goalKeepHint ? t.form.goalKeepHint : undefined}>
               <NumberInput value={vm.goal.target} onValueChange={(v) => vm.setGoal('target', v)} prefix="$" maxFractionDigits={0} max={100_000_000} />
             </Field>
             <Field label={t.form.goalYears}>
               <NumberInput value={vm.goal.years} onValueChange={(v) => vm.setGoal('years', v)} maxFractionDigits={0} max={30} />
             </Field>
           </div>
-        </Stack>
+        </details>
       </Stack>
     </Card>
   );

@@ -7,7 +7,7 @@ import { resetClientState } from '@/test/clientState';
 import { useAppStore } from '@/state';
 import { keepTypedAmounts } from './useQuickAdd';
 import { parseSpendLine } from './parseLine';
-import { useSpend } from './useSpend';
+import { spendChart, useSpend } from './useSpend';
 import type { SpendParseFn } from './useQuickAdd';
 
 // Nov 14, 2026 (local): 17 days left, today included. Demo profile: usual month $3,655, bills $2,345.
@@ -48,10 +48,21 @@ describe('useSpend', () => {
     expect(result.current.days).toHaveLength(1);
     expect(result.current.days[0]).toMatchObject({ date: '2026-11-14', day: 14, total: 87 });
     expect(result.current.byCategory).toEqual([
-      { category: 'groceries', amount: 64 },
-      { category: 'other', amount: 18 },
-      { category: 'eatingOut', amount: 5 },
+      { category: 'groceries', amount: 64, share: 64 / 87 },
+      { category: 'other', amount: 18, share: 18 / 87 },
+      { category: 'eatingOut', amount: 5, share: 5 / 87 },
     ]);
+    // Everyday money = usual month − usual bills (3,655 − 2,345); the ring is what is left of it.
+    expect(summary(result).everydayBudget).toBeCloseTo(1_310, 9);
+    expect(summary(result).leftShare).toBeCloseTo((1_310 - 87) / 1_310, 9);
+    expect(summary(result).daysInMonth).toBe(30);
+    expect(summary(result).pacePerDay).toBeCloseTo(1_310 / 30, 9);
+    // The chart: every day of November, today's bar over the usual pace, later days empty.
+    expect(result.current.chart).toHaveLength(30);
+    expect(result.current.chart[13]).toEqual({ day: 14, total: 87, overPace: true, isToday: true, isFuture: false });
+    expect(result.current.chart[0]).toMatchObject({ total: 0, overPace: false, isFuture: false });
+    expect(result.current.chart[20]).toMatchObject({ isFuture: true, total: 0 });
+    expect(result.current.chartMax).toBe(87);
 
     act(() => result.current.quickAdd.undo());
     expect(summary(result).spent).toBe(0);
@@ -117,6 +128,19 @@ describe('useSpend', () => {
       expect(d.data.spent).toBe(64);
       expect(d.data.safeToday).toBeCloseTo((1_310 - 64) / 17, 9);
     }
+  });
+});
+
+describe('spendChart', () => {
+  it('fills days without entries with 0, ignores entries after today, and tops out at the pace when bars are low', () => {
+    const { chart, chartMax } = spendChart({ day: 3, daysInMonth: 28, pacePerDay: 40 }, [
+      { day: 2, total: 12 },
+      { day: 5, total: 99 },
+    ]);
+    expect(chart.map((d) => d.total).slice(0, 6)).toEqual([0, 12, 0, 0, 0, 0]);
+    expect(chart[2]).toMatchObject({ isToday: true, isFuture: false });
+    expect(chart[4]).toMatchObject({ isFuture: true });
+    expect(chartMax).toBe(40);
   });
 });
 

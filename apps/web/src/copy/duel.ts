@@ -2,13 +2,17 @@
 // Functions here only pick words; every number arrives already computed (and formatted).
 // The fixed lesson and blind-spot templates live here too: code fills them, never an LLM.
 import type { DuelLessonId } from '@lifeguessr/engine';
-import { DUEL_CROWD_MIN_PICKS, type AreaData, type CostCategory, type DuelLetter } from '@lifeguessr/types';
+import {
+  DUEL_CROWD_MIN_PICKS, type AreaData, type CostCategory, type DuelFactGroupId, type DuelLetter, type KidAge,
+} from '@lifeguessr/types';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export type DuelTileColor = 'green' | 'yellow' | 'ink';
 export type DuelShareStatus = 'idle' | 'sharing' | 'shared' | 'copied' | 'failed';
 export type DuelCopyStatus = 'idle' | 'copied' | 'failed';
+/** US Census region of a card's state (lib/duel/publicDuelCard); `unknown` when the metro names none. */
+export type DuelRegion = 'northeast' | 'midwest' | 'south' | 'west' | 'unknown';
 
 export const duel = {
   title: 'Which life costs more?',
@@ -66,11 +70,16 @@ export const duel = {
     perMonth: '/mo',
     factsLabel: 'What we know',
     hintFact: 'Hint',
+    hintGroup: 'Neighborhood',
+    /** The flavor caption, shown as a quote line under the facts. */
+    quote: (caption: string) => `“${caption}”`,
   },
   vs: 'VS',
 
   hint: {
     offer: (cost: string) => `Hint: one more fact each · −${cost}`,
+    /** Under the hint button: what it opens, without saying which way it points. */
+    explain: 'Shows each life’s neighborhood price level.',
     used: (points: string) => `Hint used · now worth ${points}`,
     opening: 'Opening the hint…',
     error: 'The hint didn’t open. Tap to try again.',
@@ -86,6 +95,12 @@ export const duel = {
     same: 'They cost the same each month.',
     totalLabel: (letter: DuelLetter) => `Life ${letter} a month`,
     breakdownLabel: (letter: DuelLetter) => `Life ${letter}: monthly costs by category`,
+    /** The side-by-side panel under the cards: both totals, then every category for A and B. */
+    compareHeading: 'Side by side',
+    compareSub: 'Every monthly cost, life A vs life B.',
+    compareLabel: 'Monthly costs by category, life A and life B',
+    compareRow: (a: string, b: string) => `: life A ${a}, life B ${b} a month`,
+    decidedTag: 'Biggest gap',
     decidedHeading: 'What decided it',
     /** The ink band's headline: the deciding category, the costlier life's amount vs the other's. */
     decidedLine: (category: string, amount: string, other: string) =>
@@ -169,19 +184,43 @@ export const duel = {
       kids > 0 ? plural(kids, 'kid', 'kids') : 'no kids',
       bedrooms === 0 ? 'studio' : plural(bedrooms, 'bedroom', 'bedrooms'),
     ].join(' · '),
+  /**
+   * The card's fact lines, two per group (Home, Family, Car, Food). Word facts read off the LifeCard
+   * only: never a dollar amount, a total or the neighborhood's price level (that is the hint).
+   * Avoid the tier words (cheap, mid, expensive, suburb): the leak test refuses them on a card.
+   */
   facts: {
-    noCar: 'No car',
-    economyCar: 'Economy car',
-    midCar: '1 car',
-    luxuryCar: 'Luxury car',
-    daycare: 'Daycare',
-    schoolKids: 'School-age kids',
+    groups: { home: 'Home', family: 'Family', car: 'Car', food: 'Food' } satisfies Record<DuelFactGroupId, string>,
+    /** "Rental": costOfLife prices every card as a renter today (see lib/duel/publicDuelCard). */
+    home: (bedrooms: number) => (bedrooms === 0 ? 'Studio rental' : `${bedrooms}-bedroom rental`),
+    region: {
+      northeast: 'In the Northeast',
+      midwest: 'In the Midwest',
+      south: 'In the South',
+      west: 'In the West',
+      unknown: 'Somewhere in the US',
+    } satisfies Record<DuelRegion, string>,
     noKids: 'No kids',
-    cooksAtHome: 'Cooks at home',
-    eatsOutSometimes: 'Eats out sometimes',
-    eatsOutOften: 'Eats out often',
-    eatsOutMostDays: 'Eats out most days',
-    rents: 'Rents',
+    livesSolo: 'Lives solo',
+    couple: 'A couple',
+    kidAge: { infant: 'baby', toddler: 'toddler', preschool: 'preschooler', schoolAge: 'school-age' } satisfies Record<KidAge, string>,
+    /** The kids' ages youngest first, a count before a repeated age: "Kids: baby, 2 school-age". */
+    kids: (ages: readonly { age: string; count: number }[]) =>
+      `${ages.length === 1 && ages[0]!.count === 1 ? 'Kid' : 'Kids'}: ${ages.map((a) => (a.count > 1 ? `${a.count} ${a.age}` : a.age)).join(', ')}`,
+    /** A fact about age (who is too young for school), never about what care costs. */
+    notInSchool: (young: number, kids: number) =>
+      kids === 1 ? 'Not in school yet' : young === kids ? 'None in school yet' : `${young} of ${kids} not in school yet`,
+    allInSchool: (n: number) => (n === 1 ? 'In school' : 'All in school'),
+    noCar: 'No car',
+    noCarLoan: 'No car loan',
+    economyCar: 'Economy car',
+    midCar: 'Midsize car',
+    luxuryCar: 'Luxury car',
+    paidInFull: 'Paid in full',
+    financed: (termMonths: number) =>
+      termMonths % 12 === 0 ? `Financed, ${termMonths / 12}-year loan` : `Financed, ${termMonths}-month loan`,
+    eatsOut: (perWeek: number) => (perWeek <= 0 ? 'Never eats out' : `Eats out ${perWeek}×/week`),
+    groceriesFor: (people: number) => (people === 1 ? 'Groceries for one' : `Groceries for ${people}`),
   },
   /** The hint: the neighborhood tier of each life's ZIP. */
   hintFacts: {

@@ -76,6 +76,10 @@ export function togetherResult(plan: TogetherPlan & { partner2: TogetherPartner 
       p1Share: split.byIncome.shareA,
       basis: split.byIncome.basis,
       evenEach: split.even.a,
+      modes: {
+        income: { p1: split.byIncome.a, p2: split.byIncome.b, p1Share: split.byIncome.shareA },
+        even: { p1: split.even.a, p2: split.even.b, p1Share: 0.5 },
+      },
       p1VsEven: split.aVsEven,
       isEstimate: bills.isEstimate || a.takeHomePay.isEstimate || b.takeHomePay.isEstimate,
     },
@@ -84,6 +88,8 @@ export function togetherResult(plan: TogetherPlan & { partner2: TogetherPartner 
       low: f.in10y.low,
       mid: f.in10y.mid,
       high: f.in10y.high,
+      // One point a year (month 0, 12, …, 120) for the "Us in 10 years" line.
+      points: f.points.filter((pt) => pt.month % 12 === 0 && pt.month <= 120),
       isEstimate: f.in10y.low !== f.in10y.high,
       source: 'rules',
     },

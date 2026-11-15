@@ -9,14 +9,13 @@
 import { use } from 'react';
 import { usePlay } from '@/features/game/model/usePlay';
 import { PlayScreen } from '@/features/game/ui/PlayScreen';
-import { SCREEN_ROUTES } from '@/lib/screens';
 import { DuelView } from '../duel/DuelView';
 
 type PlaySearchParams = { stream?: string | string[]; c?: string | string[] };
 
 function SliderPlay({ streamer }: { streamer: boolean }) {
   const vm = usePlay({ streamer });
-  return <PlayScreen vm={vm} guessOwnHref={SCREEN_ROUTES.S5} />;
+  return <PlayScreen vm={vm} guessOwnHref="/start?ch=2" />;
 }
 
 export default function PlayPage({ searchParams }: { searchParams: Promise<PlaySearchParams> }) {

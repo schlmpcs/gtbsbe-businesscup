@@ -50,10 +50,10 @@ export function useTransactions({ importer, pageSize = PAGE_SIZE }: UseTransacti
   const search = useCallback((query: string) => setFilter('query', query), [setFilter]);
 
   const importCsv = useCallback(
-    async (file: File) => {
+    async (file: File, once?: CsvImporter) => {
       setImportState({ status: 'reading' });
       try {
-        const result = await (importer ?? ((f: File) => ledger().importFile(f)))(file);
+        const result = await (once ?? importer ?? ((f: File) => ledger().importFile(f)))(file);
         setImportState({ status: 'done', added: result.added, skipped: result.duplicates });
       } catch (err) {
         setImportState({ status: 'error', error: toVMError(err) });

@@ -2,13 +2,15 @@
 // when a bill is due, never that one should be paid late, skipped or moved to a lender.
 
 export const bills = {
-  title: 'Bills calendar',
-  eyebrow: 'Every charge, one screen',
-  intro: 'Rent, loan payments and subscriptions on the day they are due. Set the days you know; we guessed the rest.',
+  title: 'What is due this month?',
+  eyebrow: 'Bills calendar',
+  intro: 'Rent, card and loan payments and subscriptions on the day they are due. The same bills as Recurring; set the days you know.',
   loading: 'Loading your bills…',
   /** Bill names that are not a merchant label. */
   labels: {
     rent: 'Rent & utilities',
+    /** An account's payment: "Credit card payment". */
+    payment: (account: string) => `${account} payment`,
     debt: {
       card: 'Credit card payment',
       auto: 'Car loan payment',
@@ -20,6 +22,31 @@ export const bills = {
   },
   weekdaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
   weekdaysNarrow: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+  kpi: {
+    label: 'This month at a glance',
+    due: 'Due this month',
+    dueHint: (n: number) => (n === 1 ? '1 bill' : `${n} bills`),
+    paid: 'Gone out',
+    paidHint: 'Due before today',
+    toPay: 'Still to pay',
+    toPayHint: (n: number) => (n === 1 ? '1 bill left' : `${n} bills left`),
+    left: 'Left after bills',
+    leftHint: (takeHome: string) => `Of ${takeHome} take-home`,
+    leftNone: 'Add your pay',
+  },
+  split: {
+    title: 'Where it goes',
+    label: (parts: string) => `This month's bills by kind: ${parts}`,
+    part: (kind: string, amount: string, pct: number) => `${kind} ${amount} (${pct}%)`,
+  },
+  verdict: {
+    clear: 'Every bill this month has gone out.',
+    nothing: 'No bills fall in this month.',
+    toPay: (amount: string, n: number) => `${amount} still to pay this month, across ${n === 1 ? '1 bill' : `${n} bills`}.`,
+    future: (amount: string) => `${amount} will be due this month.`,
+    past: (amount: string) => `${amount} went out this month.`,
+  },
+  recurringLink: 'Edit what recurs in Recurring',
   month: {
     title: (month: string, year: number) => `${month} ${year}`,
     prevGlyph: '‹',
@@ -29,6 +56,7 @@ export const bills = {
     today: 'Today',
     total: 'Due this month',
     count: (n: number) => (n === 1 ? '1 bill' : `${n} bills`),
+    paidMark: 'gone out',
     gridLabel: (month: string) => `Bills in ${month}`,
     dayLabel: (date: string, n: number, amount: string) =>
       n === 0 ? date : `${date}: ${n === 1 ? '1 bill' : `${n} bills`}, ${amount}`,
@@ -78,7 +106,12 @@ export const bills = {
     body: 'Upload a bank statement and we will find your rent, loan payments and subscriptions. It is read in your browser.',
     upload: 'Upload a statement',
   },
-  note: 'Educational simulation, not financial advice.',
+  howTitle: 'How we place your bills',
+  how: [
+    'The bills are the same ones Recurring shows: rent and your card and loan payments from your accounts, and the charges that repeat in your transactions.',
+    'A day we do not know is assumed (rent on the 1st, card and loan payments on the 20th) and tagged. A day the month does not have moves to its last day.',
+    '"Gone out" means due before today: we see the due date, not the payment itself.',
+  ],
   /** S1 Home: one line about the next bill. */
   today: {
     nextBill: (label: string, amount: string, inDays: number) =>

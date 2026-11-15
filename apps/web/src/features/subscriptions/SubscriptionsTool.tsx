@@ -1,28 +1,23 @@
 'use client';
 
-// The subscription audit, connected: the view-model feeds the presentational screen, and the cancel plan's
-// measured part (the 10-year number, which asks the forecast route) is mounted only while the plan step
-// shows at least one mark. A cold visit, a guess, ticks, or an empty plan send no forecast request.
-import type { Profile } from '@lifeguessr/types';
-import type { MoveCandidate } from '@lifeguessr/engine';
+// The subscription audit, connected: the view-model feeds the presentational screen, and the cancel plan
+// (what is ticked to stop) is measured on the person's /plan by the engine (usePlanImpact: plan() with and
+// without the move, on this device; no request) and can be added to it as a Next Move.
+import type { Move } from '@lifeguessr/types';
+import { useCallback, type ComponentType, type ReactNode } from 'react';
+import { track as defaultTrack } from '@/lib/events';
 import { useProfile } from '@/state';
-import { useCancelResult } from './model/useCancelResult';
+import { usePlanImpact } from './model/usePlanImpact';
 import { useSubscriptions, type SubscriptionsDeps } from './model/useSubscriptions';
-import type { PlanVM } from './model/types';
-import { CancelEffect } from './ui/CancelEffect';
 import { SubscriptionsScreen } from './ui/SubscriptionsScreen';
 
-/** Exists only while there is a candidate to measure (see `useCancelResult`). */
-function CancelResults({ profile, candidate, plan, deps }: { profile: Profile; candidate: MoveCandidate; plan: PlanVM; deps: SubscriptionsDeps }) {
-  const result = useCancelResult(profile, candidate, { track: deps.track });
-  return <CancelEffect plan={plan} result={result} />;
-}
+export type LinkComponent = ComponentType<{ href: string; className?: string; children?: ReactNode }>;
 
-export function SubscriptionsTool({ deps }: { deps: SubscriptionsDeps }) {
+export function SubscriptionsTool({ deps, Link }: { deps: SubscriptionsDeps; Link?: LinkComponent }) {
   const profile = useProfile();
   const vm = useSubscriptions(profile, deps);
-  const { candidate } = vm.plan;
-  const planResults =
-    vm.step === 'plan' && candidate !== null ? <CancelResults profile={profile} candidate={candidate} plan={vm.plan} deps={deps} /> : null;
-  return <SubscriptionsScreen vm={vm} planResults={planResults} />;
+  const track = deps.track ?? defaultTrack;
+  const onAdded = useCallback((move: Move) => track({ name: 'move_committed', props: { kind: move.kind } }), [track]);
+  const impact = usePlanImpact(vm.plan.candidate, { onAdded });
+  return <SubscriptionsScreen vm={vm} impact={impact} Link={Link} />;
 }

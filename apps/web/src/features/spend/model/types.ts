@@ -76,11 +76,29 @@ export type SpendSummaryVM = {
   billsDue: Money;
   /** usual − spent − billsDue; negative = over the usual month. */
   remaining: Money;
+  /** The usual month without the bill categories (rent, childcare, subscriptions, car): everyday money. */
+  everydayBudget: Money;
+  /** max(0, remaining) / everydayBudget, 0–1: how much of this month's everyday money is left (the ring). */
+  leftShare: number;
+  /** everydayBudget / days in the month: the usual pace per day (the chart's line). */
+  pacePerDay: Money;
+  daysInMonth: number;
   entryCount: number;
 };
 
 export type SpendEntryVM = { id: string; category: CostCategory; amount: Money; label?: string };
 export type SpendDayVM = { date: string; day: number; total: Money; entries: SpendEntryVM[] };
+
+/** One bar of the by-day chart: every day of the month, 1..daysInMonth. */
+export type SpendChartDayVM = {
+  day: number;
+  total: Money;
+  /** The bar is above the usual pace per day. */
+  overPace: boolean;
+  isToday: boolean;
+  /** After today: no bar yet. */
+  isFuture: boolean;
+};
 
 /** /spend */
 export type SpendVM = {
@@ -88,8 +106,12 @@ export type SpendVM = {
   summary: Loadable<SpendSummaryVM>;
   /** This month's days with entries, newest first. */
   days: SpendDayVM[];
-  /** This month's totals per category (non-zero only, largest first). */
-  byCategory: { category: CostCategory; amount: Money }[];
+  /** Every day of this month for the by-day chart (empty until ready). */
+  chart: SpendChartDayVM[];
+  /** The tallest bar or the pace line, whichever is higher (the chart's top). */
+  chartMax: Money;
+  /** This month's totals per category (non-zero only, largest first); share = of this month's log total. */
+  byCategory: { category: CostCategory; amount: Money; share: number }[];
   remove: (id: string) => void;
   quickAdd: QuickAddVM;
 };

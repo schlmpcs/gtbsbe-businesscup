@@ -67,6 +67,20 @@ describe('toResultVM', () => {
     expect(vm.summary.effect10y).toBe(49_000);
     expect(vm.summary.effectStatus).toBe('total'); // both lines above have an effect, so the total is of both
     expect(vm.effectAvailable).toBe(true);
+    // The answer, and one next step per line above its range, biggest yearly gap first (childcare 5,894 > rent 3,888).
+    expect(vm.summary.verdict).toBe('above');
+    expect(vm.summary.nextSteps).toEqual([
+      { line: 'childcare', mid: vm.rows[3]!.typical.mid },
+      { line: 'rent', mid: 2230 },
+    ]);
+  });
+
+  it('says typical when nothing is above, and below when every line is below', () => {
+    const r = sampleOverpayingResult();
+    const notAbove = { ...r, lines: r.lines.filter((l) => l.position !== 'above') };
+    expect(toResultVM(notAbove, { profileUsed: false, kidCount: 0 }).summary).toMatchObject({ verdict: 'typical', nextSteps: [] });
+    const below = { ...r, lines: r.lines.filter((l) => l.position === 'below') };
+    expect(toResultVM(below, { profileUsed: false, kidCount: 0 }).summary.verdict).toBe('below');
   });
 
   it('says what the 10-year effect is for: the monthly difference between yours and the middle of the range', () => {
@@ -163,6 +177,6 @@ describe('toResultVM', () => {
     const empty = { ...sampleOverpayingResult(), lines: [], skipped: [{ line: 'childcare' as const, reason: 'noData' as const }] };
     const vm = toResultVM(empty, { profileUsed: true, kidCount: 1 });
     expect(vm.rows).toEqual([]);
-    expect(vm.summary).toEqual({ compared: 0, above: 0, gapPerYear: 0, effect10y: null, effectStatus: 'notApplicable' });
+    expect(vm.summary).toEqual({ verdict: 'typical', nextSteps: [], compared: 0, above: 0, gapPerYear: 0, effect10y: null, effectStatus: 'notApplicable' });
   });
 });

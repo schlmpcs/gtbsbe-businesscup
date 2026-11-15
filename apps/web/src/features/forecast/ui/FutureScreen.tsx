@@ -90,7 +90,7 @@ export function FutureScreen({ vm, links, Link, goal, events }: FutureScreenProp
                 <ErrorNote error={vm.error} className="mt-sm" />
               </div>
             ) : (
-              <Headline vm={vm} />
+              <Headline vm={vm} links={links} Link={Link} />
             )}
             {shown && (
               <a href={`#${MOVES_ID}`} className={cx(buttonClassName({ variant: 'primary' }), 'self-start')}>
@@ -166,7 +166,7 @@ function HomeLine({ home }: { home: NonNullable<FutureVM['home']> }) {
   );
 }
 
-function Headline({ vm }: { vm: FutureVM }) {
+function Headline({ vm, links, Link }: { vm: FutureVM; links: FutureScreenProps['links']; Link: LinkComponent }) {
   const f = t.future;
   const dollarsNote = vm.todaysDollars ? t.todaysDollarsNote : t.futureDollarsNote;
   return (
@@ -180,10 +180,16 @@ function Headline({ vm }: { vm: FutureVM }) {
         <Money value={vm.atHorizon.mid} />
       </p>
       <div className="mt-md flex flex-wrap items-baseline gap-x-sm text-xl text-text-muted">
-        <RangeText point={vm.atHorizon} isZero={vm.band.isZero} className="text-xl" />
+        {/* Not a probability band: it says what it is (the estimated inputs, or the AI model's own range). */}
+        <RangeText point={vm.atHorizon} isZero={vm.band.isZero} kind={vm.band.kind} className="text-xl" />
         {!vm.band.isZero && <span aria-hidden="true">·</span>}
         <span className="tabular-nums">{f.todayInline(formatMoney(vm.today.mid))}</span>
       </div>
+      {!vm.band.isZero && vm.band.kind === 'inputs' && vm.band.estimatedFields.length > 0 && (
+        <Link href={links.makeExact} className="mt-xs inline-block text-sm font-semibold text-primary hover:underline">
+          {t.narrowRange} <span aria-hidden="true">→</span>
+        </Link>
+      )}
       {vm.why && (
         <p className="mt-md max-w-prose text-lg font-semibold" data-testid="future-why">
           {whyText(vm.why)}

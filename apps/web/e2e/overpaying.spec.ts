@@ -3,6 +3,7 @@
 // `tools: {}`, so nothing is prefilled and the visitor starts cold.
 import { type Page } from '@playwright/test';
 import { overpaying as t } from '../src/copy/overpaying';
+import { planImpact as pi } from '../src/copy/planImpact';
 import { expect, test } from './tools/fixtures';
 
 let pageErrors: string[] = [];
@@ -47,10 +48,26 @@ test.describe('S23 Overpaying check', () => {
     await expect(rent.getByText(/^Source:/)).toBeVisible(); // the source note, with its year
     await expect(page.getByTestId('coverage')).toHaveAttribute('data-coverage', 'exact');
     await expect(page.getByTestId('overpaying-summary')).toContainText(t.result.summaryLine(1, 1));
-    // Cold: no profile of the person's own, so no 10-year effect; the screen says what it needs.
-    await expect(page.getByTestId('effect10y')).toHaveCount(0);
-    await expect(page.getByTestId('overpaying-summary').getByRole('link', { name: t.result.effectNeedsProfileLink })).toBeVisible();
+    // The answer first: the pill, the gap per year, and where the biggest gap is.
+    await expect(page.getByTestId('overpaying-summary')).toHaveAttribute('data-verdict', 'above');
+    await expect(page.getByTestId('overpaying-summary')).toContainText(t.result.verdict.pill.above);
+    await expect(page.getByTestId('next-steps')).toContainText('Rent + utilities');
+    // $6,000 is more than the sample plan holds for rent, so it is not measured on the plan, and it says so.
+    await expect(rent.getByText(t.result.planNotMeasured)).toBeVisible();
     await expectNoHorizontalScroll(page);
+  });
+
+  test('what paying the typical middle does to the plan, added from the row, then open the plan', async ({ page }) => {
+    await page.goto('/tools/overpaying');
+    await zipBox(page).fill('75206');
+    await amountBox(page, 'rent').fill('3500'); // above the range; the sample plan's rent line can take the change
+    const impact = rowOf(page, 'rent').getByTestId('row-impact');
+    await expect(impact).toBeVisible();
+    await expect(impact.getByTestId('impact-10y')).toContainText('+$');
+    await impact.getByRole('button', { name: pi.add }).click();
+    await expect(impact.getByText(pi.added)).toBeVisible();
+    await impact.getByRole('link', { name: new RegExp(pi.open) }).click();
+    await expect(page).toHaveURL(/\/plan$/);
   });
 
   test('says which household it compared against, and switches once the household is entered', async ({ page }) => {

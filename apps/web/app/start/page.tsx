@@ -4,11 +4,11 @@
 // analysis → the answer → your plan to 90 → one decision. Thin route: the view-model hooks feed the
 // presentational screens; the duel round is the game's own warm-up (features/game).
 import Link from 'next/link';
-import { onboarding as copy } from '@/copy';
+import { welcome as copy } from '@/copy';
 import { useDuel } from '@/features/game/model/useDuel';
 import { DuelWarmup } from '@/features/game/ui/DuelWarmup';
-import { useOnboarding } from '@/features/onboarding/model/useOnboarding';
-import { Onboarding } from '@/features/onboarding/ui/Onboarding';
+import { useOnboarding } from '@/features/welcome/model/useOnboarding';
+import { Onboarding } from '@/features/welcome/ui/Onboarding';
 import { SCREEN_ROUTES } from '@/lib/screens';
 
 export default function StartPage() {
@@ -19,7 +19,7 @@ export default function StartPage() {
       vm={vm}
       Link={Link}
       uploadHref={SCREEN_ROUTES.S9}
-      doneHref="/"
+      doneHref="/dashboard"
       warmup={<DuelWarmup vm={duel} onContinue={vm.finishWarmup} continueLabel={copy.warmup.cta} sticker={copy.warmup.sticker} />}
     />
   );

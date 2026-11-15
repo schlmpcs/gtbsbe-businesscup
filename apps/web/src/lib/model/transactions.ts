@@ -294,6 +294,8 @@ export type TransactionStore = {
   subscribe(listener: () => void): () => void;
   /** Reads a CSV through the T6/T7 pipeline and stores the lines that are not there yet. */
   importFile(file: File, deps?: ReadStatementDeps): Promise<ImportResult>;
+  /** Stores the lines of a statement already read by the T6/T7 pipeline (the demo bank link reads once, fills every screen). */
+  importRead(read: StatementFileResult): Promise<ImportResult>;
   addManual(input: ManualTransactionInput): Promise<LedgerTransaction>;
   /** Sets a line's category; with `applyToMerchant`, every line with its merchantKey. Returns lines changed. */
   setCategory(id: string, cls: StatementClass, opts?: { applyToMerchant?: boolean }): Promise<number>;
@@ -342,6 +344,21 @@ export function createTransactionStore(opts: TransactionStoreOptions = {}): Tran
     return next;
   };
 
+  /** The lines of a read statement that are not stored yet, stored. */
+  const storeRead = async (read: StatementFileResult): Promise<ImportResult> => {
+    if (!read.classified) throw new TransactionImportError('The categorizer did not return a class per line');
+    const incoming = fromClassified(read.classified);
+    return run(async () => {
+      const have = new Set(lines.map((t) => t.id));
+      const fresh = incoming.filter((t) => !have.has(t.id));
+      if (fresh.length > 0) {
+        publish([...lines, ...fresh]);
+        await persist((d) => d.putMany(fresh));
+      }
+      return { added: fresh.length, duplicates: incoming.length - fresh.length, summary: read.summary, followUps: read.followUps };
+    });
+  };
+
   return {
     load,
     list: () => lines,
@@ -353,18 +370,10 @@ export function createTransactionStore(opts: TransactionStoreOptions = {}): Tran
     async importFile(file, deps = {}) {
       // Read and categorize outside the queue (it is the slow part); store inside it.
       const read = await readFile(file, { ...deps, anonId: deps.anonId ?? getAnonId() });
-      if (!read.classified) throw new TransactionImportError('The categorizer did not return a class per line');
-      const incoming = fromClassified(read.classified);
-      return run(async () => {
-        const have = new Set(lines.map((t) => t.id));
-        const fresh = incoming.filter((t) => !have.has(t.id));
-        if (fresh.length > 0) {
-          publish([...lines, ...fresh]);
-          await persist((d) => d.putMany(fresh));
-        }
-        return { added: fresh.length, duplicates: incoming.length - fresh.length, summary: read.summary, followUps: read.followUps };
-      });
+      return storeRead(read);
     },
+
+    importRead: (read) => storeRead(read),
 
     addManual(input) {
       const line = manualTransaction(input, newId());

@@ -1,7 +1,7 @@
 // /start onboarding end to end: one warm-up round of today's duel → guess → demo bank connection (the sample statement through the real
 // parser and categorizer) → the analysis of the statement → net worth reveal → plan to 90 → one decision → Home with the Life line.
 import { expect, test } from '@playwright/test';
-import { onboarding as t } from '../src/copy/onboarding';
+import { welcome as t } from '../src/copy/welcome';
 
 test('onboarding: warm-up duel, guess, connect a bank (demo), see what you are worth, drag one decision', async ({ page }) => {
   await page.goto('/start');
@@ -40,7 +40,7 @@ test('onboarding: warm-up duel, guess, connect a bank (demo), see what you are w
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Buy a home 4 years sooner');
 
   await page.getByRole('link', { name: t.decision.cta }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByTestId('lifeline')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

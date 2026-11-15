@@ -3,11 +3,11 @@
 // Hook: useSubscriptions (./useSubscriptions.ts). The pure parts are in ./audit.ts.
 import type { MoveCandidate } from '@lifeguessr/engine';
 import type {
-  Cadence, ChargeDate, ForecastSource, MissBucket, Money, ServiceCategory, Source, SubscriptionFlag,
+  Cadence, ChargeDate, MissBucket, Money, ServiceCategory, Source, SubscriptionFlag,
 } from '@lifeguessr/types';
 import type { StatementFileProblem } from '@/features/upload/model/types';
 import type { DownloadOutcome } from '@/lib/download';
-import type { EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
+import type { EstimatedMoney, VMError } from '@/lib/model/types';
 
 export type { EstimatedMoney, Loadable, VMError } from '@/lib/model/types';
 export type { DownloadOutcome } from '@/lib/download';
@@ -103,6 +103,8 @@ export type StatementVM = {
   isShort: boolean;
   /** The latest day in the statement. */
   asOf: ChargeDate | null;
+  /** The findings come from the person's transactions (the ledger), not an upload. */
+  fromLedger: boolean;
   /** Read a CSV on this device and look for recurring charges. Needs the network (the categorizer). */
   upload: (file: File) => void;
   dismissError: () => void;
@@ -171,9 +173,6 @@ export type FindingsVM = {
 
 // ----- plan --------------------------------------------------------------------------------------
 
-/** The 10-year effect of cancelling what is marked: the same forecast as Next Moves, today's dollars. */
-export type CancelEffectVM = { effect10y: Money; source: ForecastSource };
-
 export type PlanVM = {
   /** What can be marked: the counted findings (statement findings, then ticked-only services). */
   options: FindingVM[];
@@ -184,8 +183,8 @@ export type PlanVM = {
    */
   saving: { monthly: Money; yearly: Money; isEstimate: boolean } | null;
   /**
-   * The move the plan would be, for `useCancelResult` to measure: null when nothing is marked. This hook
-   * itself never asks the forecast: only a screen with something marked does.
+   * The move the plan would be, for `usePlanImpact` to measure on the person's plan and add to it: null when
+   * nothing is marked.
    */
   candidate: MoveCandidate | null;
   /** The profile's subscriptions line, which the move lowers. */
@@ -196,18 +195,6 @@ export type PlanVM = {
   isSampleProfile: boolean;
   markCancel: (id: string) => void;
   unmarkCancel: (id: string) => void;
-  /** The committed move is this cancel plan, exactly as it stands now (same marks, same subscriptions line). */
-  moveAdded: boolean;
-  /** The committed move is an earlier version of this cancel plan: the marks or the profile's line changed since. Add it again to update it. */
-  moveOutdated: boolean;
-};
-
-/** The 10-year number of the marked plan and the way to add it as the next move (`useCancelResult`). */
-export type CancelResultVM = {
-  /** Null without a candidate. 'ready' with `effect10y` 0 = below $1, not worth a move. */
-  effect: Loadable<CancelEffectVM> | null;
-  canAddAsMove: boolean;
-  addAsMove: () => void;
 };
 
 /** "Use this in my plan": what would change in the profile, from and to. Nothing changes until `applyToProfile`. */
@@ -260,3 +247,6 @@ export type SubscriptionsVM = {
   /** Forget the guess, ticks, choices and findings kept in this browser. */
   clearLocalData: () => void;
 };
+
+/** "What it does to your plan": the cancel plan measured on the active /plan scenario (./usePlanImpact). */
+export type { PlanImpactVM } from './usePlanImpact';

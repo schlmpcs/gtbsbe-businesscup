@@ -4,7 +4,7 @@
 // from sample lives, and is preselected. When the spending came from a statement, the starting life
 // is skipped: only "About you" is asked, and the statement's numbers stay.
 import { costOfLife, lifeCardFromFacts } from '@lifeguessr/engine';
-import { KID_AGES, type HouseholdFacts, type KidAge, type Money } from '@lifeguessr/types';
+import { KID_AGES, type HouseholdFacts, type KidAge, type Money, type Profile } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { cardsSample } from '@/fixtures/cards';
 import { track } from '@/lib/events';
@@ -12,8 +12,10 @@ import { useAppReady, useAppStore, useGameStore, useProfile } from '@/state';
 import { BALANCE_FIELD_BOUNDS } from './constants';
 import { clampField } from './useBalanceSheet';
 import { debtsChanged, startingDebts } from './useLadderProgress';
-import { DEFAULT_HOUSEHOLD, isZip, OWN_LIFE_CARD_ID, ownArea, ownLifeProfile, spendingIsOwn, startingProfile } from './ownLife';
-import type { AboutYouVM, ClosestLifeVM, DifferentiatorVM, LifeCandidateVM } from './types';
+import {
+  DEFAULT_HOUSEHOLD, isZip, OWN_LIFE_CARD_ID, ownArea, ownLifeProfile, spendingIsOwn, startingProfile, typed,
+} from './ownLife';
+import type { AboutYouNumberVM, AboutYouVM, ClosestLifeVM, DifferentiatorVM, LifeCandidateVM } from './types';
 
 /** Rent differs by at least this share from same-size cards before we call the area pricier/cheaper. */
 const AREA_GAP = 0.1;
@@ -70,6 +72,27 @@ const countKids = (kids: readonly KidAge[]): Record<KidAge, number> => {
 };
 const expandKids = (counts: Record<KidAge, number>): KidAge[] => KID_AGES.flatMap((k) => Array.from({ length: counts[k] }, () => k));
 
+type AboutNumber = 'age' | 'takeHomePay';
+type Touched = Record<AboutNumber, boolean>;
+
+/**
+ * An age or pay box: the person's value (typed, or the statement's pay), else empty with our typical
+ * value as its placeholder. `touched`: typed on this screen just now, even when it equals the sample
+ * family's value (which `typed` alone can't tell from an inherited one).
+ */
+export function aboutNumber(profile: Profile, field: AboutNumber, start: Profile | null, touched: boolean): AboutYouNumberVM {
+  const own = touched || typed(profile[field], start?.[field]);
+  return { value: own ? profile[field].value : null, estimate: profile[field].value, isEstimate: !own, bounds: BALANCE_FIELD_BOUNDS[field] };
+}
+
+/** The starting profile with the fields typed on this screen counted as the person's (see `aboutNumber`). */
+function startWithTouched(start: Profile | null, touched: Touched): Profile | null {
+  if (!start) return null;
+  const out = { ...start };
+  for (const f of ['age', 'takeHomePay'] as const) if (touched[f]) out[f] = { ...start[f], isEstimate: true };
+  return out;
+}
+
 /** The starting life as a card on screen (cost lines largest first, each with its source). */
 function candidateOf(facts: HouseholdFacts, zip: string): LifeCandidateVM | null {
   const found = ownArea(zip);
@@ -114,6 +137,7 @@ export function useClosestLife(): ClosestLifeVM {
   const facts = profile.householdFacts ?? DEFAULT_HOUSEHOLD;
   const savedZip = profile.householdFacts ? (profile.zip ?? '') : '';
   const [zipDraft, setZipDraft] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Touched>({ age: false, takeHomePay: false });
   const zip = zipDraft ?? savedZip;
 
   const save = useCallback(
@@ -133,8 +157,8 @@ export function useClosestLife(): ClosestLifeVM {
 
   const found = useMemo(() => ownArea(zip), [zip]);
   const about: AboutYouVM = {
-    age: { ...profile.age, bounds: BALANCE_FIELD_BOUNDS.age },
-    takeHomePay: { ...profile.takeHomePay, bounds: BALANCE_FIELD_BOUNDS.takeHomePay },
+    age: aboutNumber(profile, 'age', startingProfile(chosenCardId), touched.age),
+    takeHomePay: aboutNumber(profile, 'takeHomePay', startingProfile(chosenCardId), touched.takeHomePay),
     adults: facts.adults,
     kids: countKids(facts.kids),
     kidsPerBandMax: KIDS_PER_BAND_MAX,
@@ -154,9 +178,10 @@ export function useClosestLife(): ClosestLifeVM {
     // a sample life's debts don't.
     const cards = [...Object.values(reveals).map((r) => r.card), ...cardsSample];
     const keepOwn = chosenCardId === OWN_LIFE_CARD_ID || debtsChanged(startingDebts(chosenCardId, cards), profile.debts);
-    chooseClosestLife(OWN_LIFE_CARD_ID, ownLifeProfile(profile, facts, zip, found.area, keepOwn, startingProfile(chosenCardId)));
+    const start = startWithTouched(startingProfile(chosenCardId), touched);
+    chooseClosestLife(OWN_LIFE_CARD_ID, ownLifeProfile(profile, facts, zip, found.area, keepOwn, start));
     track({ name: 'closest_life_chosen', props: { fromToday: false } }, { once: 'closest_life_chosen' });
-  }, [zip, spendingFromStatement, reveals, chosenCardId, profile, facts, chooseClosestLife]);
+  }, [zip, spendingFromStatement, reveals, chosenCardId, profile, facts, chooseClosestLife, touched]);
 
   return {
     status: ready ? 'ready' : 'loading',
@@ -164,11 +189,15 @@ export function useClosestLife(): ClosestLifeVM {
     about,
     setAge: (age: number) => {
       const v = clampField('age', age);
-      if (v !== null) setField('age', v);
+      if (v === null) return;
+      setField('age', v);
+      setTouched((t) => (t.age ? t : { ...t, age: true }));
     },
     setTakeHomePay: (pay: Money) => {
       const v = clampField('takeHomePay', pay);
-      if (v !== null) setField('takeHomePay', v);
+      if (v === null) return;
+      setField('takeHomePay', v);
+      setTouched((t) => (t.takeHomePay ? t : { ...t, takeHomePay: true }));
     },
     setAdults: (n: number) => edit({ adults: whole(n, 1, 2) as 1 | 2 }),
     setKidCount: (age: KidAge, n: number) =>

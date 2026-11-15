@@ -1,7 +1,9 @@
 // Strings for /plan (MP7, epic #160): the KPI cards and their tooltips, the nine plan events, the
 // assumptions and their hints, Monte Carlo, Compare and Next Moves. Owner: Amir. Hooks resolve these
 // to text; the UI may also read them directly. Functions take values already formatted by the hooks.
-import type { AccountGroup, PlanEventType } from '@lifeguessr/types';
+import type { AccountGroup, Debt, PlanEventType } from '@lifeguessr/types';
+
+type DebtKind = Debt['kind'];
 
 const events: Record<PlanEventType, { title: string; description: string }> = {
   income: { title: 'Extra income', description: 'A raise, side income or a partner’s pay, per month.' },
@@ -29,7 +31,7 @@ const groups: Record<AccountGroup, string> = {
 
 export const plan = {
   disclaimer: 'An educational simulation, not financial advice. Estimates use rules and averages, not a promise of what will happen.',
-  saveState: { saving: 'Saving…', saved: 'Saved just now' },
+  saveState: { saving: 'Saving…', saved: 'Saved just now', error: 'Not saved: this browser blocks storage' },
   display: { today: 'Today’s dollars', future: 'Future dollars' },
   notFound: 'We could not find that scenario.',
   kpi: {
@@ -48,14 +50,29 @@ export const plan = {
     retireMarker: 'Retire',
   },
   tables: {
-    accounts: { year: 'Year', age: 'Age', start: 'Start', growth: 'Growth', deposits: 'Deposits', withdrawals: 'Withdrawals', end: 'End' },
+    accounts: {
+      year: 'Year', age: 'Age', start: 'Start', growth: 'Growth', deposits: 'Deposits', withdrawals: 'Withdrawals', end: 'End',
+      assets: 'Assets', liabilities: 'Liabilities',
+    },
     cashFlow: {
       year: 'Year', age: 'Age', income: 'Income', expenses: 'Expenses', withdrawals: 'From savings', net: 'Net',
-      lines: { takeHomePay: 'Take-home pay', spending: 'Spending' } as Record<string, string>,
+      lines: {
+        takeHomePay: 'Take-home pay', windfalls: 'One-time income', spending: 'Spending', debtPayments: 'Debt payments',
+        oneOffCosts: 'One-time costs and down payments',
+      } as Record<string, string>,
     },
     events: { year: 'Year', event: 'Event', summary: 'Details' },
   },
   groups,
+  /** Account rows of the plan that are not one of the person's accounts. */
+  accountRows: {
+    home: 'Home',
+    mortgage: (name?: string) => (name ? `${name} mortgage` : 'Mortgage'),
+    loan: (title: string) => `${title} loan`,
+  },
+  debtKinds: {
+    card: 'Credit card', auto: 'Auto loan', student: 'Student loan', personal: 'Personal loan', bnpl: 'Buy now, pay later', mortgage: 'Mortgage',
+  } satisfies Record<DebtKind, string>,
   events,
   eventSummary: {
     income: (monthly: string) => `${monthly} a month`,
@@ -158,8 +175,11 @@ export const plan = {
   chance: {
     idle: 'Run the simulation to see how often your plan works.',
     running: 'Running…',
+    error: 'The simulation could not run. Your plan above is unchanged; try again in a moment.',
     gaugeLabel: 'Chance of success',
     paths: (ok: string, total: string) => `${ok} of ${total} paths work`,
+    planMarker: (value: string) => `Plan ${value}`,
+    planNeverShort: (endAge: number) => `Plan: lasts past ${endAge}`,
     histograms: {
       atRetirement: { title: 'Net worth at retirement', xLabel: 'Net worth' },
       atEnd: { title: 'Net worth at the end of the plan', xLabel: 'Net worth' },
@@ -187,46 +207,148 @@ export const plan = {
     effectAtRetirement: (amount: string) => `${amount} at retirement`,
     successRateDelta: (pts: string) => `${pts} chance of success`,
     added: 'Added to your plan',
-    // Stand-ins until the moves come from the engine (MP6) and /api/ai/explain writes the explanation.
-    items: {
-      'move-extra-income': { title: 'Earn $400 more a month', explanation: 'Extra monthly income adds to savings every year until you retire, and the early years grow the longest.' },
-      'move-windfall': { title: 'Invest a $10,000 windfall', explanation: 'A lump sum put to work next year has the most time to grow before retirement.' },
-      'move-side-income': { title: 'Add $250 a month of side income', explanation: 'A smaller extra income still compounds over decades and lowers the chance of running short.' },
-    } as Record<string, { title: string; explanation: string }>,
+    /** Second sentence of a move's explanation: how its effect was measured. */
+    measured: 'We measured it by running your plan with and without it.',
+  },
+  // The /plan screen itself (MP15/MP16): headings, buttons, view switch, empty states.
+  screen: {
+    title: 'Your plan',
+    eyebrow: 'Plan',
+    intro: 'Your net worth year by year to the end of the plan, with the life events you add.',
+    views: { label: 'Plan views', plan: 'Plan', compare: 'Compare', chance: 'Chance of success' },
+    scenarios: {
+      label: 'Scenarios',
+      add: 'Duplicate scenario',
+      addShort: 'Scenario',
+      remove: (name: string) => `Remove ${name}`,
+    },
+    header: {
+      addEvent: 'Add event',
+      assumptions: 'Assumptions',
+      settings: 'Settings',
+      panelClose: 'Done',
+    },
+    kpiSource: 'Rules-based',
+    kpiSourceHint: 'Calculated by our plan rules from your numbers, not by AI.',
+    kpis: {
+      label: 'Your plan at a glance',
+      retireAge: 'Retirement age',
+      retireAgeTooltip: 'The age at which work income stops in this plan. Change it in Assumptions or drag the Retire event.',
+      retireAgeValue: (age: number) => `Age ${age}`,
+    },
+    chart: {
+      title: 'Net worth by age',
+      heading: 'Net worth',
+      axisAge: 'Age',
+      axisYear: 'Year',
+      yourPlan: 'Your plan',
+      belowZero: 'Below $0: you owe more than you own',
+      inDollars: (unit: string) => `In ${unit.charAt(0).toLowerCase()}${unit.slice(1)}`,
+      tooltipHeader: (year: number, age: number) => `${year} · age ${age}`,
+      marker: (title: string, year: number, age: number) => `${title}, ${year} (age ${age}). Open to edit; arrow keys move it a year.`,
+      retireLine: (age: number) => `Retire at ${age}`,
+      showTable: 'Show as a table',
+      hideTable: 'Hide table',
+      aiLoading: 'Checking the AI estimate…',
+      aiNote: 'Dashed line: a second opinion from AI, checked against the simulation range. It never changes your numbers.',
+    },
+    tabs: { label: 'Year by year', events: 'Events', cashFlow: 'Cash flow', accounts: 'Accounts' },
+    events: {
+      title: 'Life events',
+      add: 'Add event',
+      empty: 'No events yet. Use “Add event” to see how one changes your plan.',
+      off: 'Off',
+      edit: (title: string) => `Edit ${title}`,
+      catalogTitle: 'Add an event',
+      catalogIntro: 'Pick what happens. You can change every number after.',
+      onlyOne: 'Already in your plan',
+    },
+    editor: {
+      name: 'Your name for it (optional)',
+      enabled: 'Include in the plan',
+      remove: 'Remove event',
+      done: 'Done',
+      breakdownTitle: 'Monthly cost of the home',
+      previewTitle: 'What this event changes',
+      yes: 'Yes',
+      no: 'No',
+    },
+    tables: {
+      netWorth: 'Net worth',
+      scrollHint: 'Scroll sideways to see every year.',
+      rowHeader: 'Year',
+      expand: (label: string) => `Show ${label}`,
+      collapse: (label: string) => `Hide ${label}`,
+      retirementYear: 'Retirement year',
+      age: (age: number) => `age ${age}`,
+    },
+    assumptions: {
+      title: 'Assumptions',
+      intro: 'Every number on this page follows these. Changes save as you go.',
+      timelineTitle: 'Timeline',
+      inflationTitle: 'Inflation',
+      inflationSlider: 'Inflation per year',
+      spendingTitle: 'Spending',
+      growthTitle: 'Growth per year',
+      growthReset: 'Use default',
+      withdrawalTitle: 'Order we draw savings in',
+      withdrawalHint: 'When spending is more than income, we take money from these in this order.',
+      moveUp: (label: string) => `Move ${label} up`,
+      moveDown: (label: string) => `Move ${label} down`,
+      splitTitle: 'Where new savings go',
+    },
+    moves: {
+      intro: 'Ranked by how much each one adds to your net worth at retirement.',
+      add: 'Add to plan',
+      rank: (n: number) => `#${n}`,
+      atRetirement: 'at retirement',
+      empty: 'No moves to suggest right now.',
+    },
+    /** "Check a decision": the What if? tools as illustrated tiles (art ids from public/art), then the hub. */
+    decisions: {
+      title: 'Check a decision',
+      afford: { title: 'Can I afford it?', body: 'A purchase against your month and your plan.', href: '/afford', art: 'afford-crane', tone: 'primary' },
+      loan: { title: 'Which loan costs less?', body: 'Two offers side by side, in total dollars.', href: '/loan', art: 'coins', tone: 'warm' },
+      decide: { title: 'Keep the car or lease?', body: 'Two paths, one decision, ten years out.', href: '/decide', art: 'loan', tone: 'positive' },
+      all: { label: 'All What if? tools', href: '/tools' },
+    },
+    compare: {
+      intro: 'Two scenarios side by side, year by year.',
+      withLabel: 'Compare with',
+      swap: 'Swap',
+      difference: 'Difference',
+      addScenario: 'Duplicate this scenario',
+      chartTitle: 'Net worth in both scenarios',
+    },
+    chance: {
+      intro: 'We run your plan through many random markets and inflation paths and count how often the money lasts.',
+      run: 'Run simulation',
+      rerun: 'Run again',
+      fanTitle: 'Range of outcomes',
+      band: 'Middle 80% of paths (p10–p90)',
+      median: 'Median path',
+      sampled: 'Sampled paths',
+      endValues: 'Where paths end',
+      modeLabel: 'Show',
+      modes: { paths: 'Paths', range: 'Range' },
+      histogramsTitle: 'How the paths ended',
+      noShortfall: 'No path runs out of money.',
+      settingsTitle: 'Simulation settings',
+      sections: { criteria: 'Success criteria', inflation: 'Inflation', advanced: 'Advanced' },
+      growthTitle: 'Growth draws (average ± spread)',
+      paths: 'paths',
+      seedLabel: (seed: number) => `Seed ${seed}`,
+      barLabel: (pct: string) => `${pct} of simulated paths work`,
+      empty: '—',
+    },
+    notFound: 'We could not find this plan. Try another scenario.',
+    loading: 'Loading your plan…',
   },
   aiLine: {
     label: 'AI estimate',
     rejected: {
       outsideBand: 'The estimate fell outside the range of simulations, so we hid it.',
       todayMismatch: 'The estimate did not start from today’s balance, so we hid it.',
-    },
-  },
-  // MP7b: labels for what the engine's plan() returns.
-  /** plan() cash-flow line keys. */
-  cashFlowLines: {
-    takeHomePay: 'Take-home pay',
-    windfalls: 'One-time income',
-    spending: 'Spending',
-    debtPayments: 'Debt payments',
-    oneOffCosts: 'One-time costs and down payments',
-  } as Record<string, string>,
-  /** Account rows an event adds to the plan (a home, its mortgage, a purchase loan). */
-  accountRows: {
-    home: 'Home',
-    mortgage: (eventName: string | null) => (eventName ? `${eventName} mortgage` : 'Mortgage'),
-    loan: (eventTitle: string) => `${eventTitle} loan`,
-  },
-  financingBreakdown: {
-    downPayment: 'Paid up front',
-    financed: 'Borrowed',
-    monthlyPayment: 'Loan payment per month',
-    totalInterest: 'Total interest',
-  },
-  leftOverMonthly: (amount: string) => `${amount} left each month`,
-  planMoves: {
-    successRate: {
-      measuring: 'Measuring the chance of success…',
-      unavailable: 'Chance of success not available',
     },
   },
 } as const;

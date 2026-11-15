@@ -6,7 +6,6 @@ import { PRO_PLANS, PRO_PRICES, ProConfirmRequestSchema, type ProPlan, type ProS
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getProAdapter, type ProFailure, type ProResult } from '@/lib/api/pro';
 import { useTrackOnce } from '@/lib/events';
-import { SCREEN_ROUTES } from '@/lib/screens';
 import { usePro, useProStore } from '@/state';
 import type { CheckoutMode, PaywallError, PaywallErrorKey, PaywallPlanVM, PaywallVM } from './types';
 
@@ -256,6 +255,6 @@ export function usePaywall({ checkoutReturn, navigate = assignLocation }: UsePay
     error,
     retry,
     pro: status.pro ? { source: status.source, plan: status.plan ?? null, sinceLabel: sinceFormat.format(new Date(status.since)) } : null,
-    continueHref: SCREEN_ROUTES.S11,
+    continueHref: '/plan',
   };
 }

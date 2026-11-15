@@ -14,9 +14,10 @@ export const overpaying = {
   screens: {
     S23: 'Are you paying more than typical?',
   },
+  eyebrow: 'Your bills vs. your area',
 
   intro:
-    'Put what you pay each month next to the typical range for your area. The ranges are sourced, you need no documents, and your numbers stay on this device.',
+    'Put what you pay each month next to what people near you typically pay. The ranges are sourced, you need no documents, and your numbers stay on this device.',
   loading: 'Loading…',
 
   /** The four lines that can be compared. Rent includes utilities, as the HUD figures do. */
@@ -50,6 +51,7 @@ export const overpaying = {
     perMonth: '/ month',
     amountPlaceholder: '0',
     fromProfile: 'From your profile',
+    fromLedger: 'From your transactions (monthly average)',
     noWriteBack: 'What you type here stays on this device. It never changes your profile.',
     /** JF4: the profile says the person owns their home. */
     ownerHousing: 'You own your home, so your housing costs are not compared with rent here.',
@@ -90,6 +92,25 @@ export const overpaying = {
 
   result: {
     title: 'How your costs compare',
+    verdict: {
+      above: (perYear: string) => `${perYear} a year above the typical range`,
+      typical: 'Your costs sit in the typical range for this area',
+      below: 'Your costs sit below the typical range for this area',
+      pill: { above: 'Above typical', typical: 'Typical', below: 'Below typical' },
+    },
+    nextTitle: 'Where the biggest gap is',
+    /** One concrete, neutral pointer per line above its range; `mid` is the middle of the typical range. */
+    next: {
+      rent: (mid: string) => `Rent + utilities: a typical home like yours here runs about ${mid} a month. Your lease renewal is when this number is set.`,
+      carInsurance: (mid: string) => `Car insurance: about ${mid} a month is typical here. Quotes for the same cover are free to compare before your renewal date.`,
+      groceries: (mid: string) => `Groceries: a typical month for this household is about ${mid} (USDA moderate-cost food plan).`,
+      childcare: (mid: string) => `Childcare: typical care for these ages here is about ${mid} a month. Many states run childcare assistance programs.`,
+    } satisfies Record<BenchmarkLine, (mid: string) => string>,
+    /** Above the plan impact on a row: what the change measured on the plan is. */
+    planLead: (perMonth: string) => `At the middle of the typical range, this line costs ${perMonth} a month less than yours.`,
+    planNotMeasured: 'Your plan holds less for this line than the difference, so it is not measured on your plan.',
+    middle: 'typical middle',
+    aboveOf: (above: number, compared: number) => `${above} of ${compared}`,
     /** Which household the comparison is about (the default is our assumption until the person edits it). */
     household: {
       describe: (bedrooms: number, adults: number, kids: number) =>

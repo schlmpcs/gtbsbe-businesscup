@@ -10,9 +10,9 @@ export const pro = {
     /** While the server has not said which checkout is on, and when none is: true of every mode. */
     neutral: 'Demo · no real charge',
   },
-  headline: 'Keep building your future',
-  /** One sentence under the headline: what stays free, what Pro adds today. */
-  lead: 'Forecast, moves, decisions, Can I Afford It? and Loan Lab stay free. Pro adds a wishlist for the purchases you are planning.',
+  headline: 'Plan your whole life, not just this month',
+  /** One sentence under the headline: what Pro is for (the Plan on /plan). */
+  lead: 'Pro is the Plan: your net worth year by year to age 90, with the life events you expect, side-by-side scenarios and your chance of success. The daily game, your month and Next Moves stay free.',
   loading: 'Checking your Pro status…',
 
   plans: {
@@ -26,8 +26,19 @@ export const pro = {
 
   includes: {
     title: 'Pro includes',
-    /** Only what Pro unlocks in this build (the wishlist is the one Pro-gated feature). */
-    now: ['Save purchases to a wishlist in Can I Afford It?'],
+    /**
+     * What the Pro plan includes. Phrased as what you get, not as locks: in this demo build only the
+     * wishlist is gated in code, the Plan screens are open to everyone to try.
+     */
+    now: [
+      'Your plan to age 90, with unlimited life events (buy a home, have a kid, retire…)',
+      'Compare scenarios side by side',
+      'Chance of success: thousands of simulated markets, not one straight line',
+      'An AI estimate line as a labeled second opinion on your plan',
+      'A wishlist for the purchases you are planning',
+    ],
+    /** Under the list: honest about what is gated in the demo. */
+    demoNote: 'Demo build: the Plan screens are open to try; the wishlist is the one Pro-only action.',
   },
 
   /** The fine print under the checkout. */
@@ -71,7 +82,7 @@ export const pro = {
 
   active: {
     successTitle: 'You are Pro',
-    successBody: 'Your wishlist is unlocked.',
+    successBody: 'Pro is on in this browser. Your wishlist is unlocked.',
     title: 'You already have Pro',
     sourceLabel: 'Unlocked with',
     sources: {
@@ -81,7 +92,7 @@ export const pro = {
     } satisfies Record<ProSource, string>,
     planLabel: 'Plan',
     sinceLabel: 'Since',
-    continue: 'Go to Can I Afford It?',
+    continue: 'Open your plan',
   },
 
   errors: {

@@ -8,9 +8,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { common, forecast, ladder } from '@/copy';
 import type {
-  GuessYourselfVM, LadderProgressVM, LifeCandidateVM, ParsedRowVM, QuickSlidersVM, StatementUploadVM,
+  BalanceSheetVM, ClosestLifeVM, GuessYourselfVM, LadderProgressVM, LifeCandidateVM, ParsedRowVM, QuickSlidersVM,
+  StatementUploadVM,
 } from './model/types';
-import { artFor } from './ui/ClosestLife';
+import { BalanceSheet } from './ui/BalanceSheet';
+import { artFor, ClosestLife } from './ui/ClosestLife';
 import { DebtForm } from './ui/DebtForm';
 import { DescribeLife } from './ui/DescribeLife';
 import { GuessYourself } from './ui/GuessYourself';
@@ -40,6 +42,7 @@ function uploadVM(over: Partial<StatementUploadVM> = {}): StatementUploadVM {
     lastRead: null,
     pending: [],
     lines: [],
+    summary: null,
     questions: [],
     answerCategory: vi.fn(),
     answerAmount: vi.fn(),
@@ -113,6 +116,129 @@ describe('ClosestLife (S6) art', () => {
     expect(artFor(life(1, 2, 18000))).toBe('home-family');
     expect(artFor(life(1, 2, null))).toBe('home-cottage');
     expect(artFor(life(2, 4, 52000))).toBe('home-large');
+  });
+});
+
+describe('ClosestLife (S6) About you', () => {
+  const bounds = { min: 0, max: 1_000_000, step: 1 };
+  const closestVM = (over: Partial<ClosestLifeVM['about']> = {}): ClosestLifeVM => ({
+    status: 'ready',
+    selfGuess: null,
+    about: {
+      age: { value: null, estimate: 32, isEstimate: true, bounds },
+      takeHomePay: { value: null, estimate: 5200, isEstimate: true, bounds },
+      adults: 1,
+      kids: { infant: 0, toddler: 0, preschool: 0, schoolAge: 0 },
+      kidsPerBandMax: 5,
+      bedrooms: 1,
+      hasCar: true,
+      zip: '',
+      zipStatus: 'empty',
+      areaZip: null,
+      ...over,
+    },
+    setAge: vi.fn(),
+    setTakeHomePay: vi.fn(),
+    setAdults: vi.fn(),
+    setKidCount: vi.fn(),
+    setBedrooms: vi.fn(),
+    setHasCar: vi.fn(),
+    setZip: vi.fn(),
+    candidate: null,
+    spendingFromStatement: false,
+    chosenCardId: null,
+    selectedCardId: null,
+    choose: vi.fn(),
+  });
+
+  it('our typical age and pay are placeholders, never values that look typed; one estimate tag for the block', () => {
+    render(<ClosestLife vm={closestVM()} progress={progress} />);
+    const age = screen.getByLabelText(ladder.closest.about.age);
+    expect(age).toHaveValue('');
+    expect(age).toHaveAttribute('placeholder', ladder.closest.about.estimatePlaceholder('32'));
+    expect(screen.getByLabelText(ladder.closest.about.pay)).toHaveAttribute('placeholder', ladder.closest.about.estimatePlaceholder('5,200'));
+    expect(screen.getAllByText(common.estimateTag)).toHaveLength(1);
+    expect(screen.getByLabelText(ladder.closest.about.zip)).toHaveAttribute('placeholder', ladder.closest.about.zipPlaceholder);
+  });
+
+  it('typed values show as typed, with no estimate tag', () => {
+    render(
+      <ClosestLife
+        vm={closestVM({
+          age: { value: 29, estimate: 29, isEstimate: false, bounds },
+          takeHomePay: { value: 6000, estimate: 6000, isEstimate: false, bounds },
+        })}
+        progress={progress}
+      />,
+    );
+    expect(screen.getByLabelText(ladder.closest.about.age)).toHaveValue('29');
+    expect(screen.queryByText(common.estimateTag)).toBeNull();
+  });
+
+  it('the disabled CTA says why it waits: no ZIP yet, or none we have data for', () => {
+    const { unmount } = render(<ClosestLife vm={closestVM()} progress={progress} />);
+    const cta = screen.getByRole('button', { name: ladder.shell.cta.S6 });
+    expect(cta).toBeDisabled();
+    expect(cta).toHaveAccessibleDescription(ladder.closest.about.zipNeeded);
+    unmount();
+    render(<ClosestLife vm={closestVM({ zip: '00501', zipStatus: 'none' })} progress={progress} />);
+    expect(screen.getByRole('button', { name: ladder.shell.cta.S6 })).toHaveAccessibleDescription(ladder.closest.about.zipNeededData);
+  });
+});
+
+describe('BalanceSheet (S8)', () => {
+  const field = (value: number, isEstimate: boolean) => ({ value, isEstimate });
+  const fb = { min: 0, max: 1_000_000, step: 1 };
+  const balanceVM = (over: Partial<BalanceSheetVM> = {}): BalanceSheetVM => ({
+    status: 'ready',
+    fields: { age: field(32, true), takeHomePay: field(5200, false), cash: field(3800, true), retirement: field(14500, true) },
+    fieldBounds: { age: fb, takeHomePay: fb, cash: fb, retirement: fb },
+    debts: [],
+    debtKinds: ['card', 'student'],
+    debtBounds: { balance: fb, apr: { min: 0, max: 1, step: 0.0001 }, minPayment: fb },
+    debtAprDefaults: { card: 0.21, auto: 0.07, student: 0.06, personal: 0.12, bnpl: 0, mortgage: 0.065 },
+    estimateMinPayment: () => 25,
+    detectedDebt: null,
+    confirmDetected: vi.fn(() => ''),
+    dismissDetected: vi.fn(),
+    debtLoad: { value: 0.1, zone: 'green', thresholds: { yellow: 0.2, red: 0.36 } },
+    debtLoadMax: 0.6,
+    netWorth: 18300,
+    home: {
+      tenure: 'rent', tenures: ['rent', 'mortgage', 'outright'], summary: null,
+      bounds: { value: fb, hoaMonthly: fb }, needsMortgage: false, mortgageWhileOutright: false,
+      setTenure: vi.fn(), setValue: vi.fn(), setHoaMonthly: vi.fn(),
+    },
+    setField: vi.fn(),
+    skipField: vi.fn(),
+    addDebt: vi.fn(() => ''),
+    updateDebt: vi.fn(),
+    removeDebt: vi.fn(),
+    scanStatement: vi.fn(async () => ({ status: 'none' }) as never),
+    ...over,
+  });
+
+  it('asks only savings and debts: age and pay are a read-only line linking back to About you', () => {
+    render(<BalanceSheet vm={balanceVM()} progress={progress} />);
+    expect(screen.queryByLabelText(ladder.balance.fields.age)).toBeNull();
+    expect(screen.queryByLabelText(ladder.balance.fields.takeHomePay)).toBeNull();
+    const about = screen.getByTestId('from-about');
+    expect(about).toHaveTextContent(ladder.balance.fromAbout('32', '$5,200'));
+    expect(within(about).getByRole('link', { name: ladder.balance.fromAboutLink })).toHaveAttribute('href', '/x/S6');
+    expect(screen.getByLabelText(ladder.balance.fields.cash)).toBeInTheDocument();
+  });
+
+  it('one estimate tag for the savings card, not one per row', () => {
+    render(<BalanceSheet vm={balanceVM()} progress={progress} />);
+    const savings = screen.getByRole('region', { name: ladder.balance.savingsTitle });
+    expect(within(savings).getAllByText(common.estimateTag)).toHaveLength(1);
+  });
+
+  it('pays the S5 guess off against the month, marked as an estimate while the spending is typical', () => {
+    render(<BalanceSheet vm={balanceVM()} progress={progress} payoff={{ guess: 3000, actual: 3600, difference: 600, isEstimate: true }} />);
+    const payoff = screen.getByTestId('guess-payoff');
+    expect(payoff).toHaveTextContent(ladder.guess.payoffEstimate('$3,000', '$3,600'));
+    expect(within(payoff).getByText(common.estimateTag)).toBeInTheDocument();
   });
 });
 
@@ -201,9 +327,16 @@ describe('StatementUpload (S9)', () => {
         { month: '2026-09', totals: zeros({ groceries: 600, subscriptions: 30 }), total: 630, oneOffs: [{ label: 'SOFA', amount: 800 }], detectedPay: 5400, averaged: true },
         { month: '2026-10', totals: zeros({ groceries: 700 }), total: 700, oneOffs: [], detectedPay: null, averaged: false },
       ],
+      summary: { averageMonth: 630, fullMonths: 1 },
       whatWeKeep: { months: ['2026-09', '2026-10'], categories: [...COST_CATEGORIES], takeHomePay: true, savedProfileToServer: true },
     });
     render(<StatementUpload vm={vm} progress={progress} />);
+    // The confirm sits on top: what was read, the average month, and "Use these numbers" right there.
+    const summary = screen.getByTestId('statement-summary');
+    expect(summary).toHaveTextContent(ladder.upload.averageMonth('$630', 1));
+    expect(within(summary).getByRole('button', { name: ladder.upload.apply })).toBeInTheDocument();
+    // The months are under "Details", closed.
+    expect(screen.getByTestId('statement-months')).not.toHaveAttribute('open');
     const sep = screen.getByRole('region', { name: ladder.upload.monthLabel('2026-09') });
     expect(within(sep).getByRole('list', { name: ladder.upload.monthLabel('2026-09') })).toHaveTextContent(common.categories.groceries);
     expect(within(sep).getByText(ladder.upload.detectedPay('$5,400'))).toBeInTheDocument();
@@ -223,6 +356,28 @@ describe('StatementUpload (S9)', () => {
     expect(vm.apply).toHaveBeenCalledOnce();
     await userEvent.click(screen.getByRole('button', { name: ladder.upload.discard }));
     expect(vm.discard).toHaveBeenCalledOnce();
+    // Going on with a statement under review uses it too: never silently dropped.
+    const next = screen.getByRole('link', { name: ladder.shell.cta.S9 });
+    expect(next).toHaveAttribute('href', '/x/S8');
+    next.addEventListener('click', (e) => e.preventDefault());
+    await userEvent.click(next);
+    expect(vm.apply).toHaveBeenCalledTimes(2);
+  });
+
+  it('applied with a guess: pays the guess off against the real month', () => {
+    const vm = uploadVM({ status: 'applied', history: ['2026-10'] });
+    render(<StatementUpload vm={vm} progress={progress} payoff={{ guess: 3000, actual: 4200, difference: 1200, isEstimate: false }} />);
+    const payoff = screen.getByTestId('guess-payoff');
+    expect(payoff).toHaveTextContent(ladder.guess.reveal('$3,000', '$4,200'));
+    expect(payoff).toHaveTextContent(ladder.guess.revealMore('$1,200'));
+    expect(within(payoff).queryByText(common.estimateTag)).toBeNull();
+  });
+
+  it('"What we keep" is one line and a disclosure, so the step’s CTA stays in view', () => {
+    render(<StatementUpload vm={uploadVM()} progress={progress} />);
+    const details = screen.getByTestId('what-we-keep-details');
+    expect(details).not.toHaveAttribute('open');
+    expect(within(details).getByText(ladder.upload.keep.toggle)).toBeInTheDocument();
   });
 
   it('review: asks the follow-ups, in the model’s words or the template’s, each answerable or skippable', async () => {
@@ -403,7 +558,7 @@ describe('GuessYourself (S5)', () => {
     };
     const { unmount } = render(<GuessYourself vm={vm} progress={progress} />);
     expect(screen.queryByTestId('guess-reveal')).toBeNull();
-    expect(screen.queryByRole('button', { name: ladder.guess.submit })).toBeNull();
+    expect(screen.queryByRole('link', { name: ladder.guess.submit })).toBeNull();
     expect(screen.getByRole('link', { name: ladder.shell.cta.S5 })).toHaveAttribute('href', '/x/S6');
     unmount();
     // Once the spending is the user's own: guess vs reality.
@@ -426,7 +581,11 @@ describe('GuessYourself (S5)', () => {
     render(<GuessYourself vm={vm} progress={progress} />);
     expect(screen.getByText(ladder.guess.bridgeLow(4, 5))).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: ladder.shell.cta.S5 })).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: ladder.guess.submit }));
+    // Locking the guess goes on to the next step in the same tap.
+    const lock = screen.getByRole('link', { name: ladder.guess.submit });
+    expect(lock).toHaveAttribute('href', '/x/S6');
+    lock.addEventListener('click', (e) => e.preventDefault());
+    await userEvent.click(lock);
     expect(vm.submit).toHaveBeenCalledOnce();
   });
 });

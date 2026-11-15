@@ -50,6 +50,10 @@ export type PartnerFormVM = {
   setGoal: (field: 'target' | 'years', value: number | null) => void;
   /** What is missing or wrong, if anything; the submit button is off while it is set. */
   problem: 'takeHomePay' | 'nickname' | 'goal' | null;
+  /** Show `problem` as a message: only once the person has touched that field (no red before typing). */
+  showProblem: boolean;
+  /** How many of the optional fields (spending, savings, debt) are filled: the "More details" summary. */
+  filledOptional: number;
 };
 
 /** One partner's month, as both partners see it (only totals, never categories or debts one by one). */
@@ -69,19 +73,36 @@ export type TogetherResultVM = {
     evenEach: Money;
     /** How much more (+) or less (−) partner 1 pays by income than 50/50. */
     p1VsEven: Money;
+    /** What each pays under each way of splitting (the split bar's two positions). */
+    modes: Record<SplitMode, { p1: Money; p2: Money; p1Share: number }>;
     isEstimate: boolean;
   };
   /** "Us in 10 years": rules-based forecast of the combined household, today's dollars. */
-  future: { today: Money; low: Money; mid: Money; high: Money; isEstimate: boolean; source: 'rules' };
+  future: {
+    today: Money;
+    low: Money;
+    mid: Money;
+    high: Money;
+    /** Yearly points of the combined net worth (month 0, 12, …, 120), today's dollars. */
+    points: { month: number; low: Money; mid: Money; high: Money }[];
+    isEstimate: boolean;
+    source: 'rules';
+  };
   goal: { target: Money; years: number; verdict: GoalVerdict; projectedMid: Money; gap: Money; progress: number } | null;
 };
+
+/** How shared bills are split on screen: by take-home pay, or 50/50. */
+export type SplitMode = 'income' | 'even';
 
 export type ShareVM = {
   url: string;
   copy: () => void;
   /** Web Share, when the browser has it. */
   share: (() => void) | null;
+  /** True for a few seconds after a copy worked. */
   copied: boolean;
+  /** The clipboard refused: the UI asks the person to copy the link by hand. */
+  copyFailed: boolean;
 };
 
 /** /together: partner 1 starts a plan. */
@@ -122,4 +143,6 @@ export type TogetherPlanVM =
       cancelEdit: (() => void) | null;
       result: TogetherResultVM | null;
       resultError: VMError | null;
+      splitMode: SplitMode;
+      setSplitMode: (mode: SplitMode) => void;
     };

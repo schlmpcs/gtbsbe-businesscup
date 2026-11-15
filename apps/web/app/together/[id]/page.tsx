@@ -4,9 +4,15 @@
 import { useParams } from 'next/navigation';
 import { useTogetherPlan } from '@/features/together/model/useTogetherPlan';
 import { TogetherPlanScreen } from '@/features/together/ui/TogetherPlanScreen';
+import { BackToTools } from '../../_components/BackToTools';
 
 export default function TogetherPlanPage() {
   const params = useParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : '';
-  return <TogetherPlanScreen vm={useTogetherPlan(id)} startHref="/together" />;
+  return (
+    <>
+      <BackToTools width="3xl" />
+      <TogetherPlanScreen vm={useTogetherPlan(id)} startHref="/together" />
+    </>
+  );
 }

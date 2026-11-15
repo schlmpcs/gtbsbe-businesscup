@@ -75,5 +75,63 @@ export const accounts = {
 
   form: {
     estimateNote: 'Estimate. Change it if you know yours.',
+    /** The "I'm not sure" box on a money field (`canBeEstimate`). */
+    notSure: "I'm not sure (mark as estimate)",
+    /** Hint under a minimum payment we fill in when it is left blank. */
+    defaultedHint: 'Leave it blank and we fill in a typical minimum from the balance and APR.',
+    percentHint: 'Per year, in percent (22.8 means 22.8%).',
+    moneyPlaceholder: '0',
+  },
+
+  /** The Accounts screen (MP17). Amounts come from the view-model; these are only the words around them. */
+  screen: {
+    intro: 'Everything you own and owe, in one place. Accounts stay in this browser.',
+    loading: 'Loading your accounts…',
+    netWorth: 'Net worth',
+    /** Next to the 1-month change, e.g. "+$800 last month". */
+    lastMonth: 'last month',
+    noChange: 'No balance a month back yet',
+    chartLabel: 'Net worth over time',
+    chartTooFew: 'Your net worth line starts when you have balances from two different months.',
+    periodLabel: 'Period',
+    summaryTitle: 'Assets and liabilities',
+    splitLabel: 'Assets against liabilities',
+    groupCount: (n: number) => `${n} ${n === 1 ? 'account' : 'accounts'}`,
+    summaryModeLabel: 'Show as',
+    groupsTitle: 'Your accounts',
+    excludedTag: 'Not counted',
+    excludedHint: 'Left out of net worth and the plan',
+    manualTag: 'Manual',
+    emptyTitle: 'Add your first account',
+    emptyBody: 'Type a balance for checking, savings, a card or a loan. Or import a bank statement to start with your transactions.',
+    importCta: 'Import a CSV',
+    privacy: 'Account names and balances stay in this browser.',
+  },
+
+  /** Account detail (/accounts/[id]). */
+  detailScreen: {
+    backToAccounts: 'All accounts',
+    notFoundTitle: 'Account not found',
+    notFoundBody: 'It may have been deleted, or it was added in another browser.',
+    loading: 'Loading the account…',
+    chartLabel: 'Balance over time',
+    summaryTitle: 'Summary',
+    notSet: '—',
+    manage: 'Manage',
+    newBalance: 'New balance (this month)',
+    saveBalance: 'Save balance',
+    invalidBalance: 'Enter a balance of 0 or more.',
+    rename: 'Rename',
+    newName: 'Account name',
+    saveName: 'Save name',
+    blankName: 'Enter a name.',
+    exclude: 'Leave out of net worth',
+    include: 'Count in net worth',
+    delete: 'Delete account',
+    confirmDelete: 'Delete this account? Its transactions stay, without an account.',
+    confirmDeleteYes: 'Yes, delete',
+    cancel: 'Cancel',
+    noTransactions: 'No transactions on this account yet.',
+    addTransaction: 'Add a transaction',
   },
 } as const;

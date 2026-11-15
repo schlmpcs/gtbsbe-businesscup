@@ -30,6 +30,7 @@ const SAMPLE_CARD_MODULES = [
   'apps/web/src/features/game/model/fixtureClient.ts',
   'apps/web/src/features/ladder/model/useClosestLife.ts',
   'apps/web/src/features/ladder/model/useLadderProgress.ts',
+  'apps/web/src/features/onboarding/model/practiceDuel.ts', // chapter 1's practice duel plays the sample lives (never the daily set)
   'apps/web/app/kit/samples.ts',
   'apps/web/src/fixtures/cards.ts', // the re-export itself
 ];

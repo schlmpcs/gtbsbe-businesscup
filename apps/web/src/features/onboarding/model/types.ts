@@ -1,95 +1,152 @@
-// View-model of the /start onboarding (useOnboarding). The contract with onboarding/ui/*, which may import
-// only this file, @/ui-kit/** and @/copy. Numbers arrive formatted; raw values only where an animation
-// counts up to them or a chart scales them.
-import type { LifeLineVM } from '@/features/lifeline/model/types';
+// View-model types for the onboarding story ("/" landing and /start, 4 chapters). The contract with
+// onboarding/ui/*, which may import only this file, @/ui-kit/** and @/copy (lint-enforced). The story
+// reuses the ladder's and the plan's view-models (re-exported below), and adds its own: the practice
+// duel (chapter 1), the month reveal (chapter 3) and the story's progress.
+import type { CostCategory, DuelFactGroup, DuelLetter, Money, Rate } from '@lifeguessr/types';
+import type { SliderVM } from '@/lib/model/types';
 
-export type { LifeLineVM, LifeLineKpiVM, LifeLinePoint } from '@/features/lifeline/model/types';
+export type { CostCategory, DuelFactGroup, DuelLetter, Money, Rate } from '@lifeguessr/types';
+export type { SliderVM } from '@/lib/model/types';
+export type {
+  ClosestLifeVM, GuessPayoffVM, GuessYourselfVM, QuickSlidersVM, StatementUploadError, StatementUploadVM,
+} from '@/features/ladder/model/types';
+export type { ChanceOfSuccessVM, PlanMovesVM, PlanVM, PlanChartPoint, PlanKpiVM } from '@/features/plan/model/types';
 
-export type OnboardingStep = 'play' | 'guess' | 'connect' | 'connecting' | 'analyzing' | 'reveal' | 'future' | 'decision';
+// ----- The story ------------------------------------------------------------------------------
 
-/** `logo`: a public path to the bank's mark (public/banks, Simple Icons, CC0). */
-export type BankVM = { id: string; name: string; logo: string };
+/** The four chapters, in order. */
+export type ChapterId = 1 | 2 | 3 | 4;
 
-export type HouseArt = 'empty-plot' | 'house-blueprint' | 'house-crane' | 'house-build' | 'home-large';
-
-export type AnalysisIcon = 'cash' | 'home' | 'repeat' | 'fork' | 'card' | 'car' | 'cart' | 'kid' | 'spark' | 'piggy';
-/** One merchant a row's money went to (or came from), the lines of that month summed. */
-export type MerchantVM = { id: string; name: string; logo: string | null; initials: string; amountLabel: string; count: number };
-export type AnalysisRowVM = {
-  id: string;
-  icon: AnalysisIcon;
-  /** "Counting your subscriptions" while it runs. */
-  label: string;
-  /** Raw dollars a month (the count-up target) and the label it lands on ("$87/mo"). */
-  value: number;
-  valueLabel: string;
-  tone: 'good' | 'bad' | 'plain';
-  /** Share of take-home pay (or of spending without a paycheck), 0–1, for the bar. */
-  share: number;
-  /** The merchants behind the row, biggest first (at most 6); none for the "left" row. */
-  merchants: MerchantVM[];
-  /** Lines in the row this month. */
-  count: number;
-  /** "Rent + utilities" (the bucket's name, short). */
-  bucket: string;
-  /** The donut segment this row adds (spending rows only). */
-  segment: { share: number; tone: 1 | 2 | 3 | 4 | 5 | 6 | 'primary' } | null;
-};
-export type AnalysisVM = {
-  title: string;
-  /** "Jul 1 – Nov 14". */
-  rangeLabel: string | null;
-  rows: AnalysisRowVM[];
-  /** Rows finished so far (the next one is running); = rows.length when done. */
-  done: number;
-  /** Spending a month: count-up target and label, and what it is out of. */
-  spent: number;
-  spentLabel: string;
-  ofLabel: string | null;
-  complete: boolean;
+/** What is kept in this browser about the story (never a number of the person's month). */
+export type OnboardingRecord = {
+  /** The chapter the person reached last. */
+  chapter: ChapterId;
+  /** Chapter 4 was reached: "/" sends the person to /dashboard from now on. */
+  done: boolean;
+  /** The practice duel's average guess error (0–1), for the bridge line in chapter 2; null until played. */
+  practiceError: Rate | null;
 };
 
-export type RevealVM = {
-  netWorth: number;
-  netWorthLabel: string;
-  guessLabel: string;
-  /** "$43,103 too high", or "Spot on". */
-  offLabel: string;
-  offTone: 'good' | 'bad';
-  ownLabel: string;
-  oweLabel: string;
-  takeHomeLabel: string | null;
-  spendingLabel: string | null;
-  /** The month's biggest categories, share of spending 0–1 for the bars. */
-  topCategories: { label: string; amountLabel: string; share: number }[];
-};
-
-export type OnboardingVM = {
+export type StoryVM = {
   status: 'loading' | 'ready';
-  step: OnboardingStep;
-  /** 1-based position for the progress bar (connecting counts as connect). */
-  stepIndex: number;
-  stepCount: number;
-  house: HouseArt;
-  guess: { value: number; min: number; max: number; step: number; label: string; formatValue: (v: number) => string };
-  /** The warm-up duel round is done (or skipped): on to the guess. */
-  finishWarmup: () => void;
-  setGuess: (v: number) => void;
-  lockGuess: () => void;
-  banks: BankVM[];
-  connect: (bankId: string) => void;
-  connecting: {
-    bankName: string;
-    /** Index of the phase in progress (copy.onboarding.connecting.phases); = length when done. */
-    phase: number;
-    readLabel: string | null;
-    failed: boolean;
-  } | null;
-  retry: () => void;
-  analysis: AnalysisVM | null;
-  reveal: RevealVM | null;
-  /** Future and decision steps: the home Life line on the data just loaded. */
-  lifeline: LifeLineVM;
+  chapter: ChapterId;
+  /** Chapters the person may jump back to (reached ones). */
+  reached: ChapterId;
+  goTo: (chapter: ChapterId) => void;
+  /** Chapter 4 reached: mark the story finished (idempotent). */
+  finish: () => void;
+  practiceError: Rate | null;
+  setPracticeError: (error: Rate) => void;
+};
+
+/** "/": what the landing does for this browser. */
+export type LandingVM = {
+  /**
+   * loading: saved state not read yet (nothing shown but the frame). redirect: the story was finished
+   * (or the person built a profile before it existed): go to `redirectTo`. continue: a story in
+   * progress, resume at `resumeChapter`. fresh: a first visit.
+   */
+  mode: 'loading' | 'redirect' | 'continue' | 'fresh';
+  redirectTo: string;
+  startHref: string;
+  /** Chapter 1 again ("Start over", for a story in progress). */
+  restartHref: string;
+  resumeChapter: ChapterId | null;
+  sampleHref: string;
+  /** Load the sample household before following `sampleHref` (the store refuses over a profile of one's own). */
+  seeSample: () => void;
+};
+
+// ----- Chapter 1: the practice duel -------------------------------------------------------------
+
+/** One category bar on a revealed card (monthly). `share` = amount / the larger card's total (0–1), for the bar width. */
+export type PracticeBarVM = { category: CostCategory; amount: Money; share: Rate };
+
+/** House cutout for a card, from the facts it shows (bedrooms, kids, car), never from its cost. */
+export type PracticeArt = 'home-apartment' | 'home-apartment-nocar' | 'home-family' | 'home-suburb' | 'home-large' | 'home-cottage';
+
+export type PracticeCardVM = {
+  letter: DuelLetter;
+  household: string;
+  metro: string;
+  caption: string;
+  /** The duel card's fact groups (Home, Family, Car, Food), two lines each, from the shared builder. */
+  facts: DuelFactGroup[];
+  art: PracticeArt;
+  /** Monthly total (engine costOfLife total.mid), after the reveal only. */
+  total: Money | null;
+  /** total / the larger total (0–1), after the reveal only: the total bar's width. */
+  totalShare: Rate | null;
+  /** Top categories, largest first, after the reveal only. */
+  bars: PracticeBarVM[];
+  /** After the reveal: this one costs more. */
+  costlier: boolean;
+  picked: boolean;
+};
+
+export type PracticeResultVM = {
+  round: number;
+  correct: boolean;
+  /** Your number for the life you picked, and what it costs (monthly). */
+  guess: Money;
+  actual: Money;
+  /** |guess − actual| / actual (0 = spot on). */
+  error: Rate;
+  /** guess below the actual cost. */
+  low: boolean;
+  /** What the costlier life outspends the other on the most. */
+  decidedBy: CostCategory;
+  /** How much more the costlier life costs a month. */
+  gap: Money;
+};
+
+export type PracticeSummaryVM = {
+  /** Mean of the rounds' errors (0–1). */
+  averageError: Rate;
+  right: number;
+  rounds: PracticeResultVM[];
+  /** More rounds guessed low than high. */
+  mostlyLow: boolean;
+};
+
+export type PracticeVM = {
+  /** pick: tap a life. guess: your number for it (the pick can still change). revealed: totals shown. summary: after the last round. */
+  phase: 'pick' | 'guess' | 'revealed' | 'summary';
+  round: number;
+  rounds: number;
+  cards: [PracticeCardVM, PracticeCardVM];
+  choice: DuelLetter | null;
+  guess: SliderVM;
+  result: PracticeResultVM | null;
+  summary: PracticeSummaryVM | null;
+  pick: (letter: DuelLetter) => void;
+  setGuess: (value: Money) => void;
+  reveal: () => void;
   next: () => void;
-  back: () => void;
+  restart: () => void;
+};
+
+// ----- Chapter 3: the month reveal --------------------------------------------------------------
+
+export type MonthCategoryVM = { category: CostCategory; amount: Money; share: Rate };
+
+/** "Your guess $X" vs "Your real month $Y", the gap, and where the month goes. */
+export type MonthRevealVM = {
+  /** The chapter 2 guess; null when it was skipped (then there is no gap to show). */
+  guess: Money | null;
+  actual: Money;
+  /** actual − guess (positive: the month costs more than guessed); null without a guess. */
+  difference: Money | null;
+  /** |difference| / guess (0–∞); null without a guess. */
+  differenceShare: Rate | null;
+  direction: 'more' | 'less' | 'exact' | null;
+  /** guess / max(guess, actual) and actual / max(...): bar widths (0–1). */
+  guessShare: Rate;
+  actualShare: Rate;
+  /** The month is still the typical one for the household (no statement, no slider moved). */
+  isEstimate: boolean;
+  /** Where the month came from. */
+  from: 'statement' | 'sliders' | 'estimate';
+  /** Spending categories and minimum debt payments, largest first (zeros left out); shares of `actual`. */
+  categories: MonthCategoryVM[];
 };

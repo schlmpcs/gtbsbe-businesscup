@@ -11,7 +11,7 @@ export const afford = {
   /** Label used when the user leaves the purchase name blank. */
   defaultPurchaseLabel: 'Purchase',
 
-  intro: 'Checked against your next 10 years.',
+  intro: 'Price it in, and see if your month and your plan can take it.',
   loading: 'Loading your plan…',
 
   form: {
@@ -98,6 +98,51 @@ export const afford = {
     loading: 'Checking…',
     /** The tilted sticker on the answer card: the verdict in one word. */
     stickers: { fits: 'Go', wait: 'Wait', no: 'No' },
+    /** The answer in three words, from the engine's comfort tier (affordComfort). */
+    tiers: { comfortable: 'Yes, comfortably', stretched: 'Yes, but stretched', notYet: 'Not yet' },
+    /** The colored pill above the answer. */
+    tierPills: { comfortable: 'Fits easily', stretched: 'Fits, but tight', notYet: 'Doesn’t fit now' },
+    /** Why, per tier. Months and percents already formatted. */
+    reasons: {
+      comfortable: (cushion: string, load: string) =>
+        `You’d still keep ${cushion} of costs in cash, and debt payments stay at ${load} of take-home pay.`,
+      stretchedCushion: (cushion: string, goal: string) =>
+        `It fits, but your cash would dip to ${cushion} of costs. Comfortable is ${goal} or more.`,
+      /** The cushion was under the comfortable level before the purchase too. */
+      stretchedThin: (before: string, after: string, goal: string) =>
+        `It fits, but your cash is already thin: ${before} of costs, ${after} after this. Comfortable is ${goal} or more.`,
+      stretchedDebt: (load: string, yellow: string) =>
+        `It fits, but debt payments would climb to ${load} of take-home pay, above the ${yellow} comfort line.`,
+      wait: (n: number) => `Wait ${months(n)} and it fits.`,
+    },
+    /** The KPI strip under the answer. */
+    kpis: {
+      label: 'The numbers behind the answer',
+      cushion: 'Cushion after',
+      cushionValue: (n: string) => `${n} mo`,
+      cushionNone: 'No costs',
+      cushionNow: (n: string) => `${n} mo before`,
+      netWorth: 'Net worth in 10 years',
+      netWorthHint: (delta: string) => `${delta} vs not buying`,
+      netWorthSame: 'Same as not buying',
+      debtLoad: 'Debt load',
+      debtLoadNow: (v: string) => `${v} before`,
+      noPay: 'No pay',
+    },
+    /** The with / without line chart (yearly, 10 years). */
+    chart: {
+      tick: (year: number) => (year === 0 ? 'Now' : `${year}y`),
+      summary: (withIt: string, without: string) => `In 10 years: ${withIt} with it, ${without} without it.`,
+      note: 'Future (nominal) dollars, middle of the likely range.',
+    },
+    /** What lands on /plan with "Add to my plan". */
+    planWhat: {
+      once: (label: string) => `${label}, one-time`,
+      card: (label: string) => `${label}, one-time (a card paid off counts like cash)`,
+      financed: (label: string) => `${label}, financed`,
+      monthly: (label: string) => `${label}, every month`,
+      yearly: (label: string) => `${label}, spread monthly`,
+    },
     effectsLabel: 'Net worth vs not buying',
     /** Fact cards under the answer: the net worth change at a horizon, vs not buying. */
     effects: {
@@ -127,6 +172,9 @@ export const afford = {
     /** Collapsed: how the verdict is decided. */
     howTitle: 'How we decide',
     how: 'We check every month of the next year: a cash cushion, a safe debt load and, on a card, paying it off within 12 months.',
+    /** How the comfort tier is read (numbers formatted). */
+    howTier: (goal: string, yellow: string) =>
+      `“Comfortably” means you keep at least ${goal} of costs in cash and debt payments stay under ${yellow} of take-home pay. Below that it’s “stretched”.`,
     waitBody: (n: number) => `Bought in ${months(n)}, every month of the year after passes.`,
     /** Why buying now fails, per rule. `cushion` gets "1 month", `red` gets "36%". */
     failsOn: {

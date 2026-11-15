@@ -29,6 +29,7 @@ export {
   DISCRETIONARY_CATEGORIES, type MoveCandidate, type RankMovesOptions,
 } from './moves';
 export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordCheck, type AffordOptions } from './afford';
+export { affordComfort, comfortableCushionMonths, type AffordComfort, type AffordTier } from './affordComfort';
 export { monthEnd, usualMonthSpend, type CurrentMonth, type UsualMonth } from './month';
 export {
   statementTotals, merchantKey, oneOffFlags, isFullStatementMonth, averagedStatementMonths, statementAverages,
@@ -52,7 +53,7 @@ export {
   MAX_SIMULATION_MONTHS, type Amortization, type LoanOptions, type PayoffExtraSuggestion,
 } from './loan/index';
 export { goalStatus, extraSavingToReach, movesTowardGoal, goalReachMonth, GOAL_REACH_SLACK_YEARS, GOAL_SOLVE_TOLERANCE } from './goal';
-export { overpayingCheck, type OverpayingInput } from './overpaying';
+export { OVERPAYING_CATEGORIES, overpayingCheck, overpayingPatch, type OverpayingInput } from './overpaying';
 export { netWorthOf, ageBandOf, coarsenAvatar, checkAvatarBounds, avatarStatsOf } from './avatar';
 export { workTime, roundWorkAmount, type WorkTime, type WorkTimeUnit, type WorkTimeOptions } from './workTime';
 export { emergencyCushion, cushionBand, CUSHION_ESSENTIAL_CATEGORIES, type Cushion, type CushionBand } from './cushion';
@@ -65,9 +66,10 @@ export {
 // nobody edits this barrel later.
 export { plan } from './plan';                                                                 // MP3
 export { monteCarlo } from './monteCarlo';                                                     // MP5
+export {
+  defaultEvent, defaultEventSources, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown, type DefaultEventSources,
+} from './planEvents'; // MP4
 export { decisionSweep, eventAtYear, DECISION_SWEEP_MAX_YEARS } from './decision';            // home Life line
-export { defaultEvent, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown } from './planEvents'; // MP4
-export { defaultEventSources, type DefaultEventSources } from './planEvents';                  // MP4 (the editor's sources, MP7b)
 export { accountsToProfile, profileToAccounts, netWorthSummary, HOME_ACCOUNT_ID } from './accounts';            // MP8
 export { budgetRows, budgetRowsForYear } from './budget';                                      // MP9
 export { cashFlowSummary } from './cashFlow';                                                  // MP9
@@ -76,3 +78,8 @@ export {
   baselineScenario, duplicateScenario, compareScenarios, planMoveEffects, previewEvent,
   MAX_SCENARIOS, BASELINE_SCENARIO_ID, BASELINE_SCENARIO_NAME, COMPARE_TIE, type PlanMoveEffectsOptions,
 } from './scenarios';                                                                         // MP6
+export {
+  carDecision, carLoanPaymentTooLow, CAR_DECISION_TIE,
+  type CarNow, type CarAlternative, type CarAlternativeKind, type CarDecision, type CarDecisionYear, type CarMonthlyCost, type CarDecisionOptions,
+} from './car';                                                                                // S13
+export { monthEndDetail, type MonthEndDetail, type MonthEndRow } from './checkin';             // S14

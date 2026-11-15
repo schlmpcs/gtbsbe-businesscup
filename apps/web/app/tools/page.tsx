@@ -1,5 +1,8 @@
-// "What if?" hub: every tool as the question it answers. Thin route.
+'use client';
+// "What if?" hub: every tool as the question it answers. Thin route: the view-model hook adds the live
+// teasers (the next bill).
 import Link from 'next/link';
+import { useToolsHub } from '@/features/tools/model/useToolsHub';
 import { ToolsHub } from '@/features/tools/ui/ToolsHub';
 import { SCREEN_ROUTES } from '@/lib/screens';
 
@@ -12,9 +15,10 @@ const hrefs = {
   overpaying: SCREEN_ROUTES.S23,
   exact: SCREEN_ROUTES.S9,
   bills: '/tools/bills',
+  spend: '/spend',
   together: '/together',
 };
 
 export default function ToolsPage() {
-  return <ToolsHub hrefs={hrefs} Link={Link} />;
+  return <ToolsHub hrefs={hrefs} vm={useToolsHub()} Link={Link} />;
 }

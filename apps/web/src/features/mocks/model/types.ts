@@ -6,109 +6,155 @@
 // "Mock" means a preview (nothing is saved, no reminders), not made-up numbers: every number comes
 // from @lifeguessr/engine on the user's profile (the demo profile until they build their own), from
 // what they type, or from a fixture the screen labels (illustrative lease terms, sample statement).
-import type { CostCategory, ForecastPoint, MonthEnd, Money, Rate } from '@lifeguessr/types';
+import type { CostCategory, MonthEnd, Money, Rate } from '@lifeguessr/types';
 import type { Loadable } from '@/lib/model/types';
 import type { MoveVM } from '@/features/forecast/model/types';
+import type { ToolPlanEventVM } from '@/features/plan/model/useToolPlanEvent';
 
 export type { Loadable, VMError } from '@/lib/model/types';
 export type { MoveTarget, MoveVM } from '@/features/forecast/model/types';
-export type { CostCategory, ForecastPoint, MonthEnd, Money, MoveKind } from '@lifeguessr/types';
+export type { CostCategory, MonthEnd, Money, MoveKind } from '@lifeguessr/types';
 
-/** Where the preview note sends a free user. */
-export type ProPreviewVM = { isPro: boolean; href: string };
+// ----- S13 Decision: keep my car or switch -------------------------------------------------
 
-// ----- S13 Decision: keep the car or lease a new one ------------------------------------------
+/** Where a field's value comes from: the person's accounts / budget, a labelled example, or what they typed. */
+export type FieldOrigin = 'accounts' | 'budget' | 'example' | 'typed';
 
+/** The car the person drives today. Money: balances for value / loanBalance, per month otherwise; apr a decimal. */
+export type CarField = 'value' | 'loanBalance' | 'loanPayment' | 'loanApr' | 'running';
+/** What they would do instead. */
+export type AlternativeKind = 'lease' | 'buy' | 'noCar';
+export type AlternativeField = 'monthly' | 'termMonths' | 'dueAtSigning' | 'running' | 'price' | 'downPayment' | 'apr';
 
-/** The lease inputs. `null` = the box is empty. Money is per month except `dueAtSigning` (per term). */
-export type LeaseForm = { monthly: Money | null; termMonths: number | null; dueAtSigning: Money | null; running: Money | null };
-export type LeaseField = keyof LeaseForm;
+/** Why a field's value is refused (the screen words it). */
+export type DecideFieldError = 'required' | 'negative' | 'tooLarge' | 'term' | 'apr' | 'downAbovePrice' | 'paymentTooLow';
+
+/** One number box. `unit` tells the screen how to show it (money, money per month, a rate, months). */
+export type DecideFieldVM<K extends string> = {
+  key: K;
+  value: number | null;
+  unit: 'money' | 'monthly' | 'rate' | 'months';
+  origin: FieldOrigin;
+  /** The value is an estimate: an example, or a profile value that was itself estimated. */
+  isEstimate: boolean;
+  error: DecideFieldError | null;
+  max: number;
+};
+
+/** One path's car cost in a month, split for the stacked bar (engine carDecision). */
+export type CarCostVM = { payment: Money; running: Money; signing: Money; total: Money };
 
 export type DecideResultVM = {
-  keep: {
-    /** Σ balances of the profile's auto loans today. */
-    loanLeft: Money;
-    /** Months until they are paid off at the required payments (engine simulate); null = not within 10 years. */
-    monthsLeft: number | null;
-    /** Required auto-loan payments, per month. */
-    loanPayment: Money;
-    /** The profile's car running costs (insurance, fuel, upkeep), per month. */
-    running: Money;
-    runningIsEstimate: boolean;
-    /** Net worth at month 120, today's dollars (engine forecast). */
-    in10y: ForecastPoint;
-  };
-  lease: {
-    in10y: ForecastPoint;
-    /** How many times the amount due at signing is paid within the 10 years. */
-    signings: number;
-  };
-  /** keep.in10y.mid − lease.in10y.mid (positive = keeping is ahead). */
-  keepAdvantage10y: Money;
-  /** (lease payment + lease running costs) − today's running costs: what keeping saves each month once the loan is paid. */
-  monthlySavingAfterPayoff: Money;
-  better: 'keep' | 'lease';
-  /** |keepAdvantage10y| */
-  betterBy10y: Money;
-  /** Some input behind the two forecasts is an estimate. */
+  better: 'keep' | 'alternative';
+  /** |difference| at the horizon, today's dollars. */
+  betterBy: Money;
+  /** Within $500 at the horizon: call it a tie. */
+  isClose: boolean;
+  keepNetWorth: Money;
+  alternativeNetWorth: Money;
+  /** Net worth of both paths, one point per year (calendar year), today's dollars. */
+  years: { year: number; keep: Money; alternative: Money }[];
+  keepCost: CarCostVM;
+  keepCostAfterPayoff: CarCostVM;
+  /** Months until the car loan is paid off; 0 = no loan; null = not within 10 years. */
+  keepPayoffMonths: number | null;
+  alternativeCost: CarCostVM;
+  /** Paid once up front: a new car's down payment (0 otherwise). */
+  alternativeUpfront: Money;
+  /** Lease signings within 10 years (0 otherwise). */
+  signings: number;
+  /** Car value − loan left (negative = paid from cash to clear the loan). */
+  tradeInEquity: Money;
   isEstimate: boolean;
-  /** Who made the two 10-year numbers: always the rules engine (`forecast`), never the AI model, so they can differ from S10's. */
-  forecastSource: 'rules';
+  source: 'rules';
+};
+
+/** "Add to my plan": the chosen path as an Expense event on the active /plan scenario. */
+export type DecidePlanVM = {
+  /** Which path the card measures and adds (the alternative by default; the person can pick). */
+  path: 'keep' | 'alternative';
+  setPath: (path: 'keep' | 'alternative') => void;
+  /** Null = nothing to add for this path (keeping is already in the plan; no car lowers a budget line instead). */
+  event: { kind: 'leaseExpense' | 'financedExpense'; amount: Money; year: number } | null;
+  /** Why there is no event for this path. */
+  noEventReason: 'keep' | 'noCar' | null;
+  /** The shared What if? plan card's view-model (engine previewEvent; add; open plan). */
+  tool: ToolPlanEventVM;
 };
 
 export type DecideVM = {
   status: 'loading' | 'ready';
-  /** Still the demo profile: the screen names its cars (the Camry and the RAV4). */
-  isDemoProfile: boolean;
-  /** Calendar year at the 10-year horizon. */
+  /** This calendar year and the year at the 10-year horizon. */
+  startYear: number;
   horizonYear: number;
-  todaysDollars: true;
-  lease: {
-    form: LeaseForm;
-    /** Per field: still the illustrative sample value (not typed by the user). */
-    isEstimate: Record<LeaseField, boolean>;
-    invalidFields: LeaseField[];
-  };
-  setLease: (patch: Partial<LeaseForm>) => void;
-  /** Back to the illustrative lease terms. */
-  resetLease: () => void;
-  /** Null while a lease field is invalid. */
+  /** Still the demo profile (sample numbers). */
+  isDemoProfile: boolean;
+  /** The car fields come from the person's accounts / budget (else every car field is an example). */
+  carFromProfile: boolean;
+  car: DecideFieldVM<CarField>[];
+  setCar: (key: CarField, value: number | null) => void;
+  resetCar: () => void;
+  alternativeKind: AlternativeKind;
+  setAlternativeKind: (kind: AlternativeKind) => void;
+  alternative: DecideFieldVM<AlternativeField>[];
+  setAlternative: (key: AlternativeField, value: number | null) => void;
+  resetAlternative: () => void;
+  /** Null while a field is refused. */
   result: Loadable<DecideResultVM> | null;
+  plan: DecidePlanVM;
 };
 
 // ----- S14 Monthly check-in -------------------------------------------------------------------
 
-/** Statement months the check-in reads: the user's uploads, or the sample statement (labelled). */
-export type CheckinDataSource = 'uploads' | 'sample';
+/** Months the check-in reads: the person's own (their transactions, or uploaded statements) or the sample statement (labelled). */
+export type CheckinDataSource = 'mine' | 'sample';
 
-/** The month under review against the average of the 3 before it (engine monthEnd). */
+/** One category: the usual month against this month (engine monthEndDetail). */
+export type CategoryBarVM = {
+  category: CostCategory;
+  usual: Money;
+  /** Month-end projection (what was spent, for a finished month). */
+  projected: Money;
+  soFar: Money;
+  /** projected − usual; null without 3 months of history. */
+  delta: Money | null;
+  /** monthEnd flagged it as drifting from the 3-month average. */
+  drift: boolean;
+};
+
+/** The month under review against the usual one (engine monthEndDetail). */
 export type CheckinMonthVM = {
   source: CheckinDataSource;
-  /** The user has uploaded at least one statement month. */
-  hasUploads: boolean;
-  /** 'YYYY-MM' of the month under review; null = no statement month (profile spending only). */
+  /** The person has months of their own; `ownKind` says where from. */
+  hasOwn: boolean;
+  ownKind: 'ledger' | 'uploads' | null;
+  /** 'YYYY-MM' of the month under review; null = no month (profile spending only). */
   month: string | null;
   /** The month under review is the current calendar month (projected to its end). */
   inProgress: boolean;
-  /** 'YYYY-MM' of the statement to add next (the month after the one under review, or this month). */
+  /** Day of the month reviewed and its length (null without a month). */
+  day: number | null;
+  daysInMonth: number | null;
+  /** 'YYYY-MM' of the month to add next (the month after the one under review, or this month). */
   nextStatementMonth: string;
   historyMonths: number;
   historyNeeded: number;
   result: Loadable<MonthEnd>;
 };
 
-/** Headline numbers from monthEnd (null until there are 3 months of history). */
+/** Headline numbers and the category bars (ready once monthEndDetail ran). */
 export type CheckinCompareVM = {
   projected: Money;
-  /** projected − vsAverage. */
-  average: Money;
-  /** vsAverage (positive = over). */
+  /** The usual month: the 3-month average, or the profile's month with less history. */
+  usual: Money;
+  usualFromHistory: boolean;
+  /** projected − usual (positive = over). */
   difference: Money;
   /** By whole dollars. */
   direction: 'over' | 'under' | 'even';
-  drifts: { category: CostCategory; delta: Money }[];
-  /** Tile categories that did not drift. */
-  onTrack: CostCategory[];
+  spentSoFar: Money;
+  rows: CategoryBarVM[];
+  driftCount: number;
 };
 
 /** What the committed move is doing, from the engine. */
@@ -164,9 +210,8 @@ export type CheckinVM = {
   setSource: (source: CheckinDataSource) => void;
   compare: CheckinCompareVM | null;
   move: CheckinMoveVM;
-  /** Where "Add statement" goes (S9 upload). */
+  /** Where "Import a statement" goes (Transactions import). */
   uploadHref: string;
-  /** Where "see all moves" goes (S10). */
+  /** Where "See all moves" goes (/plan's Next Moves). */
   movesHref: string;
-  pro: ProPreviewVM;
 };

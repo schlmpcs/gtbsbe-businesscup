@@ -1,6 +1,6 @@
 // S11 Can I Afford It?: purchase form → engine canAfford (verdict, wait, rule, with / without
 // forecasts), free text via /api/ai/parse (confirmed first), and the wishlist.
-import { canAfford, debtLoadThresholds, goalReachMonth, loanTermsTypical, safetyCushionMonths, workTime } from '@lifeguessr/engine';
+import { affordComfort, canAfford, comfortableCushionMonths, debtLoadThresholds, goalReachMonth, loanTermsTypical, safetyCushionMonths, workTime } from '@lifeguessr/engine';
 import { LoanInputSchema, PurchaseSchema, type ForecastPoint, type Goal, type Profile, type Purchase } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { afford as affordCopy } from '@/copy';
@@ -22,7 +22,12 @@ const HORIZONS = [1, 12, 60, 120] as const;
 export const AFFORD_RULES: AffordRulesVM = {
   cushionMonths: safetyCushionMonths.value,
   debtLoadRed: debtLoadThresholds.value.red,
+  debtLoadYellow: debtLoadThresholds.value.yellow,
+  comfortableCushionMonths: comfortableCushionMonths.value,
 };
+
+/** A finite number, or null (Infinity: nothing to measure against). */
+const finite = (n: number): number | null => (Number.isFinite(n) ? n : null);
 
 export const EMPTY_AFFORD_FORM: AffordFormVM = {
   label: '',
@@ -123,12 +128,21 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
   const result: Loadable<AffordResultVM> | null = useMemo(() => {
     if (!purchase) return null;
     const rates = areaRates(profile);
-    const r = runEngine(() => ({
-      check: canAfford(profile, purchase, { rates }),
-      goalEffect: goal ? affordGoalEffect(profile, goal, purchase, rates, new Date()) : null,
-    }));
+    const r = runEngine(() => {
+      const check = canAfford(profile, purchase, { rates });
+      return {
+        check,
+        comfort: affordComfort(profile, purchase, check.verdict, { rates }),
+        goalEffect: goal ? affordGoalEffect(profile, goal, purchase, rates, new Date()) : null,
+      };
+    });
     if (r.status !== 'ready') return r;
-    const { check: a, goalEffect } = r.data;
+    const { check: a, comfort, goalEffect } = r.data;
+    const chart = Array.from({ length: 11 }, (_, year) => ({
+      year,
+      with: at(a.with.points, year * 12).mid,
+      without: at(a.without.points, year * 12).mid,
+    }));
     const horizons: AffordHorizonVM[] = HORIZONS.map((month) => {
       const w = at(a.with.points, month);
       const wo = at(a.without.points, month);
@@ -143,6 +157,11 @@ export function useAfford(opts: { parse?: ParseFn } = {}): AffordVM {
       status: 'ready',
       data: {
         verdict: a.verdict,
+        tier: comfort.tier,
+        stretchedBy: comfort.stretchedBy,
+        cushion: { before: finite(comfort.cushionMonthsBefore), after: finite(comfort.cushionMonthsAfter) },
+        debtLoad: { before: finite(comfort.debtLoadBefore), after: finite(comfort.debtLoadAfter) },
+        chart,
         waitMonths: a.waitMonths ?? null,
         failsOn: a.failsOn ?? null,
         baselineFails: a.baselineFails,

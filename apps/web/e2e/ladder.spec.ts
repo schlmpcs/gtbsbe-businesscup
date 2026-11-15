@@ -1,11 +1,12 @@
 // Ladder S5–S9 (Y9, T6/T7): build a profile end to end in a real browser, on phone and desktop.
-// closest life → your spending (a statement first; by hand as the fallback) → balance sheet → /future,
+// closest life → your spending (a statement first; by hand as the fallback) → balance sheet → the story's chapter 4 (/start?ch=4),
 // through each step's CTA.
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { common } from '../src/copy/common';
 import { forecast } from '../src/copy/forecast';
 import { ladder } from '../src/copy/ladder';
+import { onboarding } from '../src/copy/onboarding';
 
 let pageErrors: string[] = [];
 
@@ -34,7 +35,7 @@ async function savedProfile(page: Page) {
   });
 }
 
-test('closest life → your spending (by hand) → balance sheet with a new debt → /future', async ({ page }) => {
+test('closest life → your spending (by hand) → balance sheet with a new debt → the plan (chapter 4)', async ({ page }) => {
   // Against a deployment with a model key the last step may wait up to 25 s for the forecast on top of the
   // steps before it: three times the default timeout.
   test.slow();
@@ -45,6 +46,9 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   await loaded(page);
   await expect(page.getByTestId('ladder-in10y')).toHaveCount(0);
   await expect(page.getByRole('button', { name: ladder.shell.cta.S6 })).toBeDisabled();
+  await expect(page.getByTestId('zip-needed')).toHaveText(ladder.closest.about.zipNeeded);
+  // Age and pay are not typed yet: empty boxes with our typical value as an "e.g." placeholder.
+  await expect(page.getByLabel(ladder.closest.about.age, { exact: true })).toHaveValue('');
   await page.getByLabel(ladder.closest.about.zip).fill('75205');
   // The life built from the answers is preselected: the CTA is live before any tap (JF13).
   const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) });
@@ -114,27 +118,16 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   const in10y = (await line.getByText(/^−?\$[\d,]+$/).textContent()) ?? '';
   expect(in10y).toMatch(/\$/);
 
-  // S10: the CTA leads to the forecast of the profile built above. S10 shows the same number only while its
-  // own answer is the rules forecast (always so in CI, where there is no model key); with the model's answer
-  // it shows another number, labeled as the AI's.
+  // The ladder's last CTA opens the story's chapter 4: the plan to 90 of the profile built above.
   await page.getByRole('link', { name: ladder.shell.cta.last }).click();
-  await expect(page).toHaveURL(/\/future$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.future.title(10));
-  const headlineSource = page.getByTestId('at-horizon').getByTestId('forecast-source');
-  await expect(headlineSource).toBeVisible({ timeout: 30_000 }); // the model has up to 25 s before the rules answer
-  if ((await headlineSource.getAttribute('data-source')) === 'rules') {
-    await expect(headlineSource).toHaveText(forecast.source.rules);
-    await expect(page.getByTestId('at-horizon')).toContainText(in10y);
-  } else {
-    await expect(headlineSource).toHaveText(forecast.source.ai);
-  }
-  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
-  await expect(page.getByRole('figure', { name: forecast.future.chartTitle(10) }).locator('.recharts-line-curve').first()).toBeVisible();
+  await expect(page).toHaveURL(/\/start\?ch=4$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(onboarding.story.chapters[4].title);
+  await expect(page.getByTestId('story-plan-line')).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);
 });
 
-test('statement first: import the sample, answer one follow-up, skip one, and reach /future without a slider', async ({ page }) => {
+test('statement first: import the sample, answer one follow-up, skip one, and reach the plan (chapter 4) without a slider', async ({ page }) => {
   test.slow(); // the last step may wait for the model's forecast on a deployment with a key
   await page.goto('/me/closest');
   await loaded(page);
@@ -167,6 +160,8 @@ test('statement first: import the sample, answer one follow-up, skip one, and re
   await expect(groups.filter({ hasText: ladder.upload.questions.skipped })).toHaveCount(count);
   const store = groups.filter({ hasNotText: /cash/i }).first();
   await expect(store).toContainText(/About \$[\d,]+ a month/);
+  // The months sit under "Details", closed until asked.
+  await page.getByText(ladder.upload.monthsToggle).click();
   // November stops on the 12th: shown, but not averaged in.
   await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-11') })).toContainText(ladder.upload.partialMonth);
   const october = page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') });
@@ -194,10 +189,12 @@ test('statement first: import the sample, answer one follow-up, skip one, and re
 
   await page.getByRole('link', { name: ladder.shell.cta.S9 }).click();
   await expect(page).toHaveURL(/\/me\/balance$/);
+  // Age and pay were asked on About you: here a read-only line; savings and debts are this step.
+  await expect(page.getByTestId('from-about')).toBeVisible();
+  await expect(page.getByLabel(ladder.balance.fields.age)).toHaveCount(0);
   await page.getByRole('link', { name: ladder.shell.cta.last }).click();
-  await expect(page).toHaveURL(/\/future$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.future.title(10));
-  await expect(page.getByTestId('at-horizon').getByTestId('forecast-source')).toBeVisible({ timeout: 30_000 });
+  await expect(page).toHaveURL(/\/start\?ch=4$/);
+  await expect(page.getByTestId('story-plan-line')).toBeVisible();
 
   // The sliders, if opened, show the imported numbers for confirmation, not entry.
   await page.goto('/me/sliders');
@@ -209,10 +206,15 @@ test('S5: only the gut guess, with no estimate to compare it with yet', async ({
   const slider = page.getByRole('slider', { name: ladder.guess.sliderLabel });
   await slider.focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
-  await page.getByRole('button', { name: ladder.guess.submit }).click();
+  // Locking the guess goes straight on to About you.
+  await page.getByRole('link', { name: ladder.guess.submit }).click();
+  await expect(page).toHaveURL(/\/me\/closest$/);
+  await loaded(page);
+  await expect(rung(page, 'S5')).toHaveAttribute('data-done', 'true');
+  await page.goto('/me/guess');
+  await loaded(page);
   await expect(page.getByRole('link', { name: ladder.shell.cta.S5 })).toBeVisible();
   await expect(page.getByTestId('guess-reveal')).toHaveCount(0);
-  await expect(rung(page, 'S5')).toHaveAttribute('data-done', 'true');
 });
 
 test('S9: upload the sample statement, review its months, and use them', async ({ page }) => {
@@ -230,6 +232,9 @@ test('S9: upload the sample statement, review its months, and use them', async (
   expect(Object.keys(body.items[0]!).sort()).toEqual(['amount', 'day', 'label', 'month']);
   expect(JSON.stringify(body)).not.toMatch(/Tom Becker|Maria Lopez|Daniel Kim|PRIYA SHAH|Jake Morris/i);
 
+  // The confirm comes first; the months open under "Details".
+  await expect(page.getByTestId('statement-summary')).toContainText(/Your average month: \$[\d,]+/);
+  await page.getByText(ladder.upload.monthsToggle).click();
   const review = page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') });
   await expect(review).toBeVisible();
   await expect(page.getByTestId('statement-read')).toContainText('Read 170 transactions from Jul 1, 2026 to Nov 12, 2026.');
@@ -257,7 +262,25 @@ test('S9: "Try with sample statement" reads the sample through the same path as 
   expect(body.items).toHaveLength(170);
   expect(JSON.stringify(body)).not.toMatch(/Tom Becker|Maria Lopez|Daniel Kim|PRIYA SHAH|Jake Morris/i);
   await expect(page.getByTestId('statement-read')).toContainText('Read 170 transactions from Jul 1, 2026 to Nov 12, 2026.');
+  await page.getByText(ladder.upload.monthsToggle).click();
   await expect(page.getByRole('region', { name: ladder.upload.monthLabel('2026-10') })).toContainText(ladder.upload.detectedPay('$4,800'));
+});
+
+test('S9: going on with a statement under review uses it (nothing read is dropped), and pays the guess off', async ({ page }) => {
+  await page.goto('/me/guess');
+  await loaded(page);
+  await page.getByRole('link', { name: ladder.guess.submit }).click();
+  await expect(page).toHaveURL(/\/me\/closest$/);
+  await page.goto('/me/upload');
+  await loaded(page);
+  await page.getByRole('button', { name: ladder.upload.trySample }).click();
+  await expect(page.getByTestId('statement-summary')).toBeVisible();
+  await page.getByRole('link', { name: ladder.shell.cta.S9 }).click();
+  await expect(page).toHaveURL(/\/me\/balance$/);
+  await expect(rung(page, 'S9')).toHaveAttribute('data-done', 'true');
+  const payoff = page.getByTestId('guess-payoff');
+  await expect(payoff).toContainText(/You guessed \$[\d,]+\. You actually spend \$[\d,]+\./);
+  await expect(payoff).toHaveAttribute('data-estimate', 'false');
 });
 
 test('S9: a file without transaction columns gets a clear error', async ({ page }) => {

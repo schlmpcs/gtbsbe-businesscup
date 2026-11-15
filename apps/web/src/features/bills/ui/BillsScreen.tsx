@@ -1,97 +1,167 @@
 'use client';
 
-// Bills calendar (/tools/bills): every charge of the month on one screen. Presentational: everything
-// comes from useBills(); the route passes its Link component.
+// "What is due this month?" (/tools/bills): every bill of the month on one screen. The answer first (a
+// plain sentence and a KPI strip: due, gone out, still to pay, left after bills), then the month grid with
+// amount chips and the split by kind, the next 7 days, what is due before payday, the calendar export, and
+// every bill with its due day. Presentational: everything comes from useBills(); the route passes Link.
 import type { ComponentType, ReactNode } from 'react';
 import { bills as t } from '@/copy';
 import { Art, Button, buttonClassName, Card, cx, EstimateTag, formatMoney, formatMonth, PageHeader, Stack } from '@/ui-kit';
-import type { BillKindVM, BillsVM } from '../model/types';
+import { CountUp, EmptyState, KpiStrip, MOTION, Panel } from '@/ui-kit/reports';
+import type { BillsVM, MonthVM } from '../model/types';
 import { BillList, PaydaysForm } from './BillList';
 import { ChargeList } from './ChargeList';
-import { KIND_DOT, MonthGrid } from './MonthGrid';
+import { KIND_DOT } from './kind';
+import { MonthGrid } from './MonthGrid';
 
 export type BillsScreenProps = {
   vm: BillsVM;
   Link: ComponentType<{ href: string; className?: string; children?: ReactNode }>;
+  /** Where "Edit what recurs" goes (/recurring). */
+  recurringHref?: string;
 };
 
-const LEGEND: BillKindVM[] = ['rent', 'debt', 'subscription'];
+const money = (n: number) => formatMoney(n);
 
-export function BillsScreen({ vm, Link }: BillsScreenProps) {
+export function BillsScreen({ vm, Link, recurringHref = '/recurring' }: BillsScreenProps) {
   return (
-    <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl sm:py-3xl">
-      <Stack gap="2xl">
+    <main className="mx-auto w-full max-w-(--container-7xl) px-lg pb-3xl pt-md">
+      <Stack gap="xl">
         <PageHeader
           eyebrow={t.eyebrow}
           title={t.title}
           intro={t.intro}
-          aside={<Art name="calendar" className="hidden h-40 w-40 items-center sm:flex" />}
+          aside={<Art name="calendar" className="hidden h-32 w-32 items-center sm:flex" />}
         />
         {vm.status === 'loading' ? (
           <div role="status" aria-live="polite" className="h-96 animate-pulse rounded-xl bg-surface">
             <span className="sr-only">{t.loading}</span>
           </div>
         ) : vm.status === 'empty' ? (
-          <Card data-testid="bills-empty" className="flex flex-col items-center gap-md text-center">
-            <Art name="empty-plot" className="flex h-40 w-40 items-center" />
-            <h2 className="font-display text-3xl font-extrabold">{t.empty.title}</h2>
-            <p className="max-w-prose text-text-muted">{t.empty.body}</p>
-            <Link href={vm.uploadHref} className={buttonClassName({ variant: 'primary', size: 'lg' })}>
-              {t.empty.upload}
-            </Link>
-          </Card>
+          <EmptyState
+            data-testid="bills-empty"
+            art="empty-plot"
+            title={t.empty.title}
+            body={t.empty.body}
+            actions={
+              <Link href={vm.uploadHref} className={buttonClassName({ variant: 'primary', size: 'lg' })}>
+                {t.empty.upload}
+              </Link>
+            }
+          />
         ) : (
-          <Ready vm={vm} />
+          <Ready vm={vm} Link={Link} recurringHref={recurringHref} />
         )}
-        <p className="text-xs text-text-muted">{t.note}</p>
       </Stack>
     </main>
   );
 }
 
-function Ready({ vm }: { vm: Extract<BillsVM, { status: 'ready' }> }) {
+function verdictText(month: MonthVM): string {
+  switch (month.verdict) {
+    case 'toPay':
+      return t.verdict.toPay(money(month.toPay.total), month.toPay.count);
+    case 'clear':
+      return t.verdict.clear;
+    case 'future':
+      return t.verdict.future(money(month.total));
+    case 'past':
+      return t.verdict.past(money(month.total));
+    default:
+      return t.verdict.nothing;
+  }
+}
+
+function Kpis({ month }: { month: MonthVM }) {
+  const est = month.totalIsEstimate ? <EstimateTag /> : undefined;
+  return (
+    <KpiStrip
+      data-testid="bills-kpis"
+      aria-label={t.kpi.label}
+      items={[
+        { id: 'due', label: t.kpi.due, value: <CountUp value={month.total} format={money} />, hint: t.kpi.dueHint(month.charges.length), tag: est },
+        { id: 'paid', label: t.kpi.paid, value: <CountUp value={month.paid.total} format={money} />, hint: t.kpi.paidHint, dot: 'muted' },
+        {
+          id: 'toPay',
+          label: t.kpi.toPay,
+          value: <CountUp value={month.toPay.total} format={money} />,
+          hint: t.kpi.toPayHint(month.toPay.count),
+          dot: 'primary',
+        },
+        month.leftAfter
+          ? {
+              id: 'left',
+              label: t.kpi.left,
+              value: <CountUp value={month.leftAfter.amount} format={money} />,
+              hint: t.kpi.leftHint(money(month.leftAfter.takeHome)),
+              tone: month.leftAfter.amount < 0 ? 'negative' : 'positive',
+              tag: month.leftAfter.isEstimate ? <EstimateTag /> : undefined,
+            }
+          : { id: 'left', label: t.kpi.left, value: '—', hint: t.kpi.leftNone },
+      ]}
+    />
+  );
+}
+
+/** The month's total split by kind: one stacked bar that grows in, with direct labels. */
+function SplitBar({ month }: { month: MonthVM }) {
+  if (month.byKind.length === 0) return null;
+  const parts = month.byKind.map((k) => t.split.part(t.legend[k.kind], money(k.total), Math.round(k.share * 100)));
+  return (
+    <div className="flex flex-col gap-sm" data-testid="bills-split">
+      <p className="text-sm font-semibold">{t.split.title}</p>
+      <div role="img" aria-label={t.split.label(parts.join(', '))} className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-surface-strong">
+        {month.byKind.map((k) => (
+          <span key={k.kind} className={cx('h-full', KIND_DOT[k.kind], MOTION.growX)} style={{ width: `${k.share * 100}%` }} />
+        ))}
+      </div>
+      <ul aria-hidden="true" className="flex flex-wrap gap-x-lg gap-y-xs text-xs text-text-muted">
+        {month.byKind.map((k) => (
+          <li key={k.kind} className="flex items-center gap-xs">
+            <span className={cx('size-2 rounded-full', KIND_DOT[k.kind])} />
+            <span className="font-semibold text-text">{t.legend[k.kind]}</span>
+            <span className="tabular-nums">{money(k.total)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function Ready({ vm, Link, recurringHref }: { vm: Extract<BillsVM, { status: 'ready' }>; Link: BillsScreenProps['Link']; recurringHref: string }) {
   const { month } = vm;
   return (
     <>
+      <section aria-label={t.kpi.label} className="flex flex-col gap-md">
+        <p data-testid="bills-verdict" className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+          {verdictText(month)}
+        </p>
+        <div data-testid="bills-month-total">
+          <Kpis month={month} />
+        </div>
+      </section>
+
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-xl lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card className="flex flex-col gap-lg px-sm sm:px-xl">
+        <Card className={cx('flex flex-col gap-lg px-sm sm:px-xl', MOTION.rise)}>
           <MonthGrid month={month} onPrev={vm.prevMonth} onNext={vm.nextMonth} onToday={vm.thisMonth} />
-          <div className="flex flex-wrap items-end justify-between gap-md px-sm sm:px-0">
-            <div data-testid="bills-month-total">
-              <p className="text-sm text-text-muted">
-                {t.month.total} · {t.month.count(month.charges.length)}
-              </p>
-              <p className="flex items-center gap-sm font-display text-4xl font-extrabold tabular-nums">
-                {formatMoney(month.total, { cents: true })}
-                {month.totalIsEstimate && <EstimateTag />}
-              </p>
-            </div>
-            <ul aria-label={t.legend.label} className="flex flex-wrap gap-md text-xs text-text-muted">
-              {LEGEND.map((k) => (
-                <li key={k} className="flex items-center gap-xs">
-                  <span aria-hidden="true" className={cx('size-2 rounded-full', KIND_DOT[k])} />
-                  {t.legend[k]}
-                </li>
-              ))}
-            </ul>
+          <div className="px-sm sm:px-0">
+            <SplitBar month={month} />
           </div>
         </Card>
 
         <Stack gap="xl">
-          <Card title={t.soon.title} headingLevel={2} data-testid="bills-soon">
-            <div className="mt-md">
-              <ChargeList
-                charges={vm.soon.charges}
-                total={vm.soon.total}
-                totalIsEstimate={vm.soon.totalIsEstimate}
-                empty={t.soon.empty}
-                testId="bills-soon-list"
-              />
-            </div>
-          </Card>
+          <Panel title={t.soon.title} data-testid="bills-soon">
+            <ChargeList
+              charges={vm.soon.charges}
+              total={vm.soon.total}
+              totalIsEstimate={vm.soon.totalIsEstimate}
+              empty={t.soon.empty}
+              testId="bills-soon-list"
+            />
+          </Panel>
 
-          <Card title={t.payday.title} headingLevel={2} tone="muted" data-testid="bills-payday">
-            <Stack gap="md" className="mt-md">
+          <Panel title={t.payday.title} data-testid="bills-payday" delay={80}>
+            <Stack gap="md">
               {vm.beforePayday && (
                 <>
                   <p className="text-sm text-text-muted">
@@ -107,7 +177,7 @@ function Ready({ vm }: { vm: Extract<BillsVM, { status: 'ready' }> }) {
               )}
               <PaydaysForm days={vm.paydays.days} isEstimate={vm.paydays.isEstimate} onChange={vm.setPaydays} />
             </Stack>
-          </Card>
+          </Panel>
 
           <div className="flex flex-col gap-sm">
             <Button variant="primary" size="lg" fullWidth onClick={vm.exportCalendar}>
@@ -120,10 +190,31 @@ function Ready({ vm }: { vm: Extract<BillsVM, { status: 'ready' }> }) {
         </Stack>
       </div>
 
-      <Card title={t.list.title} headingLevel={2}>
-        <p className="mt-xs text-sm text-text-muted">{t.list.lead}</p>
+      <Panel
+        title={t.list.title}
+        subtitle={t.list.lead}
+        action={
+          <Link href={recurringHref} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline">
+            {t.recurringLink}
+          </Link>
+        }
+      >
         <BillList bills={vm.bills} onDueDay={vm.setDueDay} />
-      </Card>
+      </Panel>
+
+      <details className="card card-pad group">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-md font-semibold">
+          {t.howTitle}
+          <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
+            ⌄
+          </span>
+        </summary>
+        <ul className="mt-md flex list-disc flex-col gap-sm pl-lg text-sm text-text-muted">
+          {t.how.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </details>
     </>
   );
 }

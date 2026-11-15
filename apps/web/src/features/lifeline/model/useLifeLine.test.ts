@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
-// useLifeLine on the demo fixtures (resetPlanStore pins the demo profile at asOf 2026-11, accounts.demo.json,
-// ZIP 75206 and scenario.demo.json with "Buy a home" in 2033, age 39): the real engine, no network. In
-// jsdom there is no Worker, so the decision sweep runs in a microtask (monteCarloJob.ts).
+// useLifeLine on the demo fixtures (resetPlanStore pins the demo profile (age 32) at asOf 2026-11,
+// ZIP 75206 and the seeded demo scenario with "Buy a home" in 2032, age 38): the real engine, no network. In
+// the decision sweep runs on the next task (setTimeout), as on the page.
 import { buyHomeBreakdown, decisionSweep, eventAtYear, plan } from '@lifeguessr/engine';
 import type { PlanEventOf, Scenario } from '@lifeguessr/types';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { fixturePlanInputs } from '@/features/plan/model/planFixtures';
+import { usePlanInputs } from '@/features/plan/model/planEngine';
 import { DEFAULT_CHANCE_SETTINGS, resetPlanStore, usePlanStore } from '@/features/plan/model/planStore';
+import { effectiveSettings } from '@/features/plan/model/useChanceOfSuccess';
 import type { LifeLineVM } from './types';
 import { DRAFT_EVENT_ID, homeDecision, LIFELINE_PATHS, niceStep, sweepYears, useLifeLine } from './useLifeLine';
 
@@ -33,7 +34,7 @@ describe('helpers', () => {
   });
 
   it('a plan without "Buy a home" gets the engine default three years out, as a draft', () => {
-    const inputs = fixturePlanInputs();
+    const inputs = renderHook(() => usePlanInputs()).result.current;
     const s = usePlanStore.getState().scenarios[0]!;
     const without: Scenario = { ...s, events: s.events.filter((e) => e.type !== 'buyHome') };
     const d = homeDecision(inputs, without);
@@ -47,10 +48,10 @@ describe('useLifeLine', { timeout: 30_000 }, () => {
   it('at the plan year: the plan KPIs, no "before" line, then the Chance of success from the sweep', async () => {
     const { result } = renderHook(() => useLifeLine());
     const vm = ready(result.current);
-    const inputs = fixturePlanInputs();
+    const inputs = renderHook(() => usePlanInputs()).result.current;
     const scenario = usePlanStore.getState().scenarios[0]!;
     const p = plan(inputs.profile, inputs.accounts, scenario, inputs.area);
-    expect(vm.slider).toMatchObject({ value: 39, base: 39, min: 35, max: 47, titleNot: null });
+    expect(vm.slider).toMatchObject({ value: 38, base: 38, min: 34, max: 46, titleNot: null });
     expect(vm.headline).toEqual({ lead: 'When should you buy a home?', payoff: null, payoffTone: 'neutral' });
     expect(vm.kpis[0]).toMatchObject({ id: 'atRetirement', label: 'Net worth at 67', was: null, delta: null });
     expect(vm.chart.selected).toEqual(p.years.map((y) => ({ age: y.age, netWorth: y.netWorth })));
@@ -58,30 +59,30 @@ describe('useLifeLine', { timeout: 30_000 }, () => {
     expect(vm.kpis[1]).toMatchObject({ id: 'chance', value: null, note: 'Measuring…' });
 
     await waitFor(() => expect(measured(result.current)).toBe(true), { timeout: 20_000 });
-    const [point] = decisionSweep(inputs.profile, inputs.accounts, scenario, 'ev-buy-home', [2033], inputs.area,
-      { ...DEFAULT_CHANCE_SETTINGS, paths: LIFELINE_PATHS, seed: usePlanStore.getState().fixedSeed });
+    const [point] = decisionSweep(inputs.profile, inputs.accounts, scenario, 'ev-buy-home', [scenario.events.find((e) => e.id === 'ev-buy-home')!.year], inputs.area,
+      effectiveSettings({ ...DEFAULT_CHANCE_SETTINGS, paths: LIFELINE_PATHS, seed: usePlanStore.getState().fixedSeed }, scenario, inputs.area));
     const done = ready(result.current);
     expect(done.kpis[1]!.gaugePct).toBe(Math.round(point!.chance!.successRate * 100));
     expect(done.chart.band).toHaveLength(p.years.length);
     expect(done.house.art).toBe(point!.chance!.successRate >= 0.8 ? 'home-large' : 'house-build');
   });
 
-  it('dragging to 35: the plan with the home in 2029 vs 2033, money runs out at 35, house under construction', async () => {
+  it('dragging to 35: the plan with the home in 2029 vs 2032, money runs out at 35, house under construction', async () => {
     const { result } = renderHook(() => useLifeLine());
     await waitFor(() => expect(measured(result.current)).toBe(true), { timeout: 20_000 });
     act(() => ready(result.current).setAge(35));
     const vm = ready(result.current);
-    const inputs = fixturePlanInputs();
+    const inputs = renderHook(() => usePlanInputs()).result.current;
     const scenario = usePlanStore.getState().scenarios[0]!;
     const moved = plan(inputs.profile, inputs.accounts, eventAtYear(scenario, 'ev-buy-home', 2029), inputs.area);
     expect(moved.kpis.shortfallAge).toBe(35);
     expect(vm.chart.selected).toEqual(moved.years.map((y) => ({ age: y.age, netWorth: y.netWorth })));
     expect(vm.chart.before).not.toBeNull();
-    expect(vm.headline.lead).toBe('Buy a home 4 years sooner');
+    expect(vm.headline.lead).toBe('Buy a home 3 years sooner');
     expect(vm.headline.payoffTone).toBe('bad');
     expect(vm.kpis[2]).toMatchObject({ id: 'runsOut', value: 'at 35', was: 'Never', delta: 'new', tone: 'bad' });
     expect(vm.chart.runsOut).toMatchObject({ age: 35, line: 'selected' });
-    expect(vm.slider.titleNot).toBe(', not 39');
+    expect(vm.slider.titleNot).toBe(', not 38');
     expect(vm.house.art).toBe('house-build');
     const ev = scenario.events.find((e) => e.id === 'ev-buy-home') as PlanEventOf<'buyHome'>;
     expect(vm.slider.facts.map((f) => f.label)).toContain(`Payment $${Math.round(buyHomeBreakdown(ev).total).toLocaleString('en-US')}/mo with tax and insurance`);

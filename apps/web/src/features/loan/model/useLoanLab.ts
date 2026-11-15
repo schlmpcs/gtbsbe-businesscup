@@ -1,7 +1,7 @@
 // S12 Loan Lab: compare up to 3 offers (engine compareLoans), the debt-load gauge, and an
 // extra-payment slider on the selected offer (engine loan). Starts from the fixture offers.
 import { compareLoans, loan, payoffOrder, simulate } from '@lifeguessr/engine';
-import { LoanInputSchema, type Debt, type LoanInput, type Money } from '@lifeguessr/types';
+import { LoanInputSchema, type Debt, type LoanInput, type LoanResult, type Money } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { loanOffersSample } from '@/fixtures';
 import { useTrackOnce } from '@/lib/events';
@@ -11,7 +11,7 @@ import { linearSliderVM, snap } from '@/lib/model/slider';
 import { useParseConfirm, type ParseFn } from '@/lib/model/useParseConfirm';
 import { useAppReady, useProfile } from '@/state';
 import { NEW_LOAN_DEBT_ID, payoffDebts } from './payoffDebts';
-import type { LoanLabVM, LoanOfferVM, PayoffPlanVM } from './types';
+import type { LoanBalanceChartVM, LoanBestVM, LoanLabVM, LoanOfferVM, PayoffPlanVM } from './types';
 
 export { NEW_LOAN_DEBT_ID };
 
@@ -65,6 +65,7 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
       isLowestCost: result !== null && valid.length > 1 && result.totalCost === minCost,
       isLowestMonthly: result !== null && valid.length > 1 && result.monthly === minMonthly,
       debtLoadAfter: result ? debtLoadGauge(result.debtLoadAfter) : null,
+      cost: result ? { price: offer.input.amount, interest: result.totalInterest, fees: offer.input.fees ?? 0 } : null,
     }));
   }, [offers, profile]);
 
@@ -113,6 +114,21 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
       totalInterest: plan.data.totalInterest,
     };
   }, [profile, selected]);
+
+  const best = useMemo(() => bestOffer(offerVMs), [offerVMs]);
+  const costScale = useMemo(() => Math.max(0, ...offerVMs.map((o) => o.result?.totalCost ?? 0)), [offerVMs]);
+
+  const balanceChart = useMemo((): LoanBalanceChartVM | null => {
+    if (!selected?.result) return null;
+    const input = selected.input;
+    const principal = input.amount - (input.downPayment ?? 0) + (input.fees ?? 0);
+    const curve = (schedule: LoanResult['schedule']) => [{ month: 0, balance: principal }, ...schedule.map((r) => ({ month: r.month, balance: r.balance }))];
+    const withExtra = extra && extra.value > 0 ? runEngine(() => loan(profile, { ...input, extraPayment: extra.value }, { rates: areaRates(profile) })) : null;
+    return {
+      base: curve(selected.result.schedule),
+      withExtra: withExtra?.status === 'ready' ? curve(withExtra.data.schedule) : null,
+    };
+  }, [selected, extra, profile]);
 
   const leftOver = useMemo(() => {
     const r = runEngine(() => simulate(profile, 1, { rates: areaRates(profile) }).path[1]?.surplus ?? null);
@@ -175,5 +191,19 @@ export function useLoanLab(opts: { parse?: ParseFn; initialOffers?: readonly Loa
     payoffPlan,
     parse,
     leftOver,
+    costScale,
+    best,
+    balanceChart,
   };
+}
+
+/** The cheapest valid offer by total cost and the next cheapest (ties: the earlier offer leads). */
+export function bestOffer(offers: readonly LoanOfferVM[]): LoanBestVM | null {
+  const valid = offers
+    .map((o, i) => ({ id: o.id, index: i + 1, totalCost: o.result?.totalCost ?? null }))
+    .filter((o): o is { id: string; index: number; totalCost: number } => o.totalCost !== null)
+    .sort((a, b) => a.totalCost - b.totalCost || a.index - b.index);
+  if (valid.length < 2) return null;
+  const [first, second] = valid as [(typeof valid)[0], (typeof valid)[0]];
+  return { ...first, runnerUp: { ...second, costsMore: second.totalCost - first.totalCost } };
 }

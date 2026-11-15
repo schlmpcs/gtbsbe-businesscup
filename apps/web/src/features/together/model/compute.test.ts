@@ -52,12 +52,18 @@ describe('togetherResult', () => {
     expect(r.month.takeHome).toBe(9000);
     expect(r.partners.map((p) => p.label)).toEqual(['Jo', 'Sam']);
     expect(r.future.source).toBe('rules');
+    expect(r.split.modes.income).toEqual({ p1: r.split.p1, p2: r.split.p2, p1Share: r.split.p1Share });
+    expect(r.split.modes.even).toEqual({ p1: 1975, p2: 1975, p1Share: 0.5 });
   });
 
   it('"Us in 10 years" is the rules forecast of the combined profile, in today\'s dollars', () => {
     const p = plan();
     const combined = combineProfiles(profileOfPartner(p.partner1), profileOfPartner(p.partner2));
     expect(togetherResult(p).future.mid).toBeCloseTo(forecast(combined, 10, { todaysDollars: true }).in10y.mid, 6);
+    const points = togetherResult(p).future.points;
+    expect(points.map((pt) => pt.month)).toEqual([0, 12, 24, 36, 48, 60, 72, 84, 96, 108, 120]);
+    expect(points[10]!.mid).toBeCloseTo(togetherResult(p).future.mid, 6);
+    expect(points[0]!.mid).toBeCloseTo(togetherResult(p).future.today, 6);
     expect(togetherResult(p).future.today).toBeCloseTo(3800 + 5200 + 14500 + 9000 - 6400 - 17800 - 21000, 6);
   });
 
