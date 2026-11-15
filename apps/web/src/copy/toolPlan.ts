@@ -9,7 +9,7 @@ export const toolPlan = {
   atEnd: (age: number) => `Net worth at ${age}`,
   moneyLasts: 'Money lasts',
   lastsTo: (age: number) => `Past ${age}`,
-  runsOut: (age: number) => `Runs short at ${age}`,
+  runsOut: (age: number) => `Until ${age}`,
   /** The change against the plan without it ("−$42K vs without"). */
   vsWithout: (delta: string) => `${delta} vs without`,
   noChange: 'No change',

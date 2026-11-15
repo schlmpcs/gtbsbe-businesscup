@@ -11,7 +11,7 @@ import { CountUp, EmptyState, KpiStrip, MOTION, Panel } from '@/ui-kit/reports';
 import type { BillsVM, MonthVM } from '../model/types';
 import { BillList, PaydaysForm } from './BillList';
 import { ChargeList } from './ChargeList';
-import { KIND_DOT, KINDS } from './kind';
+import { KIND_DOT } from './kind';
 import { MonthGrid } from './MonthGrid';
 
 export type BillsScreenProps = {
@@ -147,14 +147,6 @@ function Ready({ vm, Link, recurringHref }: { vm: Extract<BillsVM, { status: 're
           <div className="px-sm sm:px-0">
             <SplitBar month={month} />
           </div>
-          <ul aria-label={t.legend.label} className="flex flex-wrap gap-md px-sm text-xs text-text-muted sm:px-0">
-            {KINDS.map((k) => (
-              <li key={k} className="flex items-center gap-xs">
-                <span aria-hidden="true" className={cx('size-2 rounded-full', KIND_DOT[k])} />
-                {t.legend[k]}
-              </li>
-            ))}
-          </ul>
         </Card>
 
         <Stack gap="xl">
