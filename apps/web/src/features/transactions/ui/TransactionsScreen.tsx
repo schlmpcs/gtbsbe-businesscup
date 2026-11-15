@@ -139,7 +139,7 @@ function ImportPanel({ vm, links, Link }: { vm: TransactionsVM; links: { upload:
     <div className="flex flex-col gap-md">
       <p className="max-w-prose text-sm text-text-muted">{t.screen.importBody}</p>
       <div className="flex flex-wrap items-center gap-md">
-        <ImportButton vm={vm} />
+        <ImportButton vm={vm} label={t.screen.importFile} />
         <GuidedLink links={links} Link={Link} />
       </div>
     </div>
@@ -157,11 +157,11 @@ function GuidedLink({ links, Link }: { links: { upload: string }; Link: Transact
   );
 }
 
-function ImportButton({ vm }: { vm: TransactionsVM }) {
+function ImportButton({ vm, label = t.import }: { vm: TransactionsVM; label?: string }) {
   const busy = vm.importState.status === 'reading';
   return (
     <label className={cx(buttonClassName(), 'cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus', busy && 'opacity-50')}>
-      {busy ? t.importStates.reading : t.import}
+      {busy ? t.importStates.reading : label}
       <input
         type="file"
         accept=".csv,text/csv"

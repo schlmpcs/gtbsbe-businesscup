@@ -77,6 +77,8 @@ export function useDashboard({ today: todayArg, now }: { today?: string; now?: D
   const dashboardReady = usePersistedReady(useDashboardStore);
   const profile = useProfile();
   const guessedOwnMonth = useAppStore((s) => s.selfGuess !== null);
+  // The store seeds accounts from the profile, so on the sample profile they are not the person's yet.
+  const ownProfile = useAppStore((s) => s.profileOrigin !== 'demo');
   // The scenarios are seeded with Retire and Social Security events, so "your plan" counts once the person changed one.
   const changedPlan = usePlanStore((s) => s.touched);
   const duelProgress = useMemo(() => readDuelDayProgress(today), [today]);
@@ -188,12 +190,12 @@ export function useDashboard({ today: todayArg, now }: { today?: string; now?: D
     () => [
       { id: 'duel', labelKey: 'playedDuel', done: duelProgress.played > 0 || state.duelStreak > 0, href: PLANNER_ROUTES.duel },
       { id: 'guess', labelKey: 'guessedOwnMonth', done: guessedOwnMonth, href: PLANNER_ROUTES.guessOwnMonth },
-      { id: 'accounts', labelKey: 'addedAccounts', done: accounts.length > 0, href: PLANNER_ROUTES.addAccount },
+      { id: 'accounts', labelKey: 'addedAccounts', done: ownProfile && accounts.length > 0, href: PLANNER_ROUTES.addAccount },
       { id: 'csv', labelKey: 'importedCsv', done: lines.length > 0, href: PLANNER_ROUTES.importCsv },
       { id: 'budget', labelKey: 'setBudget', done: planned !== null, href: PLANNER_ROUTES.budget },
       { id: 'planEvent', labelKey: 'createdPlanEvent', done: changedPlan, href: PLANNER_ROUTES.plan },
     ],
-    [duelProgress, state.duelStreak, guessedOwnMonth, accounts.length, lines.length, planned, changedPlan],
+    [duelProgress, state.duelStreak, guessedOwnMonth, ownProfile, accounts.length, lines.length, planned, changedPlan],
   );
   const done = items.filter((i) => i.done).length;
 

@@ -83,6 +83,6 @@ test('sample banner: on numbers screens while the profile is the sample, never o
   }
   await page.goto('/future');
   await page.getByTestId('sample-banner').getByRole('link', { name: common.sampleBanner.cta }).click();
-  await expect(page).toHaveURL(/\/me\/guess$/);
+  await expect(page).toHaveURL(/\/start\?ch=2$/);
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
 });

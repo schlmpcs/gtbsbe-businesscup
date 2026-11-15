@@ -200,17 +200,22 @@ function BudgetLine({
   const name = planner.categories[row.category];
   const over = row.status === 'over' && row.progress > 1;
   return (
-    <div data-testid={`budget-row-${row.category}`} className="flex flex-col gap-sm">
-      <div className="flex items-center justify-between gap-md">
-        <span className="min-w-0 truncate font-medium">{name}</span>
-        <span className={cx('shrink-0 rounded-full px-sm py-0.5 text-xs font-semibold', STATUS_CHIP[row.status])}>{t.statuses[row.status]}</span>
-      </div>
-      <Meter value={row.progress} tone={over ? 'negative' : tone} marker={row.planned > 0 ? row.todayMarker : null} size="md" />
-      <div className="flex flex-wrap items-center justify-between gap-sm text-sm">
-        <span className="tabular-nums text-text-muted">{t.ofPlanned(formatMoney(row.actual), formatMoney(row.planned))}</span>
-        <span className={cx('tabular-nums font-semibold', row.remaining < 0 ? 'text-negative' : 'text-text')}>
-          {row.remaining < 0 ? t.overBy(formatMoney(-row.remaining)) : t.left(formatMoney(row.remaining))}
-        </span>
+    <div
+      data-testid={`budget-row-${row.category}`}
+      className={cx('flex flex-col gap-sm', editable && 'sm:grid sm:grid-cols-[minmax(0,1fr)_9.5rem] sm:items-center sm:gap-x-xl')}
+    >
+      <div className="flex min-w-0 flex-col gap-sm">
+        <div className="flex items-center justify-between gap-md">
+          <span className="min-w-0 truncate font-medium">{name}</span>
+          <span className={cx('shrink-0 rounded-full px-sm py-0.5 text-xs font-semibold', STATUS_CHIP[row.status])}>{t.statuses[row.status]}</span>
+        </div>
+        <Meter value={row.progress} tone={over ? 'negative' : tone} marker={row.planned > 0 ? row.todayMarker : null} size="md" />
+        <div className="flex flex-wrap items-center justify-between gap-sm text-sm">
+          <span className="tabular-nums text-text-muted">{t.ofPlanned(formatMoney(row.actual), formatMoney(row.planned))}</span>
+          <span className={cx('tabular-nums font-semibold', row.remaining < 0 ? 'text-negative' : 'text-text')}>
+            {row.remaining < 0 ? t.overBy(formatMoney(-row.remaining)) : t.left(formatMoney(row.remaining))}
+          </span>
+        </div>
       </div>
       {editable && (
         <NumberInput
@@ -219,7 +224,6 @@ function BudgetLine({
           prefix="$"
           suffix="/mo"
           maxFractionDigits={0}
-          className="sm:max-w-60"
           onValueChange={(v) => {
             if (v !== null) onPlanned(v);
           }}

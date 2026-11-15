@@ -165,7 +165,7 @@ function SectionCard({ section, onHide, delay }: { section: RecurringSectionVM; 
       ) : (
         <ul className="-my-sm flex flex-col divide-y divide-border">
           {section.items.map((item) => (
-            <li key={item.id} className="flex flex-col gap-sm py-md">
+            <li key={item.id} className="py-sm">
               <div className="flex items-start gap-md">
                 <Initials name={itemName(item)} size="sm" />
                 <div className="flex min-w-0 flex-1 flex-col gap-xs">
@@ -186,17 +186,16 @@ function SectionCard({ section, onHide, delay }: { section: RecurringSectionVM; 
                   <span className="text-xs text-text-muted">
                     {item.cadence === 'monthly' ? t.perMonth : `${t.cadences[item.cadence]} · ${formatMoney(item.monthly, { cents: true })} ${t.perMonth}`}
                   </span>
+                  <button
+                    type="button"
+                    className="-mr-sm min-h-11 rounded-md px-sm text-xs font-semibold text-text-muted transition-colors hover:bg-surface-strong hover:text-primary"
+                    aria-label={t.markNotRecurringLabel(itemName(item))}
+                    onClick={() => onHide(item.id)}
+                  >
+                    {t.markNotRecurring}
+                  </button>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="self-end"
-                aria-label={t.markNotRecurringLabel(itemName(item))}
-                onClick={() => onHide(item.id)}
-              >
-                {t.markNotRecurring}
-              </Button>
             </li>
           ))}
         </ul>

@@ -60,7 +60,14 @@ describe('useDashboard', () => {
     expect(renderHook(() => useDashboard({ today: TODAY, now: new Date(2026, 10, 15, 21) })).result.current.greeting.part).toBe('evening');
   });
 
+  it('does not count the sample profile\'s seeded accounts as the person\'s', () => {
+    const { result } = dash();
+    expect(useAppStore.getState().profileOrigin).toBe('demo');
+    expect(result.current.checklist.items.find((i) => i.id === 'accounts')!.done).toBe(false);
+  });
+
   it('turns checklist items done when the underlying state changes, and can be dismissed', () => {
+    useAppStore.setState({ profileOrigin: 'user' });
     const { result } = dash();
     const state = () => Object.fromEntries(result.current.checklist.items.map((i) => [i.id, i.done]));
     // A 3-day Duel streak, accounts and a ledger are there; the own-month guess, a budget and a plan of their own are not.
@@ -90,6 +97,7 @@ describe('useDashboard', () => {
   });
 
   it('turns the accounts and ledger items done and undone as the stores change', async () => {
+    useAppStore.setState({ profileOrigin: 'user' });
     const { result } = dash();
     const state = () => Object.fromEntries(result.current.checklist.items.map((i) => [i.id, i.done]));
     expect(state()).toMatchObject({ accounts: true, csv: true });

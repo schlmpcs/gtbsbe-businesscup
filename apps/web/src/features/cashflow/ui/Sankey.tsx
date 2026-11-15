@@ -148,7 +148,7 @@ export function Sankey({ flow }: { flow: CashFlowFlowVM }) {
           })}
 
           <rect x={xM} y={mid.y} width={NODE} height={mid.h} rx={3} className="fill-ink" />
-          <text x={xM + NODE / 2} y={mid.y - 8} textAnchor="middle" className={cx('fill-text font-bold', HALO)}>
+          <text x={narrow ? xM : xM + NODE / 2} y={mid.y - 8} textAnchor={narrow ? 'start' : 'middle'} className={cx('fill-text font-bold', HALO)}>
             <tspan>{t.nodes.income}</tspan>
             <tspan className="fill-text-muted font-normal tabular-nums">{` ${formatMoney(total)}`}</tspan>
           </text>

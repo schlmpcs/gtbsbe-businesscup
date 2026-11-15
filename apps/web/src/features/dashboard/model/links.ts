@@ -12,7 +12,7 @@ export const PLANNER_ROUTES = {
   goals: '/goals',
   plan: '/plan',
   duel: '/play',
-  guessOwnMonth: '/me/guess',
+  guessOwnMonth: '/start?ch=2',
 } as const;
 
 export type PlannerLinks = typeof PLANNER_ROUTES;

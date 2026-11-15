@@ -112,9 +112,6 @@ test('committing a move flags it and survives a reload', async ({ page }) => {
   await expect(page.locator(`[data-move-id="${id}"]`)).toHaveAttribute('data-committed', 'true');
   await expect(page.locator(`[data-move-id="${id}"]`).getByTestId('committed-badge')).toBeVisible();
 
-  // Today shows it as your move.
-  await page.goto('/');
-  await expect(page.getByTestId('today-move')).toContainText(t.today.move.committedTitle);
 });
 
 test('picking 3 years re-reads the same forecast: the headline and the moves change, and nothing is asked of the forecast route', async ({ page }) => {

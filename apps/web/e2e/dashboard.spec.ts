@@ -19,7 +19,7 @@ test('Dashboard: widgets, checklist, Chance of success and empty states', async 
   // Nothing entered yet: the checklist shows 0 of 6 and links to where each step happens.
   const checklist = page.getByTestId('dashboard-checklist');
   await expect(checklist).toBeVisible();
-  await expect(checklist.getByText('0/6')).toBeVisible();
+  await expect(checklist.getByText('0 of 6 done')).toBeVisible();
   await expect(checklist.getByRole('link', { name: t.checklist.addedAccounts })).toHaveAttribute('href', '/accounts?add=1');
   await expect(checklist.getByRole('link', { name: t.checklist.setBudget })).toHaveAttribute('href', '/budget');
 
@@ -29,8 +29,9 @@ test('Dashboard: widgets, checklist, Chance of success and empty states', async 
   await expect(plan.getByRole('meter', { name: t.chance })).toHaveAttribute('aria-valuetext', /^\d+%$/);
   await expect(plan.getByRole('link', { name: t.open })).toHaveAttribute('href', '/plan');
 
+  // Net worth starts from the sample profile's accounts (the sample banner says so).
+  await expect(page.getByTestId('dashboard-net-worth-value')).toBeVisible();
   // Empty states point to the right screens.
-  await expect(page.getByTestId('dashboard-net-worth').getByRole('link', { name: t.netWorthEmpty.cta })).toHaveAttribute('href', '/accounts?add=1');
   await expect(page.getByTestId('dashboard-spending').getByRole('link', { name: t.spendingEmpty.cta })).toHaveAttribute('href', '/transactions?import=1');
   await expect(page.getByTestId('dashboard-budget').getByRole('link', { name: t.budgetEmpty.cta })).toHaveAttribute('href', '/budget');
   await expect(page.getByTestId('dashboard-goals').getByRole('link', { name: t.goalsEmpty.cta })).toHaveAttribute('href', '/goals');

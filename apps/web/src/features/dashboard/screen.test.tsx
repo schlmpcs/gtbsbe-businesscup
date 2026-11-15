@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // P1 Dashboard screen wired to useDashboard on the fixtures (accounts, November 2026 ledger, demo profile).
+import { useAppStore } from '@/state/store';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -60,6 +61,7 @@ describe('DashboardScreen', () => {
   });
 
   it('computes the checklist from the stores and can be dismissed', () => {
+    useAppStore.setState({ profileOrigin: 'user' });
     render(<Dashboard />);
     const card = screen.getByTestId('dashboard-checklist');
     expect(within(card).getByText('3/6')).toBeInTheDocument();

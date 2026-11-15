@@ -47,7 +47,7 @@ export const cashflow = {
   linesAll: (n: number) => `See all ${n} on Transactions`,
   empty: 'Import a bank statement (read in this browser) or add transactions, and your Sankey fills in.',
   emptyTitle: 'No data for this period yet',
-  emptyLinks: { upload: 'Import a CSV', guess: 'Set up my numbers' },
+  emptyLinks: { upload: 'Import CSV', guess: 'Set up my numbers' },
   loading: 'Loading your cash flow…',
   transfersNote: 'Transfers between your own accounts are left out.',
   source: 'Rules-based, from your transactions.',

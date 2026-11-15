@@ -24,11 +24,11 @@ export function EmptyState({ title, body, art, actions, ghost, headingLevel = 2,
   return (
     <section className={cx('card relative isolate overflow-hidden p-xl sm:p-2xl', MOTION.rise, className)} {...rest}>
       {ghost && (
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center p-lg opacity-[0.14] grayscale-[0.3]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center p-lg opacity-25">
           {ghost}
         </div>
       )}
-      <div className="mx-auto flex max-w-md flex-col items-center gap-md text-center">
+      <div className="mx-auto flex max-w-(--container-md) flex-col items-center gap-md text-center">
         {art && <Art name={art} className="w-28 sm:w-32" loading="eager" />}
         <Heading className="font-display text-2xl font-extrabold leading-tight">{title}</Heading>
         {body && <p className="text-text-muted">{body}</p>}
