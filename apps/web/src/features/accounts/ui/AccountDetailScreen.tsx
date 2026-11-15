@@ -8,8 +8,9 @@ import { useState, type ReactNode } from 'react';
 import { accounts as t, planner } from '@/copy';
 import { Button, buttonClassName, Card, cx, EstimateTag, Field, formatMoney, formatMonthYear, formatRate, Stack, Tag, useFieldControl } from '@/ui-kit';
 import { Segmented } from '@/ui-kit/reports';
-import type { AccountPeriod, AccountVM } from '../model/types';
+import type { AccountGrowthVM, AccountPeriod, AccountVM } from '../model/types';
 import type { LinkComponent } from './AccountsScreen';
+import { AiReason, GrowthAiControls } from './AddAccountSheet';
 import { BalanceChart } from './BalanceChart';
 
 export type AccountDetailScreenProps = {
@@ -150,6 +151,20 @@ function SummaryList({ account }: { account: Account }) {
             : []),
         ]
       : []),
+    ...(s.growth === null
+      ? []
+      : [
+          {
+            id: 'growth',
+            label: t.detail.growth,
+            value: (
+              <span className="inline-flex flex-wrap items-center justify-end gap-xs" title={s.growth.aiReason ?? undefined}>
+                {s.growth.rate === null ? t.detail.growthDefault : formatRate(s.growth.rate, 2)}
+                {s.growth.rate !== null && s.growth.aiReason !== null && <Tag>{t.growthAi.label}</Tag>}
+              </span>
+            ),
+          },
+        ]),
     { id: 'lastUpdated', label: t.detail.lastUpdated, value: s.lastUpdated === null ? none : formatMonthYear(s.lastUpdated) },
     { id: 'created', label: t.detail.created, value: s.created === null ? none : formatMonthYear(s.created) },
   ];
@@ -165,9 +180,32 @@ function SummaryList({ account }: { account: Account }) {
   );
 }
 
+/** The yearly change: the percent field, "Estimate with AI" (fills the field, labeled), and Save. */
+function GrowthEdit({ growth }: { growth: AccountGrowthVM }) {
+  return (
+    <form
+      noValidate
+      className="flex flex-col gap-sm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        growth.save();
+      }}
+    >
+      <Field label={t.detailScreen.growthLabel} hint={growth.hint ?? undefined} error={growth.error ? t.detailScreen.invalidGrowth : undefined}>
+        <TextInput value={growth.text} onChange={growth.setText} inputMode="decimal" invalid={growth.error} testId="account-growth" placeholder={growth.placeholder ?? undefined} />
+      </Field>
+      <AiReason reason={growth.aiReason} />
+      <GrowthAiControls ai={growth.ai} />
+      <Button type="submit" size="sm" variant="secondary" className="self-start" data-testid="account-save-growth">
+        {t.detailScreen.saveGrowth}
+      </Button>
+    </form>
+  );
+}
+
 const INPUT = 'w-full min-h-11 rounded-lg border-2 bg-surface px-md py-sm text-base';
 
-function TextInput({ value, onChange, inputMode, invalid, testId }: { value: string; onChange: (v: string) => void; inputMode?: 'decimal'; invalid: boolean; testId: string }) {
+function TextInput({ value, onChange, inputMode, invalid, testId, placeholder }: { value: string; onChange: (v: string) => void; inputMode?: 'decimal'; invalid: boolean; testId: string; placeholder?: string }) {
   const control = useFieldControl();
   return (
     <input
@@ -175,6 +213,7 @@ function TextInput({ value, onChange, inputMode, invalid, testId }: { value: str
       type="text"
       inputMode={inputMode}
       autoComplete="off"
+      placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       data-testid={testId}
@@ -226,6 +265,8 @@ function Edits({ vm, account }: { vm: AccountVM; account: Account }) {
           {t.detailScreen.saveName}
         </Button>
       </form>
+
+      {vm.growth && <GrowthEdit growth={vm.growth} />}
 
       <div className="flex flex-wrap gap-sm border-t border-border pt-lg">
         <Button size="sm" variant="secondary" onClick={() => vm.exclude()} data-testid="account-exclude">
