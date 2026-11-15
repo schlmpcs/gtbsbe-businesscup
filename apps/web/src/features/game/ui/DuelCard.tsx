@@ -11,6 +11,13 @@ export type DuelCardProps = {
   onPick?: () => void;
   /** Another pick is on its way: both cards stop taking taps. */
   disabled?: boolean;
+  /**
+   * `full` (default, /play): the whole profile with the caption, detail lines and the locked hint tile.
+   * `compact` (the onboarding warm-up): a lighter card for a first look: smaller picture and title, one
+   * line per fact, no caption, no composite pill and no hint tile (the warm-up offers no hint), and a
+   * quiet pick line. The same facts, totals and bars, from the same view-model.
+   */
+  variant?: 'full' | 'compact';
 };
 
 const FRAME: Record<DuelCardVM['state'], string> = {
@@ -68,6 +75,19 @@ function FactGroup({ group }: { group: DuelFactGroup }) {
   );
 }
 
+/** A fact group in the compact card: a small icon and its main line, no tile. */
+function CompactFact({ group }: { group: DuelFactGroup }) {
+  const [main] = group.items;
+  const { icon } = GROUP[group.group];
+  return (
+    <li className="flex min-w-0 items-center gap-sm">
+      <DuelIcon name={icon} className="size-lg shrink-0 text-text-muted" />
+      <span className="sr-only">{t.facts.groups[group.group]}: </span>
+      <span className="min-w-0 truncate text-sm font-semibold text-text">{main}</span>
+    </li>
+  );
+}
+
 /** The neighborhood tile: the hint's fact once open (a list item), a dashed locked tile before. */
 function HintTile({ fact }: { fact: string | null }) {
   const head = (locked: boolean) => (
@@ -105,10 +125,13 @@ function HintTile({ fact }: { fact: string | null }) {
  * orange ring, big orange total) and Other. The revealed total and bars come from the view-model;
  * this only lays them out.
  */
-export function DuelCard({ card, onPick, disabled = false }: DuelCardProps) {
+export function DuelCard({ card, onPick, disabled = false, variant = 'full' }: DuelCardProps) {
   const headingId = useId();
   const revealed = card.state === 'winner' || card.state === 'other';
   const pickable = Boolean(onPick) && !revealed;
+  if (variant === 'compact') {
+    return <CompactCard card={card} onPick={onPick} disabled={disabled} headingId={headingId} revealed={revealed} pickable={pickable} />;
+  }
 
   return (
     <article
@@ -197,6 +220,109 @@ export function DuelCard({ card, onPick, disabled = false }: DuelCardProps) {
             <DuelIcon name="arrow" className="size-lg shrink-0 transition-transform group-hover:translate-x-xs" />
           </span>
           {/* The whole card is the tap target; the content above stays readable for screen readers. */}
+          <button
+            type="button"
+            onClick={onPick}
+            disabled={disabled}
+            aria-label={t.card.pick(card.letter, card.metro)}
+            aria-busy={card.state === 'picked'}
+            className="absolute inset-0 z-10 cursor-pointer rounded-xl focus:outline-none disabled:cursor-wait"
+          />
+        </>
+      )}
+    </article>
+  );
+}
+
+/** The compact frame: a softer ring than /play's, since the warm-up card sits on a calmer page. */
+const COMPACT_FRAME: Record<DuelCardVM['state'], string> = {
+  round: 'ring-1 ring-inset ring-border',
+  picked: 'ring-2 ring-inset ring-primary animate-pulse',
+  winner: 'ring-2 ring-inset ring-primary',
+  other: 'ring-1 ring-inset ring-border',
+};
+
+/** The `compact` variant of DuelCard (see DuelCardProps.variant). */
+function CompactCard({
+  card,
+  onPick,
+  disabled,
+  headingId,
+  revealed,
+  pickable,
+}: {
+  card: DuelCardVM;
+  onPick?: () => void;
+  disabled: boolean;
+  headingId: string;
+  revealed: boolean;
+  pickable: boolean;
+}) {
+  return (
+    <article
+      aria-labelledby={headingId}
+      className={cx(
+        'group relative flex h-full w-full min-w-0 flex-col gap-lg rounded-xl bg-surface p-lg text-text shadow-sm transition md:grid md:row-span-3 md:grid-rows-subgrid lg:p-xl',
+        COMPACT_FRAME[card.state],
+        pickable && 'hover:-translate-y-xs hover:shadow-md hover:ring-2 hover:ring-primary has-[button:focus-visible]:ring-2 has-[button:focus-visible]:ring-primary',
+      )}
+    >
+      <div className="flex min-w-0 items-start gap-md">
+        <div className="relative flex size-[calc(var(--spacing-3xl)*1.75)] shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--color-surface-strong)_70%,transparent)] p-xs">
+          <Art name={homeArt(card)} loading="eager" className="size-full" imgClassName="h-full max-h-full object-contain" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-xs text-left">
+          <p className="text-xs font-bold uppercase tracking-wide text-text-muted">{t.card.life(card.letter)}</p>
+          <p className="min-w-0 break-words font-display text-xl font-extrabold leading-tight sm:text-2xl">{card.metro}</p>
+          <h3 id={headingId} className="text-sm leading-snug text-text-muted">
+            {card.household}
+          </h3>
+          {revealed && (card.pickedByYou || card.state === 'winner') && (
+            <div className="flex flex-wrap gap-xs pt-xs">
+              {card.pickedByYou && <Sticker tone="ink">{t.card.yourPick}</Sticker>}
+              {card.state === 'winner' && <Sticker tone="primary">{t.card.costsMore}</Sticker>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ul aria-label={t.card.factsLabel} className="grid grid-cols-2 content-start gap-x-md gap-y-sm text-left">
+        {card.facts.map((g) => (
+          <CompactFact key={g.group} group={g} />
+        ))}
+      </ul>
+
+      {revealed && card.total !== null && (
+        <div className="mt-auto flex flex-col gap-md border-t border-border pt-md md:mt-0 md:self-start">
+          <p className="flex flex-wrap items-baseline gap-xs">
+            <Money
+              value={card.total}
+              className={cx(
+                'font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl',
+                card.state === 'winner' ? 'text-primary' : 'text-text',
+              )}
+            />
+            <span className="text-base text-text-muted">{t.reveal.perMonth}</span>
+          </p>
+          <CategoryBar label={t.reveal.breakdownLabel(card.letter)} categories={card.categories} />
+        </div>
+      )}
+
+      {pickable && (
+        <>
+          {/* What the tap does, drawn quietly; the button below carries the name for screen readers. */}
+          <span
+            aria-hidden="true"
+            className={cx(
+              'mt-auto flex items-center justify-center gap-xs rounded-full border py-sm text-base font-bold transition-colors md:mt-0 md:self-end',
+              card.state === 'picked'
+                ? 'border-primary bg-primary text-on-primary'
+                : 'border-border text-text group-hover:border-primary group-hover:bg-primary group-hover:text-on-primary group-has-[button:focus-visible]:border-primary group-has-[button:focus-visible]:bg-primary group-has-[button:focus-visible]:text-on-primary',
+            )}
+          >
+            {card.state === 'picked' ? t.card.picking : t.card.pickCta(card.letter)}
+            <DuelIcon name="arrow" className="size-md shrink-0 transition-transform group-hover:translate-x-xs" />
+          </span>
           <button
             type="button"
             onClick={onPick}

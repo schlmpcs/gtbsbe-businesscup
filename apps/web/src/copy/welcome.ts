@@ -7,6 +7,8 @@ export const welcome = {
   warmup: {
     sticker: 'Warm-up · 1 round of today’s game',
     cta: 'Now price your own life',
+    /** Below the warm-up's reveal: opens both lives side by side, category by category, with sources. */
+    more: 'See every cost side by side, with sources',
   },
   guess: {
     sticker: 'Now you',
