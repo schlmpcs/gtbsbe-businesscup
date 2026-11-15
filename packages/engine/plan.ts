@@ -5,9 +5,10 @@
 //    the profile's retirement (accountsToProfile folds them in) and carried, with real estate,
 //    vehicles and other assets, as their own group balances. With no accounts at all, the profile's
 //    own cash, retirement and debts are used.
-// 2. Events: the enabled ones are expanded (MP4 expandEvent) in date order (same year: Retire first,
-//    Social Security last, otherwise list order), each on the profile with the life events of those
-//    before it, as expandEvent's stacking rule asks. Their debts open in the event's start month and
+// 2. Events: the enabled ones are expanded (MP4 expandEvent) in `orderPlanEvents` order (date order,
+//    same year: Retire first, otherwise list order; every Social Security event after all the others,
+//    so its benefit adds on top of work pay and of each later pay change), each on the profile with
+//    the life events of those before it, as expandEvent's stacking rule asks. Their debts open in the event's start month and
 //    their assets (the home) are added in theirs.
 // 3. simulate() runs monthly from `asOf` through December of the year the person turns `endAge`
 //    (age in calendar year Y = Y − (asOf year − round(age))), with shortfallMode 'separate', the
@@ -55,7 +56,7 @@ import { accountsToProfile } from './accounts';
 import { cashYieldAnnual, returnAnnualNominal, vehicleDepreciationAnnual } from './assumptions';
 import { eventStartMonth } from './events';
 import { MAX_SIMULATION_MONTHS, PAID_OFF_EPSILON } from './loan/amortize';
-import { expandEvent, planEventMonth } from './planEvents';
+import { expandEvent, orderPlanEvents, planEventMonth } from './planEvents';
 import { type ExtraAssetGroup, type SimulateOptions, type YearlyRates, monthlyRate, simulate } from './simulate';
 
 /** Internal inputs for monteCarlo() (MP5): per plan year rate draws, index 0 = the year of asOf. */
@@ -64,9 +65,6 @@ export type PlanOptions = { yearlyRates?: YearlyRates };
 const EXTRA_GROUPS: readonly ExtraAssetGroup[] = ['investments', 'realEstate', 'vehicle', 'otherAsset'];
 /** Module-level copy of ASSET_GROUPS for the per-year loops (one binding lookup at load). */
 const GROUPS: readonly AssetGroup[] = [...ASSET_GROUPS];
-
-/** Same year: Retire before everything, Social Security after (see planEvents.ts → socialSecurity). */
-const sameYearRank = (e: PlanEvent) => (e.type === 'retire' ? 0 : e.type === 'socialSecurity' ? 2 : 1);
 
 /**
  * Steps 1–3 of plan() up to the simulation: the inputs simulate() takes, prepared once. monteCarlo()
@@ -123,10 +121,7 @@ export function preparePlan(
 
   // 2. Events, in date order, each expanded on the profile with the ones before it.
   const enabled = scenario.events.filter((e) => e.enabled);
-  const ordered = enabled
-    .map((e, i) => ({ e, i }))
-    .sort((x, y) => x.e.year - y.e.year || sameYearRank(x.e) - sameYearRank(y.e) || x.i - y.i)
-    .map(({ e }) => e);
+  const ordered = orderPlanEvents(scenario.events);
   let lifeEvents: LifeEvent[] = [...(base.events ?? [])];
   const newDebts: { month: number; debt: Debt }[] = [];
   const newAssets: NonNullable<SimulateOptions['newAssets']>[number][] = [];

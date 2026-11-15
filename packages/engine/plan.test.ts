@@ -124,6 +124,48 @@ describe('plan', () => {
     expect(r.kpis.netWorthAtRetirement).toBe(year(2063).netWorth);
   });
 
+  it('retire at 72 with Social Security at 67: work pay and the benefit together until 72, then the benefit', () => {
+    // Born 1996; Social Security $2,080/month from 2063 (age 67), Retire in 2068 (age 72). No inflation:
+    // 2062 earns 5,000 × 12 = 60,000; 2066 (age 70) earns (5,000 + 2,080) × 12 = 84,960; 2068 earns
+    // 2,080 × 12 = 24,960, and so does every year after (the benefit outlives Retire).
+    const events: PlanEvent[] = [
+      { id: 'retire', type: 'retire', year: 2068, enabled: true },
+      { id: 'ss', type: 'socialSecurity', year: 2063, enabled: true, monthly: { value: 2080, isEstimate: true } },
+    ];
+    const r = plan(person({ pay: 5000, other: 3000 }), [], scenario({ inflation: 0, retireAge: 72 }, events));
+    const income = (age: number) => r.years.find((py) => py.age === age)!.cashFlow.income[0];
+    expect(income(66)).toEqual({ key: 'takeHomePay', amount: 60_000 });
+    expect(income(70)).toEqual({ key: 'takeHomePay', amount: 84_960 });
+    expect(income(72)).toEqual({ key: 'takeHomePay', amount: 24_960 });
+    expect(income(90)).toEqual({ key: 'takeHomePay', amount: 24_960 });
+    expect(r.kpis.retireAge).toBe(72);
+  });
+
+  it('demo: retiring later never lowers income before the new retirement age, and ends richer', () => {
+    // Demo inputs as in the golden test, Retire at 62 / 67 / 72 / 76 (Social Security stays at 67).
+    const birthYear = 2026 - Math.round(profileDemo.age.value);
+    const run = (retireAge: number) => {
+      const s = structuredClone(scenarioDemo);
+      s.assumptions.retireAge = retireAge;
+      for (const e of s.events) if (e.type === 'retire') e.year = birthYear + retireAge;
+      return plan({ ...structuredClone(profileDemo), asOf: '2026-11' }, accountsDemo, s, areaByZip('75206'));
+    };
+    const takeHome = (r: PlanResult, age: number) =>
+      r.years.find((py) => py.age === age)!.cashFlow.income.find((x) => x.key === 'takeHomePay')!.amount;
+    const runs = [62, 67, 72, 76].map((age) => ({ age, r: run(age) }));
+    for (let k = 1; k < runs.length; k++) {
+      const earlier = runs[k - 1]!, later = runs[k]!;
+      expect(later.r.kpis.netWorthAtEnd).toBeGreaterThan(earlier.r.kpis.netWorthAtEnd);
+      for (const py of later.r.years) {
+        if (py.age >= later.age) break;
+        expect(takeHome(later.r, py.age)).toBeGreaterThanOrEqual(takeHome(earlier.r, py.age) - 0.01);
+      }
+    }
+    // Still working at 70 when retiring at 72: work pay plus the benefit, above the benefit alone.
+    expect(takeHome(runs[2]!.r, 70)).toBeGreaterThan(takeHome(runs[1]!.r, 70) * 3);
+    expect(takeHome(runs[2]!.r, 80)).toBeCloseTo(takeHome(runs[1]!.r, 80), 6);
+  });
+
   it('golden snapshot: scenario.demo.json', () => {
     // Demo profile at asOf 2026-11 (the accounts' latest month), accountsDemo, ZIP 75206.
     const r = plan({ ...structuredClone(profileDemo), asOf: '2026-11' }, accountsDemo, scenarioDemo, areaByZip('75206'));

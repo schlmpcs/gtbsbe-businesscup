@@ -6,7 +6,7 @@ import {
 import { areaByZip, cloneProfileDemo } from '@lifeguessr/data/fixtures';
 import { scenarioDemo } from '@lifeguessr/data/fixtures/plan';
 import { kidOtherMonthly, utilitiesMonthlyAverage } from './assumptions';
-import { buyHomeBreakdown, defaultEvent, defaultEventSources, expandEvent } from './planEvents';
+import { buyHomeBreakdown, defaultEvent, defaultEventSources, expandEvent, orderPlanEvents } from './planEvents';
 
 const area = areaByZip('75206')!; // the demo ZIP
 // Demo profile: take-home $5,200, rentUtilities $1,950, childcare $0, other $450 (estimate).
@@ -105,6 +105,45 @@ describe('expandEvent(careerBreak)', () => {
     const { lifeEvents } = expandEvent(pause, ctx(profile));
     expect(payAt(lifeEvents, '2029-01')).toMatchObject({ takeHomePay: { value: 0 } });
     expect(payAt(lifeEvents, '2030-01')).toMatchObject({ takeHomePay: { value: 6_000 } });
+  });
+});
+
+describe('expandEvent(socialSecurity)', () => {
+  const ss: PlanEvent = { id: 'ss', type: 'socialSecurity', year: 2061, enabled: true, monthly: { value: 2_080, isEstimate: true } };
+  const retire = (year: number): PlanEvent => ({ id: 'retire', type: 'retire', year, enabled: true });
+
+  it('adds the benefit to the pay in effect: work pay while still working', () => {
+    // Demo take-home 5,200 + 2,080 = 7,280 from 2061-01, an estimate (the benefit is one).
+    const { lifeEvents } = expandEvent(ss, ctx());
+    expect(lifeEvents).toHaveLength(1);
+    expect(payAt(lifeEvents, '2061-01')).toMatchObject({ takeHomePay: { value: 7_280, isEstimate: true } });
+  });
+
+  it('keeps the benefit through a later Retire (expanded before it): pay = benefit only from then on', () => {
+    // Retire in 2066 (age 72) sets pay to 0; Social Security, expanded after it, re-issues that change
+    // as 0 + 2,080 in the same month, listed after it so it wins.
+    const profile = { ...cloneProfileDemo(), asOf: '2026-11', events: expandEvent(retire(2066), ctx()).lifeEvents };
+    const { lifeEvents } = expandEvent(ss, ctx(profile));
+    expect(payAt(lifeEvents, '2061-01')).toMatchObject({ takeHomePay: { value: 7_280 } });
+    expect(payAt(lifeEvents, '2066-01')).toMatchObject({ takeHomePay: { value: 2_080 } });
+  });
+
+  it('starts on top of 0 after an earlier Retire', () => {
+    const profile = { ...cloneProfileDemo(), asOf: '2026-11', events: expandEvent(retire(2056), ctx()).lifeEvents };
+    const { lifeEvents } = expandEvent(ss, ctx(profile));
+    expect(lifeEvents).toHaveLength(1);
+    expect(payAt(lifeEvents, '2061-01')).toMatchObject({ takeHomePay: { value: 2_080 } });
+  });
+
+  it('orderPlanEvents: by year, Retire first in its year, Social Security after every other event, disabled dropped', () => {
+    const events: PlanEvent[] = [
+      ss,
+      { id: 'job', type: 'newJob', year: 2070, enabled: true, takeHomePay: 1_000 },
+      retire(2066),
+      { id: 'off', type: 'windfall', year: 2030, enabled: false, amount: 1 },
+      { id: 'gift', type: 'windfall', year: 2066, enabled: true, amount: 1 },
+    ];
+    expect(orderPlanEvents(events).map((e) => e.id)).toEqual(['retire', 'gift', 'job', 'ss']);
   });
 });
 
