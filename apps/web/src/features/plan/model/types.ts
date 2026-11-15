@@ -164,6 +164,35 @@ export type EventCatalogVM = {
   closeEditor: () => void;
 };
 
+// ----- useWhatIf ------------------------------------------------------------------------------
+
+/** One event the what-if field added: what the chip shows. Amounts come from the engine event. */
+export type WhatIfChipVM = {
+  id: string;
+  label: string;
+  year: number;
+  icon: PlanEventIconId;
+  /** "$538 a month", "$375,000 home, 20% down". */
+  amountText: string;
+  /** True when the amount is a default or derived from area data, not a number the person wrote. */
+  isEstimate: boolean;
+  /** "AI parsed · engine numbers". */
+  source: string;
+};
+export type WhatIfStatus = 'idle' | 'loading' | 'done' | 'error';
+export type WhatIfVM = {
+  text: string;
+  setText: (text: string) => void;
+  status: WhatIfStatus;
+  /** Inline message when status is 'error' (or a note when some items were skipped). */
+  error: string | null;
+  /** The events the last submit added (empty after undo). */
+  lastAdded: WhatIfChipVM[];
+  submit: () => void;
+  /** Removes the events the last submit added. */
+  undo: () => void;
+};
+
 // ----- useEventEditor -------------------------------------------------------------------------
 
 export type EventFieldKind = 'money' | 'rate' | 'year' | 'count' | 'toggle' | 'choice';

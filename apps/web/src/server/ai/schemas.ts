@@ -8,7 +8,8 @@ import {
   COST_CATEGORIES, CostCategorySchema, DEBT_KINDS, ForecastSourceSchema, HorizonYearsSchema, MOVE_KINDS, ProfilePatchSchema,
   ProfileSchema,
 } from '@lifeguessr/types';
-import { SPEND_ITEM_CATEGORIES } from '@lifeguessr/types';
+import { SPEND_ITEM_CATEGORIES, WHAT_IF_TYPES } from '@lifeguessr/types';
+import { coveredMetros } from '@lifeguessr/data/areas';
 import { z } from 'zod';
 
 // ----- limits --------------------------------------------------------------------------------
@@ -22,7 +23,7 @@ export const MAX_FORECAST_BODY_BYTES = 32 * 1024; // a profile plus up to 8 cand
 
 // ----- /api/ai/parse -------------------------------------------------------------------------
 
-export const PARSE_KINDS = ['life', 'purchase', 'loan', 'spend'] as const;
+export const PARSE_KINDS = ['life', 'purchase', 'loan', 'spend', 'plan'] as const;
 export type ParseKind = (typeof PARSE_KINDS)[number];
 
 export const ParseRequestSchema = z.object({
@@ -37,6 +38,9 @@ export const ParseRequestSchema = z.object({
 export type ParseRequest = z.infer<typeof ParseRequestSchema>;
 
 const nullableMoney = z.number().nullable();
+
+/** Metros a "move" what-if may name: only those we have area data for (e.g. "Denver, CO"). */
+export const PLAN_METROS = coveredMetros().map((m) => m.metro) as [string, ...string[]];
 
 const WireLoanSchema = z.object({
   amount: nullableMoney.describe('Price or amount borrowed in US dollars, before any down payment; null if not stated.'),
@@ -78,6 +82,18 @@ export const WIRE_SCHEMAS = {
       category: z.enum(SPEND_ITEM_CATEGORIES),
       amount: nullableMoney.describe('The amount paid in US dollars exactly as written; null if the text gives none.'),
     })).describe('One item per purchase, in the order written; empty when the text names no purchase.'),
+  }),
+  // "Write your what-if" (/plan): life changes in the user's words. Only metros we have data for.
+  plan: z.object({
+    items: z.array(z.object({
+      type: z.enum(WHAT_IF_TYPES),
+      year: z.number().int().nullable().describe('Calendar year the change starts, e.g. 2029; null if the text gives no time.'),
+      label: z.string().describe('Short name for the change, e.g. "Baby" or "Move to Denver", in the language of the text.'),
+      metro: z.enum(PLAN_METROS).nullable().describe('For type "move" only: the metro moved to, from this list; null otherwise.'),
+      amount: nullableMoney.describe('A dollar amount ONLY if that number is literally written in the text for this change; otherwise null. Never a typical or estimated value.'),
+      cadence: z.enum(['once', 'monthly']).nullable().describe('For type "expense" only: a one-off or a monthly cost; null otherwise.'),
+      endYear: z.number().int().nullable().describe('Calendar year it ends (income, expense, careerBreak) when the text says; otherwise null.'),
+    })).describe('One item per life change, in the order written; empty when the text names none we can use.'),
   }),
 } as const;
 

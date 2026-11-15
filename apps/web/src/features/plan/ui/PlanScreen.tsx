@@ -11,6 +11,7 @@ import { plan as copy } from '@/copy';
 import { Button, Sheet, cx } from '@/ui-kit';
 import type {
   AiLineVM, AssumptionsVM, ChanceOfSuccessVM, CompareVM, EventCatalogVM, EventEditorVM, PlanMovesVM, PlanVM, ScenariosVM,
+  WhatIfVM,
 } from '../model/types';
 import { AssumptionsPanel } from './AssumptionsPanel';
 import { ChanceSettings, ChanceView } from './ChanceView';
@@ -20,6 +21,7 @@ import { EventBadge, EventIcon } from './EventIcon';
 import { NetWorthChart } from './NetWorthChart';
 import { NextMoves, type PlanLinkComponent } from './NextMoves';
 import { PlanDetails } from './PlanDetails';
+import { WhatIfField } from './WhatIfField';
 
 export const PLAN_VIEWS = ['plan', 'compare', 'chance'] as const;
 export type PlanViewId = (typeof PLAN_VIEWS)[number];
@@ -39,6 +41,8 @@ export type PlanScreenProps = {
   compareWithId: string | null;
   onCompareWith: (id: string) => void;
   chance: ChanceOfSuccessVM;
+  /** "Write your what-if" above the chart (Plan view); left out = not shown. */
+  whatIf?: WhatIfVM;
   /** The route's Link (client navigation to /afford and /loan); a plain <a> when left out. */
   Link?: PlanLinkComponent;
 };
@@ -98,6 +102,7 @@ export function PlanScreen(props: PlanScreenProps) {
             <ChanceView vm={props.chance} />
           ) : (
             <>
+              {props.whatIf && <WhatIfField vm={props.whatIf} />}
               <NetWorthChart
                 kpis={plan.kpis}
                 chart={plan.chart}
