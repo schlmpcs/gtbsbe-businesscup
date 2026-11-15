@@ -9,17 +9,32 @@ export const lifeline = {
     eyebrow: 'Try it · a sample life',
     hint: 'Drag “Buy a home” along the years',
   },
+  /** The landing's road: the same plan as the chart, laid along the illustration. */
+  road: {
+    label: 'A sample life from today to 90: move when the home is bought',
+    eyebrow: 'Try it · a sample life',
+    today: (age: number) => `${age} · Today`,
+    home: (age: number) => `${age} · Buy a home`,
+    retire: (age: number) => `${age} · Retire`,
+    end: (age: number) => `${age}`,
+    sooner: 'Buy the home a year sooner',
+    later: 'Buy the home a year later',
+    chanceCaption: (endAge: number) => `chance the money lasts to ${endAge}`,
+    hint: 'Tap the arrows to move the home',
+  },
   sticker: 'Your whole life · one line',
   headingId: 'lifeline-heading',
   lead: {
     later: (n: number) => `Wait ${years(n)} to buy a home`,
     sooner: (n: number) => `Buy a home ${years(n)} sooner`,
     same: 'When should you buy a home?',
+    /** The plan's own year already runs out of cash: say the age, the payoff says the rest. */
+    sameShort: (age: number) => `Buy a home at ${age}`,
   },
   payoff: {
     chance: (from: string, to: string) => `chance of success ${from} → ${to}`,
     lasts: (endAge: number) => `your money lasts past ${endAge}`,
-    runsOut: (age: number) => `your money runs out at ${age}`,
+    runsOut: (age: number) => `you run out of cash at ${age}`,
     /** `amount` is the size of the difference vs the plan at retirement, never a balance. */
     atRetirement: (amount: string, more: boolean) => `${amount} ${more ? 'more' : 'less'} at retirement`,
   },
@@ -54,7 +69,7 @@ export const lifeline = {
     selected: (age: number) => `Buy at ${age}`,
     before: (age: number) => `Buy at ${age} (before)`,
     band: (paths: string) => `80% of ${paths} paths`,
-    runsOut: (age: number) => `Out of money at ${age}`,
+    runsOut: (age: number) => `Out of cash at ${age}`,
     atRetirement: (value: string, age: number) => `${value} at ${age}`,
     was: (value: string) => `was ${value}`,
     marker: { home: 'Buy a home', kid: 'Kid', retire: 'Retire' },

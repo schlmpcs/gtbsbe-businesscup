@@ -4,23 +4,100 @@
 export const onboarding = {
   landing: {
     eyebrow: 'A money game that turns into your plan',
-    title: 'One decision. Your whole life.',
-    body: 'Drag when you buy a home and watch your money to age 90 redraw: 500 simulated lives, real local prices. Then do it with your own numbers in 2 minutes.',
-    start: 'Start',
+    title: 'Your whole life, on one road.',
+    body: 'Move one milestone and watch everything after it change. Start with a game, finish with your own plan to age 90.',
+    start: 'Start with a game',
     continue: (chapter: number) => `Continue: chapter ${chapter} of 4`,
     restart: 'Start over',
     sample: 'See a sample plan',
     note: 'No sign-up. About 2 minutes.',
-    chaptersLabel: 'The story in 3 steps',
-    /** A hint of the chapters (the 4th is where it takes you). */
-    chapters: [
-      { title: 'Other people’s money', body: 'Which life costs more? One round of today’s game.' },
-      { title: 'What you’re worth', body: 'Guess it, connect your bank, see the real number.' },
-      { title: 'Where it takes you', body: 'Your plan to 90 and one decision that moves all of it.' },
-    ],
-    heroSticker: 'Your house, built from your month',
+    nav: { play: 'Today’s Duel', sample: 'Sample plan' },
     loading: 'Loading…',
     redirecting: 'Opening your dashboard…',
+
+    /** Four facts about the product itself (none is a market statistic). */
+    statsLabel: 'LifeGuessr in four numbers',
+    stats: [
+      { value: '2 min', body: 'from the first tap to a plan to age 90' },
+      { value: '5 rounds', body: 'of the Duel every day, scored on the server' },
+      { value: '1,000', body: 'simulated futures behind the Chance of success on your plan' },
+      { value: '60 ZIPs', body: 'in 15 metros, priced from HUD, Census and BLS data' },
+    ],
+
+    life: {
+      title: 'Most people can’t say what their life costs',
+      body: 'Or what they are worth, or where it is heading. Here is the sample life the road above is drawn from.',
+      who: 'The sample life',
+      whoBody: 'A fictional household, used wherever you have not entered your own numbers.',
+      rows: { age: 'Age', takeHome: 'Take-home pay', rent: 'Rent and utilities', card: 'Credit card', auto: 'Auto loan', cash: 'Cash' },
+      perMonth: (v: string) => `${v}/mo`,
+      debt: (balance: string, apr: string) => `${balance} · ${apr}`,
+      outTitle: 'What LifeGuessr works out from it',
+      outBody: 'The same four answers you get for your own numbers.',
+      outs: [
+        { title: 'What the month really costs', body: 'Every category added up from the statement, not from memory.' },
+        { title: 'Net worth today', body: 'Everything owned minus everything owed, next to the guess.' },
+        { title: 'The line to age 90', body: 'Net worth year by year, and the share of futures where the money lasts.' },
+        { title: 'The next move', body: 'Which decision is worth the most dollars, and how many.' },
+      ],
+    },
+
+    how: {
+      title: 'From a game to your plan',
+      body: 'You answer three questions, then connect your bank or upload a CSV. LifeGuessr does the math.',
+      you: 'You',
+      us: 'LifeGuessr',
+      steps: [
+        { by: 'you', title: 'Play', rest: 'one round', body: 'Which life costs more? Pick one of two lives.' },
+        { by: 'you', title: 'Guess', rest: 'your worth', body: 'What you own minus what you owe, on one slider.' },
+        { by: 'you', title: 'Age', rest: 'and city', body: 'Two facts set the years of the plan and the local prices.' },
+        { by: 'us', title: 'Reads', rest: 'your bank or CSV', body: 'Your bank link or a CSV, sorted into categories.' },
+        { by: 'us', title: 'Draws', rest: 'your plan', body: 'Net worth by year to age 90, with a Chance of success.' },
+        { by: 'you', title: 'Move', rest: 'one decision', body: 'Drag when you buy a home and watch the line redraw.' },
+      ] as { by: 'you' | 'us'; title: string; rest: string; body: string }[],
+    },
+
+    gets: {
+      title: 'What you walk away with',
+      body: 'Not a list of last month’s purchases: a line to age 90 and what to do next.',
+      items: [
+        { title: 'Your plan', rest: 'to age 90', body: 'Net worth year by year, with a home, kids and retirement on a timeline.' },
+        { title: 'Chance', rest: 'of success', body: 'How many simulated futures your money lasts in, from a seeded Monte Carlo.' },
+        { title: 'Next moves', rest: 'in dollars', body: 'The decisions that change the plan most, ranked by what each is worth.' },
+        { title: 'A daily game', rest: 'the Duel', body: 'Five rounds a day of “Which life costs more?”, with a result to share.' },
+      ],
+    },
+
+    compare: {
+      title: 'Your plan in minutes, not weeks',
+      body: 'Budget apps keep the forecast behind an account, days of syncing and a yearly fee.',
+      what: 'What it takes',
+      them: 'A budget app',
+      us: 'LifeGuessr',
+      rows: [
+        { what: 'A plan to age 90', them: 'After a sign-up and days of syncing', us: 'From a bank link or a CSV, right away' },
+        { what: 'Getting your numbers in', them: 'Bank login only', us: 'Bank link, CSV or by hand' },
+        { what: 'Time to the first plan', them: 'After your accounts sync', us: 'About 2 minutes' },
+        { what: 'Price to see it', them: 'Up to $299 a year', us: 'Free, no sign-up' },
+        { what: 'What to do next', them: 'A forecast to read', us: 'Next moves ranked in dollars' },
+        { what: 'A reason to come back', them: 'A monthly review', us: 'A new Duel every day' },
+      ],
+    },
+
+    faq: {
+      title: 'Questions you might have',
+      body: 'Straight answers about your data, the numbers and what this is.',
+      items: [
+        { q: 'Is this financial advice?', a: 'No. LifeGuessr is an educational simulation. It shows what your own numbers add up to under stated assumptions, and never recommends a lender, an investment or a security.' },
+        { q: 'How do my numbers get in?', a: 'Your choice: connect your bank, upload a CSV statement, or add accounts and move sliders by hand. You never have to create an account.' },
+        { q: 'Where do the prices come from?', a: 'Rent, home values, childcare, groceries and inflation come from public data: HUD, the Census, BLS and the Department of Labor. Every number carries its source or an “estimate” tag.' },
+        { q: 'What do you keep from my statement?', a: 'The file is read in your browser. Merchant labels, with personal names masked, go to our server to be sorted into categories and are not stored. Only category totals are kept.' },
+        { q: 'How is the Chance of success worked out?', a: 'A seeded Monte Carlo runs your plan through many market paths and counts the share where the money lasts to the end. Code does all the math; the AI only reads text and writes explanations.' },
+      ],
+    },
+
+    final: { title: 'Your plan is one game away', body: 'Play a round, connect your bank or drop in a CSV, and see where your money is heading.' },
+    disclaimer: 'Local prices: HUD, Census, BLS and Department of Labor public data.',
   },
 
   story: {

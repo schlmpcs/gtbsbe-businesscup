@@ -6,7 +6,7 @@ import { buyHomeBreakdown, decisionSweep, eventAtYear, plan } from '@lifeguessr/
 import type { PlanEventOf, PlanResult, PlanYear, Scenario } from '@lifeguessr/types';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { usePlanInputs } from '@/features/plan/model/planEngine';
+import { NO_MOVES, profileFor, usePlanInputs } from '@/features/plan/model/planEngine';
 import { DEFAULT_CHANCE_SETTINGS, resetPlanStore, usePlanStore } from '@/features/plan/model/planStore';
 import { effectiveSettings } from '@/features/plan/model/useChanceOfSuccess';
 import type { LifeLineVM } from './types';
@@ -35,13 +35,28 @@ describe('helpers', () => {
     expect(niceStep(0)).toBe(1);
   });
 
-  it('a plan without "Buy a home" gets the engine default three years out, as a draft', () => {
+  it('a plan without "Buy a home" gets the engine default as a draft, in the first year from three years out the plan can pay for it', () => {
     const inputs = renderHook(() => usePlanInputs()).result.current;
     const s = usePlanStore.getState().scenarios[0]!;
     const without: Scenario = { ...s, events: s.events.filter((e) => e.type !== 'buyHome') };
     const d = homeDecision(inputs, without);
     expect(d).toMatchObject({ eventId: DRAFT_EVENT_ID, inPlan: false, event: { type: 'buyHome', year: 2029 } });
     expect(d.scenario.events.at(-1)).toBe(d.event);
+    // Whatever the person has saved: the draft sits in the first year from 2029 with no year short of cash,
+    // or stays in 2029 when no year before retiring works (the line then says the cash runs out).
+    const picked: number[] = [];
+    for (const cash of [3_800, 80_000, 160_000, 400_000]) {
+      const rich = { ...inputs, accounts: inputs.accounts.map((a) => (a.group === 'cash' ? { ...a, balance: { ...a.balance, value: cash } } : a)) };
+      const at = homeDecision(rich, without);
+      const shortAt = (year: number) => plan(profileFor(rich, NO_MOVES), rich.accounts, eventAtYear(at.scenario, DRAFT_EVENT_ID, year), rich.area).kpis.shortfallAge;
+      picked.push(at.event.year);
+      if (shortAt(at.event.year) === null) {
+        if (at.event.year > 2029) expect(shortAt(at.event.year - 1)).not.toBeNull();
+      } else {
+        expect(at.event.year).toBe(2029);
+      }
+    }
+    expect(picked.every((y) => y >= 2029)).toBe(true);
     expect(homeDecision(inputs, s)).toMatchObject({ eventId: 'ev-buy-home', inPlan: true, scenario: s });
   });
 });
@@ -199,6 +214,12 @@ describe('useLifeLine', { timeout: 30_000 }, () => {
     expect(vm.chart.before).not.toBeNull();
     expect(vm.headline.lead).toBe('Buy a home 3 years sooner');
     expect(vm.headline.payoffTone).toBe('bad');
+    // Running out of cash is the headline, and the line carries no net worth at retirement to celebrate.
+    expect(vm.headline.payoff).toBe('you run out of cash at 35');
+    expect(vm.chart.retireCallout).toBeNull();
+    expect(vm.chart.beforeCallout).toBeNull();
+    expect(vm.headline.why).toBeNull(); // no retirement breakdown for a line that runs out of cash
+    expect(vm.kpis[0]!.tone).not.toBe('good');
     expect(vm.kpis[2]).toMatchObject({ id: 'runsOut', value: 'at 35', was: 'Never', delta: 'new', tone: 'bad' });
     expect(vm.chart.runsOut).toMatchObject({ age: 35, line: 'selected' });
     expect(vm.slider.titleNot).toBe(', not 38');
