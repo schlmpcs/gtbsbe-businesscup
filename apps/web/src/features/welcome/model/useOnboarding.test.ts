@@ -16,7 +16,7 @@ import { analysisRows, BANKS, GUESS, revealOf, useOnboarding } from './useOnboar
 
 vi.mock('@/features/bankDemo/model/fillAll', () => ({ fillFromStatement: vi.fn() }));
 vi.mock('@/features/upload/model/sampleStatement', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/features/upload/model/sampleStatement')>()),
+  ...(await importOriginal<Record<string, unknown>>()),
   fetchSampleStatement: async () => new File(['sample'], 'statement.sample.csv', { type: 'text/csv' }),
 }));
 
