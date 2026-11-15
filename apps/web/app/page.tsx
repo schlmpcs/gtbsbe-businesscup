@@ -7,13 +7,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useLanding } from '@/features/onboarding/model/useLanding';
+import { useLifeLine } from '@/features/lifeline/model/useLifeLine';
+import { LifeLineTeaser } from '@/features/lifeline/ui/LifeLineTeaser';
 import { Landing } from '@/features/onboarding/ui/Landing';
 
 export default function LandingPage() {
   const vm = useLanding();
+  const lifeline = useLifeLine();
   const router = useRouter();
   useEffect(() => {
     if (vm.mode === 'redirect') router.replace(vm.redirectTo);
   }, [vm.mode, vm.redirectTo, router]);
-  return <Landing vm={vm} Link={Link} homeHref="/" />;
+  return <Landing vm={vm} Link={Link} homeHref="/" demo={<LifeLineTeaser vm={lifeline} />} />;
 }

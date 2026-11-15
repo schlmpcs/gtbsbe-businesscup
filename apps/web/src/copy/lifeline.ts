@@ -3,6 +3,10 @@
 const years = (n: number) => `${n} ${n === 1 ? 'year' : 'years'}`;
 
 export const lifeline = {
+  teaser: {
+    eyebrow: 'Try it · a sample life',
+    hint: 'Drag “Buy a home” along the years',
+  },
   sticker: 'Your whole life · one line',
   headingId: 'lifeline-heading',
   lead: {

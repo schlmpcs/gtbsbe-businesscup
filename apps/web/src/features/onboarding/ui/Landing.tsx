@@ -2,7 +2,7 @@
 // hint of the three chapters, the 3D house, and "See a sample plan" as the quiet second way in. No app
 // chrome (the shell leaves "/" bare) and no numbers. Returning visitors never see it: the route sends
 // them to /dashboard (a short "Opening your dashboard…" frame meanwhile).
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { onboarding } from '@/copy';
 import { Art, buttonClassName, cx, Sticker } from '@/ui-kit';
 import type { LandingVM } from '../model/types';
@@ -10,9 +10,10 @@ import { Logo, type StoryLink } from './StoryFrame';
 
 const t = onboarding.landing;
 
-export type LandingProps = { vm: LandingVM; Link: StoryLink; homeHref: string };
+/** `demo`: the live Life line (the route renders it) in place of the house art. */
+export type LandingProps = { vm: LandingVM; Link: StoryLink; homeHref: string; demo?: ReactNode };
 
-export function Landing({ vm, Link, homeHref }: LandingProps) {
+export function Landing({ vm, Link, homeHref, demo }: LandingProps) {
   if (vm.mode === 'loading' || vm.mode === 'redirect') {
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-(--container-6xl) flex-col px-lg py-md" data-testid="landing-wait">
@@ -28,12 +29,12 @@ export function Landing({ vm, Link, homeHref }: LandingProps) {
       <header className="flex items-center justify-between gap-md">
         <Logo Link={Link} href={homeHref} />
       </header>
-      <section className="grid items-center gap-2xl lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <section className={cx('grid items-center gap-2xl', demo ? 'lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]' : 'lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')}>
         <div className="flex min-w-0 flex-col items-start gap-lg">
           <Sticker tone="ink" tilt={-3} className="ob-enter text-sm">
             {t.eyebrow}
           </Sticker>
-          <h1 className="ob-enter font-display text-5xl font-extrabold leading-display tracking-tight sm:text-7xl" style={{ '--ob-delay': '80ms' } as CSSProperties}>
+          <h1 className="ob-enter font-display text-5xl font-extrabold leading-display tracking-tight sm:text-6xl" style={{ '--ob-delay': '80ms' } as CSSProperties}>
             {t.title}
           </h1>
           <p className="ob-enter max-w-(--container-lg) text-xl" style={{ '--ob-delay': '160ms' } as CSSProperties}>
@@ -58,7 +59,8 @@ export function Landing({ vm, Link, homeHref }: LandingProps) {
           )}
           <p className="text-sm text-text-muted">{t.note}</p>
         </div>
-        {/* Decoration only: the art carries no number. */}
+        {demo ? <div className="ob-enter min-w-0" style={{ '--ob-delay': '200ms' } as CSSProperties}>{demo}</div> : (
+        /* Decoration only: the art carries no number. */
         <div aria-hidden="true" className="relative mx-auto w-full max-w-(--container-sm) lg:max-w-(--container-md)">
           <div className="ob-build">
             <Art name="house-build" loading="eager" className="ob-float" />
@@ -67,6 +69,7 @@ export function Landing({ vm, Link, homeHref }: LandingProps) {
             {t.heroSticker}
           </Sticker>
         </div>
+        )}
       </section>
       <section aria-label={t.chaptersLabel}>
         <ol className="grid gap-md sm:grid-cols-3">

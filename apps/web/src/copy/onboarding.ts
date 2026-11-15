@@ -4,8 +4,8 @@
 export const onboarding = {
   landing: {
     eyebrow: 'A money game that turns into your plan',
-    title: 'You don’t know what life costs. Let’s find out.',
-    body: 'Play one round of today’s game, guess what you’re worth, connect your bank and watch your whole life to 90 redraw with every decision.',
+    title: 'One decision. Your whole life.',
+    body: 'Drag when you buy a home and watch your money to age 90 redraw: 500 simulated lives, real local prices. Then do it with your own numbers in 2 minutes.',
     start: 'Start',
     continue: (chapter: number) => `Continue: chapter ${chapter} of 4`,
     restart: 'Start over',
