@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 // Small line icons for the duel (Figma Design v3: fact chips, the hint chip, the "what decided it" bulb).
 // Decorative only: every icon sits next to text that carries the meaning.
 
-export type DuelIconName = 'car' | 'food' | 'people' | 'home' | 'pin' | 'bulb' | 'arrow';
+export type DuelIconName = 'car' | 'food' | 'people' | 'home' | 'pin' | 'bulb' | 'arrow' | 'kid' | 'lock';
 
 const PATHS: Record<DuelIconName, ReactNode> = {
   car: (
@@ -48,6 +48,18 @@ const PATHS: Record<DuelIconName, ReactNode> = {
     </>
   ),
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  kid: (
+    <>
+      <circle cx="12" cy="5.5" r="2.5" />
+      <path d="M8 21v-6.5a4 4 0 0 1 8 0V21M10 21v-3M14 21v-3" />
+    </>
+  ),
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11M12 15v2" />
+    </>
+  ),
 };
 
 export function DuelIcon({ name, className }: { name: DuelIconName; className?: string }) {

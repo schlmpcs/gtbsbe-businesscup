@@ -65,12 +65,16 @@ export const duel = {
     compositeHint: 'A composite of real costs, not a real person.',
     pick: (letter: DuelLetter, metro: string) => `Life ${letter} costs more: ${metro}`,
     picking: 'Locking in…',
+    /** The drawn button at the foot of a card (the real button's name is `pick`). */
+    pickCta: (letter: DuelLetter) => `Pick ${letter}`,
     yourPick: 'Your pick',
     costsMore: 'Costs more',
     perMonth: '/mo',
     factsLabel: 'What we know',
     hintFact: 'Hint',
     hintGroup: 'Neighborhood',
+    /** The neighborhood tile before the hint is open. */
+    hintLocked: 'Hint unlocks',
     /** The flavor caption, shown as a quote line under the facts. */
     quote: (caption: string) => `“${caption}”`,
   },
