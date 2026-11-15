@@ -114,6 +114,15 @@ test('demo path: landing → /start (warm-up duel, guess, demo bank, reveal, pla
   await expectNoSideScroll(page);
   await warmup.getByRole('button', { name: w.warmup.cta }).click();
 
+  // ----- About you: age, ZIP, household, take-home pay (the person's own, not the sample's) -----
+  await expect(page.getByTestId('onboarding')).toHaveAttribute('data-step', 'about');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(w.about.title);
+  await page.getByTestId('ob-age').fill('41');
+  await page.getByTestId('ob-zip').fill('94110');
+  await page.getByTestId('ob-takeHome').fill('7250');
+  await page.getByTestId('ob-adults-2').click();
+  await page.getByTestId('onboarding-about-next').click();
+
   // ----- 2. What are you worth? A gut guess, locked in -----
   await expect(onboardingMain).toHaveAttribute('data-step', 'guess');
   await expect(h1(page)).toHaveText(w.guess.title);
@@ -123,6 +132,14 @@ test('demo path: landing → /start (warm-up duel, guess, demo bank, reveal, pla
     await expect(page.getByTestId('onboarding-guess')).toHaveText('$40,000', { timeout: 1_000 });
   }).toPass();
   await page.getByTestId('onboarding-lock').click();
+
+  // ----- Add it up: what you have and owe -----
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(w.balances.title);
+  await page.getByTestId('ob-cash').fill('12000');
+  await page.getByTestId('ob-retirement').fill('30,000');
+  await page.getByTestId('ob-card').fill('4000');
+  await page.getByTestId('ob-student').fill('20000');
+  await page.getByTestId('onboarding-balances-next').click();
 
   // ----- 3. Connect a bank (a labelled demo): the sample statement goes through the real pipeline -----
   await expect(h1(page)).toHaveText(w.connect.title);
@@ -138,7 +155,9 @@ test('demo path: landing → /start (warm-up duel, guess, demo bank, reveal, pla
 
   // ----- 4. The answer: net worth from the accounts, next to the guess -----
   await expect(onboardingMain).toHaveAttribute('data-step', 'reveal', { timeout: 30_000 });
-  await expect(page.getByTestId('onboarding-networth')).toHaveText(/^−?\$[\d,]+$/);
+  // 12,000 + 30,000 − 4,000 − 20,000: the answers, not the sample household.
+  await expect(page.getByTestId('onboarding-networth')).toHaveText('$18,000');
+  await expect(page.getByText('$7,250/mo')).toBeVisible();
   await expect(page.getByText(w.reveal.guessed('$40,000'))).toBeVisible();
   await expectNoSideScroll(page);
   await page.getByTestId('onboarding-next').click();

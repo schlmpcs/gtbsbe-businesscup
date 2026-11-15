@@ -1,4 +1,5 @@
-// Server-only: free text → typed input (ProfilePatch / Purchase / LoanInput) for /api/ai/parse.
+// Server-only: free text → typed input (ProfilePatch / Purchase / LoanInput / SpendItem[] /
+// WhatIfParse) for /api/ai/parse.
 //
 // The model only transcribes numbers the user wrote; it computes nothing. Its JSON is validated
 // with the canonical zod schemas, plus a check that rates came back as decimals. On a validation
@@ -6,13 +7,13 @@
 // falls back to the manual form. Parsed values are inputs: the user confirms them in the UI.
 import {
   COST_CATEGORIES, DAILY_ENTRY_LABEL_MAX, LoanInputSchema, ProfilePatchSchema, PurchaseSchema, SpendItemSchema,
-  type LoanInput, type ProfilePatch, type Purchase, type SpendItem,
+  WhatIfParseSchema, type LoanInput, type ProfilePatch, type Purchase, type SpendItem, type WhatIfItem, type WhatIfParse,
 } from '@lifeguessr/types';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
 import { devLog, llmModel, responseText, type LlmClient } from './client';
 import { extractNumbers, tokenMatches, type NumberToken } from './numbers';
-import { WIRE_SCHEMAS, type ParseKind, type ParseRequest, type WireOutput } from './schemas';
+import { PLAN_METROS, WIRE_SCHEMAS, type ParseKind, type ParseRequest, type WireOutput } from './schemas';
 
 export type ParsedValue = {
   life: ProfilePatch;
@@ -20,10 +21,14 @@ export type ParsedValue = {
   loan: LoanInput;
   /** Daily log purchases (/spend). Amounts are only ever copied from the text (checked below). */
   spend: SpendItem[];
+  /** "Write your what-if" (/plan): life changes. Amounts are only ever copied from the text (checked below). */
+  plan: WhatIfParse;
 };
 
 /** Most purchases one daily-log line may hold. */
 export const MAX_SPEND_ITEMS = 20;
+/** Most what-if changes one text may hold (WhatIfParseSchema caps it too). */
+export const MAX_PLAN_ITEMS = 8;
 
 export type ParseErrorCode =
   | 'unavailable'     // no ANTHROPIC_API_KEY: use the manual form
@@ -62,6 +67,15 @@ Only use debt ids from the list given with the text; if no list is given, return
   spend: `Extract each purchase the user logged: a short label as written, its category and the amount paid as written.
 Categories: groceries (supermarket, food for home); eatingOut (restaurants, cafes, coffee, takeout, food delivery); car (fuel, parking, tolls, car repairs and insurance); rentUtilities (rent, electricity, water, internet, phone bill); childcare (daycare, babysitter); subscriptions (streaming, apps, memberships); other (everything else: taxi and rides, transit, shopping, health, gifts).
 One item per purchase. Use null for an amount the text does not give: never use a typical price.`,
+  plan: `Extract each life change the user wants to try ("what if"), in the order written. The text may be in English or Russian.
+Types: haveKid (a kid, baby, child); buyHome (buy a house, home, apartment); newJob (a new job, a raise, a promotion); careerBreak (sabbatical, career break, quitting work); windfall (inheritance, bonus, lottery, a gift of money); retire (retiring); move (moving or relocating to a city); expense (any other cost, e.g. a wedding, a car, tuition); income (side income, a side job, rent from a tenant).
+year: the calendar year the change starts. Resolve relative times from the current year given with the text ("next year" = current year + 1, "in 3 years" = current year + 3). Use null when no time is given.
+label: a short name for the change in the language of the text, e.g. "Baby" or "Move to Denver".
+metro: for move only, one of: ${PLAN_METROS.join('; ')}. If the city is not in this list, leave that move out entirely; never pick a different city. Null for every other type.
+amount: only a dollar number written in the text for that change, else null. Meaning by type: newJob, income and a monthly expense = per month; windfall and a one-off expense = once; buyHome = the home's price. A yearly salary is not a monthly amount: use null. Never use a typical or estimated value.
+cadence: for expense only, "once" or "monthly" (null if unclear); null for every other type.
+endYear: the year it ends for income, expense or careerBreak when the text says; otherwise null.
+At most ${MAX_PLAN_ITEMS} items. If nothing usable is in the text, return an empty items array.`,
 };
 
 function systemPrompt(kind: ParseKind): string {
@@ -72,8 +86,10 @@ function userPrompt(req: ParseRequest): string {
   const debts = req.kind === 'life' && req.debts?.length
     ? `\n\nThe user's debts (id: kind): ${req.debts.map((d) => `${d.id}: ${d.kind}`).join(', ')}`
     : '';
+  // Relative times ("next year") resolve against the server's calendar year.
+  const year = req.kind === 'plan' ? `\n\nThe current year is ${new Date().getFullYear()}.` : '';
   // The text is data, not instructions; fence it so it can't pose as part of the prompt.
-  return `Text to read:\n<text>\n${req.text}\n</text>${debts}`;
+  return `Text to read:\n<text>\n${req.text}\n</text>${debts}${year}`;
 }
 
 function retryPrompt(req: ParseRequest, previous: string, issues: string[]): string {
@@ -120,6 +136,21 @@ function loanFromWire(w: WireOutput<'loan'>, prefix = ''): { value: LoanInput } 
 }
 
 function convert<K extends ParseKind>(kind: K, wire: unknown, req: ParseRequest): Converted<K> {
+  if (kind === 'plan') {
+    const w = wire as WireOutput<'plan'>;
+    const items: WhatIfItem[] = w.items
+      .filter((it) => it.type !== 'move' || it.metro !== null) // a move to a city we have no data for is dropped
+      .slice(0, MAX_PLAN_ITEMS)
+      .map((it) => ({
+        ...it,
+        label: it.label.trim(),
+        metro: it.type === 'move' ? it.metro : null,
+        cadence: it.type === 'expense' ? it.cadence : null,
+      }));
+    if (items.length === 0) return { empty: true };
+    return { value: { items } } as Converted<K>;
+  }
+
   if (kind === 'spend') {
     const w = wire as WireOutput<'spend'>;
     if (w.items.length === 0) return { empty: true };
@@ -206,6 +237,12 @@ function numericLeaves(kind: ParseKind, value: ParsedValue[ParseKind]): Leaf[] {
   if (kind === 'spend') {
     (value as SpendItem[]).forEach((it, i) => leaves.push({ path: `items.${i}.amount`, value: it.amount, unit: 'money' }));
   }
+  if (kind === 'plan') {
+    // Only amounts: years may be inferred ("next year" → 2027), amounts may not.
+    (value as WhatIfParse).items.forEach((it, i) => {
+      if (it.amount !== null) leaves.push({ path: `items.${i}.amount`, value: it.amount, unit: 'money' });
+    });
+  }
   if (kind === 'life') {
     const p = value as ProfilePatch;
     for (const c of COST_CATEGORIES) {
@@ -246,6 +283,7 @@ const CONTRACT_SCHEMAS: { [K in ParseKind]: z.ZodType<ParsedValue[K]> } = {
   purchase: PurchaseSchema,
   loan: LoanInputSchema,
   spend: z.array(SpendItemSchema).min(1).max(MAX_SPEND_ITEMS),
+  plan: WhatIfParseSchema,
 };
 
 const formatIssues = (error: z.ZodError) =>
@@ -280,8 +318,8 @@ function validate(
   if (percent.length > 0) return { issues: percent };
 
   const inferred = inferredPaths(leaves, tokens);
-  // A logged amount is the user's own number: the model may only copy it, never supply one.
-  if (kind === 'spend' && inferred.length > 0) {
+  // A logged amount or a what-if amount is the user's own number: the model may only copy it, never supply one.
+  if ((kind === 'spend' || kind === 'plan') && inferred.length > 0) {
     return { issues: inferred.map((path) => `${path}: this amount is not written in the text; copy amounts exactly or use null`) };
   }
 

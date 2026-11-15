@@ -84,3 +84,4 @@ export {
   type CarNow, type CarAlternative, type CarAlternativeKind, type CarDecision, type CarDecisionYear, type CarMonthlyCost, type CarDecisionOptions,
 } from './car';                                                                                // S13
 export { monthEndDetail, type MonthEndDetail, type MonthEndRow } from './checkin';             // S14
+export { whatIfEvent, whatIfEvents, moveCostDelta, WHAT_IF_DEFAULT_HOUSEHOLD } from './whatIf';    // what-if field

@@ -879,3 +879,17 @@ export const LedgerTransactionSchema = z.object({
   categoryOverridden: z.boolean(),
   goalId: z.string().min(1).max(64).optional(),
 });
+
+// ----- "Write your what-if" -------------------------------------------------------------------
+import { WHAT_IF_TYPES } from './plan';
+
+export const WhatIfItemSchema = z.object({
+  type: z.enum(WHAT_IF_TYPES),
+  year: z.number().int().min(1900).max(2200).nullable(),
+  label: z.string().trim().min(1).max(80),
+  metro: z.string().min(1).max(80).nullable(),
+  amount: NonNegativeMoneySchema.nullable(),
+  cadence: z.enum(['once', 'monthly']).nullable(),
+  endYear: z.number().int().min(1900).max(2200).nullable(),
+});
+export const WhatIfParseSchema = z.object({ items: z.array(WhatIfItemSchema).max(8) });

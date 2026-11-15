@@ -14,6 +14,7 @@ import { useEventEditor } from '@/features/plan/model/useEventEditor';
 import { usePlan } from '@/features/plan/model/usePlan';
 import { usePlanMoves } from '@/features/plan/model/usePlanMoves';
 import { useScenarios } from '@/features/plan/model/useScenarios';
+import { useWhatIf } from '@/features/plan/model/useWhatIf';
 import { PLAN_VIEWS, PlanScreen, type PlanViewId } from '@/features/plan/ui/PlanScreen';
 
 type SearchParams = Promise<{ view?: string | string[] }>;
@@ -32,6 +33,7 @@ export default function PlanPage({ searchParams }: { searchParams: SearchParams 
   const moves = usePlanMoves();
   const aiLine = useAiLine();
   const chance = useChanceOfSuccess();
+  const whatIf = useWhatIf();
 
   // Compare: the active scenario against the one picked (default: the first other scenario).
   const [picked, setPicked] = useState<string | null>(null);
@@ -56,6 +58,7 @@ export default function PlanPage({ searchParams }: { searchParams: SearchParams 
       compareWithId={compareWithId}
       onCompareWith={setPicked}
       chance={chance}
+      whatIf={whatIf}
       Link={Link}
     />
   );

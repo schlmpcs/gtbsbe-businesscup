@@ -1,7 +1,9 @@
-// POST /api/ai/parse  { kind: 'life' | 'purchase' | 'loan' | 'spend', text, debts? }
+// POST /api/ai/parse  { kind: 'life' | 'purchase' | 'loan' | 'spend' | 'plan', text, debts? }
 //   200 { ok: true, kind, value, needsConfirmation: true, inferred }
-//       value: ProfilePatch | Purchase | LoanInput | SpendItem[], validated with @lifeguessr/types schemas.
+//       value: ProfilePatch | Purchase | LoanInput | SpendItem[] | WhatIfParse, validated with @lifeguessr/types schemas.
 //       ('spend' = the daily log: every amount must be written in the text.)
+//       ('plan' = "Write your what-if": { items: WhatIfItem[] }, at most 8; a move only to a covered
+//       metro; amounts only when written in the text; years may be resolved from "next year".)
 //       These are parsed *inputs*: the UI shows them for the user to confirm before they enter
 //       the profile. `inferred` lists paths not written literally in the text.
 //   4xx/5xx { ok: false, error: { code, ... }, fallback: 'manualForm' }

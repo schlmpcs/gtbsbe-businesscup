@@ -366,6 +366,28 @@ export const plan = {
     notFound: 'We could not find this plan. Try another scenario.',
     loading: 'Loading your plan…',
   },
+  whatIf: {
+    title: 'Write your what-if',
+    label: 'Describe a life change',
+    placeholder: 'A kid in 2029 and a move to Denver',
+    submit: 'What if?',
+    loading: 'Reading…',
+    badge: 'AI',
+    note: 'Claude reads your sentence; the engine does the math.',
+    source: 'AI parsed · engine numbers',
+    estimate: 'estimate',
+    added: (n: number) => (n === 1 ? 'Added 1 event to this scenario' : `Added ${n} events to this scenario`),
+    undo: 'Undo',
+    moveMore: (amount: string) => `costs ${amount} a month more to live there`,
+    moveLess: (amount: string) => `frees ${amount} a month (cheaper to live there)`,
+    errors: {
+      unavailable: 'AI is offline — add events by hand',
+      nothingFound: 'Couldn’t find a life event in that',
+      rateLimited: 'Too many tries — wait a minute and try again',
+      skipped: 'We don’t have cost data for that place yet',
+      generic: 'Something went wrong — try again or add events by hand',
+    },
+  },
   aiLine: {
     label: 'AI estimate',
     rejected: {
