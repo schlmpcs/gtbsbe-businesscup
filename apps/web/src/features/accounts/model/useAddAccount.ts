@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ACCOUNT_GROUPS, type AccountGroup } from '@lifeguessr/types';
 import { useAccountsStore } from '@/lib/model/accounts';
 import { useAccountsUiStore } from './accountsStore';
-import { buildForm, emptyForm, toFields, type FormState } from './addForm';
+import { buildForm, emptyForm, formTitle, toFields, type FormState } from './addForm';
 import { kindOf } from './series';
 import type { AddAccountFieldId, AddAccountVM } from './types';
 
@@ -52,5 +52,17 @@ export function useAddAccount(_options: { today?: string } = {}): AddAccountVM {
     reset();
   }, [reset]);
 
-  return { step: group === null ? 'pick-type' : 'form', groups: GROUPS, group, fields, pickType, setField, setEstimate, submit, back: reset, close };
+  return {
+    step: group === null ? 'pick-type' : 'form',
+    groups: GROUPS,
+    group,
+    title: group === null ? null : formTitle(group),
+    fields,
+    pickType,
+    setField,
+    setEstimate,
+    submit,
+    back: reset,
+    close,
+  };
 }

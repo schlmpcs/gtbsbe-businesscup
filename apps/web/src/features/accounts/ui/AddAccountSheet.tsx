@@ -4,7 +4,7 @@
 // screens. Presentational: the fields, their errors and the estimate tags come from useAddAccount.
 import { accounts as t, bankDemo, planner } from '@/copy';
 import { Button, buttonClassName, cx, Field, Sheet, Stack, Tag, useFieldControl } from '@/ui-kit';
-import type { AccountGroup, AddAccountFieldVM, AddAccountVM } from '../model/types';
+import type { AddAccountFieldVM, AddAccountVM } from '../model/types';
 import type { LinkComponent } from './AccountsScreen';
 
 export type AddAccountSheetProps = {
@@ -24,7 +24,7 @@ export function AddAccountSheet({ open, vm, uploadHref, Link, onConnectBank }: A
     <Sheet
       open={open}
       onClose={vm.close}
-      title={isForm ? `${t.add}: ${t.groups[vm.group as AccountGroup]}` : t.pickType}
+      title={vm.title ?? t.pickType}
       footer={
         isForm ? (
           <div className="flex justify-between gap-sm">
@@ -129,10 +129,9 @@ function AccountForm({ vm }: { vm: AddAccountVM }) {
 }
 
 function FieldRow({ field, vm }: { field: AddAccountFieldVM; vm: AddAccountVM }) {
-  const hint = field.defaulted ? t.form.defaultedHint : field.input === 'percent' ? t.form.percentHint : undefined;
   return (
     <div className="flex flex-col gap-xs">
-      <Field label={t.fields[field.labelKey]} hint={hint} error={field.error ? t.errors[field.error] : undefined} isEstimate={field.isEstimate}>
+      <Field label={t.fields[field.labelKey]} hint={field.hint ?? undefined} error={field.error ? t.errors[field.error] : undefined} isEstimate={field.isEstimate}>
         {field.input === 'select' ? (
           <SelectControl field={field} onChange={(v) => vm.setField(field.id, v)} />
         ) : (
@@ -170,7 +169,7 @@ function TextControl({ field, onChange }: { field: AddAccountFieldVM; onChange: 
         name={field.id}
         value={field.value}
         required={field.required}
-        placeholder={field.input === 'money' ? t.form.moneyPlaceholder : undefined}
+        placeholder={field.placeholder ?? (field.input === 'money' ? t.form.moneyPlaceholder : undefined)}
         onChange={(e) => onChange(e.target.value)}
         data-testid={`add-account-${field.id}`}
         className={cx(

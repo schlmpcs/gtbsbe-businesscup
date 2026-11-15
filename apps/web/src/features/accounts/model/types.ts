@@ -134,6 +134,9 @@ export type AddAccountStep = 'pick-type' | 'form';
 
 export type AddAccountFieldId = 'name' | 'balance' | 'apr' | 'minPayment' | 'debtKind' | 'growth';
 
+/** Keys of copy.accounts.fields: a field's id, or 'value' for the money field of a thing you own (vehicle, real estate, other). */
+export type AddAccountLabelKey = AddAccountFieldId | 'value';
+
 /**
  * One input of the form. `value` is the text as typed: 'money' in dollars ("1,250.50"), 'percent' in
  * percent ("22.8" = 0.228 per year; the hook converts on submit), 'select' one of `options`.
@@ -143,7 +146,7 @@ export type AddAccountFieldId = 'name' | 'balance' | 'apr' | 'minPayment' | 'deb
 export type AddAccountFieldVM = {
   id: AddAccountFieldId;
   /** Key into copy.accounts.fields. */
-  labelKey: AddAccountFieldId;
+  labelKey: AddAccountLabelKey;
   input: 'text' | 'money' | 'percent' | 'select';
   value: string;
   required: boolean;
@@ -154,6 +157,10 @@ export type AddAccountFieldVM = {
   options?: Debt['kind'][];
   /** Set only after a failed `submit`. */
   error: 'required' | 'invalid' | null;
+  /** Placeholder text, already formatted (e.g. "−15", the plan's default yearly change of a vehicle); null for the input's own default. */
+  placeholder: string | null;
+  /** The line under the field, already worded (from copy.accounts.form); null for none. */
+  hint: string | null;
 };
 
 export type AddAccountVM = {
@@ -162,6 +169,8 @@ export type AddAccountVM = {
   groups: { group: AccountGroup; kind: AccountKind }[];
   /** Null on 'pick-type'. */
   group: AccountGroup | null;
+  /** The form's title (e.g. "Add asset: Vehicle"); null on 'pick-type'. */
+  title: string | null;
   fields: AddAccountFieldVM[];
   pickType: (group: AccountGroup) => void;
   setField: (id: AddAccountFieldId, value: string) => void;
