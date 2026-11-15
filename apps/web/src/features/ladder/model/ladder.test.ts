@@ -397,7 +397,7 @@ describe('useStatementUpload (S9)', () => {
       line(mo, 28, 'ACME PAYROLL', -2400, 'pay'),
     ]);
     const readWith = (items: ClassifiedStatementItem[]) => vi.fn(async (): Promise<FileResult> => ({
-      months: statementTotals(items), summary, classified: items, followUps: statementFollowUps(items),
+      months: statementTotals(items), summary, classified: items, followUps: statementFollowUps(items), findings: { income: [], debts: [] },
     }));
 
     it('asks them, re-sums the months in code when one is answered, and applies a typed amount as measured', async () => {
@@ -478,9 +478,6 @@ describe('useStatementUpload (S9)', () => {
     expect(readableLabel('#')).toBe('#');
   });
 
-  it('readFile: reading → review with what was read → apply clears it', async () => {
-    let resolve!: (v: FileResult) => void;
-    const readStatementFile = vi.fn(() => new Promise<FileResult>((r) => { resolve = r; }));
   it('readFile: reading → review with what was read → apply clears it', async () => {
     let resolve!: (v: FileResult) => void;
     const readStatementFile = vi.fn(() => new Promise<FileResult>((r) => { resolve = r; }));
