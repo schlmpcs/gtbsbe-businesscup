@@ -36,6 +36,13 @@ test('Dashboard: widgets, checklist, Chance of success and empty states', async 
   await expect(page.getByTestId('dashboard-budget').getByRole('link', { name: t.budgetEmpty.cta })).toHaveAttribute('href', '/budget');
   await expect(page.getByTestId('dashboard-goals').getByRole('link', { name: t.goalsEmpty.cta })).toHaveAttribute('href', '/goals');
 
+  // What if?: three decision tools as tiles, and the hub.
+  const whatIf = page.getByTestId('dashboard-whatif');
+  await expect(whatIf.getByRole('link', { name: new RegExp(t.whatIf.tiles.afford.title.replace('?', '\\?')) })).toHaveAttribute('href', '/afford');
+  await expect(whatIf.getByRole('link', { name: new RegExp(t.whatIf.tiles.loan.title.replace('?', '\\?')) })).toHaveAttribute('href', '/loan');
+  await expect(whatIf.getByRole('link', { name: new RegExp(t.whatIf.tiles.decide.title.replace('?', '\\?')) })).toHaveAttribute('href', '/decide');
+  await expect(whatIf.getByRole('link', { name: t.whatIf.allLabel })).toHaveAttribute('href', '/tools');
+
   // Today's game.
   const game = page.getByTestId('dashboard-game');
   await expect(game.getByText(t.duelQuestion)).toBeVisible();

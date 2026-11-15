@@ -4,7 +4,13 @@
 import Link from 'next/link';
 import { useDecide } from '@/features/mocks/model/useDecide';
 import { DecideScreen } from '@/features/mocks/ui/DecideScreen';
+import { BackToTools } from '../_components/BackToTools';
 
 export default function DecidePage() {
-  return <DecideScreen vm={useDecide()} Link={Link} />;
+  return (
+    <>
+      <BackToTools />
+      <DecideScreen vm={useDecide()} Link={Link} />
+    </>
+  );
 }

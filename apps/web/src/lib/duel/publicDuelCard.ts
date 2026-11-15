@@ -43,7 +43,7 @@ export function duelFacts(card: LifeCard): DuelFactGroup[] {
   const young = card.kids.filter((k) => k !== 'schoolAge').length;
   const family: DuelFactGroup = card.kids.length === 0
     ? { group: 'family', items: [f.noKids, card.adults === 1 ? f.livesSolo : f.couple] }
-    : { group: 'family', items: [f.kids(ages), young > 0 ? f.underSchoolAge(young) : f.allInSchool(card.kids.length)] };
+    : { group: 'family', items: [f.kids(ages), young > 0 ? f.notInSchool(young, card.kids.length) : f.allInSchool(card.kids.length)] };
 
   const car: DuelFactGroup = !card.car
     ? { group: 'car', items: [f.noCar, f.noCarLoan] }

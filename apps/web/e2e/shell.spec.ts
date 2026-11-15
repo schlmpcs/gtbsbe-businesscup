@@ -2,6 +2,7 @@
 // the onboarding story; the sample banner only where the numbers on screen are the sample's.
 import { expect, test } from '@playwright/test';
 import { common } from '../src/copy/common';
+import { tools } from '../src/copy/tools';
 
 const t = common.shell;
 
@@ -10,14 +11,14 @@ test('navigation: every page is reachable on this viewport, with the current pag
   if (isMobile) {
     const tabs = page.getByRole('navigation', { name: t.tabsLabel });
     await expect(tabs).toBeVisible();
-    for (const key of ['dashboard', 'plan', 'play', 'accounts'] as const) {
+    for (const key of ['dashboard', 'plan', 'whatif', 'play'] as const) {
       await expect(tabs.getByRole('link', { name: t.links[key], exact: true })).toBeVisible();
     }
     await expect(tabs.getByRole('button', { name: t.more })).toBeVisible();
     await tabs.getByRole('button', { name: t.more }).click();
     const more = page.getByRole('navigation', { name: t.moreLabel });
     await expect(more.getByRole('link', { name: t.links.budget, exact: true })).toHaveAttribute('aria-current', 'page');
-    for (const key of ['transactions', 'cashflow', 'budget', 'recurring', 'goals'] as const) {
+    for (const key of ['accounts', 'transactions', 'cashflow', 'budget', 'recurring', 'goals'] as const) {
       await expect(more.getByRole('link', { name: t.links[key], exact: true })).toBeVisible();
     }
     await expect(more.getByRole('link', { name: t.links.pro })).toBeVisible();
@@ -35,11 +36,11 @@ test('navigation: every page is reachable on this viewport, with the current pag
     const side = page.getByRole('navigation', { name: t.sidebarLabel });
     await expect(side).toBeVisible();
     await expect(side.getByRole('link', { name: t.links.budget, exact: true })).toHaveAttribute('aria-current', 'page');
-    for (const key of ['dashboard', 'plan', 'accounts', 'transactions', 'cashflow', 'recurring', 'goals', 'play'] as const) {
+    for (const key of ['dashboard', 'plan', 'whatif', 'accounts', 'transactions', 'cashflow', 'recurring', 'goals', 'play'] as const) {
       await expect(side.getByRole('link', { name: t.links[key], exact: true })).toBeVisible();
     }
     await expect(side.getByText(t.groups.money)).toBeVisible();
-    for (const gone of ['My future', 'What if?', 'Home']) {
+    for (const gone of ['My future', 'Home']) {
       await expect(side.getByRole('link', { name: gone, exact: true })).toHaveCount(0);
     }
     await expect(page.getByTestId('shell-sidebar').getByText(t.proLine)).toBeVisible();
@@ -47,15 +48,30 @@ test('navigation: every page is reachable on this viewport, with the current pag
   }
 });
 
-test('routes kept out of the nav still render inside the shell and light up their section', async ({ page, isMobile }) => {
-  for (const [route, key] of [['/afford', 'plan'], ['/loan', 'plan']] as const) {
+test('the decision tools light up "What if?"; /future lights up Plan', async ({ page, isMobile }) => {
+  for (const [route, key] of [
+    ['/tools', 'whatif'],
+    ['/afford', 'whatif'],
+    ['/loan', 'whatif'],
+    ['/tools/bills', 'whatif'],
+    ['/spend', 'whatif'],
+    ['/future', 'plan'],
+  ] as const) {
     await page.goto(route);
     const nav = page.getByRole('navigation', { name: isMobile ? t.tabsLabel : t.sidebarLabel });
     await expect(nav.getByRole('link', { name: t.links[key], exact: true })).toHaveAttribute('aria-current', 'page');
   }
-  await page.goto('/tools');
-  await expect(page.locator('main').first()).toBeVisible();
+  // Every tool has "← What if?" back to the hub, and the hub shows its four groups of illustrated tiles.
+  await page.goto('/loan');
+  await page.getByTestId('back-to-tools').click();
+  await expect(page).toHaveURL(/\/tools$/);
+  await expect(page.getByRole('heading', { level: 1, name: tools.hub.title })).toBeVisible();
+  for (const g of Object.values(tools.hub.groups)) {
+    await expect(page.getByRole('heading', { level: 2, name: g.title, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole('link', { name: /Can I afford it\?/ })).toHaveAttribute('href', '/afford');
   await expect(page.getByRole('navigation', { name: isMobile ? t.tabsLabel : t.sidebarLabel })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test('no chrome on the onboarding story: no sidebar, no tabs, no sample banner', async ({ page }) => {

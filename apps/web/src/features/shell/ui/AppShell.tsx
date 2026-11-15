@@ -1,6 +1,6 @@
 // The app shell (MP14, docs/ARCHITECTURE.md → Screens). Desktop (md and up): a calm left sidebar
-// (logo, Dashboard and Plan, the "Money" screens, Play with its "Daily" tag, and a Go Pro card at the
-// foot). Phone: a slim top bar (logo, Go Pro), fixed bottom tabs (Dashboard, Plan, Play, Accounts,
+// (logo, Dashboard, Plan and What if?, the "Money" screens, Play with its "Daily" tag, and a Go Pro card at the
+// foot). Phone: a slim top bar (logo, Go Pro), fixed bottom tabs (Dashboard, Plan, What if?, Play,
 // More) and a "More" sheet with the rest. The page content is padded by --shell-sidebar-w /
 // --shell-tabbar-h (globals.css) so nothing hides under the sidebar or the tab bar.
 // On a bare route (the landing and the onboarding story) none of the chrome renders: the page is

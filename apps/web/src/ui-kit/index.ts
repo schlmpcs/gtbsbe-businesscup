@@ -42,3 +42,4 @@ export { Tag, type TagProps, type TagVariant } from './Tag';
 
 /** Where a number comes from ({ name, year, url? }); re-exported so ui/ files can type props. */
 export type { Source } from '@lifeguessr/types';
+export { ToolTile, type ToolTileProps, type ToolTileTone } from './ToolTile';

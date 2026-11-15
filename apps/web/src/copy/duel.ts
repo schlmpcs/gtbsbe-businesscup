@@ -71,6 +71,8 @@ export const duel = {
     factsLabel: 'What we know',
     hintFact: 'Hint',
     hintGroup: 'Neighborhood',
+    /** The flavor caption, shown as a quote line under the facts. */
+    quote: (caption: string) => `“${caption}”`,
   },
   vs: 'VS',
 
@@ -97,8 +99,8 @@ export const duel = {
     compareHeading: 'Side by side',
     compareSub: 'Every monthly cost, life A vs life B.',
     compareLabel: 'Monthly costs by category, life A and life B',
-    compareRow: (category: string, a: string, b: string) => `${category}: life A ${a}, life B ${b} a month`,
-    decidedTag: 'Decided it',
+    compareRow: (a: string, b: string) => `: life A ${a}, life B ${b} a month`,
+    decidedTag: 'Biggest gap',
     decidedHeading: 'What decided it',
     /** The ink band's headline: the deciding category, the costlier life's amount vs the other's. */
     decidedLine: (category: string, amount: string, other: string) =>
@@ -206,7 +208,8 @@ export const duel = {
     kids: (ages: readonly { age: string; count: number }[]) =>
       `${ages.length === 1 && ages[0]!.count === 1 ? 'Kid' : 'Kids'}: ${ages.map((a) => (a.count > 1 ? `${a.count} ${a.age}` : a.age)).join(', ')}`,
     /** A fact about age (who is too young for school), never about what care costs. */
-    underSchoolAge: (n: number) => `${plural(n, 'kid', 'kids')} under school age`,
+    notInSchool: (young: number, kids: number) =>
+      kids === 1 ? 'Not in school yet' : young === kids ? 'None in school yet' : `${young} of ${kids} not in school yet`,
     allInSchool: (n: number) => (n === 1 ? 'In school' : 'All in school'),
     noCar: 'No car',
     noCarLoan: 'No car loan',

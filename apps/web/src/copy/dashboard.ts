@@ -90,6 +90,19 @@ export const dashboard = {
   duelDone: 'Done for today. Come back tomorrow.',
   duelSeeResult: 'See your result',
 
+  /** The "What if?" row: three decision tools as big tiles, then the hub (/tools). Art ids from public/art. */
+  whatIf: {
+    title: 'What if?',
+    intro: 'Test a decision before you make it.',
+    all: 'All tools',
+    allLabel: 'Open all What if? tools',
+    tiles: {
+      afford: { title: 'Can I afford it?', line: 'A purchase against your month and your plan.', art: 'afford-crane', tone: 'primary' },
+      loan: { title: 'Which loan costs less?', line: 'Offers side by side, in total dollars.', art: 'coins', tone: 'warm' },
+      decide: { title: 'Keep the car or lease?', line: 'Two paths, ten years out.', art: 'loan', tone: 'positive' },
+    },
+  },
+
   /** Where each card's link goes (accessible names of the full screens). */
   screens: {
     plan: 'your plan',

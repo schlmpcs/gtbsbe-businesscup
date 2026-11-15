@@ -11,7 +11,7 @@ import { duelTileColor } from '@/lib/duel/duelDay';
 import { shareImageUrls } from './derive';
 import type { DuelChallenge, DuelProgress } from './duelClient';
 import type {
-  ChallengeVM, DuelCardVM, DuelCategoryVM, DuelDotVM, DuelHintVM, DuelOutcome, DuelRevealVM, DuelScoreVM, DuelSummaryVM,
+  ChallengeVM, DuelCardVM, DuelCategoryVM, DuelCompareRowVM, DuelDotVM, DuelHintVM, DuelOutcome, DuelRevealVM, DuelScoreVM, DuelSummaryVM,
 } from './types';
 
 const other = (letter: DuelLetter): DuelLetter => (letter === 'A' ? 'B' : 'A');
@@ -122,6 +122,35 @@ export function buildDuelCrowd(crowd: NonNullable<PickResult['crowd']>): DuelRev
   return { letter, share: percent / 100, total };
 }
 
+/**
+ * The reveal's side-by-side rows: every category either life spends on, with both amounts (0 when a
+ * life has none), largest first. Bars share one scale, the round's largest single category, so the
+ * longest bar is full and every other one is read against it. Amounts are the PickResult's as given.
+ */
+export function buildDuelCompare(result: PickResult): DuelCompareRowVM[] {
+  const rows = new Map<CostCategory, { A: number; B: number; isEstimate: boolean }>();
+  for (const letter of ['A', 'B'] as const) {
+    for (const line of result.breakdown[letter]) {
+      const row = rows.get(line.category) ?? { A: 0, B: 0, isEstimate: false };
+      row[letter] += line.amount;
+      row.isEstimate ||= line.isEstimate;
+      rows.set(line.category, row);
+    }
+  }
+  const max = Math.max(0, ...[...rows.values()].flatMap((r) => [r.A, r.B]));
+  return [...rows]
+    .map(([category, r]) => ({
+      category,
+      A: r.A,
+      B: r.B,
+      scaleA: max > 0 ? r.A / max : 0,
+      scaleB: max > 0 ? r.B / max : 0,
+      isEstimate: r.isEstimate,
+      decided: category === result.decidedBy.category,
+    }))
+    .sort((x, y) => Math.max(y.A, y.B) - Math.max(x.A, x.B));
+}
+
 export function buildDuelReveal(round: DuelRound, pick: { choice: DuelLetter; result: PickResult }): DuelRevealVM {
   const { result, choice } = pick;
   const { costlier, amount } = duelDifference(result.totals);
@@ -142,6 +171,7 @@ export function buildDuelReveal(round: DuelRound, pick: { choice: DuelLetter; re
       otherLetter: other(top),
     },
     lesson: result.lesson,
+    categories: buildDuelCompare(result),
     crowd,
     sources: sourcesOf(result),
     isLastRound: round === DUEL_ROUND_COUNT,

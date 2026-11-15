@@ -7,6 +7,7 @@ import { useOverpaying } from '@/features/overpaying/model/useOverpaying';
 import { useOwnProfile } from '@/features/overpaying/model/useOwnProfile';
 import { OverpayingScreen } from '@/features/overpaying/ui/OverpayingScreen';
 import { useAppStore } from '@/state';
+import { BackToTools } from '../../_components/BackToTools';
 
 export default function OverpayingPage({ searchParams }: { searchParams: Promise<{ stream?: string | string[] }> }) {
   const { stream } = use(searchParams);
@@ -22,5 +23,10 @@ export default function OverpayingPage({ searchParams }: { searchParams: Promise
     onStore: (state) => setTool('overpaying', state),
     household,
   });
-  return <OverpayingScreen vm={vm} />;
+  return (
+    <>
+      <BackToTools />
+      <OverpayingScreen vm={vm} />
+    </>
+  );
 }

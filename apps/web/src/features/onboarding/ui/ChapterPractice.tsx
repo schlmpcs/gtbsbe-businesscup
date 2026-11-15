@@ -3,7 +3,7 @@
 // Reveal: both monthly totals count up and their bars grow. After round 3: "You were off by X% on
 // average" with a small per-round error strip. Every number comes from the view-model.
 import type { CSSProperties } from 'react';
-import { common, onboarding } from '@/copy';
+import { common, duel, onboarding } from '@/copy';
 import { Art, Button, cx, formatMoney, formatRate, Slider, Sticker, Tag } from '@/ui-kit';
 import type { PracticeCardVM, PracticeResultVM, PracticeSummaryVM, PracticeVM } from '../model/types';
 import { Count } from './Count';
@@ -118,10 +118,12 @@ function PracticeCard({
           {card.metro} · {t.composite}
         </p>
         {card.caption && <p className="text-sm">{card.caption}</p>}
-        <ul className="flex flex-wrap gap-xs pt-xs">
-          {card.facts.map((f) => (
-            <li key={f}>
-              <Tag className="bg-bg">{f}</Tag>
+        <ul aria-label={duel.card.factsLabel} className="grid grid-cols-2 gap-xs pt-xs">
+          {card.facts.map((g) => (
+            <li key={g.group} className="flex min-w-0 flex-col rounded-md bg-bg px-sm py-xs text-xs">
+              <span className="font-bold uppercase tracking-wide text-text-muted">{duel.facts.groups[g.group]}</span>
+              <span className="font-semibold text-text">{g.items[0]}</span>
+              <span className="text-text-muted">{g.items[1]}</span>
             </li>
           ))}
         </ul>

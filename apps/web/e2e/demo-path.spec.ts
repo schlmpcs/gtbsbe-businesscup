@@ -159,6 +159,9 @@ test('demo path: landing → story (practice, guess, statement, plan) → dashbo
   // ----- 5. Play today's five duels at /play -----
   await page.goto('/play');
   await expect(h1(page)).toHaveText(duel.title);
+  // Each life: four fact groups, and the hint explains what it opens before you pay for it.
+  await expect(page.getByRole('list', { name: duel.card.factsLabel }).first().getByRole('listitem')).toHaveCount(4);
+  await expect(page.getByText(duel.hint.explain)).toBeVisible();
   // One hint in the first round: one more fact on each card, for −10% of the round's points.
   await page.getByRole('button', { name: duel.hint.offer('10%') }).click();
   await expect(page.getByText(duel.hint.used('900'))).toBeVisible();
@@ -172,6 +175,7 @@ test('demo path: landing → story (practice, guess, statement, plan) → dashbo
       await expect(breakdown).toBeVisible();
       await expect(page.getByRole('article').filter({ has: breakdown }).getByText(/\$[\d,]+/).first()).toBeVisible();
     }
+    await expect(page.getByTestId('duel-compare').getByText(duel.reveal.decidedTag, { exact: true })).toBeVisible();
     await page.getByRole('button', { name: round === 5 ? duel.reveal.finish : duel.reveal.next }).click();
   }
   await expect(page.getByRole('heading', { name: duel.summary.heading })).toBeVisible();

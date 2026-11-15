@@ -5,7 +5,13 @@
 import Link from 'next/link';
 import { useBills } from '@/features/bills/model/useBills';
 import { BillsScreen } from '@/features/bills/ui/BillsScreen';
+import { BackToTools } from '../../_components/BackToTools';
 
 export default function BillsPage() {
-  return <BillsScreen vm={useBills()} Link={Link} />;
+  return (
+    <>
+      <BackToTools />
+      <BillsScreen vm={useBills()} Link={Link} />
+    </>
+  );
 }

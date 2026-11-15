@@ -3,6 +3,7 @@
 // The full path with a CSV and the daily duel is demo-path.spec.ts.
 import { expect, test, type Page } from '@playwright/test';
 import { common } from '../src/copy/common';
+import { duel } from '../src/copy/duel';
 import { ladder } from '../src/copy/ladder';
 import { onboarding as o } from '../src/copy/onboarding';
 
@@ -86,7 +87,14 @@ test('sample statement path with reduced motion: final numbers at once; chapter 
   test.slow();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/start');
-  // Chapter 1: one practice round shows both totals and the guess error.
+  // Chapter 1: each practice life shows the duel card's four fact groups (Home, Family, Car, Food).
+  await expect(page.getByRole('list', { name: duel.card.factsLabel })).toHaveCount(2);
+  for (const list of await page.getByRole('list', { name: duel.card.factsLabel }).all()) {
+    await expect(list.getByRole('listitem')).toHaveCount(4);
+    await expect(list).toContainText(duel.facts.groups.home);
+    await expect(list).not.toContainText('$');
+  }
+  // One practice round shows both totals and the guess error.
   await page.getByRole('button', { name: /^Life B costs more/ }).click();
   await page.getByRole('button', { name: o.practice.reveal }).click();
   await expect(page.getByTestId('practice-result')).toContainText(/off|Spot on/);

@@ -2,7 +2,7 @@
 // Link; every amount and ratio comes from the view-model (engine numbers), only formatted here.
 import { useState } from 'react';
 import { dashboard as t, forecast, goals as goalsCopy, planner, recurring as recurringCopy } from '@/copy';
-import { Art, buttonClassName, cx, formatMoney, formatMonth, formatRate, Tag } from '@/ui-kit';
+import { Art, buttonClassName, cx, formatMoney, formatMonth, formatRate, Tag, ToolTile } from '@/ui-kit';
 import type {
   BudgetGroupBarVM, ChecklistItemVM, DashboardVM, NetWorthPeriod, PlannerLinks, TransactionRowVM, UpcomingBillVM,
 } from '../model/types';
@@ -443,5 +443,43 @@ export function GameCard({ duel, Link, links, index }: CardBase & { duel: Dashbo
         </Link>
       </div>
     </Widget>
+  );
+}
+
+// ----- What if? ----------------------------------------------------------------------------------------
+
+/** Three decision tools as big illustrated tiles, then "All tools" (the /tools hub). No numbers here. */
+export function WhatIfRow({ Link, links, index }: CardBase) {
+  const w = t.whatIf;
+  const keys = ['afford', 'loan', 'decide'] as const;
+  return (
+    <section aria-labelledby="dash-whatif-title" data-testid="dashboard-whatif" className="flex flex-col gap-md">
+      <div className="flex min-h-11 flex-wrap items-end justify-between gap-sm">
+        <div className="flex flex-col">
+          <h2 id="dash-whatif-title" className="font-display text-2xl font-extrabold leading-tight">
+            {w.title}
+          </h2>
+          <p className="text-sm text-text-muted">{w.intro}</p>
+        </div>
+        <Link
+          href={links.tools}
+          aria-label={w.allLabel}
+          className="inline-flex min-h-11 items-center gap-xs rounded-md px-sm text-sm font-semibold text-primary hover:bg-primary-soft"
+        >
+          {w.all}
+          <Icon name="arrow" className="size-4" />
+        </Link>
+      </div>
+      <ul className="grid grid-cols-1 gap-lg min-[480px]:grid-cols-3">
+        {keys.map((k, i) => {
+          const tile = w.tiles[k];
+          return (
+            <li key={k}>
+              <ToolTile href={links[k]} art={tile.art} tone={tile.tone} title={tile.title} line={tile.line} size="md" index={index + i} Link={Link} />
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

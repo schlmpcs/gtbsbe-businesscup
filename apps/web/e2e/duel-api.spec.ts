@@ -78,7 +78,13 @@ test('a full duel day against the server: hint, five picks, a reload mid-day res
     page.goto('/duel'),
   ]);
   expect(daily.status()).toBe(200);
-  const { date } = (await daily.json()) as { date: string }; // read before any navigation
+  const { date, duels } = (await daily.json()) as { date: string; duels: { cards: { facts: { group: string; items: string[] }[] }[] }[] }; // read before any navigation
+  // Every card carries the four fact groups, two word lines each, and no dollar amount.
+  for (const card of duels.flatMap((x) => x.cards)) {
+    expect(card.facts.map((g) => g.group)).toEqual(['home', 'family', 'car', 'food']);
+    for (const g of card.facts) expect(g.items).toHaveLength(2);
+    expect(JSON.stringify(card.facts)).not.toContain('$');
+  }
   expect(daily.request().headers()['x-anon-id']).toMatch(/^[0-9a-f-]{36}$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.title);
   // Scored on the server: the footer no longer says "in your browser".
@@ -92,6 +98,8 @@ test('a full duel day against the server: hint, five picks, a reload mid-day res
   expect(hint.status()).toBe(200);
   expect(((await hint.json()) as { recorded: boolean }).recorded).toBe(true);
   await expect(page.getByText(t.hint.used('900'))).toBeVisible();
+  // The hint is one more row on each card: the neighborhood's price level, from the server.
+  for (const list of await page.getByRole('list', { name: t.card.factsLabel }).all()) await expect(list.getByRole('listitem')).toHaveCount(5);
   const r1 = await pickAOnServer(page, 1);
   expect([0, 900]).toContain(r1.points);
   await page.getByRole('button', { name: t.reveal.next }).click();

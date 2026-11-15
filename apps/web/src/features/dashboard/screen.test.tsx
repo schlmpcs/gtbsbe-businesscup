@@ -45,6 +45,11 @@ describe('DashboardScreen', () => {
     expect(screen.getByRole('link', { name: t.open })).toHaveAttribute('href', '/plan');
     expect(screen.getByRole('link', { name: t.duelPlay })).toHaveAttribute('href', '/play');
     expect(within(screen.getByTestId('dashboard-recent')).getAllByRole('listitem')).toHaveLength(5);
+    // What if?: three decision tools as tiles, then the hub.
+    const whatIf = screen.getByTestId('dashboard-whatif');
+    expect(within(whatIf).getByRole('heading', { level: 2, name: t.whatIf.title })).toBeInTheDocument();
+    expect(within(whatIf).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/tools', '/afford', '/loan', '/decide']);
+    expect(within(whatIf).getByRole('link', { name: t.whatIf.allLabel })).toHaveAttribute('href', '/tools');
     // Recurring: the loan and card payments on the 20th.
     expect(screen.getByText(t.recurringRemaining(formatMoney(605.92)))).toBeInTheDocument();
     // No budget and no goals yet: empty states with one button each.

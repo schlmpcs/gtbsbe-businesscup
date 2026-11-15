@@ -2,7 +2,7 @@
 import type { ComponentType, ReactNode } from 'react';
 
 export type ShellLinkKey =
-  | 'dashboard' | 'plan' | 'accounts' | 'transactions' | 'cashflow' | 'budget' | 'recurring' | 'goals'
+  | 'dashboard' | 'plan' | 'whatif' | 'accounts' | 'transactions' | 'cashflow' | 'budget' | 'recurring' | 'goals'
   | 'play' | 'pro';
 
 export type ShellIcon = ShellLinkKey | 'more';
@@ -18,7 +18,7 @@ export type ShellLinkVM = {
 };
 
 /**
- * Sidebar groups: `main` (Dashboard, Plan; no heading), `money` (Accounts … Goals, headed "Money"),
+ * Sidebar groups: `main` (Dashboard, Plan, What if?; no heading), `money` (Accounts … Goals, headed "Money"),
  * `game` (Play, set apart under a divider).
  */
 export type ShellGroupVM = { key: 'main' | 'money' | 'game'; links: ShellLinkVM[] };
@@ -35,7 +35,7 @@ export type ShellVM = {
   pro: ShellLinkVM;
   /** Where the logo goes (the dashboard). */
   homeHref: string;
-  /** Phone bottom tabs (Dashboard, Plan, Play, Accounts); "More" comes after them. */
+  /** Phone bottom tabs (Dashboard, Plan, What if?, Play); "More" comes after them. */
   tabs: ShellLinkVM[];
   /** The rest of the pages, in the phone's More sheet (Go Pro last). */
   more: ShellLinkVM[];

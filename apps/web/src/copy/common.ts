@@ -27,6 +27,7 @@ export const common = {
     links: {
       dashboard: 'Dashboard',
       plan: 'Plan',
+      whatif: 'What if?',
       accounts: 'Accounts',
       transactions: 'Transactions',
       cashflow: 'Cash flow',

@@ -4,7 +4,13 @@
 import Link from 'next/link';
 import { useSpend } from '@/features/spend/model/useSpend';
 import { SpendScreen } from '@/features/spend/ui/SpendScreen';
+import { BackToTools } from '../_components/BackToTools';
 
 export default function SpendPage() {
-  return <SpendScreen vm={useSpend()} homeHref="/" Link={Link} />;
+  return (
+    <>
+      <BackToTools width="5xl" />
+      <SpendScreen vm={useSpend()} homeHref="/" Link={Link} />
+    </>
+  );
 }

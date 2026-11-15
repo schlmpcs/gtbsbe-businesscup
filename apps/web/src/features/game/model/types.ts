@@ -4,7 +4,7 @@
 import type {
   AreaData, ClueId, ClueReveal, CostCategory, GuessResult, KidAge, LifeCard, Money, Rate, SceneLayout, SceneProp, Source,
 } from '@lifeguessr/types';
-import type { DuelLetter, DuelRound } from '@lifeguessr/types';
+import type { DuelFactGroup, DuelLetter, DuelRound } from '@lifeguessr/types';
 import type { DuelCopyStatus, DuelShareStatus, DuelTileColor } from '@/copy/duel';
 import type { GameSource } from '@/lib/config';
 import type { Loadable, SliderVM, VMError } from '@/lib/model/types';
@@ -207,7 +207,7 @@ export type PlayVM = {
 
 // ----- Duel game (S2 Duel round, S3 Reveal, S3 Day result): useDuel() in ./useDuel.ts --------
 
-export type { DuelLetter, DuelRound } from '@lifeguessr/types';
+export type { DuelFactGroup, DuelFactGroupId, DuelLetter, DuelRound } from '@lifeguessr/types';
 export type { DuelCopyStatus, DuelShareStatus, DuelTileColor } from '@/copy/duel';
 
 /**
@@ -231,8 +231,8 @@ export type DuelCardVM = {
   metro: string;
   household: string;
   caption: string;
-  /** The 4 fact chips. */
-  facts: string[];
+  /** The card's facts: Home, Family, Car, Food, two lines each (always in that order). */
+  facts: DuelFactGroup[];
   /** The hint's extra fact, once the hint is open. */
   hintFact: string | null;
   /** House sprite id for SpriteImage. */
@@ -271,6 +271,11 @@ export type DuelRevealVM = {
   decidedBy: { category: CostCategory; amount: Money; otherAmount: Money; otherLetter: DuelLetter };
   lesson: string;
   /**
+   * Every category either life spends on, largest first: both monthly amounts and bar lengths on one
+   * shared scale (amount / the largest single category of the round, 0–1). `decided` marks decidedBy.
+   */
+  categories: DuelCompareRowVM[];
+  /**
    * How other players picked: the letter most of them chose, its share (already rounded to the
    * whole percent shown, see buildDuelCrowd) and how many picks that is. Null = not enough picks yet.
    */
@@ -278,6 +283,17 @@ export type DuelRevealVM = {
   /** Every source behind both breakdowns, by category. */
   sources: { category: CostCategory; sources: Source[] }[];
   isLastRound: boolean;
+};
+
+/** One row of the reveal's side-by-side bars: what life A and life B spend on a category a month. */
+export type DuelCompareRowVM = {
+  category: CostCategory;
+  A: Money;
+  B: Money;
+  scaleA: Rate;
+  scaleB: Rate;
+  isEstimate: boolean;
+  decided: boolean;
 };
 
 export type DuelDotVM = { round: DuelRound; state: 'current' | 'upcoming' | DuelTileColor };

@@ -12,6 +12,11 @@ export const PLANNER_ROUTES = {
   goals: '/goals',
   plan: '/plan',
   duel: '/play',
+  /** The "What if?" hub and the three decision tools on the dashboard's row. */
+  tools: '/tools',
+  afford: '/afford',
+  loan: '/loan',
+  decide: '/decide',
   guessOwnMonth: '/start?ch=2',
 } as const;
 

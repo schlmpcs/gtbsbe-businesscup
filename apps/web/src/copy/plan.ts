@@ -304,10 +304,13 @@ export const plan = {
       atRetirement: 'at retirement',
       empty: 'No moves to suggest right now.',
     },
+    /** "Check a decision": the What if? tools as illustrated tiles (art ids from public/art), then the hub. */
     decisions: {
       title: 'Check a decision',
-      afford: { title: 'Can I afford it?', body: 'A purchase against your month and your plan.', href: '/afford' },
-      loan: { title: 'Which loan costs less?', body: 'Two offers side by side, in total dollars.', href: '/loan' },
+      afford: { title: 'Can I afford it?', body: 'A purchase against your month and your plan.', href: '/afford', art: 'afford-crane', tone: 'primary' },
+      loan: { title: 'Which loan costs less?', body: 'Two offers side by side, in total dollars.', href: '/loan', art: 'coins', tone: 'warm' },
+      decide: { title: 'Keep the car or lease?', body: 'Two paths, one decision, ten years out.', href: '/decide', art: 'loan', tone: 'positive' },
+      all: { label: 'All What if? tools', href: '/tools' },
     },
     compare: {
       intro: 'Two scenarios side by side, year by year.',

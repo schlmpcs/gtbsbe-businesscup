@@ -7,9 +7,15 @@ import { usePayoffWiring } from '@/features/loan/model/wiring';
 import { usePayoffPlanner } from '@/features/loan/model/usePayoffPlanner';
 import { useLoanLab } from '@/features/loan/model/useLoanLab';
 import { LoanLabScreen } from '@/features/loan/ui/LoanLabScreen';
+import { BackToTools } from '../_components/BackToTools';
 
 export default function LoanLabPage() {
   const vm = useLoanLab();
   const payoff = usePayoffPlanner(vm, usePayoffWiring());
-  return <LoanLabScreen vm={vm} payoff={payoff} Link={Link} />;
+  return (
+    <>
+      <BackToTools />
+      <LoanLabScreen vm={vm} payoff={payoff} Link={Link} />
+    </>
+  );
 }

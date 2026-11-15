@@ -4,6 +4,13 @@ import type { ShellIcon as IconName } from '../model/types';
 const PATHS: Record<IconName, string[]> = {
   dashboard: ['M4 4h7v9H4Z', 'M13 4h7v5h-7Z', 'M13 11h7v9h-7Z', 'M4 15h7v5H4Z'],
   plan: ['M3 20h18', 'M4 16l5-5 4 3 7-8', 'M15 6h5v5'],
+  // A speech bubble with a question mark and a small sparkle: "what if?".
+  whatif: [
+    'M4 11.5a7 7 0 0 1 7-7h1a7 7 0 0 1 0 14H8l-3.5 2.5.9-4A7 7 0 0 1 4 11.5Z',
+    'M9.6 9.6a2 2 0 1 1 2.8 1.8c-.5.3-.9.7-.9 1.3v.3',
+    'M11.5 15.2h.01',
+    'M19.5 2.5v3M18 4h3',
+  ],
   accounts: ['M3 9.5 12 4l9 5.5', 'M5 10v8M9.5 10v8M14.5 10v8M19 10v8', 'M3 20.5h18'],
   transactions: ['M4 7h13', 'M14 4l3 3-3 3', 'M20 17H7', 'M10 14l-3 3 3 3'],
   cashflow: ['M3 6h6c4 0 4 12 8 12h4', 'M3 18h6c1.5 0 2.4-1.7 3-4', 'M14 9c.7-1.8 1.6-3 3-3h4'],

@@ -2,10 +2,10 @@
 // onboarding/ui/*, which may import only this file, @/ui-kit/** and @/copy (lint-enforced). The story
 // reuses the ladder's and the plan's view-models (re-exported below), and adds its own: the practice
 // duel (chapter 1), the month reveal (chapter 3) and the story's progress.
-import type { CostCategory, DuelLetter, Money, Rate } from '@lifeguessr/types';
+import type { CostCategory, DuelFactGroup, DuelLetter, Money, Rate } from '@lifeguessr/types';
 import type { SliderVM } from '@/lib/model/types';
 
-export type { CostCategory, DuelLetter, Money, Rate } from '@lifeguessr/types';
+export type { CostCategory, DuelFactGroup, DuelLetter, Money, Rate } from '@lifeguessr/types';
 export type { SliderVM } from '@/lib/model/types';
 export type {
   ClosestLifeVM, GuessPayoffVM, GuessYourselfVM, QuickSlidersVM, StatementUploadError, StatementUploadVM,
@@ -70,7 +70,8 @@ export type PracticeCardVM = {
   household: string;
   metro: string;
   caption: string;
-  facts: string[];
+  /** The duel card's fact groups (Home, Family, Car, Food), two lines each, from the shared builder. */
+  facts: DuelFactGroup[];
   art: PracticeArt;
   /** Monthly total (engine costOfLife total.mid), after the reveal only. */
   total: Money | null;

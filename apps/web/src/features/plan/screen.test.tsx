@@ -143,6 +143,8 @@ describe('PlanScreen', () => {
     render(<Harness />);
     expect(screen.getByRole('link', { name: new RegExp(t.decisions.afford.title) }).getAttribute('href')).toBe('/afford');
     expect(screen.getByRole('link', { name: new RegExp(t.decisions.loan.title) }).getAttribute('href')).toBe('/loan');
+    expect(screen.getByRole('link', { name: new RegExp(t.decisions.decide.title.replace('?', '\\?')) }).getAttribute('href')).toBe('/decide');
+    expect(screen.getByRole('link', { name: t.decisions.all.label }).getAttribute('href')).toBe('/tools');
   });
 
   it('Compare view: the sentence and the difference table', () => {

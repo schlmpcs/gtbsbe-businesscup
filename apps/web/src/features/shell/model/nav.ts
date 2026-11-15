@@ -2,9 +2,9 @@
 // screens (Accounts, Transactions, Cash flow, Budget, Recurring, Goals) and Play; the phone's bottom
 // tabs hold four and "More" the rest. Pure: the hook in useShell.ts adds the pathname and the More
 // sheet's state.
-// Routes that still exist but are not in the nav (reached from inside other screens): /future,
-// /tools and its tools, /afford and /loan (from /plan), /decide, /checkin, /spend, /together. They
-// light up the nav link they belong to (`match`) so the person still sees where they are.
+// "What if?" (/tools) is the hub of the decision tools; each tool (/afford, /loan, /decide, /checkin,
+// /together, /spend, /tools/*) lights it up (`match`) so the person still sees where they are.
+// /future is kept out of the nav and lights up Plan.
 import type { ShellGroupVM, ShellLinkKey, ShellLinkVM } from './types';
 
 type NavDef = {
@@ -17,12 +17,13 @@ type NavDef = {
 
 const D = {
   dashboard: { key: 'dashboard', href: '/dashboard' },
-  plan: { key: 'plan', href: '/plan', match: ['/future', '/afford', '/loan', '/decide', '/checkin', '/together'] },
+  plan: { key: 'plan', href: '/plan', match: ['/future'] },
+  whatif: { key: 'whatif', href: '/tools', match: ['/afford', '/loan', '/decide', '/checkin', '/together', '/spend'] },
   accounts: { key: 'accounts', href: '/accounts' },
-  transactions: { key: 'transactions', href: '/transactions', match: ['/spend'] },
+  transactions: { key: 'transactions', href: '/transactions' },
   cashflow: { key: 'cashflow', href: '/cashflow', match: ['/cash-flow'] },
   budget: { key: 'budget', href: '/budget' },
-  recurring: { key: 'recurring', href: '/recurring', match: ['/tools/bills', '/tools/subscriptions', '/tools/overpaying'] },
+  recurring: { key: 'recurring', href: '/recurring' },
   goals: { key: 'goals', href: '/goals' },
   // The daily game; the challenge link (/duel) is the same game.
   play: { key: 'play', href: '/play', match: ['/duel'], badge: 'daily' },
@@ -30,12 +31,12 @@ const D = {
 } as const satisfies Record<ShellLinkKey, NavDef>;
 
 const SIDEBAR: { key: ShellGroupVM['key']; links: ShellLinkKey[] }[] = [
-  { key: 'main', links: ['dashboard', 'plan'] },
+  { key: 'main', links: ['dashboard', 'plan', 'whatif'] },
   { key: 'money', links: ['accounts', 'transactions', 'cashflow', 'budget', 'recurring', 'goals'] },
   { key: 'game', links: ['play'] },
 ];
-const TABS: ShellLinkKey[] = ['dashboard', 'plan', 'play', 'accounts'];
-const MORE: ShellLinkKey[] = ['transactions', 'cashflow', 'budget', 'recurring', 'goals', 'pro'];
+const TABS: ShellLinkKey[] = ['dashboard', 'plan', 'whatif', 'play'];
+const MORE: ShellLinkKey[] = ['accounts', 'transactions', 'cashflow', 'budget', 'recurring', 'goals', 'pro'];
 
 /**
  * Routes shown without the shell's chrome: the landing (exactly `/`) and the onboarding story

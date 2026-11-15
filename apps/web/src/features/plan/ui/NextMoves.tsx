@@ -1,8 +1,9 @@
 // Next Moves (usePlanMoves): ranked cards, the dollar effect at retirement big, in the order the hook
-// gives; then "Check a decision" links to /afford and /loan. The route passes its Link component in.
+// gives; then "Check a decision": the What if? tools (/afford, /loan, /decide) as illustrated tiles and a
+// link to all of them (/tools). The route passes its Link component in.
 import type { ComponentType, ReactNode } from 'react';
 import { plan as copy } from '@/copy';
-import { Button, Tag, cx } from '@/ui-kit';
+import { Button, Tag, ToolTile, cx } from '@/ui-kit';
 import type { PlanMovesVM } from '../model/types';
 
 export type PlanLinkComponent = ComponentType<{ href: string; className?: string; children?: ReactNode }>;
@@ -64,21 +65,20 @@ export function NextMoves({ vm, Link = DefaultLink }: { vm: PlanMovesVM; Link?: 
         </ol>
       )}
 
-      <div className="flex flex-col gap-sm pt-sm">
-        <h3 className="section-label">{d.title}</h3>
-        <ul className="grid gap-md sm:grid-cols-2">
-          {[d.afford, d.loan].map((x) => (
+      <div className="flex flex-col gap-md pt-sm">
+        <div className="flex min-h-11 flex-wrap items-center justify-between gap-sm">
+          <h3 className="section-label">{d.title}</h3>
+          <Link
+            href={d.all.href}
+            className="inline-flex min-h-11 items-center gap-xs rounded-md px-sm text-sm font-semibold text-primary hover:bg-primary-soft"
+          >
+            {d.all.label} <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+        <ul className="grid grid-cols-1 gap-lg min-[480px]:grid-cols-3">
+          {[d.afford, d.loan, d.decide].map((x, i) => (
             <li key={x.href}>
-              <Link
-                href={x.href}
-                className="card flex min-h-11 items-center justify-between gap-md p-lg transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="font-semibold">{x.title}</span>
-                  <span className="text-sm text-text-muted">{x.body}</span>
-                </span>
-                <span aria-hidden="true" className="text-xl text-primary">→</span>
-              </Link>
+              <ToolTile href={x.href} art={x.art} tone={x.tone} title={x.title} line={x.body} size="md" index={i} Link={Link} />
             </li>
           ))}
         </ul>

@@ -1,11 +1,12 @@
 // P1 Dashboard (/dashboard): a greeting, the setup checklist while something is missing, then a grid of
 // widget cards (two columns on desktop, one on a phone): the plan with its Chance of success, net worth,
-// spending, budget, recurring bills, recent transactions, goals and today's game. Presentational: every
-// number comes from useDashboard(); the route passes its Link.
+// the "What if?" row (three decision tools as illustrated tiles, then all tools), spending, budget,
+// recurring bills, recent transactions, goals and today's game. Presentational: every number comes from
+// useDashboard(); the route passes its Link.
 import { dashboard as t, planner } from '@/copy';
 import { formatMonthYear } from '@/ui-kit';
 import type { DashboardVM } from '../model/types';
-import { BudgetCard, ChecklistCard, GameCard, GoalsCard, NetWorthCard, PlanCard, RecentCard, RecurringCard, SpendingCard } from './Cards';
+import { BudgetCard, ChecklistCard, GameCard, GoalsCard, NetWorthCard, PlanCard, RecentCard, RecurringCard, SpendingCard, WhatIfRow } from './Cards';
 import type { DashLink } from './Widget';
 
 export type { DashLink } from './Widget';
@@ -35,6 +36,9 @@ export function DashboardScreen({ vm, Link }: DashboardScreenProps) {
           <div className="grid grid-cols-1 gap-lg lg:grid-cols-2">
             <PlanCard {...base} index={0} plan={vm.plan} topMove={vm.topMove} />
             <NetWorthCard {...base} index={1} netWorth={vm.netWorth} />
+          </div>
+          <WhatIfRow {...base} index={2} />
+          <div className="grid grid-cols-1 gap-lg lg:grid-cols-2">
             <SpendingCard {...base} index={2} spending={vm.spending} />
             <BudgetCard {...base} index={3} budget={vm.budget} />
             <RecurringCard {...base} index={4} recurring={vm.recurring} />
