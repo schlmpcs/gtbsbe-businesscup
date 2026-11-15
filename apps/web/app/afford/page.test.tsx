@@ -4,7 +4,8 @@ import type { Purchase } from '@lifeguessr/types';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { afford as t, common, forecast, pro, workTime as workTimeCopy } from '@/copy';
+import { afford as t, common, forecast, pro, toolPlan, workTime as workTimeCopy } from '@/copy';
+import { resetPlanStore, usePlanStore } from '@/features/plan/model/planStore';
 import type { AffordResultVM } from '@/features/afford/model/types';
 import { AffordResultPanel } from '@/features/afford/ui/AffordResultPanel';
 import type * as AiParse from '@/lib/api/aiParse';
@@ -20,6 +21,7 @@ vi.mock('@/lib/api/aiParse', async (importOriginal) => ({
 
 beforeEach(() => {
   resetClientState();
+  resetPlanStore();
   resetProState(); // a free user, and no request leaves the test
   parseText.mockReset();
 });
@@ -34,19 +36,38 @@ async function renderReady() {
 const verdict = () => screen.getByTestId('afford-verdict');
 
 describe('/afford (S11)', () => {
-  it('a $300 cash purchase fits, with the chart, horizons and cheapest way', async () => {
+  it('a $300 cash purchase fits (stretched on the demo’s thin cushion), with the chart, horizons and cheapest way', async () => {
     const user = await renderReady();
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(t.screens.S11); // no screen ID shown
     expect(screen.getByText(t.form.empty)).toBeTruthy();
     await user.type(screen.getByRole('textbox', { name: t.form.amount }), '300');
     await waitFor(() => expect(verdict().dataset.verdict).toBe('fits'));
-    expect(verdict().textContent).toBe(t.result.verdicts.fits);
+    // The demo keeps about 1 month of costs in cash, under the 3 months "comfortably" needs.
+    expect(verdict().dataset.tier).toBe('stretched');
+    expect(verdict().textContent).toBe(t.result.tiers.stretched);
+    expect(within(screen.getByTestId('afford-kpis')).getByText(t.result.kpis.cushion)).toBeTruthy();
     expect(screen.getByRole('figure', { name: t.result.chartTitle(t.defaultPurchaseLabel) })).toBeTruthy();
     const table = screen.getByRole('table', { name: t.result.horizonsCaption });
     expect(within(table).getAllByRole('row')).toHaveLength(5);
     expect(screen.getByText(t.result.cheapestTitle)).toBeTruthy();
     expect(screen.getByText((text) => text.startsWith(t.result.cheapestSame))).toBeTruthy();
     for (const tag of screen.getAllByTestId('afford-forecast-source')) expect(tag).toHaveTextContent(forecast.source.rules);
+  });
+
+  it('"Add to my plan" measures the purchase on the plan and adds it to the active scenario', async () => {
+    const user = await renderReady();
+    await user.type(screen.getByRole('textbox', { name: t.form.label }), 'Couch');
+    await user.type(screen.getByRole('textbox', { name: t.form.amount }), '2400');
+    const card = await screen.findByTestId('tool-plan-impact');
+    expect(within(card).getByText(toolPlan.atRetirement(67))).toBeTruthy();
+    const active = () => usePlanStore.getState().scenarios.find((s) => s.id === usePlanStore.getState().activeId)!;
+    const before = active().events.length;
+    await user.click(within(card).getByRole('button', { name: toolPlan.add }));
+    expect(active().events).toHaveLength(before + 1);
+    expect(active().events.at(-1)).toMatchObject({ type: 'expense', name: 'Couch', amount: 2400, cadence: 'once', enabled: true });
+    expect(within(card).getByText(toolPlan.added)).toBeTruthy();
+    // Once added, the same purchase can't be added twice.
+    expect(within(card).queryByRole('button', { name: toolPlan.add })).toBeNull();
   });
 
   it('an example chip fills the fields', async () => {
@@ -63,6 +84,7 @@ describe('/afford (S11)', () => {
     await user.type(screen.getByRole('textbox', { name: t.form.amount }), '15000');
     await user.click(screen.getByRole('radio', { name: t.form.payWithOptions.card }));
     await waitFor(() => expect(verdict().dataset.verdict).toBe('no'));
+    expect(verdict().textContent).toBe(t.result.tiers.notYet);
     expect(screen.getByText(t.result.failsOn.cushion(t.result.cushionMonths(1)))).toBeTruthy();
   });
 
@@ -148,8 +170,13 @@ describe('AffordResultPanel', () => {
     withoutPoints: points,
     horizons: [],
     workTime: null,
+    tier: 'notYet',
+    stretchedBy: null,
+    cushion: { before: 1.2, after: 0.8 },
+    debtLoad: { before: 0.1, after: 0.4 },
+    chart: [0, 5, 10].map((year) => ({ year, with: 1000 * year, without: 1200 * year })),
   };
-  const rules = { cushionMonths: 1, debtLoadRed: 0.36 };
+  const rules = { cushionMonths: 1, debtLoadRed: 0.36, debtLoadYellow: 0.2, comfortableCushionMonths: 3 };
   const panel = (data: AffordResultVM) => (
     <AffordResultPanel result={{ status: 'ready', data }} rules={rules} invalidFields={[]} purchaseLabel="Car" chosenWay="loan" />
   );
@@ -175,13 +202,26 @@ describe('AffordResultPanel', () => {
   });
 
   it('fits with a broken baseline shows the heads-up; wait shows the months', () => {
-    const { unmount } = render(panel({ ...base, verdict: 'fits', failsOn: null, baselineFails: true }));
+    const { unmount } = render(panel({ ...base, verdict: 'fits', tier: 'comfortable', failsOn: null, baselineFails: true }));
     expect(screen.getByRole('note').textContent).toBe(t.result.baseline.fits);
     unmount();
     render(panel({ ...base, verdict: 'wait', waitMonths: 3, failsOn: 'cushion' }));
-    expect(screen.getByTestId('afford-verdict').textContent).toBe(t.result.verdicts.wait(3));
+    expect(screen.getByTestId('afford-verdict').textContent).toBe(t.result.tiers.notYet);
+    expect(screen.getByText(t.result.reasons.wait(3))).toBeTruthy();
     expect(screen.getByText(t.result.waitBody(3))).toBeTruthy();
     expect(screen.getByText(t.result.failsOn.cushion(t.result.cushionMonths(1)))).toBeTruthy();
+  });
+
+  it('says why it is comfortable or stretched, with the numbers from the view-model', () => {
+    const { unmount } = render(panel({ ...base, verdict: 'fits', tier: 'comfortable', failsOn: null, cushion: { before: 6, after: 5.5 }, debtLoad: { before: 0.1, after: 0.1 } }));
+    expect(screen.getByTestId('afford-verdict').textContent).toBe(t.result.tiers.comfortable);
+    expect(screen.getByText(t.result.reasons.comfortable('5.5 mo', '10%'))).toBeTruthy();
+    unmount();
+    const { unmount: u2 } = render(panel({ ...base, verdict: 'fits', tier: 'stretched', stretchedBy: 'debtLoad', failsOn: null, debtLoad: { before: 0.1, after: 0.25 }, cushion: { before: 6, after: 5 } }));
+    expect(screen.getByText(t.result.reasons.stretchedDebt('25%', '20%'))).toBeTruthy();
+    u2();
+    render(panel({ ...base, verdict: 'fits', tier: 'stretched', stretchedBy: 'cushion', failsOn: null, cushion: { before: 1.2, after: 0.8 } }));
+    expect(screen.getByText(t.result.reasons.stretchedThin('1.2 mo', '0.8 mo', '3 mo'))).toBeTruthy();
   });
 
   it('shows the price in work time next to the verdict, tagged when take-home pay is an estimate', () => {

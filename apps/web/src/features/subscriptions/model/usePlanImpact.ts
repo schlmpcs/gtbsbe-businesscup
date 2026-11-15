@@ -43,15 +43,20 @@ export type PlanImpactVM =
 export type ReadyPlanImpactVM = Extract<PlanImpactVM, { status: 'ready' }>;
 
 /** One move: its impact on the active scenario and the way to add it. */
-export function usePlanImpact(candidate: MoveCandidate | null): PlanImpactVM {
+export function usePlanImpact(candidate: MoveCandidate | null, opts: PlanImpactOptions = {}): PlanImpactVM {
   const list = useMemo(() => (candidate ? [candidate] : []), [candidate]);
-  return usePlanImpacts(list)[0] ?? NONE;
+  return usePlanImpacts(list, opts)[0] ?? NONE;
 }
+
+export type PlanImpactOptions = {
+  /** Called after a move is added (the tool sends its `move_committed` event: the kind only). */
+  onAdded?: (move: Move) => void;
+};
 
 const NONE: PlanImpactVM = { status: 'none' };
 
 /** Several moves, each measured on its own against the active scenario (in the order given). */
-export function usePlanImpacts(candidates: readonly MoveCandidate[]): PlanImpactVM[] {
+export function usePlanImpacts(candidates: readonly MoveCandidate[], { onAdded }: PlanImpactOptions = {}): PlanImpactVM[] {
   useScenarios(); // seeds the scenarios from the profile, as /plan does
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
   const applied = usePlanStore((s) => s.movesApplied[s.activeId] ?? NO_MOVES);
@@ -69,10 +74,12 @@ export function usePlanImpacts(candidates: readonly MoveCandidate[]): PlanImpact
   const add = useCallback(
     (candidate: MoveCandidate, effect: Money) => {
       if (!scenarioId) return;
+      const move = asMove(candidate, effect);
       removeMove(scenarioId, candidate.id);
-      applyMove(scenarioId, asMove(candidate, effect));
+      applyMove(scenarioId, move);
+      onAdded?.(move);
     },
-    [scenarioId, applyMove, removeMove],
+    [scenarioId, applyMove, removeMove, onAdded],
   );
   const remove = useCallback((id: string) => scenarioId && removeMove(scenarioId, id), [scenarioId, removeMove]);
 

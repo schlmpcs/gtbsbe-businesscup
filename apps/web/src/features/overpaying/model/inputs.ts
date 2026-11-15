@@ -100,8 +100,9 @@ export function initialDraft(
   profile: Profile | null,
   stored: OverpayingToolState | undefined,
   household?: { facts: HouseholdFacts; zip: string | null } | null,
+  ledger?: LedgerAverages | null,
 ): { draft: Draft; prefill: PrefillVM } {
-  const result = initialDraftFromProfile(profile, stored);
+  const result = initialDraftFromProfile(profile, stored, ledger ?? null);
   if (!household) return result;
   const { draft, prefill } = result;
   if (draft.householdEntered) return result;
@@ -116,7 +117,14 @@ export function initialDraft(
   return { draft: { ...draft, inputs, householdEntered: true }, prefill: { ...prefill, zip: prefill.zip || fillZip } };
 }
 
-function initialDraftFromProfile(profile: Profile | null, stored: OverpayingToolState | undefined): { draft: Draft; prefill: PrefillVM } {
+/** Monthly averages of the person's transactions by category (engine statementAverages over the ledger). */
+export type LedgerAverages = Partial<Record<CostCategory, Money>>;
+
+function initialDraftFromProfile(
+  profile: Profile | null,
+  stored: OverpayingToolState | undefined,
+  ledger: LedgerAverages | null,
+): { draft: Draft; prefill: PrefillVM } {
   if (stored) {
     const amounts = noAmounts();
     for (const line of BENCHMARK_LINES) amounts[line] = stored[line] ?? null;

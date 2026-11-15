@@ -1,12 +1,13 @@
 'use client';
 
-// S21 Subscription audit (`/tools/subscriptions`): statement → findings → plan; guess → ticks → reveal as the by-hand fallback.
-// Placeholder UI: tokens and copy only. All data and actions come from useSubscriptions(); nothing is
-// computed here. The designer's frames (docs/design/08-subscription-audit.md) replace it later.
-import type { ReactNode } from 'react';
+// "What am I still paying for?" (`/tools/subscriptions`): transactions or statement → findings (tick what
+// you would stop, see what it does to your plan) → cancel plan; guess → ticks → reveal as the by-hand
+// fallback. Tokens and copy only. All data and actions come from useSubscriptions() and usePlanImpact();
+// nothing is computed here.
+import type { ComponentType, ReactNode } from 'react';
 import { subscriptions as t } from '@/copy';
-import { PageHeader, Stack } from '@/ui-kit';
-import type { SubscriptionsVM } from '../model/types';
+import { Art, PageHeader, Stack } from '@/ui-kit';
+import type { PlanImpactVM, SubscriptionsVM } from '../model/types';
 import { CancelPlan } from './CancelPlan';
 import { FindingsList } from './FindingsList';
 import { GuessStep } from './GuessStep';
@@ -16,15 +17,25 @@ import { StepNav } from './StepNav';
 import { TickList } from './TickList';
 import { UploadStep } from './UploadStep';
 
-/**
- * `planResults`: the measured part of the cancel plan (the 10-year number, add as move). It asks the
- * forecast route, so the screen's owner builds it only while it is wanted; it is shown on the plan step.
- */
-export function SubscriptionsScreen({ vm, planResults }: { vm: SubscriptionsVM; planResults?: ReactNode }) {
+const NO_IMPACT: PlanImpactVM = { status: 'none' };
+
+export type SubscriptionsScreenProps = {
+  vm: SubscriptionsVM;
+  /** What the ticked cancel plan does to the person's plan (usePlanImpact). */
+  impact?: PlanImpactVM;
+  Link?: ComponentType<{ href: string; className?: string; children?: ReactNode }>;
+};
+
+export function SubscriptionsScreen({ vm, impact = NO_IMPACT, Link }: SubscriptionsScreenProps) {
   return (
-    <main className="mx-auto w-full max-w-(--container-2xl) px-lg py-xl">
+    <main className="mx-auto w-full max-w-(--container-5xl) px-lg pb-3xl pt-md">
       <Stack gap="xl">
-        <PageHeader title={t.screens.S21} intro={t.intro} />
+        <PageHeader
+          eyebrow={t.eyebrow}
+          title={t.screens.S21}
+          intro={t.intro}
+          aside={<Art name="streaming" className="hidden h-28 w-28 items-center sm:flex" />}
+        />
         {vm.status === 'loading' ? (
           <p role="status" className="text-sm text-text-muted">
             {t.loading}
@@ -45,11 +56,14 @@ export function SubscriptionsScreen({ vm, planResults }: { vm: SubscriptionsVM; 
                   statement={vm.statement}
                   canPlan={vm.steps.some((s) => s.id === 'plan' && s.available)}
                   onPlan={() => vm.goTo('plan')}
+                  plan={vm.plan}
+                  impact={impact}
+                  Link={Link}
                 />
                 <UploadStep statement={vm.statement} />
               </Stack>
             )}
-            {vm.step === 'plan' && <CancelPlan plan={vm.plan} apply={vm.apply} renewals={vm.renewals} results={planResults} />}
+            {vm.step === 'plan' && <CancelPlan plan={vm.plan} apply={vm.apply} renewals={vm.renewals} impact={impact} Link={Link} />}
             <KeepNote hasLocalData={vm.hasLocalData} onClear={vm.clearLocalData} />
           </>
         )}

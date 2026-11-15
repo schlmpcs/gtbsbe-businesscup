@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { forecast, mocks } from '@/copy';
 import { Button, buttonClassName, cx, EstimateTag, Field, formatMoney, NumberInput, PageHeader, Tag } from '@/ui-kit';
 import { CountUp, KpiStrip, MOTION, Panel, Segmented, TONE_BG, type ChartTone } from '@/ui-kit/reports';
+import { ToolPlanImpact } from '@/ui-kit/ToolPlanImpact';
 import type {
   AlternativeKind, CarCostVM, DecideFieldVM, DecidePlanVM, DecideResultVM, DecideVM, FieldOrigin,
 } from '../model/types';
@@ -173,71 +174,52 @@ function Costs({ vm, r }: { vm: DecideVM; r: DecideResultVM }) {
 
 function PlanCard({ vm, plan, links, Link }: { vm: DecideVM; plan: DecidePlanVM; links: DecideLinks; Link: LinkComponent }) {
   const p = t.plan;
-  const impact = plan.impact?.status === 'ready' ? plan.impact.data : null;
+  const picker = (
+    <Segmented
+      legend={p.choose}
+      showLegend
+      name="decide-plan-path"
+      value={plan.path}
+      options={[
+        { value: 'keep', label: p.paths.keep },
+        { value: 'alternative', label: t.kindsShort[vm.alternativeKind] },
+      ]}
+      onChange={plan.setPath}
+    />
+  );
+  const what = plan.event
+    ? plan.event.kind === 'leaseExpense'
+      ? p.what.lease(money(plan.event.amount))
+      : p.what.buy(money(plan.event.amount))
+    : '';
   return (
-    <Panel title={p.title} delay={200} data-testid="decide-plan">
-      <div className="flex flex-col gap-md">
-        <Segmented
-          legend={p.choose}
-          showLegend
-          name="decide-plan-path"
-          value={plan.path}
-          options={[
-            { value: 'keep', label: p.paths.keep },
-            { value: 'alternative', label: t.kindsShort[vm.alternativeKind] },
-          ]}
-          onChange={plan.setPath}
+    <div className="flex min-w-0 flex-col gap-md" data-testid="decide-plan">
+      {picker}
+      {plan.event ? (
+        <ToolPlanImpact
+          scenarioName={plan.tool.scenarioName}
+          preview={plan.tool.preview}
+          add={plan.tool.add}
+          added={plan.tool.added}
+          planHref={plan.tool.planHref}
+          what={what}
+          Link={Link}
         />
-        {plan.event ? (
-          <>
-            <p className="text-sm">
-              {plan.event.kind === 'leaseExpense'
-                ? p.event.leaseExpense(money(plan.event.amount), plan.event.year)
-                : p.event.financedExpense(money(plan.event.amount), plan.event.year)}
-            </p>
-            {impact && (
-              <div className="flex flex-col gap-xs rounded-lg bg-bg p-md" data-testid="decide-plan-impact">
-                <span className="text-sm text-text-muted">{p.impact(impact.retireAge)}</span>
-                <span className={cx('font-display text-2xl font-extrabold tabular-nums', impact.atRetirement < 0 ? 'text-negative' : 'text-positive')}>
-                  <CountUp value={impact.atRetirement} format={(v) => formatMoney(v, { signed: true })} />
-                </span>
-                {plan.scenarioName && <span className="text-xs text-text-muted">{p.scenario(plan.scenarioName)}</span>}
-              </div>
-            )}
-            {plan.impact?.status === 'error' && <ErrorNote error={plan.impact.error} />}
-            {plan.added ? (
-              <p role="status" className="flex flex-wrap items-center gap-md">
-                <span className="inline-flex items-center gap-xs font-semibold text-positive">
-                  <span aria-hidden="true">✓</span>
-                  {p.added}
-                </span>
-                <Link href={plan.href} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
-                  {p.open} <span aria-hidden="true">→</span>
-                </Link>
-              </p>
-            ) : (
-              <Button className="self-start" onClick={plan.add}>
-                {p.add}
-              </Button>
-            )}
-          </>
-        ) : plan.noEventReason === 'noCar' ? (
+      ) : (
+        <section className="card card-pad flex flex-col gap-sm" aria-label={p.title}>
+          <h2 className="text-lg font-bold leading-tight">{p.title}</h2>
           <p className="text-sm text-text-muted">
-            {p.noCarNote}{' '}
-            <Link href={links.budget} className="font-semibold text-primary underline-offset-2 hover:underline">
-              {p.noCarLink}
+            {plan.noEventReason === 'noCar' ? p.noCarNote : p.keepNote}{' '}
+            <Link
+              href={plan.noEventReason === 'noCar' ? links.budget : plan.tool.planHref}
+              className="font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              {plan.noEventReason === 'noCar' ? p.noCarLink : p.open}
             </Link>
           </p>
-        ) : (
-          <p className="text-sm text-text-muted">
-            {p.keepNote}{' '}
-            <Link href={plan.href} className="font-semibold text-primary underline-offset-2 hover:underline">
-              {p.open}
-            </Link>
-          </p>
-        )}
-      </div>
-    </Panel>
+        </section>
+      )}
+    </div>
   );
 }
 

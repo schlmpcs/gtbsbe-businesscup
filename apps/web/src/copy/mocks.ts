@@ -86,16 +86,13 @@ export const mocks = {
     // ----- plan
     plan: {
       title: 'What it does to your plan',
-      choose: 'Add which path?',
+      choose: 'Put which path on your plan?',
       paths: { keep: 'Keep it' },
-      impact: (age: number) => `Net worth at ${age} on your plan`,
-      scenario: (name: string) => `Measured on “${name}”, your active plan.`,
-      event: {
-        leaseExpense: (amount: string, year: number) => `Adds an Expense: ${amount} a month from ${year}, for 10 years.`,
-        financedExpense: (amount: string, year: number) => `Adds an Expense: a ${amount} car in ${year}, on a loan.`,
+      /** What the event is called in the shared plan card ("Adds “…” to your plan’s timeline"). */
+      what: {
+        lease: (amount: string) => `Car lease, ${amount} a month for 10 years`,
+        buy: (amount: string) => `A ${amount} car, on a loan`,
       },
-      add: 'Add to my plan',
-      added: 'Added to your plan',
       open: 'Open plan',
       keepNote: 'Keeping is already in your plan: your car loan and Car budget line are part of it.',
       noCarNote: 'Going car-free shows up in your plan as a lower Car budget line.',
@@ -157,53 +154,59 @@ export const mocks = {
   },
 
   checkin: {
-    /** The page title: "October check-in". */
+    /** The page title: "November check-in". */
     eyebrow: (month: string) => `${month} check-in`,
     /** Small label over the title. */
     kicker: 'Monthly check-in',
-    titleOver: (amount: string) => `You’re ${amount} over your usual month.`,
-    titleUnder: (amount: string) => `You’re ${amount} under your usual month.`,
-    titleEven: 'Right on your usual month.',
-    titleWasOver: (amount: string) => `You were ${amount} over your usual month.`,
-    titleWasUnder: (amount: string) => `You were ${amount} under your usual month.`,
-    titleNoAverage: (month: string) => `How ${month} is going`,
-    titleNoAverageDone: (month: string) => `How ${month} went`,
     titleNoData: 'How this month is going',
-    scoreLabel: 'This month so far',
-    scoreLabelDone: 'The month',
-    projected: 'projected this month',
-    spent: 'spent this month',
-    average: 'your 3-month average',
-    progress: 'of the card paid this month',
-    needHistory: (have: number) => `Your usual month needs 3 past months of statements (${have} so far).`,
-    noDataHint: 'From your profile. Add a statement to see your real month.',
-    sourceLabel: 'Statement months',
-    sources: { uploads: 'My statements', sample: 'Sample statement' },
-    sampleNote: 'Sample statement, not yours. Add your own to see your month.',
-    /** Ends the one muted line under the headline (after the sample note). */
-    notSaved: 'Nothing is saved yet.',
-    /** The ink card with the month's totals (engine monthEnd). */
-    valueCheck: 'Value check',
-    valueCheckSoFar: 'Value check · so far',
-    valueNote: {
-      uploads: 'Computed by the engine from your statements.',
-      sample: 'Computed by the engine from the sample statement.',
+    /** The lead under the title. */
+    lead: {
+      over: (amount: string, usual: string) => `You’re on pace to spend ${amount} more than ${usual}.`,
+      under: (amount: string, usual: string) => `You’re on pace to spend ${amount} less than ${usual}.`,
+      even: (usual: string) => `You’re right on ${usual}.`,
+      wasOver: (amount: string, usual: string) => `You spent ${amount} more than ${usual}.`,
+      wasUnder: (amount: string, usual: string) => `You spent ${amount} less than ${usual}.`,
+      wasEven: (usual: string) => `You spent right what ${usual} costs.`,
+      noData: 'This is your plan’s month. Import a statement to see your real one.',
     },
-    /** The card with two bars: the 3-month average and this month. */
-    compareTitle: 'Usual vs this month',
-    compareUsual: 'Your usual month',
-    compareThis: 'This month',
-    compareThisSoFar: 'This month (projected)',
-    comparePill: {
-      over: (amount: string) => `${amount} over your usual`,
-      under: (amount: string) => `${amount} under your usual`,
-      even: 'Right on your usual',
+    usualName: { history: 'your usual month', profile: 'your plan’s month' },
+
+    // ----- data source
+    sourceLabel: 'Months from',
+    sources: { mine: 'My transactions', mineUploads: 'My statements', sample: 'Sample statement' },
+    samplePreview: 'Preview',
+    sampleNote: 'This is a sample statement, not yours. Import your own to see your month.',
+    importCta: 'Import a statement',
+
+    // ----- KPI strip
+    kpiLabel: 'Your month in numbers',
+    kpi: {
+      projected: 'Projected by month end',
+      spent: 'Spent this month',
+      usual: 'Your usual month',
+      planned: 'Your plan’s month',
+      difference: 'Difference',
+      soFar: 'Spent so far',
     },
-    /** Sticker on the house once a move is marked done. */
-    floorSticker: '+1 floor',
-    driftTitle: 'What drifted',
-    vsAverage: 'vs your average',
-    onTrack: 'right on track',
+    kpiHint: {
+      projected: 'At today’s pace; bills at their usual amount',
+      usualHistory: (n: number) => `Average of the last ${n} months`,
+      usualProfile: 'From your budget, until 3 months of history',
+      soFar: (day: number, days: number) => `Day ${day} of ${days}`,
+    },
+
+    // ----- category bars
+    barsTitle: 'Usual month vs this month',
+    barsSubtitle: (inProgress: boolean) => (inProgress ? 'By category, this month projected to its end' : 'By category'),
+    legendUsual: 'Usual',
+    legendThis: (inProgress: boolean) => (inProgress ? 'This month (projected)' : 'This month'),
+    driftOver: (amount: string) => `${amount} over`,
+    driftUnder: (amount: string) => `${amount} under`,
+    driftLabel: 'Drifted',
+    driftCount: (n: number) => (n === 0 ? 'Nothing drifted' : n === 1 ? '1 category drifted' : `${n} categories drifted`),
+    barRow: (category: string, usual: string, projected: string) => `${category}: usual ${usual}, this month ${projected}`,
+    needHistory: (have: number) => `Drift flags need 3 past months (${have} so far). Until then the usual month is your budget.`,
+
     categories: {
       rentUtilities: 'Rent & utilities',
       car: 'Car',
@@ -214,8 +217,13 @@ export const mocks = {
       debtPayments: 'Debt payments',
       other: 'Other',
     } as Record<string, string>,
+
+    /** Sticker on the house once a move is marked done. */
+    floorSticker: '+1 floor',
+
+    // ----- move
     move: {
-      sticker: 'Your move',
+      sticker: 'Your move this month',
       ofTotal: (paid: string, total: string) => `${paid} of ${total}`,
       /** Next to the big paid amount: "of $4,200". */
       ofTotalRest: (total: string) => `of ${total}`,
@@ -233,13 +241,22 @@ export const mocks = {
       doneTitle: 'Nice work',
       doneBody: (title: string) => `“${title}” is now part of your plan.`,
       keepBody: 'Still committed. We’ll ask again next month.',
-      noneTitle: 'Pick a move to work on',
+      noneTitle: 'One move worth the most right now',
       noMoves: 'No move helps right now.',
-      commit: 'I’m doing this',
+      commit: 'Commit to this',
       level2: 'Level 2 moves are unlocked.',
-      seeAll: 'See all moves',
+      seeAll: 'See all moves on your plan',
     },
+
+    // ----- how
+    howTitle: 'How we calculate',
+    how: [
+      'Your usual month is the average of your last 3 full months, per category. With fewer months it is your budget.',
+      'A month in progress is projected to its end: bills (rent, car, childcare, subscriptions) at their usual amount or what you paid, everything else at today’s pace.',
+      'A category is flagged when it moves further from its average than it normally swings (at least 10% or $25).',
+      'One-off charges are left out, so a vet bill doesn’t look like a habit.',
+    ],
     months: (n: number) => months(n),
-    addStatement: (month: string) => `Add ${month} statement`,
+    addStatement: (month: string) => `Import your ${month} statement`,
   },
 } as const;

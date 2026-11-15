@@ -52,11 +52,14 @@ function Reason({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM })
   if (data.tier === 'comfortable')
     return <p className={body}>{r.comfortable(cushionText(data.cushion.after), loadText(data.debtLoad.after))}</p>;
   if (data.tier === 'stretched') {
+    const goal = t.result.kpis.cushionValue(String(rules.comfortableCushionMonths));
     return (
       <p className={body}>
         {data.stretchedBy === 'debtLoad'
           ? r.stretchedDebt(loadText(data.debtLoad.after), formatRate(rules.debtLoadYellow, 0))
-          : r.stretchedCushion(cushionText(data.cushion.after), t.result.kpis.cushionValue(String(rules.comfortableCushionMonths)))}
+          : data.cushion.before !== null && data.cushion.before < rules.comfortableCushionMonths
+            ? r.stretchedThin(cushionText(data.cushion.before), cushionText(data.cushion.after), goal)
+            : r.stretchedCushion(cushionText(data.cushion.after), goal)}
       </p>
     );
   }

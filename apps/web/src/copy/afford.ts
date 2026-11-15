@@ -108,6 +108,9 @@ export const afford = {
         `You’d still keep ${cushion} of costs in cash, and debt payments stay at ${load} of take-home pay.`,
       stretchedCushion: (cushion: string, goal: string) =>
         `It fits, but your cash would dip to ${cushion} of costs. Comfortable is ${goal} or more.`,
+      /** The cushion was under the comfortable level before the purchase too. */
+      stretchedThin: (before: string, after: string, goal: string) =>
+        `It fits, but your cash is already thin: ${before} of costs, ${after} after this. Comfortable is ${goal} or more.`,
       stretchedDebt: (load: string, yellow: string) =>
         `It fits, but debt payments would climb to ${load} of take-home pay, above the ${yellow} comfort line.`,
       wait: (n: number) => `Wait ${months(n)} and it fits.`,

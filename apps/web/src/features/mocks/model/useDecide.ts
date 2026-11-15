@@ -238,6 +238,7 @@ export function useDecide(opts: { now?: Date } = {}): DecideVM {
   const plan = useCarPlanLink({
     result: result?.status === 'ready' ? result.data : null,
     alternative: invalid ? null : checkedAlt.alt,
+    startYear,
   });
 
   const setCar = useCallback((key: CarField, value: number | null) => setCarTyped((t) => ({ ...t, [key]: value })), []);

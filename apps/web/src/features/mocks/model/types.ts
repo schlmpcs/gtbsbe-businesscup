@@ -9,13 +9,11 @@
 import type { CostCategory, MonthEnd, Money, Rate } from '@lifeguessr/types';
 import type { Loadable } from '@/lib/model/types';
 import type { MoveVM } from '@/features/forecast/model/types';
+import type { ToolPlanEventVM } from '@/features/plan/model/useToolPlanEvent';
 
 export type { Loadable, VMError } from '@/lib/model/types';
 export type { MoveTarget, MoveVM } from '@/features/forecast/model/types';
 export type { CostCategory, MonthEnd, Money, MoveKind } from '@lifeguessr/types';
-
-/** Where the preview note sends a free user. */
-export type ProPreviewVM = { isPro: boolean; href: string };
 
 // ----- S13 Decision: keep my car or switch -------------------------------------------------
 
@@ -80,12 +78,8 @@ export type DecidePlanVM = {
   event: { kind: 'leaseExpense' | 'financedExpense'; amount: Money; year: number } | null;
   /** Why there is no event for this path. */
   noEventReason: 'keep' | 'noCar' | null;
-  /** Net worth at retirement with the event − without it, on the active scenario (engine plan()). */
-  impact: Loadable<{ atRetirement: Money; retireAge: number }> | null;
-  scenarioName: string;
-  added: boolean;
-  add: () => void;
-  href: string;
+  /** The shared What if? plan card's view-model (engine previewEvent; add; open plan). */
+  tool: ToolPlanEventVM;
 };
 
 export type DecideVM = {
@@ -112,37 +106,55 @@ export type DecideVM = {
 
 // ----- S14 Monthly check-in -------------------------------------------------------------------
 
-/** Statement months the check-in reads: the user's uploads, or the sample statement (labelled). */
-export type CheckinDataSource = 'uploads' | 'sample';
+/** Months the check-in reads: the person's own (their transactions, or uploaded statements) or the sample statement (labelled). */
+export type CheckinDataSource = 'mine' | 'sample';
 
-/** The month under review against the average of the 3 before it (engine monthEnd). */
+/** One category: the usual month against this month (engine monthEndDetail). */
+export type CategoryBarVM = {
+  category: CostCategory;
+  usual: Money;
+  /** Month-end projection (what was spent, for a finished month). */
+  projected: Money;
+  soFar: Money;
+  /** projected − usual; null without 3 months of history. */
+  delta: Money | null;
+  /** monthEnd flagged it as drifting from the 3-month average. */
+  drift: boolean;
+};
+
+/** The month under review against the usual one (engine monthEndDetail). */
 export type CheckinMonthVM = {
   source: CheckinDataSource;
-  /** The user has uploaded at least one statement month. */
-  hasUploads: boolean;
-  /** 'YYYY-MM' of the month under review; null = no statement month (profile spending only). */
+  /** The person has months of their own; `ownKind` says where from. */
+  hasOwn: boolean;
+  ownKind: 'ledger' | 'uploads' | null;
+  /** 'YYYY-MM' of the month under review; null = no month (profile spending only). */
   month: string | null;
   /** The month under review is the current calendar month (projected to its end). */
   inProgress: boolean;
-  /** 'YYYY-MM' of the statement to add next (the month after the one under review, or this month). */
+  /** Day of the month reviewed and its length (null without a month). */
+  day: number | null;
+  daysInMonth: number | null;
+  /** 'YYYY-MM' of the month to add next (the month after the one under review, or this month). */
   nextStatementMonth: string;
   historyMonths: number;
   historyNeeded: number;
   result: Loadable<MonthEnd>;
 };
 
-/** Headline numbers from monthEnd (null until there are 3 months of history). */
+/** Headline numbers and the category bars (ready once monthEndDetail ran). */
 export type CheckinCompareVM = {
   projected: Money;
-  /** projected − vsAverage. */
-  average: Money;
-  /** vsAverage (positive = over). */
+  /** The usual month: the 3-month average, or the profile's month with less history. */
+  usual: Money;
+  usualFromHistory: boolean;
+  /** projected − usual (positive = over). */
   difference: Money;
   /** By whole dollars. */
   direction: 'over' | 'under' | 'even';
-  drifts: { category: CostCategory; delta: Money }[];
-  /** Tile categories that did not drift. */
-  onTrack: CostCategory[];
+  spentSoFar: Money;
+  rows: CategoryBarVM[];
+  driftCount: number;
 };
 
 /** What the committed move is doing, from the engine. */
@@ -198,9 +210,8 @@ export type CheckinVM = {
   setSource: (source: CheckinDataSource) => void;
   compare: CheckinCompareVM | null;
   move: CheckinMoveVM;
-  /** Where "Add statement" goes (S9 upload). */
+  /** Where "Import a statement" goes (Transactions import). */
   uploadHref: string;
-  /** Where "see all moves" goes (S10). */
+  /** Where "See all moves" goes (/plan's Next Moves). */
   movesHref: string;
-  pro: ProPreviewVM;
 };

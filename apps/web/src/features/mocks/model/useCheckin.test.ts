@@ -1,19 +1,31 @@
 // @vitest-environment jsdom
-import { applyPatch, monthEnd, movesLevel, rankMoves, simulate } from '@lifeguessr/engine';
+import { applyPatch, monthEndDetail, movesLevel, rankMoves, simulate } from '@lifeguessr/engine';
 import type { CategoryTotals, CostCategory, ForecastBundle } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { cloneProfileDemo, statementTotalsSample } from '@/fixtures';
+import { cloneProfileDemo, statementTotalsSample, transactionsDemo } from '@/fixtures';
+import { markLedgerLoaded, setLedgerStore } from '@/features/transactions/model/transactionsStore';
+import { memoryRecordStore } from '@/lib/model/idb';
+import { createTransactionStore, transactionTotals } from '@/lib/model/transactions';
 import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState, waitForReady } from '@/test/clientState';
 import { aiAnswer, mockForecastRoute, rulesAnswer } from '@/test/forecastApi';
 import { resetProState } from '@/test/pro';
-import { checkinMonthInputs, compareOf, daysInMonth, moveProgress, nextMonth, TILE_CATEGORIES, useCheckin } from './useCheckin';
+import { checkinMonthInputs, compareOf, daysInMonth, moveProgress, nextMonth, useCheckin } from './useCheckin';
 
-beforeEach(() => {
+/** A loaded Transactions store over memory holding `lines`, as the ledger the hooks read. */
+async function seedLedger(lines: Parameters<typeof memoryRecordStore>[0]) {
+  const store = createTransactionStore({ db: memoryRecordStore(lines as never[]) });
+  setLedgerStore(store);
+  await store.load();
+  markLedgerLoaded(store);
+}
+
+beforeEach(async () => {
   resetClientState();
   resetProState();
+  await seedLedger([]);
 });
 
 /** The demo profile's area rates, from the real area data (what the hooks use). */
@@ -55,16 +67,18 @@ describe('checkin helpers', () => {
     expect([nextMonth('2026-10'), nextMonth('2026-12')]).toEqual(['2026-11', '2027-01']);
   });
 
-  it('compareOf reads monthEnd: average = projection − vsAverage; non-drifting tiles are on track', () => {
-    expect(compareOf({ projectedSpend: 3000, vsAverage: null, drifts: [] })).toBeNull();
-    const c = compareOf({ projectedSpend: 3000, vsAverage: 120, drifts: [{ category: 'eatingOut', delta: 90 }] });
-    expect(c).toEqual({
-      projected: 3000, average: 2880, difference: 120, direction: 'over',
-      drifts: [{ category: 'eatingOut', delta: 90 }],
-      onTrack: TILE_CATEGORIES.filter((x) => x !== 'eatingOut'),
-    });
-    expect(compareOf({ projectedSpend: 3000, vsAverage: -0.4, drifts: [] })?.direction).toBe('even');
-    expect(compareOf({ projectedSpend: 3000, vsAverage: -50, drifts: [] })?.direction).toBe('under');
+  it('compareOf reads monthEndDetail: difference = projection − usual; empty categories are left out', () => {
+    const history = statementTotalsSample.slice(0, 3);
+    const d = monthEndDetail(cloneProfileDemo(), history, { month: '2026-10', day: 31, totals: statementTotalsSample[3]!.totals });
+    const c = compareOf(d);
+    expect(c.projected).toBe(d.projectedSpend);
+    expect(c.usual).toBe(d.usualSpend);
+    expect(c.difference).toBeCloseTo(d.vsAverage!, 9);
+    expect(c.driftCount).toBe(d.drifts.length);
+    expect(c.rows.every((r) => r.usual > 0 || r.projected > 0)).toBe(true);
+    expect(c.rows.filter((r) => r.drift).map((r) => r.category)).toEqual(d.rows.filter((r) => r.drift).map((r) => r.category));
+    const even = compareOf({ ...d, projectedSpend: d.usualSpend + 0.4 });
+    expect(even.direction).toBe('even');
   });
 });
 
@@ -95,45 +109,59 @@ describe('moveProgress', () => {
     const category = move.category!;
     const target = move.patch.spending![category]!;
     const latest = monthOf('2026-10', { [category]: target - 10 });
-    expect(moveProgress(p, move, { latest, inProgress: false, source: 'uploads' })).toEqual({
+    expect(moveProgress(p, move, { latest, inProgress: false, source: 'mine' })).toEqual({
       kind: 'spendingTarget', category, target, planned: p.spending[category].value, actual: target - 10, onTrack: true,
     });
     const over = monthOf('2026-10', { [category]: target + 10 });
-    expect(moveProgress(p, move, { latest: over, inProgress: false, source: 'uploads' })).toMatchObject({ onTrack: false });
-    expect(moveProgress(p, move, { latest, inProgress: true, source: 'uploads' })).toMatchObject({ actual: null, onTrack: null });
+    expect(moveProgress(p, move, { latest: over, inProgress: false, source: 'mine' })).toMatchObject({ onTrack: false });
+    expect(moveProgress(p, move, { latest, inProgress: true, source: 'mine' })).toMatchObject({ actual: null, onTrack: null });
     expect(moveProgress(p, move, { latest, inProgress: false, source: 'sample' })).toMatchObject({ actual: null, onTrack: null });
   });
 });
 
 describe('useCheckin (S14)', () => {
-  it('without uploads, reviews the sample statement’s last month against the 3 before it (engine monthEnd)', async () => {
+  it('with no months of their own, reviews the sample statement’s last month (labelled sample)', async () => {
     const { result } = await ready();
     const m = result.current.month;
     expect(m).toMatchObject({
-      source: 'sample', hasUploads: false, month: '2026-10', inProgress: false, nextStatementMonth: '2026-11', historyMonths: 3, historyNeeded: 3,
+      source: 'sample', hasOwn: false, ownKind: null, month: '2026-10', inProgress: false, nextStatementMonth: '2026-11', historyMonths: 3, historyNeeded: 3,
+      day: 31, daysInMonth: 31,
     });
-    const expected = monthEnd(cloneProfileDemo(), statementTotalsSample.slice(0, 3), {
+    const expected = monthEndDetail(cloneProfileDemo(), statementTotalsSample.slice(0, 3), {
       month: '2026-10', day: 31, totals: statementTotalsSample[3]!.totals,
     });
     expect(m.result).toEqual({ status: 'ready', data: expected });
-    expect(expected.vsAverage).not.toBeNull(); // the real monthEnd (T9) compares with the average
+    expect(expected.vsAverage).not.toBeNull();
     expect(result.current.compare).toEqual(compareOf(expected));
-    expect(result.current.uploadHref).toBe('/me/upload');
+    expect(result.current.uploadHref).toBe('/transactions?import=1');
+    expect(result.current.movesHref).toBe('/plan');
   });
 
-  it('with uploads, reviews them by default; the sample is one tap away', async () => {
+  it('reads the person’s transactions (the ledger) first: this month in progress against the months before', async () => {
+    await seedLedger(transactionsDemo);
+    const { result } = await ready();
+    const m = result.current.month;
+    expect(m).toMatchObject({ source: 'mine', hasOwn: true, ownKind: 'ledger', month: '2026-11', inProgress: true, day: 14, daysInMonth: 30 });
+    const months = transactionTotals(transactionsDemo);
+    const nov = months.find((x) => x.month === '2026-11')!;
+    const expected = monthEndDetail(useAppStore.getState().profile, months.filter((x) => x.month < '2026-11'), { month: '2026-11', day: 14, totals: nov.totals });
+    expect(m.result).toEqual({ status: 'ready', data: expected });
+    expect(result.current.compare?.spentSoFar).toBe(expected.spentSoFar);
+    act(() => result.current.setSource('sample'));
+    expect(result.current.month).toMatchObject({ source: 'sample', month: '2026-10' });
+  });
+
+  it('with uploaded statements and no transactions, reviews the statements', async () => {
     const { result } = await ready();
     const uploads = [monthOf('2026-08'), monthOf('2026-09'), monthOf('2026-10'), monthOf('2026-11', { eatingOut: 90 })];
     act(() => useAppStore.getState().applyStatementTotals(uploads));
     const m = result.current.month;
-    expect(m).toMatchObject({ source: 'uploads', hasUploads: true, month: '2026-11', inProgress: true, nextStatementMonth: '2026-12', historyMonths: 3 });
+    expect(m).toMatchObject({ source: 'mine', ownKind: 'uploads', month: '2026-11', inProgress: true, nextStatementMonth: '2026-12', historyMonths: 3 });
     const s = useAppStore.getState();
     expect(m.result).toEqual({
       status: 'ready',
-      data: monthEnd(s.profile, s.statementMonths.slice(0, 3), { month: '2026-11', day: 14, totals: totals({ eatingOut: 90 }) }),
+      data: monthEndDetail(s.profile, s.statementMonths.slice(0, 3), { month: '2026-11', day: 14, totals: totals({ eatingOut: 90 }) }),
     });
-    act(() => result.current.setSource('sample'));
-    expect(result.current.month).toMatchObject({ source: 'sample', month: '2026-10' });
   });
 
   it('with no committed move, offers the ranked moves; committing one shows its progress', async () => {
@@ -233,10 +261,5 @@ describe('useCheckin (S14)', () => {
     expect(useAppStore.getState().profile.doneMoveIds).toEqual([first.id]);
     expect(result.current.move.answer).toBe('done');
     await act(async () => release?.());
-  });
-
-  it('links the preview note to Pro', async () => {
-    const { result } = await ready();
-    expect(result.current.pro).toEqual({ isPro: false, href: '/pro' });
   });
 });
