@@ -159,6 +159,8 @@ describe('PlanScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(copy.events.haveKid.title) }));
     expect(screen.getByText(copy.editor.fields.childcareMonthly!)).toBeTruthy();
     expect(screen.getByRole('heading', { name: t.editor.previewTitle })).toBeTruthy();
+    // "Starts in" is a year: 2027-style, never "2,027" (a 4-digit year without a thousands separator).
+    expect((screen.getByRole('textbox', { name: copy.editor.fields.year }) as HTMLInputElement).value).toMatch(/^\d{4}$/);
     // The new event is in the list (Events tab).
     fireEvent.click(screen.getByRole('tab', { name: t.tabs.events }));
     expect(screen.getByRole('button', { name: t.events.edit(copy.events.haveKid.title) })).toBeTruthy();

@@ -54,6 +54,8 @@ test('onboarding: warm-up duel, guess, connect a bank (demo), see what you are w
   await page.getByTestId('onboarding-next').click();
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title);
+  // "$735.9K": the dashboard's plan card must show the same figure for the same plan.
+  const atRetirement = (await page.getByTestId('onboarding-kpi-atRetirement').innerText()).match(/\$[\d.,]+[KM]?/)![0];
   await page.getByTestId('onboarding-next').click();
   await expect(page.getByTestId('onboarding')).toHaveAttribute('data-step', 'decision');
   // Buy the home up to 4 years sooner than the plan's age (the slider starts there; the age depends on today's date).
@@ -67,5 +69,7 @@ test('onboarding: warm-up duel, guess, connect a bank (demo), see what you are w
   await page.getByRole('link', { name: t.decision.cta }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); // the dashboard (the Life line now lives in /start's last step)
+  // One plan on both screens: the decision was a what-if, so the plan card shows what the future step showed.
+  await expect(page.getByRole('main')).toContainText(atRetirement);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

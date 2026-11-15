@@ -656,21 +656,19 @@ function Fact({ label, value }: { label: string; value: string }) {
 // ----- 4. Future -------------------------------------------------------------------------------
 
 function FutureStep({ vm }: { vm: OnboardingVM }) {
-  const ll = vm.lifeline;
-  if (ll.status !== 'ready') return <div className={cx('h-96 animate-pulse rounded-xl', DARK_PANEL)} />;
-  const kAt = ll.kpis.find((k) => k.id === 'atRetirement')!;
-  const kChance = ll.kpis.find((k) => k.id === 'chance')!;
+  const f = vm.future;
+  if (!f) return <div className={cx('h-96 animate-pulse rounded-xl', DARK_PANEL)} />;
   return (
     <>
       <Sticker tone="primary" tilt={-2} className="self-start text-sm">{t.future.sticker}</Sticker>
       <h1 className={H1}>{t.future.title}</h1>
       <div className={cx('mt-xs flex flex-col overflow-hidden rounded-xl', DARK_PANEL)}>
         <div className="px-md pt-lg">
-          <MiniChart points={ll.chart.selected} ageDomain={ll.chart.ageDomain} valueDomain={ll.chart.valueDomain} callout={ll.chart.retireCallout} />
+          <MiniChart points={f.points} ageDomain={f.ageDomain} valueDomain={f.valueDomain} callout={f.callout} />
         </div>
         <div className="grid grid-cols-2 divide-x divide-on-primary/10 border-t border-on-primary/10">
-          <DarkKpi kpi={kAt} />
-          <DarkKpi kpi={kChance} measuring={t.future.measuring} />
+          <DarkKpi kpi={f.atRetirement} />
+          <DarkKpi kpi={f.chance} measuring={t.future.measuring} />
         </div>
       </div>
       <p className="ob-fade-up flex items-start gap-sm text-sm leading-relaxed text-chart-6" style={{ animationDelay: '1.8s' }}>
@@ -685,7 +683,7 @@ function FutureStep({ vm }: { vm: OnboardingVM }) {
 
 function DarkKpi({ kpi, measuring }: { kpi: LifeLineKpiVM; measuring?: string }) {
   return (
-    <div className="flex flex-col gap-xs px-lg py-md">
+    <div className="flex flex-col gap-xs px-lg py-md" data-testid={`onboarding-kpi-${kpi.id}`}>
       <span className={DARK_LABEL}>{kpi.label}</span>
       <span className={cx('font-display text-3xl font-extrabold tabular-nums sm:text-4xl', kpi.id === 'chance' && kpi.tone === 'bad' && 'text-primary')}>
         {kpi.value ?? <span className="text-base font-semibold text-chart-6">{measuring ?? kpi.note}</span>}
@@ -772,6 +770,7 @@ function DecisionStep({ vm, Link, doneHref, chart }: { vm: OnboardingVM; Link: L
         <Link href={doneHref} className="inline-flex min-h-12 items-center justify-center gap-sm self-stretch rounded-full bg-primary px-xl text-lg font-bold text-on-primary sm:self-start">
           {t.decision.cta} <Icon name="arrowRight" size={18} />
         </Link>
+        <p className="text-sm text-text-muted">{t.decision.note}</p>
       </div>
       {chart && <div className="min-w-0 rounded-xl bg-surface p-lg shadow-md">{chart}</div>}
     </div>

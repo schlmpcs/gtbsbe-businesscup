@@ -24,6 +24,8 @@ export type NumberInputProps = Omit<
   prefix?: string;
   /** Text after the number, e.g. "/mo", "%", "months". */
   suffix?: string;
+  /** Thousands separators at rest (default true). Pass false for years and other labels-as-numbers (2027, not 2,027). */
+  grouping?: boolean;
 };
 
 /** Selects the whole text of a focused input (setSelectionRange: iOS ignores select() at times). */
@@ -45,6 +47,7 @@ export function NumberInput({
   maxFractionDigits = 2,
   prefix,
   suffix,
+  grouping = true,
   className,
   onFocus,
   onBlur,
@@ -124,7 +127,7 @@ export function NumberInput({
         autoComplete="off"
         disabled={disabled}
         aria-invalid={invalid || field['aria-invalid'] ? true : undefined}
-        value={draft ?? toText(value, true)}
+        value={draft ?? toText(value, grouping)}
         onFocus={(e) => {
           edited.current = false;
           selectPending.current = true;
