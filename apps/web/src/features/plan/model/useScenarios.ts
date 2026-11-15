@@ -1,16 +1,18 @@
 // The scenario tabs of /plan: pick, duplicate, rename, remove. Until the person changes a scenario, the
 // scenarios follow the profile (planStore.ts → seedScenarios): the demo pair on the demo profile, the
-// engine's Baseline on the person's own.
+// engine's Baseline on the person's own. Nothing is seeded or listed before the saved plan is loaded
+// (usePlanReady), so a saved plan is never replaced by a seed and the demo tabs never flash.
 import { useCallback, useEffect, useMemo } from 'react';
 import { plan as copy } from '@/copy';
 import { useAppStore } from '@/state/store';
 import { calendarOf, eventContext, usePlanInputs } from './planEngine';
-import { seedScenarios, usePlanStore } from './planStore';
+import { seedScenarios, usePlanReady, usePlanStore } from './planStore';
 import type { ScenariosVM } from './types';
 
 export const DEFAULT_SCENARIO_ICON = 'home';
 
 export function useScenarios(): ScenariosVM {
+  const ready = usePlanReady();
   const scenarios = usePlanStore((s) => s.scenarios);
   const activeId = usePlanStore((s) => s.activeId);
   const select = usePlanStore((s) => s.select);
@@ -22,13 +24,14 @@ export function useScenarios(): ScenariosVM {
   const demo = useAppStore((s) => s.profileOrigin === 'demo');
 
   useEffect(() => {
+    if (!ready) return;
     const first = usePlanStore.getState().scenarios[0];
     if (!first) return;
     const cal = calendarOf(inputs.profile, first.assumptions.endAge);
     const key = `${demo ? 'demo' : 'own'}:${cal.firstYear}:${cal.birthYear}`;
     if (usePlanStore.getState().seedKey === key) return;
     seed(key, seedScenarios(demo, eventContext(inputs, first)));
-  }, [inputs, demo, seed]);
+  }, [ready, inputs, demo, seed]);
 
   const add = useCallback((): string => {
     const { scenarios: all, activeId: current } = usePlanStore.getState();
@@ -53,15 +56,15 @@ export function useScenarios(): ScenariosVM {
 
   return useMemo(
     () => ({
-      items: scenarios.map((s) => ({ id: s.id, name: s.name, icon: s.icon ?? DEFAULT_SCENARIO_ICON, active: s.id === activeId })),
+      items: ready ? scenarios.map((s) => ({ id: s.id, name: s.name, icon: s.icon ?? DEFAULT_SCENARIO_ICON, active: s.id === activeId })) : [],
       activeId,
-      canCompare: scenarios.length >= 2,
-      canRemove: scenarios.length > 1,
+      canCompare: ready && scenarios.length >= 2,
+      canRemove: ready && scenarios.length > 1,
       select,
       add,
       rename,
       remove: removeScenario,
     }),
-    [scenarios, activeId, select, add, rename, removeScenario],
+    [ready, scenarios, activeId, select, add, rename, removeScenario],
   );
 }

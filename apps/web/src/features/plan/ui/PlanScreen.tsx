@@ -84,7 +84,11 @@ export function PlanScreen(props: PlanScreenProps) {
 
       <div className="grid gap-lg xl:grid-cols-[minmax(0,1fr)_19rem] xl:items-start">
         <div className="flex min-w-0 flex-col gap-lg">
-          {plan.status !== 'ready' ? (
+          {plan.status === 'loading' ? (
+            <p role="status" aria-busy="true" className="card card-pad text-sm text-text-muted">
+              {t.loading}
+            </p>
+          ) : plan.status !== 'ready' ? (
             <p role="alert" className="card card-pad text-sm">
               {t.notFound}
             </p>

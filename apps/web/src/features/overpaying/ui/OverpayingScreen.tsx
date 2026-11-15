@@ -52,7 +52,7 @@ function Summary({ data }: { data: OverpayingResultVM }) {
         <KpiStrip
           items={[
             { id: 'gap', label: t.result.gapPerYear, value: <CountUp value={summary.gapPerYear} format={(n) => formatMoney(n)} />, hint: t.result.gapPerYearHint, tone: 'negative' },
-            { id: 'above', label: t.result.above, value: `${summary.above} / ${summary.compared}`, hint: t.result.compared },
+            { id: 'above', label: t.result.above, value: t.result.aboveOf(summary.above, summary.compared), hint: t.result.compared },
           ]}
         />
       )}

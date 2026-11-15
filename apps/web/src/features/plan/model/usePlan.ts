@@ -6,7 +6,7 @@ import { useCallback, useMemo } from 'react';
 import { plan as copy } from '@/copy';
 import { accountLabel, ageAt, calendarOf, clampYearTo, EVENT_ICONS, NO_MOVES, planOf, usePlanInputs, yearAt } from './planEngine';
 import { eventSummary, iconOf, kpiVMs, money } from './planFormat';
-import { usePlanStore } from './planStore';
+import { usePlanReady, usePlanStore } from './planStore';
 import type {
   PlanAccountsTableVM, PlanCashFlowTableVM, PlanChartVM, PlanDisplay, PlanEventRowVM, PlanVM,
 } from './types';
@@ -21,6 +21,7 @@ export function movedEvent(e: PlanEvent, year: number): PlanEvent {
 }
 
 export function usePlan(scenarioId: string): PlanVM {
+  const ready = usePlanReady();
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === scenarioId));
   const saveState = usePlanStore((s) => s.saveState);
   const moves = usePlanStore((s) => s.movesApplied[scenarioId] ?? NO_MOVES);
@@ -48,6 +49,8 @@ export function usePlan(scenarioId: string): PlanVM {
   );
 
   return useMemo((): PlanVM => {
+    // Until the saved plan is loaded, show nothing rather than the demo pair it is about to replace.
+    if (!ready) return { status: 'loading', disclaimer: copy.disclaimer };
     if (!scenario) return { status: 'notFound', disclaimer: copy.disclaimer };
     const result = planOf(inputs, scenario, moves);
     const { years } = result;
@@ -151,5 +154,5 @@ export function usePlan(scenarioId: string): PlanVM {
       setDisplay,
       moveEvent,
     };
-  }, [scenario, moves, inputs, cal, saveState, setDisplay, moveEvent]);
+  }, [ready, scenario, moves, inputs, cal, saveState, setDisplay, moveEvent]);
 }

@@ -110,6 +110,7 @@ export const overpaying = {
     planLead: (perMonth: string) => `At the middle of the typical range, this line costs ${perMonth} a month less than yours.`,
     planNotMeasured: 'Your plan holds less for this line than the difference, so it is not measured on your plan.',
     middle: 'typical middle',
+    aboveOf: (above: number, compared: number) => `${above} of ${compared}`,
     /** Which household the comparison is about (the default is our assumption until the person edits it). */
     household: {
       describe: (bedrooms: number, adults: number, kids: number) =>

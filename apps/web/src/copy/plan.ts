@@ -31,7 +31,7 @@ const groups: Record<AccountGroup, string> = {
 
 export const plan = {
   disclaimer: 'An educational simulation, not financial advice. Estimates use rules and averages, not a promise of what will happen.',
-  saveState: { saving: 'Saving…', saved: 'Saved just now' },
+  saveState: { saving: 'Saving…', saved: 'Saved just now', error: 'Not saved: this browser blocks storage' },
   display: { today: 'Today’s dollars', future: 'Future dollars' },
   notFound: 'We could not find that scenario.',
   kpi: {
@@ -342,6 +342,7 @@ export const plan = {
       empty: '—',
     },
     notFound: 'We could not find this plan. Try another scenario.',
+    loading: 'Loading your plan…',
   },
   aiLine: {
     label: 'AI estimate',

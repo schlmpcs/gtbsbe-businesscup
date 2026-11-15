@@ -23,7 +23,7 @@ import { dueDateIn } from '@/features/bills/model/calendar';
 import { readDuelDayProgress } from '@/features/game/model/duelProgress';
 import { useGoals } from '@/features/goals/model/useGoals';
 import { NO_MOVES, planOf, usePlanInputs } from '@/features/plan/model/planEngine';
-import { usePlanStore } from '@/features/plan/model/planStore';
+import { usePlanReady, usePlanStore } from '@/features/plan/model/planStore';
 import { GOOD_SUCCESS_RATE, useChanceOfSuccess } from '@/features/plan/model/useChanceOfSuccess';
 import { useScenarios } from '@/features/plan/model/useScenarios';
 import { useRecurring } from '@/features/recurring/model/useRecurring';
@@ -125,7 +125,8 @@ export function useDashboard({ today: todayArg, now }: { today?: string; now?: D
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
   const moves = usePlanStore((s) => s.movesApplied[s.activeId] ?? NO_MOVES);
   const planInputs = usePlanInputs();
-  const ready = accountsReady && ledgerReady && budgetReady && dashboardReady;
+  const planReady = usePlanReady();
+  const ready = accountsReady && ledgerReady && budgetReady && dashboardReady && planReady;
   // No Chance run yet (or the plan changed since): run it, once the person's data is loaded.
   const { status: chanceStatus, run: runChance } = useChanceOfSuccess();
   useEffect(() => {

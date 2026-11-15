@@ -15,7 +15,8 @@ export type PlanEventIconId =
 
 export type PlanTone = 'good' | 'bad';
 export type PlanDisplay = 'today' | 'future';
-export type SaveState = 'saving' | 'saved';
+/** 'error': this browser refused the write (private window, storage full or blocked); the plan stays in memory. */
+export type SaveState = 'saving' | 'saved' | 'error';
 
 /** A value the person can edit: raw for the control, formatted for display, with where it came from. */
 export type PlanFieldValue = number | boolean | string | null;
@@ -106,6 +107,8 @@ export type PlanEventRowVM = {
 };
 
 export type PlanVM =
+  /** The saved plan is not loaded yet (server render and the first client render). */
+  | { status: 'loading'; disclaimer: string }
   | { status: 'notFound'; disclaimer: string }
   | {
       status: 'ready';
@@ -116,7 +119,7 @@ export type PlanVM =
       tables: { accounts: PlanAccountsTableVM; cashFlow: PlanCashFlowTableVM; events: PlanEventRowVM[] };
       display: { value: PlanDisplay; label: string; options: { value: PlanDisplay; label: string }[] };
       saveState: SaveState;
-      /** "Saving…" or "Saved just now". */
+      /** "Saving…", "Saved just now" or the could-not-save message. */
       saveLabel: string;
       disclaimer: string;
       setDisplay: (display: PlanDisplay) => void;

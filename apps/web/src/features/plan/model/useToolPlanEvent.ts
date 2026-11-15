@@ -4,14 +4,16 @@
 // /plan draws) and adds it to that scenario on request, so it shows on /plan's timeline.
 //
 // The scenarios follow the profile until the person changes one (useScenarios seeds them), so the
-// hook seeds first: adding an event before /plan was ever opened must not freeze the demo pair.
+// hook seeds first: adding an event before /plan was ever opened must not freeze the demo pair. It also
+// waits for the saved plan to load (no preview, `add` does nothing), so the event goes on the person's
+// saved scenario, not on the demo pair the load replaces.
 import { previewEvent } from '@lifeguessr/engine';
 import type { PlanEvent, PlanKpis } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { runEngine } from '@/lib/model/errors';
 import type { Loadable } from '@/lib/model/types';
 import { calendarOf, NO_MOVES, profileFor, usePlanInputs } from './planEngine';
-import { usePlanStore } from './planStore';
+import { usePlanReady, usePlanStore } from './planStore';
 import { useScenarios } from './useScenarios';
 
 /** A plan event without what the hook fills in: its id, its year (this plan year) and `enabled`. */
@@ -49,6 +51,7 @@ export const PLAN_HREF = '/plan';
 
 export function useToolPlanEvent(draft: ToolEventDraft | null): ToolPlanEventVM {
   useScenarios(); // seeds the scenarios from the profile before anything is added
+  const ready = usePlanReady();
   const inputs = usePlanInputs();
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId) ?? s.scenarios[0]);
   const moves = usePlanStore((s) => s.movesApplied[s.activeId] ?? NO_MOVES);
@@ -57,12 +60,12 @@ export function useToolPlanEvent(draft: ToolEventDraft | null): ToolPlanEventVM 
 
   const key = draft ? JSON.stringify(draft) : null;
   const event: PlanEvent | null = useMemo(() => {
-    if (!draft || !scenario) return null;
+    if (!ready || !draft || !scenario) return null;
     const year = calendarOf(inputs.profile, scenario.assumptions.endAge).firstYear;
     return { ...draft, id: 'tool-preview', year, enabled: true } as PlanEvent;
     // `key` stands for the draft's content, so a new object with the same fields does not re-run plan().
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, scenario, inputs]);
+  }, [ready, key, scenario, inputs]);
 
   const addedId = added && added.key === key ? added.id : null;
   const preview = useMemo((): Loadable<ToolPlanPreview> | null => {
