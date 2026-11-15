@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stampProfile } from '@/state/profile';
 import { useAppStore } from '@/state/store';
 import { money, signedMoney } from './planFormat';
+import { formatMoney } from '@/lib/format';
 import { resetPlanStore, usePlanStore } from './planStore';
 import type { EventEditorVM, PlanVM } from './types';
 import { useAiLine } from './useAiLine';
@@ -255,6 +256,11 @@ describe('useChanceOfSuccess', () => {
     expect(r.samplePaths).toHaveLength(200);
     expect(r.samplePaths[0]!.points).toHaveLength(59);
     expect(r.histograms.map((h) => h.id)).toEqual(['atRetirement', 'atEnd', 'shortfallAge']);
+    // Each histogram marks the rules-based plan's own value (same display unit as the run).
+    const kpis = plan(demoProfile(), [], scenario('baseline'), area()).kpis;
+    expect(r.histograms.map((h) => h.planValue)).toEqual([kpis.netWorthAtRetirement, kpis.netWorthAtEnd, kpis.shortfallAge]);
+    expect(r.histograms[0]!.planLabel).toBe(`Plan ${formatMoney(kpis.netWorthAtRetirement, { compact: true })}`);
+    if (kpis.shortfallAge === null) expect(r.histograms[2]!.planLabel).toBe('Plan: lasts past 90');
     // Growth draws around the plan's own rates, so the median tracks plan().
     expect(result.current.settings.growth.map((g) => [g.group, g.mean, g.sd])).toEqual([
       ['investments', 0.06, 0.15], ['retirement', 0.06, 0.15], ['realEstate', area().homeAppreciationAnnual!.value, 0.05],

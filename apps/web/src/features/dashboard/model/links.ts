@@ -6,7 +6,7 @@ export const PLANNER_ROUTES = {
   addAccount: '/accounts?add=1',
   transactions: '/transactions',
   importCsv: '/transactions?import=1',
-  cashFlow: '/cash-flow',
+  cashFlow: '/cashflow',
   budget: '/budget',
   recurring: '/recurring',
   goals: '/goals',

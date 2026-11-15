@@ -5,9 +5,11 @@
 // copy.planner.budgetGroups. Transfers between your own accounts are in neither income nor expenses.
 import type { CashFlowPeriod, CashFlowSummary, CostCategory, Money, Rate } from '@lifeguessr/types';
 import type { BudgetGroupId } from '@/features/budget/model/groups';
+import type { TransactionRowVM } from '@/features/transactions/model/types';
 
 export type { CashFlowPeriod, CashFlowSummary, CostCategory, Money, Rate } from '@lifeguessr/types';
 export type { BudgetGroupId } from '@/features/budget/model/groups';
+export type { TransactionRowVM } from '@/features/transactions/model/types';
 
 export type CashFlowPeriodKind = 'monthly' | 'quarterly' | 'yearly';
 export type CashFlowBreakdown = 'category' | 'group';
@@ -27,10 +29,29 @@ export type CashFlowBarVM = {
 };
 
 export type CashFlowKpiId = 'income' | 'expenses' | 'savings' | 'savingsRate';
-/** A tile for the current period; `previous` is the same figure one period back (null when there is none). */
+/**
+ * A tile for the current period; `previous` is the same figure one period back (null when there is none)
+ * and `change` is value - previous (null when either is missing).
+ */
 export type CashFlowKpiVM =
-  | { id: 'income' | 'expenses' | 'savings'; value: Money; previous: Money | null }
-  | { id: 'savingsRate'; value: Rate | null; previous: Rate | null };
+  | { id: 'income' | 'expenses' | 'savings'; value: Money; previous: Money | null; change: Money | null }
+  | { id: 'savingsRate'; value: Rate | null; previous: Rate | null; change: Rate | null };
+
+/** Where the money of the current period went, as the Sankey draws it (by category or by group). */
+export type CashFlowFlowTargetVM =
+  | { kind: 'category'; id: CostCategory; group: BudgetGroupId; value: Money }
+  | { kind: 'group'; id: BudgetGroupId; group: BudgetGroupId; value: Money }
+  | { kind: 'oneOffs'; id: string; group: null; value: Money }
+  | { kind: 'savings'; id: 'savings'; group: null; value: Money };
+
+export type CashFlowFlowVM = {
+  /** What fed Income: pay, and the gap taken from savings when spending beat pay. */
+  sources: { id: 'pay' | 'fromSavings'; value: Money }[];
+  /** The Income node: the sum of `sources` (= the sum of `targets`). */
+  total: Money;
+  /** Spending targets largest first, then what was saved (if anything). */
+  targets: CashFlowFlowTargetVM[];
+};
 
 export type CashFlowBreakdownRowVM =
   | { kind: 'category'; category: CostCategory; amount: Money; share: Rate }
@@ -53,6 +74,12 @@ export type CashFlowVM = {
   setBreakdown: (breakdown: CashFlowBreakdown) => void;
   /** Spending of the current period by category or group, largest first. `share` is of total expenses. */
   breakdownRows: CashFlowBreakdownRowVM[];
-  /** The current period in the engine's shape: `sankey` draws the Sankey view. */
+  /** The current period in the engine's shape. */
   summary: CashFlowSummary;
+  /** The current period's Sankey, grouped by `breakdown`. */
+  flow: CashFlowFlowVM;
+  /** The current period's latest lines (transfers left out), newest first, at most LINES_SHOWN. */
+  lines: TransactionRowVM[];
+  /** How many lines (transfers left out) the current period has in all. */
+  lineCount: number;
 };

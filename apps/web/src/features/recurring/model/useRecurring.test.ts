@@ -43,6 +43,21 @@ describe('useRecurring', () => {
     expect(cells.find((c) => c.day === 20)!.items.map((i) => i.id)).toEqual(expect.arrayContaining(['account:card-1', 'account:auto-1']));
   });
 
+  it('adds up the bills still due this month', () => {
+    const { result } = renderHook(() => useRecurring({ today: TODAY }));
+    const { items, total } = result.current.upcoming;
+    // From the 15th on: the card (193.92) and the auto loan (412) on the 20th; rent (the 1st) is past; pay is not a bill.
+    expect(items.every((i) => i.section !== 'income' && (i.dayOfMonth ?? 0) >= 15)).toBe(true);
+    expect(items.map((i) => i.id)).toEqual(expect.arrayContaining(['account:card-1', 'account:auto-1']));
+    expect(items.find((i) => i.id === 'rent')).toBeUndefined();
+    expect(total).toBeCloseTo(items.reduce((s, i) => s + i.amount, 0), 2);
+    act(() => result.current.prev());
+    expect(result.current.upcoming).toEqual({ items: [], total: 0 });
+    act(() => result.current.next());
+    act(() => result.current.next());
+    expect(result.current.upcoming.items.find((i) => i.id === 'rent')).toBeDefined();
+  });
+
   it('hides an item marked not recurring and moves between months', () => {
     const { result } = renderHook(() => useRecurring({ today: TODAY }));
     act(() => result.current.markNotRecurring('rent'));

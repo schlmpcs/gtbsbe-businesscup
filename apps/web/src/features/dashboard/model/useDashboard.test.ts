@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // The Dashboard on the fixtures (accounts.demo.json, transactions.demo.json, profile.demo.json). No network.
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { monteCarloDemo } from '@/fixtures';
 import { useAccountsStore } from '@/lib/model/accounts';
@@ -8,7 +8,6 @@ import { useAppStore } from '@/state/store';
 import { usePlanStore } from '@/features/plan/model/planStore';
 import { ledger } from '@/features/transactions/model/transactionsStore';
 import { useBudgetStore } from '@/features/budget/model/budgetStore';
-import { useDashboardStore } from './dashboardStore';
 import { FIXTURE_NOW, resetFixtureStores } from './resetFixtureStores';
 import { useDashboard } from './useDashboard';
 
@@ -18,9 +17,8 @@ const addPlanEvent = () => {
   const { activeId } = usePlanStore.getState();
   usePlanStore.getState().edit(activeId, (s) => ({ ...s, events: [{ id: 'ev-1', type: 'windfall', year: 2027, enabled: true, amount: 5000 }] }));
 };
-const removePlanEvents = () => {
-  for (const s of usePlanStore.getState().scenarios) usePlanStore.getState().edit(s.id, (x) => ({ ...x, events: [] }));
-};
+/** Back to a plan the person never changed. */
+const untouchPlan = () => usePlanStore.setState({ touched: false });
 const dash = () => renderHook(() => useDashboard({ today: TODAY, now: NOW }));
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -49,10 +47,9 @@ describe('useDashboard', () => {
     expect(vm.spending.points[14]!.thisMonth).toBeCloseTo(2544.96, 2);
     expect(vm.spending.points[15]!.thisMonth).toBeNull(); // the 16th has not happened
     expect(vm.spending.points[30]).toMatchObject({ day: 31, thisMonth: null }); // November has 30 days
-    expect(vm.plan).toEqual({ status: 'result', successRate: monteCarloDemo.successRate });
     expect(vm.topMove).not.toBeNull();
-    expect(vm.duel).toEqual({ playedToday: false, streak: 3 });
-    expect(vm.budget).toEqual({ hasBudget: false, rows: [] });
+    expect(vm.duel).toEqual({ playedToday: false, played: 0, total: 5, streak: 3 });
+    expect(vm.budget).toMatchObject({ hasBudget: false, rows: [], groups: [] });
     expect(vm.recentTransactions).toHaveLength(5);
     expect(vm.recentTransactions[0]).toMatchObject({ id: 'tx-170', date: '2026-11-12' });
     expect(vm.links.accounts).toBe('/accounts');
@@ -66,10 +63,13 @@ describe('useDashboard', () => {
   it('turns checklist items done when the underlying state changes, and can be dismissed', () => {
     const { result } = dash();
     const state = () => Object.fromEntries(result.current.checklist.items.map((i) => [i.id, i.done]));
-    // A 3-day Duel streak, accounts and a ledger are there; the own-month guess and a plan event are not.
-    expect(state()).toEqual({ duel: true, guess: false, accounts: true, csv: true, planEvent: false });
-    expect(result.current.checklist).toMatchObject({ done: 3, total: 5, visible: true });
-    expect(result.current.checklist.items.map((i) => i.labelKey)).toEqual(['playedDuel', 'guessedOwnMonth', 'addedAccounts', 'importedCsv', 'createdPlanEvent']);
+    // A 3-day Duel streak, accounts and a ledger are there; the own-month guess, a budget and a plan of their own are not.
+    expect(state()).toEqual({ duel: true, guess: false, accounts: true, csv: true, budget: false, planEvent: false });
+    expect(result.current.checklist).toMatchObject({ done: 3, total: 6, visible: true });
+    expect(result.current.checklist.items.map((i) => i.labelKey)).toEqual([
+      'playedDuel', 'guessedOwnMonth', 'addedAccounts', 'importedCsv', 'setBudget', 'createdPlanEvent',
+    ]);
+    expect(result.current.checklist.items.find((i) => i.id === 'budget')!.href).toBe('/budget');
 
     act(() => useAppStore.getState().setSelfGuess(3500)); // the own-month guess lives in the app store
     expect(result.current.checklist.done).toBe(4);
@@ -78,10 +78,12 @@ describe('useDashboard', () => {
     expect(result.current.netWorth).toMatchObject({ value: 0, hasAccounts: false, sparkline: [] });
     act(() => void useAccountsStore.getState().addAccount({ group: 'cash', name: 'Cash', balance: 10 }));
     expect(state().accounts).toBe(true);
+    act(() => useBudgetStore.getState().create({ rentUtilities: 1950, car: 310, childcare: 0, groceries: 520, eatingOut: 340, subscriptions: 85, debtPayments: 0, other: 450 }, 5200));
+    expect(state().budget).toBe(true);
     act(() => addPlanEvent());
-    expect(result.current.checklist).toMatchObject({ done: 5, total: 5, visible: false }); // all done: the card goes away
+    expect(result.current.checklist).toMatchObject({ done: 6, total: 6, visible: false }); // all done: the card goes away
 
-    act(() => removePlanEvents());
+    act(() => untouchPlan());
     expect(result.current.checklist.visible).toBe(true);
     act(() => result.current.dismissChecklist());
     expect(result.current.checklist).toMatchObject({ dismissed: true, visible: false });
@@ -112,10 +114,47 @@ describe('useDashboard', () => {
     expect(result.current.recentTransactions).toMatchObject([{ label: 'Coffee', amount: -12 }]);
   });
 
-  it('shows "Run" until a Chance run exists', () => {
+  it('plans to the end age and shows the real Chance of success, the same run as /plan', async () => {
     const { result } = dash();
-    act(() => useDashboardStore.getState().update({ planSuccessRate: null }));
-    expect(result.current.plan).toEqual({ status: 'run' });
+    const plan = result.current.plan!;
+    expect(plan).not.toBeNull();
+    // engine plan(): a point a year from this year to the end age.
+    expect(plan.points[0]!.year).toBe(2026);
+    expect(plan.points.at(-1)!.age).toBe(plan.endAge);
+    expect(plan.endAge).toBe(90);
+    expect(plan.retireAge).toBeGreaterThan(plan.points[0]!.age);
+    // The dashboard starts /plan's Monte Carlo run; the result is the plan store's, not a fixture's.
+    expect(plan.chance).toEqual({ status: 'running' });
+    await waitFor(() => expect(result.current.plan!.chance.status).toBe('result'), { timeout: 10_000 });
+    const stored = usePlanStore.getState().chanceResult!;
+    expect(usePlanStore.getState().chanceStatus).toBe('done');
+    expect(result.current.plan!.chance).toEqual({ status: 'result', successRate: stored.successRate, good: stored.successRate >= 0.8, paths: stored.paths });
+    expect(stored.seed).toBe(usePlanStore.getState().chanceSettings.seed);
+    expect(stored).not.toBe(monteCarloDemo);
+  });
+
+  it('cuts net worth to the 1, 3, 6 and 12 month periods', () => {
+    const { result } = dash();
+    const { periods } = result.current.netWorth;
+    // History: October -21200, November -5900.
+    expect(periods['1m']).toEqual({ points: [{ month: '2026-10', value: -21200 }, { month: '2026-11', value: -5900 }], change: 15300 });
+    expect(periods['12m'].points.map((p) => p.month)).toEqual(['2026-10', '2026-11']);
+    expect(periods['12m'].change).toBe(15300);
+  });
+
+  it('lists the recurring bills still due this month and the goals', () => {
+    const { result } = dash();
+    const { upcoming, remainingDue, empty } = result.current.recurring;
+    expect(empty).toBe(false);
+    // From the 15th on: the auto loan and the card minimum, both on the 20th (the accounts' assumed due day).
+    expect(upcoming.map((b) => [b.date, b.labelKey, b.amount])).toEqual([['2026-11-20', 'loan', 412], ['2026-11-20', 'card', 193.92]]);
+    expect(remainingDue).toBeCloseTo(605.92, 2);
+    for (const b of upcoming) {
+      expect(b.date >= TODAY).toBe(true);
+      expect(b.section).not.toBe('income');
+    }
+    expect(upcoming.map((b) => b.date)).toEqual([...upcoming.map((b) => b.date)].sort());
+    expect(result.current.goals).toEqual([]);
   });
 
   it('lists the 3 budget lines with the least left, once a budget exists', () => {
@@ -126,5 +165,12 @@ describe('useDashboard', () => {
     // car 310 - 184.98 = 125.02, eating out 179.44, ...; childcare and debt (nothing planned, nothing spent) are left out.
     expect(result.current.budget.rows.map((r) => r.category)).toEqual(['subscriptions', 'rentUtilities', 'car']);
     expect(result.current.budget.rows[0]!.remaining).toBeCloseTo(27.04, 2);
+    // Groups: essentials and lifestyle (debt has nothing planned or spent); totals over every category.
+    expect(result.current.budget.groups.map((g) => g.id)).toEqual(['essentials', 'lifestyle']);
+    const { totals, groups } = result.current.budget;
+    expect(totals.planned).toBe(1950 + 310 + 520 + 340 + 85 + 450);
+    expect(groups.reduce((s, g) => s + g.actual, 0)).toBeCloseTo(totals.actual, 6);
+    expect(totals.remaining).toBeCloseTo(totals.planned - totals.actual, 6);
+    expect(result.current.budget.todayMarker).toBeCloseTo(15 / 30, 6);
   });
 });

@@ -2,7 +2,7 @@
 import type { ShellIcon as IconName } from '../model/types';
 
 const PATHS: Record<IconName, string[]> = {
-  home: ['M3 10.5 12 3l9 7.5', 'M5 9.5V21h5v-6h4v6h5V9.5'],
+  dashboard: ['M4 4h7v9H4Z', 'M13 4h7v5h-7Z', 'M13 11h7v9h-7Z', 'M4 15h7v5H4Z'],
   plan: ['M3 20h18', 'M4 16l5-5 4 3 7-8', 'M15 6h5v5'],
   accounts: ['M3 9.5 12 4l9 5.5', 'M5 10v8M9.5 10v8M14.5 10v8M19 10v8', 'M3 20.5h18'],
   transactions: ['M4 7h13', 'M14 4l3 3-3 3', 'M20 17H7', 'M10 14l-3 3 3 3'],
@@ -10,8 +10,6 @@ const PATHS: Record<IconName, string[]> = {
   budget: ['M12 3v9l7.5 4.5', 'M21 12a9 9 0 1 1-9-9'],
   recurring: ['M20 11a8 8 0 0 0-14.7-4.3', 'M4 4v4h4', 'M4 13a8 8 0 0 0 14.7 4.3', 'M20 20v-4h-4'],
   goals: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z', 'M12 12h.01'],
-  future: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M12 7v5l3 2'],
-  whatIf: ['M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6', 'M12 17.5h.01', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z'],
   play: ['M6 4.5v15l13-7.5Z'],
   pro: ['M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9Z'],
   more: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],

@@ -1,8 +1,8 @@
 // Seeds every store the planner screens read with the MP2 demo fixtures, for hook tests (not used by the
 // app): the accounts (accounts.demo.json) and the ledger (transactions.demo.json) go through the real
 // stores, on the browser-less fallbacks (localStorage in jsdom, a memory record store for the ledger).
-// The budget, goals, hidden items and the checklist start empty; the Duel streak and the Chance rate are
-// the dashboard's placeholders; the plan has scenarios without events. Awaited by `beforeEach`.
+// The budget, goals, hidden items and the checklist start empty; the Duel streak is the dashboard's
+// placeholder; the plan has scenarios without events and no Chance run yet. Awaited by `beforeEach`.
 import { accountsDemo, transactionsDemo } from '@/fixtures';
 import { clearAccounts, ACCOUNTS_STORE_KEY, initAccounts } from '@/lib/model/accounts';
 import { memoryRecordStore } from '@/lib/model/idb';

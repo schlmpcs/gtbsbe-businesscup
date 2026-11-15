@@ -83,6 +83,47 @@ describe('useCashFlow', () => {
     expect(links[1]!.value).toBeCloseTo(144.96, 2);
   });
 
+  it('gives each KPI its change against the previous period', () => {
+    const { result } = renderHook(() => useCashFlow({ today: TODAY }));
+    const [income, expenses, savings, rate] = result.current.kpis;
+    expect(income!.change).toBe(2400 - 4800);
+    expect(expenses!.change).toBeCloseTo(2544.96 - 3948.01, 2);
+    expect(savings!.change).toBeCloseTo(-144.96 - 851.99, 2);
+    expect(rate!.change).toBeCloseTo(-144.96 / 2400 - 851.99 / 4800, 10);
+  });
+
+  it('shapes the Sankey flow by category and by group', () => {
+    const { result } = renderHook(() => useCashFlow({ today: TODAY }));
+    const byCategory = result.current.flow;
+    // November: pay 2400 plus 144.96 from savings = 2544.96 through Income, all of it spent.
+    expect(byCategory.sources.map((s) => s.id)).toEqual(['pay', 'fromSavings']);
+    expect(byCategory.total).toBeCloseTo(2544.96, 2);
+    expect(byCategory.targets[0]).toMatchObject({ kind: 'category', id: 'rentUtilities', group: 'essentials', value: 1883.15 });
+    expect(byCategory.targets.reduce((s, t) => s + t.value, 0)).toBeCloseTo(2544.96, 2);
+    expect(byCategory.targets.some((t) => t.kind === 'savings')).toBe(false);
+
+    act(() => result.current.setBreakdown('group'));
+    expect(result.current.flow.targets).toEqual([
+      { kind: 'group', id: 'essentials', group: 'essentials', value: 2237.6 },
+      { kind: 'group', id: 'lifestyle', group: 'lifestyle', value: 307.36 },
+    ]);
+
+    act(() => result.current.setPeriod('yearly'));
+    const year = result.current.flow;
+    expect(year.sources).toEqual([{ id: 'pay', value: 24000 }]);
+    expect(year.targets[year.targets.length - 1]).toMatchObject({ kind: 'savings', value: expect.closeTo(4878.03, 2) });
+    expect(year.targets.reduce((s, t) => s + t.value, 0)).toBeCloseTo(24000, 2);
+  });
+
+  it('lists the latest lines of the period, transfers left out', () => {
+    const { result } = renderHook(() => useCashFlow({ today: TODAY }));
+    const { lines, lineCount } = result.current;
+    expect(lines.length).toBe(Math.min(6, lineCount));
+    expect(lineCount).toBeGreaterThan(lines.length);
+    expect(lines.every((l) => l.date.startsWith('2026-11') && l.category !== 'transfer')).toBe(true);
+    expect([...lines].sort((a, b) => (a.date < b.date ? 1 : -1)).map((l) => l.date)).toEqual(lines.map((l) => l.date));
+  });
+
   it('is empty without transactions', async () => {
     await ledger().clear();
     const { result } = renderHook(() => useCashFlow({ today: TODAY }));

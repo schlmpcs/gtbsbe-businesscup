@@ -9,7 +9,7 @@ beforeEach(resetClientState);
 
 describe('showsPersonalNumbers', () => {
   it('is true on the planner and tool screens that show a profile’s numbers, and their subpages', () => {
-    for (const r of ['/future', '/plan', '/accounts', '/accounts/abc', '/budget', '/afford', '/loan', '/spend', '/tools/bills']) {
+    for (const r of ['/dashboard', '/future', '/plan', '/accounts', '/accounts/abc', '/budget', '/afford', '/loan', '/spend', '/tools/bills']) {
       expect(showsPersonalNumbers(r)).toBe(true);
     }
   });
@@ -55,6 +55,23 @@ describe('useSampleBanner', () => {
     expect(result.current.requested).toBe(false);
     act(() => useAppStore.getState().setSpending('rentUtilities', 1800));
     expect(useAppStore.getState().profileOrigin).toBe('user');
+    expect(result.current.active).toBe(false);
+  });
+
+  it('with the person’s own transactions in the ledger: says so, and leaves /transactions (it shows only their lines)', async () => {
+    const plan = renderHook(() => useSampleBanner('/plan', { ownLedger: true }));
+    const tx = renderHook(() => useSampleBanner('/transactions', { ownLedger: true }));
+    const txEmpty = renderHook(() => useSampleBanner('/transactions', { ownLedger: false }));
+    await waitFor(() => expect(plan.result.current.active).toBe(true));
+    expect(plan.result.current.ownLedger).toBe(true);
+    expect(tx.result.current.active).toBe(false);
+    expect(txEmpty.result.current.active).toBe(true);
+  });
+
+  it('goes away once a statement is applied to the profile (S9)', async () => {
+    const { result } = renderHook(() => useSampleBanner('/dashboard'));
+    await waitFor(() => expect(result.current.active).toBe(true));
+    act(() => useAppStore.getState().applyStatementTotals([]));
     expect(result.current.active).toBe(false);
   });
 });

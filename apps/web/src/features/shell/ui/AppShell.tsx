@@ -1,11 +1,14 @@
-// The app shell (MP14, docs/ARCHITECTURE.md → Screens). Desktop (md and up): a left sidebar with every
-// page. Phone: a slim top bar (logo, Go Pro), fixed bottom tabs (Home, Plan, Play, What if?, More) and
-// a "More" sheet with the rest. The page content is padded by --shell-sidebar-w / --shell-tabbar-h
-// (globals.css) so nothing hides under the sidebar or the tab bar.
+// The app shell (MP14, docs/ARCHITECTURE.md → Screens). Desktop (md and up): a calm left sidebar
+// (logo, Dashboard and Plan, the "Money" screens, Play with its "Daily" tag, and a Go Pro card at the
+// foot). Phone: a slim top bar (logo, Go Pro), fixed bottom tabs (Dashboard, Plan, Play, Accounts,
+// More) and a "More" sheet with the rest. The page content is padded by --shell-sidebar-w /
+// --shell-tabbar-h (globals.css) so nothing hides under the sidebar or the tab bar.
+// On a bare route (the landing and the onboarding story) none of the chrome renders: the page is
+// full-screen, with only the footer under it.
 // Presentational: links and state come from ShellVM; the route's Link comes in as a prop.
 import type { ReactNode } from 'react';
 import { common } from '@/copy';
-import { buttonClassName, cx, Sheet } from '@/ui-kit';
+import { cx, Sheet } from '@/ui-kit';
 import type { ShellGroupVM, ShellLinkComponent, ShellLinkVM, ShellVM } from '../model/types';
 import { ShellIcon, ShellLogo } from './ShellIcon';
 
@@ -14,7 +17,7 @@ const t = common.shell;
 export type AppShellProps = {
   vm: ShellVM;
   Link: ShellLinkComponent;
-  /** Notices under the top of the page (e.g. the sample banner). */
+  /** Notices at the top of the content (e.g. the sample banner). Not shown on bare routes. */
   banner?: ReactNode;
   /** Under the page (the disclaimer). */
   footer?: ReactNode;
@@ -24,6 +27,16 @@ export type AppShellProps = {
 const CONTENT_ID = 'content';
 
 export function AppShell({ vm, Link, banner, footer, children }: AppShellProps) {
+  if (vm.bare) {
+    return (
+      <div data-testid="shell-bare" className="flex min-h-dvh flex-col">
+        <div id={CONTENT_ID} tabIndex={-1} className="flex-1 outline-none">
+          {children}
+        </div>
+        {footer}
+      </div>
+    );
+  }
   return (
     <>
       <a
@@ -47,16 +60,25 @@ export function AppShell({ vm, Link, banner, footer, children }: AppShellProps) 
   );
 }
 
-function Logo({ Link }: { Link: ShellLinkComponent }) {
+function Logo({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
   return (
-    <Link href="/" aria-label={t.home} className="flex min-h-11 shrink-0 items-center gap-sm">
+    <Link href={vm.homeHref} aria-label={t.home} className="flex min-h-11 shrink-0 items-center gap-sm rounded-md">
       <ShellLogo />
       <span className="font-display text-xl font-extrabold lowercase">{common.appName}</span>
     </Link>
   );
 }
 
-const SIDE_LINK = 'flex min-h-11 items-center gap-md rounded-lg px-md text-sm transition-colors';
+function DailyBadge({ badge }: { badge: ShellLinkVM['badge'] }) {
+  if (!badge) return null;
+  return (
+    <span aria-hidden="true" className="ml-auto rounded-full bg-primary-soft px-sm py-0.5 text-[0.6875rem] font-bold uppercase tracking-wide text-primary">
+      {t.badges[badge]}
+    </span>
+  );
+}
+
+const SIDE_LINK = 'flex min-h-10 items-center gap-md rounded-full px-md text-sm transition-colors duration-150';
 
 function SideLink({ link, Link }: { link: ShellLinkVM; Link: ShellLinkComponent }) {
   return (
@@ -65,23 +87,29 @@ function SideLink({ link, Link }: { link: ShellLinkVM; Link: ShellLinkComponent 
       aria-current={link.active ? 'page' : undefined}
       className={cx(
         SIDE_LINK,
-        link.active ? 'bg-primary-soft font-semibold text-primary' : 'text-text hover:bg-surface-strong',
+        link.active
+          ? 'bg-primary-soft font-semibold text-text'
+          : 'font-medium text-text-muted hover:bg-surface-strong hover:text-text',
       )}
     >
-      <ShellIcon name={link.icon} className="size-5 shrink-0" />
+      <ShellIcon name={link.icon} className={cx('size-5 shrink-0', link.active && 'text-primary')} />
       {t.links[link.key]}
+      <DailyBadge badge={link.badge} />
     </Link>
   );
 }
 
 function Group({ group, Link }: { group: ShellGroupVM; Link: ShellLinkComponent }) {
+  const heading = t.groups[group.key];
   const id = `shell-group-${group.key}`;
   return (
-    <div className="flex flex-col gap-xs">
-      <p id={id} className="px-md text-xs font-bold uppercase tracking-wide text-text-muted">
-        {t.groups[group.key]}
-      </p>
-      <ul aria-labelledby={id} className="flex flex-col gap-xs">
+    <div className={cx('flex flex-col gap-xs', group.key === 'game' && 'border-t border-border pt-lg')}>
+      {heading && (
+        <p id={id} className="px-md pb-xs text-[0.6875rem] font-bold uppercase tracking-wider text-text-muted">
+          {heading}
+        </p>
+      )}
+      <ul aria-labelledby={heading ? id : undefined} className="flex flex-col gap-0.5">
         {group.links.map((l) => (
           <li key={l.key}>
             <SideLink link={l} Link={Link} />
@@ -92,6 +120,25 @@ function Group({ group, Link }: { group: ShellGroupVM; Link: ShellLinkComponent 
   );
 }
 
+function ProCard({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
+  return (
+    <Link
+      href={vm.pro.href}
+      aria-current={vm.pro.active ? 'page' : undefined}
+      className={cx(
+        'group flex flex-col gap-xs rounded-(--card-radius) border p-md transition-colors duration-150',
+        vm.pro.active ? 'border-primary bg-primary-soft' : 'border-border bg-bg hover:border-primary',
+      )}
+    >
+      <span className="flex items-center gap-sm font-display text-base font-extrabold text-text">
+        <ShellIcon name="pro" className="size-5 shrink-0 text-primary" />
+        {t.links.pro}
+      </span>
+      <span className="text-xs leading-snug text-text-muted">{t.proLine}</span>
+    </Link>
+  );
+}
+
 function Sidebar({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
   return (
     <aside
@@ -99,23 +146,15 @@ function Sidebar({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
       className="fixed inset-y-0 left-0 z-30 hidden w-(--shell-sidebar-w) flex-col gap-xl overflow-y-auto border-r border-border bg-surface px-md py-lg md:flex"
     >
       <div className="px-sm">
-        <Logo Link={Link} />
+        <Logo vm={vm} Link={Link} />
       </div>
-      <nav aria-label={t.sidebarLabel} className="flex flex-col gap-xl">
+      <nav aria-label={t.sidebarLabel} className="flex flex-col gap-lg">
         {vm.sidebar.map((g) => (
           <Group key={g.key} group={g} Link={Link} />
         ))}
       </nav>
-      <div className="mt-auto flex flex-col gap-xs">
-        <Link
-          href={vm.pro.href}
-          aria-current={vm.pro.active ? 'page' : undefined}
-          className={cx(buttonClassName({ variant: vm.pro.active ? 'primary' : 'secondary', size: 'md', fullWidth: true }))}
-        >
-          <ShellIcon name="pro" className="size-5 shrink-0" />
-          {t.links.pro}
-        </Link>
-        <p className="px-sm text-xs text-text-muted">{t.proLine}</p>
+      <div className="mt-auto">
+        <ProCard vm={vm} Link={Link} />
       </div>
     </aside>
   );
@@ -125,26 +164,27 @@ function Sidebar({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
 function TopBar({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
   return (
     <header className="flex items-center justify-between gap-lg px-lg pt-sm md:hidden">
-      <Logo Link={Link} />
+      <Logo vm={vm} Link={Link} />
       <Link
         href={vm.pro.href}
         aria-current={vm.pro.active ? 'page' : undefined}
-        className={cx(buttonClassName({ variant: 'secondary', size: 'sm' }), 'min-h-11 text-primary')}
+        className="inline-flex min-h-11 items-center gap-xs rounded-full px-md text-sm font-semibold text-primary hover:bg-primary-soft"
       >
+        <ShellIcon name="pro" className="size-4 shrink-0" />
         {t.links.pro}
       </Link>
     </header>
   );
 }
 
-const TAB = 'flex min-h-11 w-full flex-col items-center justify-center gap-xs rounded-lg py-xs text-xs leading-tight';
+const TAB = 'flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-lg py-xs text-[0.6875rem] leading-tight';
 
 function BottomTabs({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
   return (
     <nav
       aria-label={t.tabsLabel}
       data-testid="shell-tabs"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-lg md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       <ul className="mx-auto grid h-16 max-w-(--container-lg) grid-cols-5 items-center px-xs">
         {vm.tabs.map((l) => (
@@ -154,7 +194,9 @@ function BottomTabs({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
               aria-current={l.active ? 'page' : undefined}
               className={cx(TAB, l.active ? 'font-bold text-primary' : 'font-medium text-text-muted hover:text-text')}
             >
-              <ShellIcon name={l.icon} />
+              <span className={cx('flex h-7 w-12 items-center justify-center rounded-full', l.active && 'bg-primary-soft')}>
+                <ShellIcon name={l.icon} className="size-5 shrink-0" />
+              </span>
               {t.links[l.key]}
             </Link>
           </li>
@@ -167,7 +209,9 @@ function BottomTabs({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
             onClick={vm.openMore}
             className={cx(TAB, vm.moreActive ? 'font-bold text-primary' : 'font-medium text-text-muted hover:text-text')}
           >
-            <ShellIcon name="more" />
+            <span className={cx('flex h-7 w-12 items-center justify-center rounded-full', vm.moreActive && 'bg-primary-soft')}>
+              <ShellIcon name="more" className="size-5 shrink-0" />
+            </span>
             {t.more}
           </button>
         </li>
@@ -182,22 +226,29 @@ function MoreSheet({ vm, Link }: { vm: ShellVM; Link: ShellLinkComponent }) {
       <nav aria-label={t.moreLabel}>
         <ul className="grid grid-cols-2 gap-sm">
           {vm.more.map((l) => (
-            <li key={l.key}>
+            <li key={l.key} className={cx(l.key === 'pro' && 'col-span-2')}>
               <Link
                 href={l.href}
                 onClick={vm.closeMore}
                 aria-current={l.active ? 'page' : undefined}
                 className={cx(
-                  'flex min-h-14 items-center gap-md rounded-lg px-md text-sm',
+                  'flex min-h-14 items-center gap-md rounded-(--card-radius) px-md text-sm',
                   l.active
                     ? 'bg-primary-soft font-semibold text-primary'
                     : l.key === 'pro'
-                      ? 'border-2 border-primary font-semibold text-primary'
-                      : 'bg-surface font-medium text-text shadow-sm',
+                      ? 'border border-primary font-semibold text-primary'
+                      : 'border border-border bg-surface font-medium text-text',
                 )}
               >
                 <ShellIcon name={l.icon} className="size-5 shrink-0" />
-                {t.links[l.key]}
+                {l.key === 'pro' ? (
+                  <span className="flex flex-col">
+                    {t.links.pro}
+                    <span className="text-xs font-normal text-text-muted">{t.proLine}</span>
+                  </span>
+                ) : (
+                  t.links[l.key]
+                )}
               </Link>
             </li>
           ))}

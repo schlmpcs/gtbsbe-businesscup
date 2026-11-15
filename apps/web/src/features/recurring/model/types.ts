@@ -63,6 +63,12 @@ export type RecurringVM = {
   isCurrent: boolean;
   /** Income, expenses, credit cards; a section with no item that month still appears (items: []). */
   sections: RecurringSectionVM[];
+  /**
+   * Bills and card payments (not income) still to come in the month on screen, by due day: from today on in
+   * the current month, all of them in a future month, none in a past one. `total` adds up their `amount`.
+   * Items with no known day are left out.
+   */
+  upcoming: { items: RecurringItemVM[]; total: Money };
   /** Calendar weeks, Sunday first, 7 cells each. */
   calendar: { weeks: RecurringCalendarCellVM[][] };
   /** Nothing recurring at all (not just this month): show the empty state. */

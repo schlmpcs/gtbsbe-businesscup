@@ -84,6 +84,17 @@ describe('usePlan', () => {
     const names = vm.tables.accounts.columns.map((c) => c.name);
     expect(names).toEqual(expect.arrayContaining(['Home', 'Mortgage']));
     expect(vm.tables.accounts.rows.find((r) => r.isRetirementYear)!.year).toBe(2061);
+    // Assets then liabilities, each group listing its accounts; totals are the engine's.
+    const { sections } = vm.tables.accounts;
+    expect(sections.map((s) => s.id)).toEqual(['assets', 'liabilities']);
+    expect(sections.flatMap((s) => s.groups.flatMap((g) => g.accountIds)).sort()).toEqual(vm.tables.accounts.columns.map((c) => c.accountId).sort());
+    expect(sections[1]!.groups.map((g) => g.group)).toContain('mortgage');
+    const r2040 = vm.tables.accounts.rows.find((r) => r.year === 2040)!;
+    const p2040 = p.years.find((y) => y.year === 2040)!;
+    expect(r2040).toMatchObject({ assetsLabel: money(p2040.assets), liabilitiesLabel: money(p2040.liabilities) });
+    const mortgageIds = new Set(sections[1]!.groups.find((g) => g.group === 'mortgage')!.accountIds);
+    const mortgageEnd = p2040.accounts.filter((a) => mortgageIds.has(a.accountId)).reduce((s, a) => s + a.end, 0);
+    expect(r2040.groupEnds.mortgage).toBe(money(mortgageEnd));
     const y0 = p.years[0]!;
     const income = y0.cashFlow.income.reduce((s, l) => s + l.amount, 0);
     expect(vm.tables.cashFlow.rows[0]).toMatchObject({ incomeLabel: money(income), netLabel: money(y0.cashFlow.net) });

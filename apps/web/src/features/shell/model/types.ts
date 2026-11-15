@@ -2,12 +2,10 @@
 import type { ComponentType, ReactNode } from 'react';
 
 export type ShellLinkKey =
-  | 'home' | 'plan' | 'accounts' | 'transactions' | 'cashflow' | 'budget' | 'recurring' | 'goals'
-  | 'future' | 'whatIf' | 'play' | 'pro';
+  | 'dashboard' | 'plan' | 'accounts' | 'transactions' | 'cashflow' | 'budget' | 'recurring' | 'goals'
+  | 'play' | 'pro';
 
-export type ShellIcon =
-  | 'home' | 'plan' | 'accounts' | 'transactions' | 'cashflow' | 'budget' | 'recurring' | 'goals'
-  | 'future' | 'whatIf' | 'play' | 'pro' | 'more';
+export type ShellIcon = ShellLinkKey | 'more';
 
 export type ShellLinkVM = {
   key: ShellLinkKey;
@@ -15,18 +13,31 @@ export type ShellLinkVM = {
   icon: ShellIcon;
   /** The current page is this link or one of its subpages (rendered as aria-current="page"). */
   active: boolean;
+  /** A small tag next to the label ("Daily" on Play). */
+  badge?: 'daily';
 };
 
-export type ShellGroupVM = { key: 'planner' | 'tools'; links: ShellLinkVM[] };
+/**
+ * Sidebar groups: `main` (Dashboard, Plan; no heading), `money` (Accounts … Goals, headed "Money"),
+ * `game` (Play, set apart under a divider).
+ */
+export type ShellGroupVM = { key: 'main' | 'money' | 'game'; links: ShellLinkVM[] };
 
 export type ShellVM = {
+  /**
+   * No chrome on this route (the landing `/` and the onboarding story, /me/*, /start/*): no sidebar,
+   * tabs, top bar or banner; the page is full-screen and brings its own logo link and "Skip".
+   */
+  bare: boolean;
   /** Sidebar (md and up): every page, in groups. */
   sidebar: ShellGroupVM[];
-  /** Go Pro, under the sidebar groups and in the phone's top bar and More sheet. */
+  /** Go Pro: the card at the foot of the sidebar, the phone's top bar and the More sheet. */
   pro: ShellLinkVM;
-  /** Phone bottom tabs (Home, Plan, Play, What if?); "More" comes after them. */
+  /** Where the logo goes (the dashboard). */
+  homeHref: string;
+  /** Phone bottom tabs (Dashboard, Plan, Play, Accounts); "More" comes after them. */
   tabs: ShellLinkVM[];
-  /** The rest of the pages, in the phone's More sheet. */
+  /** The rest of the pages, in the phone's More sheet (Go Pro last). */
   more: ShellLinkVM[];
   /** The current page is one of the More sheet's (the More tab shows as active). */
   moreActive: boolean;

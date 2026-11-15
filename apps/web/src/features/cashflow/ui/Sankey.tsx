@@ -1,135 +1,232 @@
 'use client';
 
-// The Cash Flow Sankey: the engine's nodes and links (summary.sankey) drawn as three columns, sources →
-// Income → where it went. Only drawing geometry here (heights in proportion to each link's dollars);
-// every amount is the engine's. Labels sit right of the last column, one per node, pushed apart so they
-// never overlap; a list under the chart gives the same flows as text.
+// The Cash Flow Sankey: sources (pay, and what came out of savings) → Income → where it went, from the
+// view-model's flow (the engine's links, by category or by group). Laid out in real pixels at the card's
+// width so labels stay readable on a phone; only drawing geometry here (each band's height is its share
+// of the Income node). Ribbons are smooth bezier bands colored by budget group; they fade in one after
+// another. A list under the chart gives the same flows as text for screen readers.
 import { cashflow as t, planner } from '@/copy';
-import { formatMoney } from '@/ui-kit';
-import type { CashFlowSummary } from '../model/types';
+import { cx, formatMoney } from '@/ui-kit';
+import { MOTION, TONE_BG, TONE_FILL, useWidth, type ChartTone } from '@/ui-kit/reports';
+import type { BudgetGroupId, CashFlowFlowTargetVM, CashFlowFlowVM } from '../model/types';
 
-const NAMES: Record<string, string> = { ...planner.categories, ...t.nodes };
-const nameOf = (id: string) => NAMES[id] ?? id;
+export const GROUP_TONE: Record<BudgetGroupId, ChartTone> = { essentials: 'c1', lifestyle: 'c2', debt: 'c5' };
 
-const W = 340;
-const NODE = 8;
-const COL = [0, 96, 186];
-const LABEL_X = COL[2]! + NODE + 6;
-const GAP = 4;
-const LINE = 13; // one label line
-const BODY = 220; // drawing height for the flows
+export const targetTone = (target: CashFlowFlowTargetVM): ChartTone =>
+  target.kind === 'savings' ? 'positive' : target.kind === 'oneOffs' ? 'c3' : GROUP_TONE[target.group];
 
-const LINK_FILL: Record<string, string> = {
-  income: 'fill-chart-1',
-  savings: 'fill-chart-4',
-  fromSavings: 'fill-chart-2',
-  total: 'fill-chart-6',
-  category: 'fill-chart-1',
+export const targetName = (target: CashFlowFlowTargetVM): string =>
+  target.kind === 'category'
+    ? planner.categories[target.id]
+    : target.kind === 'group'
+      ? planner.budgetGroups[target.id]
+      : target.kind === 'savings'
+        ? t.nodes.savings
+        : t.nodes.oneOffs;
+
+const SOURCE_TONE: Record<'pay' | 'fromSavings', ChartTone> = { pay: 'positive', fromSavings: 'c6' };
+
+const NODE = 10;
+const GAP = 10;
+const LABEL = 34; // two label lines
+const TOP = 26; // room for the Income label above the middle node
+
+type Box = { y: number; h: number };
+
+/** Stacks values top to bottom with a gap, at `unit` px per dollar, starting at `y0`. */
+function stack(values: readonly number[], unit: number, y0: number, gap: number): Box[] {
+  let y = y0;
+  return values.map((v) => {
+    const h = Math.max(2, v * unit);
+    const box = { y, h };
+    y += h + gap;
+    return box;
+  });
+}
+
+/** Places labels near their wanted y without overlapping, kept inside [min, max]. */
+function spread(wanted: readonly number[], size: number, min: number, max: number): number[] {
+  const out = wanted.map((w) => Math.max(min, w));
+  for (let i = 1; i < out.length; i++) out[i] = Math.max(out[i]!, out[i - 1]! + size);
+  const overflow = (out[out.length - 1] ?? 0) + size - max;
+  if (overflow > 0) {
+    out[out.length - 1] = out[out.length - 1]! - overflow;
+    for (let i = out.length - 2; i >= 0; i--) out[i] = Math.min(out[i]!, out[i + 1]! - size);
+  }
+  return out;
+}
+
+/** A band from (x0, y0..y0+h0) to (x1, y1..y1+h1) as a smooth filled curve. */
+const band = (x0: number, y0: number, h0: number, x1: number, y1: number, h1: number) => {
+  const c = (x1 - x0) * 0.5;
+  return `M${x0},${y0} C${x0 + c},${y0} ${x1 - c},${y1} ${x1},${y1} L${x1},${y1 + h1} C${x1 - c},${y1 + h1} ${x0 + c},${y0 + h0} ${x0},${y0 + h0} Z`;
 };
 
-type Box = { id: string; y: number; h: number };
+const HALO = '[paint-order:stroke] stroke-surface [stroke-width:4px] [stroke-linejoin:round]';
 
-export function Sankey({ summary }: { summary: CashFlowSummary }) {
-  const { nodes, links } = summary.sankey;
-  if (nodes.length === 0) return <p className="text-sm text-text-muted">{t.sankeyEmpty}</p>;
+export function Sankey({ flow }: { flow: CashFlowFlowVM }) {
+  const [ref, width] = useWidth<HTMLDivElement>(720);
+  const { sources, targets, total } = flow;
+  if (total <= 0 || targets.length === 0) return <p className="py-2xl text-center text-sm text-text-muted">{t.sankeyEmpty}</p>;
 
-  const kindOf = new Map(nodes.map((n) => [n.id, n.kind]));
-  const sources = links.filter((l) => l.target === 'income');
-  const targets = links.filter((l) => l.source === 'income');
-  const total = Math.max(
-    sources.reduce((s, l) => s + l.value, 0),
-    targets.reduce((s, l) => s + l.value, 0),
-  );
-  const gaps = (n: number) => Math.max(0, n - 1) * GAP;
-  const unit = total > 0 ? (BODY - gaps(Math.max(sources.length, targets.length))) / total : 0;
-  const stack = (list: typeof links, key: 'source' | 'target'): Box[] => {
-    let y = 0;
-    return list.map((l) => {
-      const h = Math.max(1, l.value * unit);
-      const box = { id: l[key], y, h };
-      y += h + GAP;
-      return box;
-    });
-  };
-  const left = stack(sources, 'source');
-  const right = stack(targets, 'target');
-  const midH = Math.max(1, total * unit);
+  const W = Math.max(300, width);
+  const narrow = W < 560;
+  const labelW = narrow ? 112 : 168;
+  const xR = W - labelW - NODE; // right nodes
+  const xM = Math.round((narrow ? 0.34 : 0.4) * xR); // the Income node
+  const body = Math.max(narrow ? 220 : 280, targets.length * (LABEL + 4));
+  const unit = (body - GAP * Math.max(0, targets.length - 1)) / total;
+  const midH = total * unit;
+  const height = TOP + body + 8;
 
-  // Labels: two lines (name, amount) at each right node's middle, pushed down to avoid overlaps.
-  const labelY: number[] = [];
-  right.forEach((b, i) => {
-    const want = b.y + b.h / 2 - LINE / 2;
-    labelY.push(i === 0 ? Math.max(0, want) : Math.max(want, labelY[i - 1]! + LINE * 2 + 2));
-  });
-  const height = Math.max(BODY + LINE + 4, (labelY[labelY.length - 1] ?? 0) + LINE * 2 + 4);
+  const right = stack(targets.map((x) => x.value), unit, TOP, GAP);
+  const mid = { y: TOP + (body - midH) / 2, h: midH };
+  const leftGap = 24;
+  const leftH = total * unit + leftGap * Math.max(0, sources.length - 1);
+  const left = stack(sources.map((s) => s.value), unit, TOP + (body - leftH) / 2, leftGap);
+  const rightLabels = spread(right.map((b) => b.y + b.h / 2 - LABEL / 2 + 4), LABEL, TOP - 4, height);
 
-  // A link band from (x0, y0..y0+h0) to (x1, y1..y1+h1), drawn as a filled curve.
-  const band = (x0: number, y0: number, x1: number, y1: number, h: number) => {
-    const mx = (x0 + x1) / 2;
-    return `M${x0},${y0} C${mx},${y0} ${mx},${y1} ${x1},${y1} L${x1},${y1 + h} C${mx},${y1 + h} ${mx},${y0 + h} ${x0},${y0 + h} Z`;
-  };
+  // Where each band enters and leaves the Income node: stacked without gaps, in order.
+  let inY = mid.y;
+  let outY = mid.y;
 
   return (
-    <figure className="flex flex-col gap-md">
-      <svg
-        role="img"
-        aria-label={t.sankeyLabel}
-        viewBox={`0 0 ${W} ${height}`}
-        className="h-auto w-full max-w-2xl"
-        data-testid="cashflow-sankey"
-      >
-        {left.map((b, i) => {
-          // The middle column has no gaps: the band lands at its stacked offset.
-          const y1 = b.y - i * GAP;
-          return (
-            <path key={`in-${b.id}`} d={band(COL[0]! + NODE, b.y, COL[1]!, y1, b.h)} className={LINK_FILL[b.id === 'fromSavings' ? 'fromSavings' : 'total']} opacity={0.35}>
-              <title>{`${nameOf(b.id)} → ${t.nodes.income}: ${formatMoney(sources[i]!.value)}`}</title>
-            </path>
-          );
-        })}
-        {right.map((b, i) => {
-          const y0 = b.y - i * GAP;
-          const kind = kindOf.get(b.id) ?? 'category';
-          return (
-            <path key={`out-${b.id}`} d={band(COL[1]! + NODE, y0, COL[2]!, b.y, b.h)} className={LINK_FILL[kind]} opacity={0.35}>
-              <title>{`${t.nodes.income} → ${nameOf(b.id)}: ${formatMoney(targets[i]!.value)}`}</title>
-            </path>
-          );
-        })}
-        {left.map((b) => (
-          <g key={`node-in-${b.id}`}>
-            <rect x={COL[0]} y={b.y} width={NODE} height={b.h} rx={2} className="fill-ink" />
-            <text x={COL[0]! + NODE + 4} y={Math.max(LINE, b.y + b.h / 2)} className="fill-text text-xs font-semibold">
-              {nameOf(b.id)}
-            </text>
-            <text x={COL[0]! + NODE + 4} y={Math.max(LINE, b.y + b.h / 2) + LINE} className="fill-text-muted text-xs tabular-nums">
-              {formatMoney(sources[left.indexOf(b)]!.value)}
-            </text>
-          </g>
-        ))}
-        <rect x={COL[1]} y={0} width={NODE} height={midH} rx={2} className="fill-ink" />
-        <text x={COL[1]! + NODE + 4} y={LINE - 2} className="fill-text text-xs font-semibold">
-          {t.nodes.income}
-        </text>
-        {right.map((b, i) => (
-          <g key={`node-out-${b.id}`}>
-            <rect x={COL[2]} y={b.y} width={NODE} height={b.h} rx={2} className="fill-ink" />
-            <text x={LABEL_X} y={labelY[i]! + LINE - 3} className="fill-text text-xs font-medium">
-              {nameOf(b.id)}
-            </text>
-            <text x={LABEL_X} y={labelY[i]! + LINE * 2 - 3} className="fill-text-muted text-xs tabular-nums">
-              {formatMoney(targets[i]!.value)}
-            </text>
-          </g>
-        ))}
-      </svg>
-      <figcaption>
-        <ul aria-label={t.sankeyLabel} className="sr-only">
-          {links.map((l) => (
-            <li key={`${l.source}-${l.target}`}>{`${nameOf(l.source)} → ${nameOf(l.target)}: ${formatMoney(l.value)}`}</li>
+    <div ref={ref} className="w-full min-w-0">
+      <figure className="m-0 flex flex-col gap-md">
+        <svg
+          role="img"
+          aria-label={t.sankeyLabel}
+          viewBox={`0 0 ${W} ${height}`}
+          width="100%"
+          height={height}
+          className="block h-auto w-full overflow-visible text-xs"
+          data-testid="cashflow-sankey"
+        >
+          {sources.map((s, i) => {
+            const b = left[i]!;
+            const y1 = inY;
+            inY += b.h;
+            return (
+              <path
+                key={`in-${s.id}`}
+                d={band(NODE, b.y, b.h, xM, y1, b.h)}
+                className={cx(TONE_FILL[SOURCE_TONE[s.id]], 'opacity-35 transition-opacity hover:opacity-60', MOTION.fade)}
+                style={{ transitionDelay: `${i * 60}ms` }}
+              >
+                <title>{`${t.nodes[s.id]} → ${t.nodes.income}: ${formatMoney(s.value)}`}</title>
+              </path>
+            );
+          })}
+          {targets.map((x, i) => {
+            const b = right[i]!;
+            const y0 = outY;
+            outY += b.h;
+            return (
+              <path
+                key={`out-${x.kind}-${x.id}`}
+                d={band(xM + NODE, y0, b.h, xR, b.y, b.h)}
+                className={cx(TONE_FILL[targetTone(x)], 'opacity-35 transition-opacity hover:opacity-60', MOTION.fade)}
+                style={{ transitionDelay: `${120 + i * 60}ms` }}
+              >
+                <title>{`${t.nodes.income} → ${targetName(x)}: ${formatMoney(x.value)}`}</title>
+              </path>
+            );
+          })}
+
+          {sources.map((s, i) => {
+            const b = left[i]!;
+            const cy = b.y + b.h / 2;
+            return (
+              <g key={`node-in-${s.id}`}>
+                <rect x={0} y={b.y} width={NODE} height={b.h} rx={3} className={TONE_FILL[SOURCE_TONE[s.id]]} />
+                <text x={NODE + 6} y={cy - 2} className={cx('fill-text font-semibold', HALO)}>
+                  {t.nodes[s.id]}
+                </text>
+                <text x={NODE + 6} y={cy + 13} className={cx('fill-text-muted tabular-nums', HALO)}>
+                  {formatMoney(s.value)}
+                </text>
+              </g>
+            );
+          })}
+
+          <rect x={xM} y={mid.y} width={NODE} height={mid.h} rx={3} className="fill-ink" />
+          <text x={xM + NODE / 2} y={mid.y - 8} textAnchor="middle" className={cx('fill-text font-bold', HALO)}>
+            <tspan>{t.nodes.income}</tspan>
+            <tspan className="fill-text-muted font-normal tabular-nums">{` ${formatMoney(total)}`}</tspan>
+          </text>
+
+          {targets.map((x, i) => {
+            const b = right[i]!;
+            const ly = rightLabels[i]!;
+            return (
+              <g key={`node-out-${x.kind}-${x.id}`}>
+                <rect x={xR} y={b.y} width={NODE} height={b.h} rx={3} className={TONE_FILL[targetTone(x)]} />
+                <text x={xR + NODE + 8} y={ly + 10} className="fill-text font-semibold">
+                  {targetName(x)}
+                </text>
+                <text x={xR + NODE + 8} y={ly + 25} className="fill-text-muted tabular-nums">
+                  {formatMoney(x.value)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+        <figcaption className="flex flex-wrap gap-x-lg gap-y-xs text-xs text-text-muted">
+          <Legend tone="positive" label={t.nodes.pay} />
+          {(Object.keys(GROUP_TONE) as BudgetGroupId[]).map((g) => (
+            <Legend key={g} tone={GROUP_TONE[g]} label={planner.budgetGroups[g]} />
           ))}
-        </ul>
-      </figcaption>
-    </figure>
+          <ul aria-label={t.sankeyLabel} className="sr-only">
+            {sources.map((s) => (
+              <li key={`in-${s.id}`}>{`${t.nodes[s.id]} → ${t.nodes.income}: ${formatMoney(s.value)}`}</li>
+            ))}
+            {targets.map((x) => (
+              <li key={`out-${x.kind}-${x.id}`}>{`${t.nodes.income} → ${targetName(x)}: ${formatMoney(x.value)}`}</li>
+            ))}
+          </ul>
+        </figcaption>
+      </figure>
+    </div>
+  );
+}
+
+function Legend({ tone, label }: { tone: ChartTone; label: string }) {
+  return (
+    <span aria-hidden="true" className="flex items-center gap-xs">
+      <span className={cx('size-2.5 rounded-full', TONE_BG[tone])} />
+      {label}
+    </span>
+  );
+}
+
+/** A faded, number-free Sankey shape for the empty state. */
+export function GhostSankey({ className }: { className?: string }) {
+  const ins: [number, number, number, ChartTone][] = [
+    [90, 110, 80, 'positive'],
+    [200, 190, 28, 'c6'],
+  ];
+  const outs: [number, number, number, ChartTone][] = [
+    [110, 30, 40, 'c1'],
+    [150, 110, 26, 'c1'],
+    [176, 175, 18, 'c2'],
+    [194, 230, 14, 'c2'],
+    [208, 280, 10, 'c5'],
+  ];
+  return (
+    <svg viewBox="0 0 360 320" className={cx('h-full w-full', className)} aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      {ins.map(([y0, y1, h, tone]) => (
+        <path key={`gi-${y0}`} d={band(14, y0, h, 160, y1, h)} className={cx(TONE_FILL[tone], 'opacity-40')} />
+      ))}
+      {outs.map(([y0, y1, h, tone]) => (
+        <path key={`go-${y0}`} d={band(172, y0, h, 330, y1, h)} className={cx(TONE_FILL[tone], 'opacity-40')} />
+      ))}
+      {ins.map(([y0, , h, tone]) => (
+        <rect key={`gn-${y0}`} x={4} y={y0} width={10} height={h} rx={3} className={TONE_FILL[tone]} />
+      ))}
+      <rect x={160} y={110} width={12} height={108} rx={3} className="fill-ink" />
+      {outs.map(([y0, y1, h, tone]) => (
+        <rect key={`gr-${y0}`} x={330} y={y1} width={10} height={h} rx={3} className={TONE_FILL[tone]} />
+      ))}
+    </svg>
   );
 }

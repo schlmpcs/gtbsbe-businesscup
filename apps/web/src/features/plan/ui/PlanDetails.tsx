@@ -1,88 +1,216 @@
 'use client';
 
-// Under the chart: tabs Events / Cash flow / Accounts (usePlan → tables) and the "Add event" catalog
-// (useEventCatalog). The tables arrive formatted; this file only lays them out.
+// Under the chart: the year-by-year card with tabs Accounts / Cash flow / Events (usePlan → tables).
+// Years are columns; the first column (row names) stays put while the table scrolls sideways inside the
+// card. Accounts group as Assets › Cash › each account (expandable); Cash flow opens Income and Expenses
+// into their lines. Every cell arrives formatted; this file only lays them out.
 import { useState } from 'react';
 import { plan as copy } from '@/copy';
-import { Button, Card, Sheet, Tabs, cx } from '@/ui-kit';
-import type {
-  EventCatalogVM, PlanAccountsTableVM, PlanCashFlowTableVM, PlanEventRowVM,
-} from '../model/types';
-import { EventIcon } from './EventIcon';
+import { Tabs, cx } from '@/ui-kit';
+import type { PlanAccountsTableVM, PlanCashFlowTableVM, PlanEventRowVM, PlanTone } from '../model/types';
+import { EventBadge } from './EventIcon';
 
-type TabId = 'events' | 'cashFlow' | 'accounts';
+type TabId = 'accounts' | 'cashFlow' | 'events';
 
 export type PlanDetailsProps = {
   events: readonly PlanEventRowVM[];
   cashFlow: PlanCashFlowTableVM;
   accounts: PlanAccountsTableVM;
-  catalog: EventCatalogVM;
+  onOpenEvent: (id: string) => void;
 };
 
-const TH = 'px-md py-sm font-medium whitespace-nowrap';
-const TD = 'px-md py-xs whitespace-nowrap';
-
-export function PlanDetails({ events, cashFlow, accounts, catalog }: PlanDetailsProps) {
+export function PlanDetails({ events, cashFlow, accounts, onOpenEvent }: PlanDetailsProps) {
   const t = copy.screen;
-  const [tab, setTab] = useState<TabId>('events');
-  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [tab, setTab] = useState<TabId>('accounts');
 
   return (
-    <Card
-      title={t.tabs.label}
-      action={
-        <Button size="sm" onClick={() => setCatalogOpen(true)}>
-          {t.events.add}
-        </Button>
-      }
-    >
+    <section aria-labelledby="plan-details" className="card card-pad flex min-w-0 flex-col gap-md">
+      <h2 id="plan-details" className="text-lg font-bold">{t.tabs.label}</h2>
       <Tabs<TabId>
         label={t.tabs.label}
         value={tab}
         onValueChange={setTab}
         tabs={[
-          { id: 'events', label: t.tabs.events, panel: <EventList events={events} onOpen={catalog.openEditor} /> },
-          { id: 'cashFlow', label: t.tabs.cashFlow, panel: <CashFlowTable table={cashFlow} /> },
           { id: 'accounts', label: t.tabs.accounts, panel: <AccountsTable table={accounts} /> },
+          { id: 'cashFlow', label: t.tabs.cashFlow, panel: <CashFlowTable table={cashFlow} /> },
+          { id: 'events', label: t.tabs.events, panel: <EventList events={events} onOpen={onOpenEvent} /> },
         ]}
       />
-
-      <Sheet open={catalogOpen} onClose={() => setCatalogOpen(false)} title={t.events.catalogTitle} description={t.events.catalogIntro}>
-        <ul className="grid gap-sm sm:grid-cols-2">
-          {catalog.entries.map((e) => (
-            <li key={e.type}>
-              <button
-                type="button"
-                disabled={!e.enabled}
-                onClick={() => {
-                  setCatalogOpen(false);
-                  catalog.add(e.type);
-                }}
-                className={cx(
-                  'flex h-full min-h-11 w-full items-start gap-md rounded-md border border-border bg-bg p-md text-left',
-                  'hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-                  'disabled:cursor-not-allowed disabled:opacity-50',
-                )}
-              >
-                <span className="mt-xs flex size-2xl shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-                  <EventIcon id={e.icon} />
-                </span>
-                <span className="flex min-w-0 flex-col gap-xs">
-                  <span className="font-semibold">{e.title}</span>
-                  <span className="text-sm text-text-muted">{e.enabled ? e.description : t.events.onlyOne}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </Sheet>
-    </Card>
+    </section>
   );
+}
+
+// ----- The year-columns table ------------------------------------------------------------------
+
+type YearColumn = { year: number; age: number; highlight: boolean };
+type YearRow = {
+  id: string;
+  label: string;
+  depth: 0 | 1 | 2;
+  cells: readonly string[];
+  tones?: readonly (PlanTone | null)[];
+  strong?: boolean;
+  /** Expandable rows: whether open, and the toggle. */
+  expanded?: boolean;
+  onToggle?: () => void;
+};
+
+const STICKY = 'sticky left-0 z-10 bg-surface';
+
+function YearTable({ caption, columns, rows }: { caption: string; columns: readonly YearColumn[]; rows: readonly YearRow[] }) {
+  const t = copy.screen.tables;
+  return (
+    <div className="flex flex-col gap-xs">
+      <p className="text-xs text-text-muted">{t.scrollHint}</p>
+      <div className="-mx-lg overflow-x-auto overscroll-x-contain sm:mx-0" tabIndex={0} role="region" aria-label={caption}>
+        <table className="w-max min-w-full border-separate border-spacing-0 text-sm tabular-nums">
+          <caption className="sr-only">{caption}</caption>
+          <thead className="text-xs text-text-muted">
+            <tr>
+              <th scope="col" className={cx(STICKY, 'w-36 min-w-36 border-b border-border px-md py-sm text-left font-medium sm:w-52 sm:min-w-52')}>
+                {t.rowHeader}
+              </th>
+              {columns.map((c) => (
+                <th
+                  key={c.year}
+                  scope="col"
+                  className={cx('min-w-24 border-b border-border px-md py-sm text-right font-medium', c.highlight && 'bg-primary-soft text-text')}
+                  title={c.highlight ? t.retirementYear : undefined}
+                >
+                  <span className="block font-semibold text-text">{c.year}</span>
+                  <span className="block font-normal">{t.age(c.age)}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id} className={cx('group', r.strong && 'font-semibold')}>
+                <th
+                  scope="row"
+                  className={cx(
+                    STICKY,
+                    'max-w-36 border-b border-border py-xs pr-sm text-left font-normal group-hover:bg-surface-strong sm:max-w-52',
+                    r.depth === 0 ? 'pl-md' : r.depth === 1 ? 'pl-xl' : 'pl-2xl text-text-muted',
+                    r.strong && 'font-semibold',
+                  )}
+                >
+                  {r.onToggle ? (
+                    <button
+                      type="button"
+                      aria-expanded={r.expanded}
+                      aria-label={r.expanded ? t.collapse(r.label) : t.expand(r.label)}
+                      onClick={r.onToggle}
+                      className="flex min-h-11 w-full items-center gap-xs text-left font-[inherit] hover:text-primary"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 16 16" className={cx('size-md shrink-0 transition-transform motion-reduce:transition-none', r.expanded && 'rotate-90')}>
+                        <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span className="truncate">{r.label}</span>
+                    </button>
+                  ) : (
+                    <span className="flex min-h-9 items-center truncate">{r.label}</span>
+                  )}
+                </th>
+                {r.cells.map((cell, i) => {
+                  const tone = r.tones?.[i];
+                  return (
+                    <td
+                      key={columns[i]?.year ?? i}
+                      className={cx(
+                        'whitespace-nowrap border-b border-border px-md py-xs text-right group-hover:bg-surface-strong',
+                        columns[i]?.highlight && 'bg-primary-soft/60',
+                        tone === 'bad' && 'text-negative',
+                        tone === 'good' && 'text-positive',
+                        r.depth === 2 && 'text-text-muted',
+                      )}
+                    >
+                      {cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** Which expandable rows are open (UI state only). */
+function useOpenRows(initial: readonly string[]) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(initial));
+  const toggle = (id: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  return { isOpen: (id: string) => open.has(id), toggle };
+}
+
+function AccountsTable({ table }: { table: PlanAccountsTableVM }) {
+  const t = copy.screen.tables;
+  const { isOpen, toggle } = useOpenRows(['assets', 'liabilities']);
+  const columns = table.rows.map((r) => ({ year: r.year, age: r.age, highlight: r.isRetirementYear }));
+  const nameOf = new Map(table.columns.map((c) => [c.accountId, c.name]));
+
+  const rows: YearRow[] = [];
+  for (const s of table.sections) {
+    if (s.groups.length === 0) continue;
+    const sOpen = isOpen(s.id);
+    rows.push({
+      id: s.id, label: s.label, depth: 0, strong: true, expanded: sOpen, onToggle: () => toggle(s.id),
+      cells: table.rows.map((r) => (s.id === 'assets' ? r.assetsLabel : r.liabilitiesLabel)),
+    });
+    if (!sOpen) continue;
+    for (const g of s.groups) {
+      const key = `${s.id}:${g.group}`;
+      const gOpen = isOpen(key);
+      rows.push({
+        id: key, label: g.label, depth: 1, expanded: gOpen, onToggle: () => toggle(key),
+        cells: table.rows.map((r) => r.groupEnds[g.group] ?? '—'),
+      });
+      if (!gOpen) continue;
+      for (const id of g.accountIds) {
+        rows.push({ id: `${key}:${id}`, label: nameOf.get(id) ?? id, depth: 2, cells: table.rows.map((r) => r.cells[id]?.end ?? '—') });
+      }
+    }
+  }
+  rows.push({ id: 'netWorth', label: t.netWorth, depth: 0, strong: true, cells: table.rows.map((r) => r.netWorthLabel) });
+
+  return <YearTable caption={copy.screen.tabs.accounts} columns={columns} rows={rows} />;
+}
+
+function CashFlowTable({ table }: { table: PlanCashFlowTableVM }) {
+  const c = copy.tables.cashFlow;
+  const { isOpen, toggle } = useOpenRows([]);
+  const columns = table.rows.map((r) => ({ year: r.year, age: r.age, highlight: false }));
+  const first = table.rows[0];
+  const lineRows = (kind: 'incomeLines' | 'expenseLines', parent: string): YearRow[] =>
+    (first?.[kind] ?? []).map((l) => ({
+      id: `${parent}:${l.key}`,
+      label: l.label,
+      depth: 2,
+      cells: table.rows.map((r) => r[kind].find((x) => x.key === l.key)?.amountLabel ?? '—'),
+    }));
+
+  const rows: YearRow[] = [
+    { id: 'income', label: c.income, depth: 0, expanded: isOpen('income'), onToggle: () => toggle('income'), cells: table.rows.map((r) => r.incomeLabel) },
+    ...(isOpen('income') ? lineRows('incomeLines', 'income') : []),
+    { id: 'expenses', label: c.expenses, depth: 0, expanded: isOpen('expenses'), onToggle: () => toggle('expenses'), cells: table.rows.map((r) => r.expensesLabel) },
+    ...(isOpen('expenses') ? lineRows('expenseLines', 'expenses') : []),
+    { id: 'withdrawals', label: c.withdrawals, depth: 0, cells: table.rows.map((r) => r.withdrawalsLabel) },
+    { id: 'net', label: c.net, depth: 0, strong: true, cells: table.rows.map((r) => r.netLabel), tones: table.rows.map((r) => r.netTone) },
+  ];
+  return <YearTable caption={copy.screen.tabs.cashFlow} columns={columns} rows={rows} />;
 }
 
 function EventList({ events, onOpen }: { events: readonly PlanEventRowVM[]; onOpen: (id: string) => void }) {
   const t = copy.screen.events;
-  if (events.length === 0) return <p className="text-sm text-text-muted">{t.empty}</p>;
+  if (events.length === 0) return <p className="py-lg text-sm text-text-muted">{t.empty}</p>;
   return (
     <ul className="flex flex-col divide-y divide-border">
       {events.map((e) => (
@@ -92,14 +220,12 @@ function EventList({ events, onOpen }: { events: readonly PlanEventRowVM[]; onOp
             onClick={() => onOpen(e.id)}
             aria-label={t.edit(e.name ?? e.title)}
             className={cx(
-              'flex min-h-11 w-full items-center gap-md py-md text-left hover:bg-surface-strong',
+              'flex min-h-11 w-full items-center gap-md rounded-md px-xs py-md text-left hover:bg-surface-strong',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
               !e.enabled && 'opacity-50',
             )}
           >
-            <span className="flex size-2xl shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-              <EventIcon id={e.icon} />
-            </span>
+            <EventBadge id={e.icon} />
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-semibold">
                 {e.name ?? e.title}
@@ -115,77 +241,5 @@ function EventList({ events, onOpen }: { events: readonly PlanEventRowVM[]; onOp
         </li>
       ))}
     </ul>
-  );
-}
-
-function CashFlowTable({ table }: { table: PlanCashFlowTableVM }) {
-  const c = copy.tables.cashFlow;
-  return (
-    <div className="max-h-96 overflow-auto rounded-md border border-border">
-      <table className="w-full text-sm tabular-nums">
-        <thead className="sticky top-0 bg-surface-strong text-left text-xs text-text-muted">
-          <tr>
-            <th scope="col" className={TH}>{c.year}</th>
-            <th scope="col" className={TH}>{c.age}</th>
-            <th scope="col" className={cx(TH, 'text-right')}>{c.income}</th>
-            <th scope="col" className={cx(TH, 'text-right')}>{c.expenses}</th>
-            <th scope="col" className={cx(TH, 'text-right')}>{c.withdrawals}</th>
-            <th scope="col" className={cx(TH, 'text-right')}>{c.net}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {table.rows.map((r) => (
-            <tr key={r.year} className="border-t border-border">
-              <td className={TD}>{r.year}</td>
-              <td className={TD}>{r.age}</td>
-              <td className={cx(TD, 'text-right')}>{r.incomeLabel}</td>
-              <td className={cx(TD, 'text-right')}>{r.expensesLabel}</td>
-              <td className={cx(TD, 'text-right')}>{r.withdrawalsLabel}</td>
-              <td className={cx(TD, 'text-right font-semibold', r.netTone === 'bad' ? 'text-negative' : 'text-positive')}>{r.netLabel}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function AccountsTable({ table }: { table: PlanAccountsTableVM }) {
-  const a = copy.tables.accounts;
-  return (
-    <div className="flex flex-col gap-xs">
-      <p className="text-xs text-text-muted sm:hidden">{copy.screen.tables.scrollHint}</p>
-      <div className="max-h-96 overflow-auto rounded-md border border-border">
-        <table className="w-full text-sm tabular-nums">
-          <thead className="sticky top-0 bg-surface-strong text-left text-xs text-text-muted">
-            <tr>
-              <th scope="col" className={TH}>{a.year}</th>
-              <th scope="col" className={TH}>{a.age}</th>
-              {table.columns.map((col) => (
-                <th key={col.accountId} scope="col" className={cx(TH, 'text-right')}>
-                  <span className="block text-text">{col.name}</span>
-                  <span className="block">{col.groupLabel}</span>
-                </th>
-              ))}
-              <th scope="col" className={cx(TH, 'text-right')}>{copy.screen.tables.netWorth}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {table.rows.map((r) => (
-              <tr key={r.year} className={cx('border-t border-border', r.isRetirementYear && 'bg-primary-soft')}>
-                <td className={TD}>{r.year}</td>
-                <td className={TD}>{r.age}</td>
-                {table.columns.map((col) => (
-                  <td key={col.accountId} className={cx(TD, 'text-right')}>
-                    {r.cells[col.accountId]?.end ?? '—'}
-                  </td>
-                ))}
-                <td className={cx(TD, 'text-right font-semibold')}>{r.netWorthLabel}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }

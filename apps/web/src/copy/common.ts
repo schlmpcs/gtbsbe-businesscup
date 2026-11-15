@@ -12,19 +12,20 @@ export const common = {
    * Routes live in features/shell/model; these are the labels.
    */
   shell: {
-    home: 'LifeGuessr home',
+    home: 'LifeGuessr dashboard',
     skipToContent: 'Skip to content',
     /** Accessible names of the nav landmarks. */
     sidebarLabel: 'Main',
     tabsLabel: 'Main tabs',
     moreLabel: 'More pages',
-    /** Group headings in the sidebar and the More sheet. */
+    /** Group headings in the sidebar (null: the group has no heading). */
     groups: {
-      planner: 'Planner',
-      tools: 'Explore',
+      main: null,
+      money: 'Money',
+      game: null,
     },
     links: {
-      home: 'Home',
+      dashboard: 'Dashboard',
       plan: 'Plan',
       accounts: 'Accounts',
       transactions: 'Transactions',
@@ -32,24 +33,28 @@ export const common = {
       budget: 'Budget',
       recurring: 'Recurring',
       goals: 'Goals',
-      future: 'My future',
-      whatIf: 'What if?',
       play: 'Play',
       pro: 'Go Pro',
     },
+    badges: {
+      daily: 'Daily',
+    },
     more: 'More',
     moreTitle: 'More',
-    moreDescription: 'Every screen of your money planner.',
-    proLine: 'Plan to age 90, Compare, Chance of success',
+    moreDescription: 'The rest of your money planner.',
+    proLine: 'Plan to 90, Compare, Chance of success',
   },
   /**
-   * Shown while the numbers on screen are the sample household's, not yours (the demo profile):
-   * `text` after "See a sample plan", `textDefault` when nothing was entered yet.
+   * The slim strip at the top of the content while the numbers on screen are the sample household's,
+   * not yours (the demo profile): `text` after "See a sample plan", `textDefault` when nothing was
+   * entered yet, `textLedger` when the person imported their own transactions but the plan (profile)
+   * is still the sample's.
    */
   sampleBanner: {
-    text: 'You’re looking at a sample life.',
-    textDefault: 'These are sample numbers, not yours yet.',
-    cta: 'Use mine',
+    text: 'Sample life — make it yours',
+    textDefault: 'Sample numbers — make it yours',
+    textLedger: 'Your transactions are in; the plan still uses sample numbers — make it yours',
+    cta: 'Use my numbers',
   },
   nav: {
     title: 'Screens',

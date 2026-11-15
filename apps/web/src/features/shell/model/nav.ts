@@ -1,55 +1,73 @@
-// The shell's routes (docs/ARCHITECTURE.md → Screens: the sidebar holds Dashboard, Plan, Accounts,
-// Transactions, Cash Flow, Budget, Recurring, Goals; the phone's bottom tabs hold a few and "More"
-// the rest). Pure: the hook in useShell.ts adds the pathname and the More sheet's state.
-import type { ShellGroupVM, ShellIcon, ShellLinkKey, ShellLinkVM } from './types';
+// The shell's routes (docs/ARCHITECTURE.md → Screens): the sidebar holds Dashboard, Plan, the Money
+// screens (Accounts, Transactions, Cash flow, Budget, Recurring, Goals) and Play; the phone's bottom
+// tabs hold four and "More" the rest. Pure: the hook in useShell.ts adds the pathname and the More
+// sheet's state.
+// Routes that still exist but are not in the nav (reached from inside other screens): /future,
+// /tools and its tools, /afford and /loan (from /plan), /decide, /checkin, /spend, /together. They
+// light up the nav link they belong to (`match`) so the person still sees where they are.
+import type { ShellGroupVM, ShellLinkKey, ShellLinkVM } from './types';
 
-type NavDef = { key: ShellLinkKey; href: string; icon: ShellIcon; /** Other routes that light this link up. */ match?: readonly string[] };
+type NavDef = {
+  key: ShellLinkKey;
+  href: string;
+  /** Other routes that light this link up. */
+  match?: readonly string[];
+  badge?: ShellLinkVM['badge'];
+};
 
 const D = {
-  home: { key: 'home', href: '/', icon: 'home' },
-  plan: { key: 'plan', href: '/plan', icon: 'plan' },
-  accounts: { key: 'accounts', href: '/accounts', icon: 'accounts' },
-  transactions: { key: 'transactions', href: '/transactions', icon: 'transactions' },
-  cashflow: { key: 'cashflow', href: '/cashflow', icon: 'cashflow' },
-  budget: { key: 'budget', href: '/budget', icon: 'budget' },
-  recurring: { key: 'recurring', href: '/recurring', icon: 'recurring' },
-  goals: { key: 'goals', href: '/goals', icon: 'goals' },
-  future: { key: 'future', href: '/future', icon: 'future' },
-  // The What if? hub and the tools it opens.
-  whatIf: {
-    key: 'whatIf', href: '/tools', icon: 'whatIf',
-    match: ['/afford', '/loan', '/decide', '/checkin', '/spend', '/together'],
-  },
+  dashboard: { key: 'dashboard', href: '/dashboard' },
+  plan: { key: 'plan', href: '/plan', match: ['/future', '/afford', '/loan', '/decide', '/checkin', '/together'] },
+  accounts: { key: 'accounts', href: '/accounts' },
+  transactions: { key: 'transactions', href: '/transactions', match: ['/spend'] },
+  cashflow: { key: 'cashflow', href: '/cashflow', match: ['/cash-flow'] },
+  budget: { key: 'budget', href: '/budget' },
+  recurring: { key: 'recurring', href: '/recurring', match: ['/tools/bills', '/tools/subscriptions', '/tools/overpaying'] },
+  goals: { key: 'goals', href: '/goals' },
   // The daily game; the challenge link (/duel) is the same game.
-  play: { key: 'play', href: '/play', icon: 'play', match: ['/duel'] },
-  pro: { key: 'pro', href: '/pro', icon: 'pro' },
+  play: { key: 'play', href: '/play', match: ['/duel'], badge: 'daily' },
+  pro: { key: 'pro', href: '/pro' },
 } as const satisfies Record<ShellLinkKey, NavDef>;
 
 const SIDEBAR: { key: ShellGroupVM['key']; links: ShellLinkKey[] }[] = [
-  { key: 'planner', links: ['home', 'plan', 'accounts', 'transactions', 'cashflow', 'budget', 'recurring', 'goals'] },
-  { key: 'tools', links: ['future', 'whatIf', 'play'] },
+  { key: 'main', links: ['dashboard', 'plan'] },
+  { key: 'money', links: ['accounts', 'transactions', 'cashflow', 'budget', 'recurring', 'goals'] },
+  { key: 'game', links: ['play'] },
 ];
-const TABS: ShellLinkKey[] = ['home', 'plan', 'play', 'whatIf'];
-const MORE: ShellLinkKey[] = ['accounts', 'transactions', 'cashflow', 'budget', 'recurring', 'goals', 'future', 'pro'];
+const TABS: ShellLinkKey[] = ['dashboard', 'plan', 'play', 'accounts'];
+const MORE: ShellLinkKey[] = ['transactions', 'cashflow', 'budget', 'recurring', 'goals', 'pro'];
+
+/**
+ * Routes shown without the shell's chrome: the landing (exactly `/`) and the onboarding story
+ * (each prefix and its subpaths).
+ */
+export const BARE_ROUTES: readonly string[] = ['/', '/me', '/start'];
+
+export function isBareRoute(pathname: string): boolean {
+  return BARE_ROUTES.some((r) => (r === '/' ? pathname === '/' : pathname === r || pathname.startsWith(`${r}/`)));
+}
 
 /** Every route the shell links to, in sidebar order then Go Pro (for tests and the docs). */
 export const SHELL_ROUTES: readonly string[] = [...SIDEBAR.flatMap((g) => g.links.map((k) => D[k].href)), D.pro.href];
 
 export function isActive(pathname: string, def: Pick<NavDef, 'href' | 'match'>): boolean {
-  if (def.href === '/') return pathname === '/';
   return [def.href, ...(def.match ?? [])].some((h) => pathname === h || pathname.startsWith(`${h}/`));
 }
 
 function link(key: ShellLinkKey, pathname: string): ShellLinkVM {
   const def: NavDef = D[key];
-  return { key, href: def.href, icon: def.icon, active: isActive(pathname, def) };
+  const vm: ShellLinkVM = { key, href: def.href, icon: key, active: isActive(pathname, def) };
+  if (def.badge) vm.badge = def.badge;
+  return vm;
 }
 
 export function shellNav(pathname: string) {
   const more = MORE.map((k) => link(k, pathname));
   return {
+    bare: isBareRoute(pathname),
     sidebar: SIDEBAR.map((g) => ({ key: g.key, links: g.links.map((k) => link(k, pathname)) })),
     pro: link('pro', pathname),
+    homeHref: D.dashboard.href,
     tabs: TABS.map((k) => link(k, pathname)),
     more,
     moreActive: more.some((l) => l.active),

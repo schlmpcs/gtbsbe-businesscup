@@ -10,11 +10,11 @@
 // appreciation, so the median path tracks plan(). The spreads are the spec's assumptions
 // (docs/ENGINEERING.md → Monte Carlo: sd 0.15 for investments and retirement, 0.05 for real estate).
 import { monteCarlo } from '@lifeguessr/engine';
-import { ASSET_GROUPS, type AccountGroup, type AreaData, type MonteCarloResult, type MonteCarloSettings, type Scenario } from '@lifeguessr/types';
+import { ASSET_GROUPS, type AccountGroup, type PlanKpis, type AreaData, type MonteCarloResult, type MonteCarloSettings, type Scenario } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { plan as copy } from '@/copy';
 import { formatMoney } from '@/lib/format';
-import { NO_MOVES, profileFor, usePlanInputs } from './planEngine';
+import { NO_MOVES, planOf, profileFor, usePlanInputs } from './planEngine';
 import { pct } from './planFormat';
 import { usePlanStore } from './planStore';
 import { growthDefaults } from './useAssumptions';
@@ -41,13 +41,29 @@ export function effectiveSettings(settings: MonteCarloSettings, scenario: Scenar
   return { ...settings, growth: { ...growth, ...settings.growth } };
 }
 
-function resultVM(r: MonteCarloResult): ChanceResultVM {
+/**
+ * The result for the screen. `kpis` and `endAge` are the rules-based plan of the same scenario (same
+ * display unit as the run), so each histogram can mark where the plan itself lands.
+ */
+export function resultVM(r: MonteCarloResult, kpis?: PlanKpis, endAge?: number): ChanceResultVM {
   const successfulPaths = Math.round(r.successRate * r.paths);
+  const planValues: Record<HistogramVM['id'], number | null> = {
+    atRetirement: kpis?.netWorthAtRetirement ?? null,
+    atEnd: kpis?.netWorthAtEnd ?? null,
+    shortfallAge: kpis?.shortfallAge ?? null,
+  };
+  const planLabel = (id: HistogramVM['id'], label: (n: number) => string): string => {
+    const v = planValues[id];
+    if (v !== null) return copy.chance.planMarker(label(v));
+    return kpis && id === 'shortfallAge' ? copy.chance.planNeverShort(endAge ?? 0) : '';
+  };
   const bins = (id: HistogramVM['id'], label: (n: number) => string): HistogramVM => ({
     id,
     title: copy.chance.histograms[id].title,
     xLabel: copy.chance.histograms[id].xLabel,
     bins: r.histograms[id].map((b) => ({ ...b, label: `${label(b.from)} to ${label(b.to)}` })),
+    planValue: planValues[id],
+    planLabel: planLabel(id, label),
   });
   return {
     gaugePct: Math.round(r.successRate * 100),
@@ -140,10 +156,13 @@ export function useChanceOfSuccess(): ChanceOfSuccessVM {
     [setChance],
   );
 
+  // The plan's own KPIs, for the histogram markers (a plan change drops the result, so they match the run).
+  const planKpis = useMemo(() => (scenario ? planOf(inputs, scenario, moves).kpis : undefined), [inputs, scenario, moves]);
+
   return useMemo(
     () => ({
       status,
-      result: status === 'done' && result ? resultVM(result) : null,
+      result: status === 'done' && result ? resultVM(result, planKpis, scenario?.assumptions.endAge) : null,
       settings: settingsVM(settings),
       idleMessage: copy.chance.idle,
       errorMessage: status === 'error' ? copy.chance.error : null,
@@ -151,6 +170,6 @@ export function useChanceOfSuccess(): ChanceOfSuccessVM {
       updateSettings,
       setFixedSeed,
     }),
-    [status, result, settings, run, updateSettings, setFixedSeed],
+    [status, result, planKpis, scenario, settings, run, updateSettings, setFixedSeed],
   );
 }

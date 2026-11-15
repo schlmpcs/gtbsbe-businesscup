@@ -40,4 +40,4 @@ export function useAppReady(): boolean {
   return hydrated;
 }
 export { PERSONAL_NUMBER_ROUTES, showsPersonalNumbers, useSampleBanner } from './sample';
-export type { SampleBannerVM } from './sample';
+export type { SampleBannerOptions, SampleBannerVM } from './sample';

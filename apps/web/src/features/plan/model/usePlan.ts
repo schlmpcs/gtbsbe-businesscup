@@ -1,7 +1,7 @@
 // /plan page: the KPI cards, the net worth chart with event markers, the three tables, the display unit
 // and the autosave indicator. Every number is the engine's plan() of the active scenario on the person's
 // profile, accounts and area (planEngine.ts); this hook only picks values out and formats them.
-import type { PlanEvent } from '@lifeguessr/types';
+import { ASSET_GROUPS, LIABILITY_GROUPS, type AccountGroup, type PlanEvent } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { plan as copy } from '@/copy';
 import { accountLabel, ageAt, calendarOf, clampYearTo, EVENT_ICONS, NO_MOVES, planOf, usePlanInputs, yearAt } from './planEngine';
@@ -71,13 +71,33 @@ export function usePlan(scenarioId: string): PlanVM {
       const { name, group } = accountLabel(accountId, inputs, scenario);
       return { accountId, name, group, groupLabel: copy.groups[group] };
     });
+    const section = (id: 'assets' | 'liabilities', groups: readonly AccountGroup[]): PlanAccountsTableVM['sections'][number] => ({
+      id,
+      label: copy.tables.accounts[id],
+      groups: groups
+        .map((group) => ({ group, label: copy.groups[group], accountIds: columns.filter((c) => c.group === group).map((c) => c.accountId) }))
+        .filter((g) => g.accountIds.length > 0),
+    });
+    const groupOf = new Map(columns.map((c) => [c.accountId, c.group]));
+    const groupEnds = (rows: readonly { accountId: string; end: number }[]) => {
+      const sums: Partial<Record<AccountGroup, number>> = {};
+      for (const a of rows) {
+        const g = groupOf.get(a.accountId);
+        if (g) sums[g] = (sums[g] ?? 0) + a.end;
+      }
+      return Object.fromEntries(Object.entries(sums).map(([g, v]) => [g, money(v)])) as Partial<Record<AccountGroup, string>>;
+    };
     const accounts: PlanAccountsTableVM = {
       columns,
+      sections: [section('assets', ASSET_GROUPS), section('liabilities', LIABILITY_GROUPS)],
       rows: years.map((y) => ({
         year: y.year,
         age: y.age,
         isRetirementYear: y.year === retireYear,
         netWorthLabel: money(y.netWorth),
+        assetsLabel: money(y.assets),
+        liabilitiesLabel: money(y.liabilities),
+        groupEnds: groupEnds(y.accounts),
         cells: Object.fromEntries(
           y.accounts.map((a) => [a.accountId, {
             start: money(a.start), growth: money(a.growth), deposits: money(a.deposits), withdrawals: money(a.withdrawals), end: money(a.end),

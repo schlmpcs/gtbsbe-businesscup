@@ -48,6 +48,17 @@ export function useRecurring({ today: todayArg }: { today?: string } = {}): Recu
     [inMonth],
   );
 
+  const upcoming = useMemo(() => {
+    if (month < todayMonth) return { items: [], total: 0 };
+    const year = Number(month.slice(0, 4));
+    const m = Number(month.slice(5, 7));
+    const fromDay = month === todayMonth ? Number(today.slice(8, 10)) : 1;
+    const items = inMonth
+      .filter((i) => i.section !== 'income' && i.dayOfMonth !== null && dueDateIn(i.dayOfMonth, year, m).day >= fromDay)
+      .sort(byDay);
+    return { items, total: Math.round(items.reduce((sum, i) => sum + i.amount * 100, 0)) / 100 };
+  }, [inMonth, month, todayMonth, today]);
+
   const calendar = useMemo(() => {
     const year = Number(month.slice(0, 4));
     const m = Number(month.slice(5, 7));
@@ -74,6 +85,7 @@ export function useRecurring({ today: todayArg }: { today?: string } = {}): Recu
     monthLabel: formatMonthYear(month),
     isCurrent: month === todayMonth,
     sections,
+    upcoming,
     calendar,
     // Pay alone is not "something recurring": the person has no statement charge and no account payment.
     empty: sources.every((s) => s.item.origin === 'profile'),

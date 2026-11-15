@@ -60,11 +60,22 @@ export type PlanChartVM = {
 
 export type PlanAccountsTableVM = {
   columns: { accountId: string; name: string; group: AccountGroup; groupLabel: string }[];
+  /** Assets, then liabilities: the groups that have rows in the plan, in group order, with their account ids. */
+  sections: {
+    id: 'assets' | 'liabilities';
+    label: string;
+    groups: { group: AccountGroup; label: string; accountIds: string[] }[];
+  }[];
   rows: {
     year: number;
     age: number;
     isRetirementYear: boolean;
     netWorthLabel: string;
+    /** Year-end totals from the plan (liabilities as a positive balance). */
+    assetsLabel: string;
+    liabilitiesLabel: string;
+    /** Year-end balance per group: the sum of its accounts' `end`. */
+    groupEnds: Partial<Record<AccountGroup, string>>;
     cells: Record<string, { start: string; growth: string; deposits: string; withdrawals: string; end: string }>;
   }[];
 };
@@ -269,7 +280,16 @@ export type CompareVM =
 // ----- useChanceOfSuccess ---------------------------------------------------------------------
 
 export type ChanceStatus = 'idle' | 'running' | 'done' | 'error';
-export type HistogramVM = { id: 'atRetirement' | 'atEnd' | 'shortfallAge'; title: string; xLabel: string; bins: { from: number; to: number; count: number; label: string }[] };
+export type HistogramVM = {
+  id: 'atRetirement' | 'atEnd' | 'shortfallAge';
+  title: string;
+  xLabel: string;
+  bins: { from: number; to: number; count: number; label: string }[];
+  /** The rules-based plan's own value on this axis (same display unit), for a marker; null when it has none (money never runs short). */
+  planValue: number | null;
+  /** "Plan $371K", "Plan: age 84" or "Plan: lasts past 90". */
+  planLabel: string;
+};
 export type ChanceResultVM = {
   /** Whole percent for the gauge, 0–100. */
   gaugePct: number;
