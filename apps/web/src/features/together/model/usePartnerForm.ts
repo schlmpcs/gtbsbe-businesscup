@@ -12,6 +12,9 @@ export const EMPTY_QUICK: QuickInputs = {
   cash: null, retirement: null, debtBalance: null, debtApr: null, debtPayment: null,
 };
 
+/** The quick inputs past the first three (take-home pay, rent, groceries). */
+const OPTIONAL_FIELDS = ['childcare', 'otherSpending', 'cash', 'retirement', 'debtBalance', 'debtApr', 'debtPayment'] as const;
+
 export type PartnerFormState = {
   vm: PartnerFormVM;
   /** The partner and goal to send, or null while the form has a problem. */
@@ -25,6 +28,9 @@ export function usePartnerForm(initialGoal: Goal | null = null, initialNickname 
   const [nickname, setNickname] = useState(initialNickname);
   const [chosen, setSource] = useState<PartnerSource | null>(null);
   const [quick, setQuickState] = useState<QuickInputs>(EMPTY_QUICK);
+  const [touched, setTouched] = useState<{ nickname: boolean; takeHomePay: boolean; goal: boolean }>({
+    nickname: false, takeHomePay: false, goal: false,
+  });
   const [goal, setGoalState] = useState<{ target: number | null; years: number | null }>({
     target: initialGoal?.target ?? null,
     years: initialGoal?.years ?? null,
@@ -56,17 +62,28 @@ export function usePartnerForm(initialGoal: Goal | null = null, initialNickname 
 
   const vm: PartnerFormVM = {
     nickname,
-    setNickname,
+    setNickname: (v) => {
+      setNickname(v);
+      setTouched((t) => ({ ...t, nickname: true }));
+    },
     hasProfile,
     source,
     setSource: (s) => setSource(s === 'profile' && !hasProfile ? 'quick' : s),
     profileSummary,
     quick,
-    setQuick: (field, value) => setQuickState((q) => ({ ...q, [field]: value })),
+    setQuick: (field, value) => {
+      setQuickState((q) => ({ ...q, [field]: value }));
+      if (field === 'takeHomePay') setTouched((t) => ({ ...t, takeHomePay: true }));
+    },
     defaultApr: { value: cardAprDefault.value, sourceName: cardAprDefault.source.name, year: cardAprDefault.source.year },
     goal,
-    setGoal: (field, value) => setGoalState((g) => ({ ...g, [field]: value })),
+    setGoal: (field, value) => {
+      setGoalState((g) => ({ ...g, [field]: value }));
+      setTouched((t) => ({ ...t, goal: true }));
+    },
     problem,
+    showProblem: problem !== null && touched[problem],
+    filledOptional: OPTIONAL_FIELDS.filter((f) => quick[f] !== null).length,
   };
 
   const build = () => {

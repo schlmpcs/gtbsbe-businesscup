@@ -191,3 +191,18 @@ export function monthWeeks(year: number, month: number): (number | null)[][] {
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
   return weeks;
 }
+
+export type PaidSplit = { paid: BillOccurrence[]; toPay: BillOccurrence[] };
+
+/**
+ * A month's charges split by their due date against today: due before today = gone out ("paid", by due
+ * date: we do not see the payment itself), today or later = still to pay. A past month is all paid, a
+ * future one all to pay.
+ */
+export function splitByToday(occurrences: readonly BillOccurrence[], today: CalDate): PaidSplit {
+  const t = dayIndex(today);
+  return {
+    paid: occurrences.filter((o) => dayIndex(o.date) < t),
+    toPay: occurrences.filter((o) => dayIndex(o.date) >= t),
+  };
+}

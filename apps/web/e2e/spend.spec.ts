@@ -8,6 +8,11 @@ test('a typed line is saved and the spent total changes, on /spend and Home', as
   await expect(input).toBeEnabled();
   const spent = page.getByTestId('spend-spent');
   await expect(spent).toHaveText('$0');
+  await expect(page.getByTestId('spend-empty')).toBeVisible();
+  await expect(page.getByTestId('spend-chart')).toBeVisible();
+  await expect(page.getByTestId('back-to-tools')).toBeVisible();
+  await expect(page.getByRole('link', { name: /Back to Home/ })).toHaveCount(0);
+  await page.waitForTimeout(800); // let the count-up settle
   const safeBefore = await page.getByTestId('spend-safe').textContent();
 
   await input.fill('coffee 5, taxi 18, groceries 64');
@@ -19,6 +24,14 @@ test('a typed line is saved and the spent total changes, on /spend and Home', as
   await expect(page.getByTestId('spend-days')).toContainText('taxi');
   await expect(page.getByTestId('spend-categories')).toContainText('Groceries');
   await expect(page.getByTestId('spend-safe')).not.toHaveText(safeBefore ?? '');
+  await expect(page.getByTestId('spend-empty')).toHaveCount(0);
+
+  // Phones: nothing scrolls sideways.
+  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 
   // A preset chip (estimated price), then Undo takes it back out.
   await page.getByRole('button', { name: 'Add Coffee, $5 (typical price)' }).click();

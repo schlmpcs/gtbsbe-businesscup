@@ -37,12 +37,18 @@ test('two partners plan together through a link, without signing up', async ({ p
   // Partner 1: their numbers, then "Plan together".
   await page.goto('/together');
   await expect(page.getByTestId('together-create')).toBeDisabled(); // no take-home pay yet
+  await expect(page.getByTestId('together-steps').locator('[aria-current="step"]')).toContainText(t.steps.items[0]!.title);
+  await expect(page.getByText(t.form.problems.takeHomePay)).toHaveCount(0); // no red before typing
   await fillPartner(page, { nickname: 'Jo', pay: '6000', rent: '1200', groceries: '300' });
   await page.getByTestId('together-create').click();
   await expect(page).toHaveURL(/\/together\/[A-Za-z0-9_-]{22}(#plan=.+)?$/);
   const link = await page.getByTestId('together-link').inputValue();
   expect(link).toMatch(/^https?:\/\/[^/]+\/together\/[A-Za-z0-9_-]{22}/);
   await expect(page.getByTestId('together-waiting')).toContainText(t.plan.waiting(t.partner2));
+  await expect(page.getByTestId('together-steps').locator('[aria-current="step"]')).toContainText(t.steps.items[1]!.title);
+  // Copy gives feedback either way: copied, or how to copy by hand where the clipboard is blocked.
+  await page.getByTestId('together-copy').click();
+  await expect(page.getByTestId('together-copy-status')).toHaveText(new RegExp(`${t.plan.copiedLive}|${t.plan.copyFailed}`));
 
   // Partner 2: a different browser (no shared storage) opens the link.
   const other = await browser.newContext({ ...testInfo.project.use });
@@ -60,6 +66,12 @@ test('two partners plan together through a link, without signing up', async ({ p
     await expect(page2.getByTestId('together-month')).toContainText('$10,000');
     await expect(page2.getByTestId('together-future')).toContainText(t.result.rulesTag);
     await expect(page2.getByTestId('together-goal')).toContainText(t.result.goalNone);
+
+    // The split bar flips to 50/50 and back.
+    await page2.getByText(t.result.splitModes.even, { exact: true }).click();
+    await expect(page2.getByTestId('together-split-line')).toHaveText(t.result.splitLine('Jo', '$1,250', 'Alex', '$1,250'));
+    await page2.getByText(t.result.splitModes.income, { exact: true }).click();
+    await expect(page2.getByTestId('together-split-line')).toHaveText(t.result.splitLine('Jo', '$1,500', 'Alex', '$1,000'));
 
     // Partner 1 sees the same plan from partner 2's link (on the server it is the same link).
     await page.goto('about:blank'); // a full load, not a same-page #fragment change

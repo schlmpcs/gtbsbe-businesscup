@@ -6,10 +6,12 @@ const months = (n: number) => (n === 1 ? '1 month' : `${n} months`);
 
 export const loan = {
   screens: {
-    S12: 'Loan Lab',
+    S12: 'Which loan costs less?',
   },
+  /** Small label above the question. */
+  eyebrow: 'Loan Lab',
 
-  intro: 'Compare up to 3 offers. See the real cost before you sign.',
+  intro: 'Put up to 3 offers side by side and see what each one really costs, before you sign.',
   loading: 'Loading your plan…',
 
   /** Offers are lettered: Offer A, Offer B, Offer C (n starts at 1). */
@@ -33,6 +35,41 @@ export const loan = {
     lowestMonthly: (names: string, monthly: string) => `${names} has the lowest monthly payment: ${monthly}.`,
     and: ' and ',
     none: 'Fix the offers above to compare them.',
+    /** The headline: the cheapest offer against the next cheapest (amount formatted). */
+    saves: (best: string, other: string, amount: string) => `${best} costs ${amount} less than ${other}`,
+    tie: (best: string, other: string) => `${best} and ${other} cost the same`,
+    one: 'Add a second offer to compare.',
+    pill: (name: string) => `Best offer: ${name}`,
+    /** Under the headline: the cheapest offer's total (formatted). */
+    total: (name: string, total: string) => `${name}: ${total} all in.`,
+  },
+
+  /** The stacked total-cost bars: what each offer's total is made of. */
+  cost: {
+    title: 'Where the money goes',
+    subtitle: 'Total paid over the life of each offer.',
+    parts: { price: 'Price', interest: 'Interest', fees: 'Fees' },
+    /** Screen-reader line per offer (amounts formatted). */
+    row: (name: string, total: string, price: string, interest: string, fees: string) =>
+      `${name}: ${total} total = ${price} price + ${interest} interest + ${fees} fees`,
+  },
+
+  /** The selected offer's balance over time, with and without the extra payment. */
+  balance: {
+    title: (name: string) => `${name}: balance over time`,
+    onSchedule: 'On schedule',
+    withExtra: (extra: string) => `With ${extra}/mo extra`,
+    tick: (month: number) => (month === 0 ? 'Now' : `${Math.round(month / 12)}y`),
+    summary: (name: string, months: string) => `${name} is paid off in ${months}.`,
+    summaryExtra: (name: string, months: string, extraMonths: string) =>
+      `${name} is paid off in ${months} on schedule, ${extraMonths} with the extra payment.`,
+  },
+
+  /** "Add to my plan" for the selected offer. */
+  plan: {
+    /** The event's name on /plan. */
+    eventName: (name: string) => `Loan (${name})`,
+    what: (name: string) => `${name}, financed`,
   },
 
   /** Under the page: where the numbers come from (the app footer carries the disclaimer). */
@@ -49,6 +86,8 @@ export const loan = {
   },
   /** JF16: secondary sections sit behind these disclosures. */
   disclosures: { parse: 'Type an offer in words', extra: 'Pay extra each month', payoff: 'Which debt to pay first' },
+  /** Section titles on the page. */
+  sections: { payoff: 'Pay it off faster', load: 'Can your month carry it?' },
 
   compare: {
     title: 'Side by side',
@@ -251,6 +290,13 @@ export const loan = {
       fixNone: 'No extra payment within the limits of this simulation would clear it.',
     },
 
+    /** The payoff timeline: one bar per debt, from now to the month it is paid off (picked method). */
+    timeline: {
+      title: 'Payoff timeline',
+      now: 'Now',
+      row: (label: string, date: string) => `${label}: ${date}`,
+      never: 'Not paid off',
+    },
     chart: {
       title: 'Total balance over time',
       minimum: 'Minimums only',

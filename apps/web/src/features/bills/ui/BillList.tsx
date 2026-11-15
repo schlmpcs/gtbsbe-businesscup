@@ -2,7 +2,7 @@
 import { bills as t } from '@/copy';
 import { cx, EstimateTag, formatMoney, Tag } from '@/ui-kit';
 import type { BillVM } from '../model/types';
-import { KIND_DOT } from './MonthGrid';
+import { KIND_DOT } from './kind';
 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const SELECT = 'min-h-11 rounded-lg border-2 border-border bg-surface px-sm py-xs text-base tabular-nums';
@@ -18,13 +18,13 @@ export function BillList({ bills, onDueDay }: BillListProps) {
       {bills.map((b) => (
         <li key={b.id} className="flex flex-wrap items-center justify-between gap-md py-md">
           <div className="flex min-w-0 flex-col gap-xs">
-            <span className="flex items-center gap-sm font-bold">
+            <span className="flex min-w-0 items-center gap-sm font-bold">
               <span aria-hidden="true" className={cx('size-2 shrink-0 rounded-full', KIND_DOT[b.kind])} />
-              {b.label}
+              <span className="min-w-0 break-words">{b.label}</span>
             </span>
             <span className="flex flex-wrap items-center gap-xs text-sm text-text-muted">
               <span className="tabular-nums">
-                {formatMoney(b.amount, { cents: true })} {t.list.perCadence[b.cadence]}
+                {formatMoney(b.amount)} {t.list.perCadence[b.cadence]}
               </span>
               {b.amountIsEstimate && <EstimateTag />}
               {b.dueDayIsEstimate ? (

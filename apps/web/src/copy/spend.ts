@@ -4,11 +4,10 @@
 export const spend = {
   eyebrow: 'Daily log',
   title: 'What did you spend today?',
-  intro: 'Type it or say it, one line for everything. Your log stays in this browser.',
+  intro: 'Log it in one line and see what you can still spend today without breaking your usual month.',
   homeLink: 'Open your daily log',
   /** Disclosure over the quick-add on Home (collapsed, so the dashboard stays short). */
   homeQuickAdd: 'Log a purchase',
-  backHome: 'Back to Home',
 
   input: {
     label: 'Log spending',
@@ -76,9 +75,65 @@ export const spend = {
 
   month: {
     byCategory: 'By category',
-    byDay: 'By day',
+    byCategorySub: 'Share of what you logged this month.',
+    byDay: 'Logged this month',
+    byDaySub: 'Newest first. Remove a line you logged by mistake.',
     empty: 'Nothing logged this month yet.',
     remove: (what: string) => `Remove ${what}`,
+    count: (n: number) => (n === 1 ? '1 purchase' : `${n} purchases`),
+  },
+
+  /** The big "safe to spend today" ring. */
+  safe: {
+    label: 'Safe to spend today',
+    perDay: 'today',
+    /** `left` = "$1,223", `budget` = "$1,310". */
+    left: (left: string, budget: string) => `${left} of ${budget} everyday money left this month`,
+    noBudget: 'Your usual month is all bills, so there is no everyday money to spread.',
+    rulesTag: 'Rules-based',
+  },
+
+  kpis: {
+    label: 'Your month in numbers',
+    spent: 'Spent so far',
+    /** `usual` = "$3,655". */
+    spentHint: (usual: string) => `of a usual ${usual} month`,
+    projected: 'Projected month end',
+    projectedOver: (diff: string) => `${diff} over your usual month`,
+    projectedUnder: (diff: string) => `${diff} under your usual month`,
+    bills: 'Bills still to pay',
+    billsHint: 'Kept aside, not spendable',
+  },
+
+  chart: {
+    title: 'Day by day',
+    subtitle: 'Bars are what you logged each day. The dashed line is your usual pace.',
+    /** `pace` = "$44". */
+    pace: (pace: string) => `Usual pace ${pace}/day`,
+    today: 'Today',
+    over: 'Over the usual pace',
+    under: 'At or under it',
+    /** Accessible summary of the chart. */
+    aria: (month: string, spent: string, pace: string) =>
+      `Spending per day in ${month}: ${spent} logged so far; your usual pace is ${pace} a day.`,
+    /** `date` = "November 15", `amount` = "$87". */
+    bar: (date: string, amount: string) => `${date}: ${amount}`,
+  },
+
+  empty: {
+    title: 'Nothing logged yet this month',
+    body: 'Tap a chip or type “coffee 5”. Your safe-to-spend number moves at once.',
+  },
+
+  how: {
+    title: 'How we calculate',
+    lines: [
+      'Usual month = your last 3 months of statements, or your profile’s monthly spending.',
+      'Everyday money = the usual month minus bills (rent and utilities, childcare, subscriptions, car), which are kept aside until paid.',
+      'Safe to spend today = everyday money not spent yet, spread over the days left, today included.',
+      'Projected month end = bills at their usual amount, the rest at your pace so far.',
+      'Logged purchases stay in this log. They are not added to Transactions, so a statement you import later never counts them twice.',
+    ],
   },
 
   privacy:

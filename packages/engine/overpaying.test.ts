@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { areaDataSample, cloneProfileDemo } from '@lifeguessr/data/fixtures';
 import { OverpayingResultSchema } from '@lifeguessr/types';
-import { overpayingCheck } from './overpaying';
+import { overpayingCheck, overpayingPatch } from './overpaying';
 import { applyPatch, forecast } from './forecast';
 import { inflationAnnualOf } from './simulate';
 const area = areaDataSample[0]!;
@@ -105,5 +105,27 @@ describe('overpayingCheck', () => {
         lines: [{ ...result.lines[0], effect10y: Infinity }],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('overpayingPatch', () => {
+  const profile = cloneProfileDemo();
+  const typical = { mid: 400 };
+  it('lowers the category by yours − mid for a line above the range', () => {
+    const groceries = profile.spending.groceries.value;
+    expect(overpayingPatch({ line: 'groceries', yours: 600, typical, position: 'above' }, profile)).toEqual({
+      spending: { groceries: groceries - 200 },
+    });
+    // Car insurance is part of `car`: the rest of the category is kept.
+    const car = profile.spending.car.value;
+    expect(overpayingPatch({ line: 'carInsurance', yours: 150, typical: { mid: 120 }, position: 'above' }, profile)).toEqual({
+      spending: { car: car - 30 },
+    });
+  });
+  it('is null in or below the range, or when the profile line cannot absorb the change', () => {
+    expect(overpayingPatch({ line: 'groceries', yours: 600, typical, position: 'inRange' }, profile)).toBeNull();
+    expect(overpayingPatch({ line: 'groceries', yours: 300, typical, position: 'below' }, profile)).toBeNull();
+    const tiny = { spending: { ...profile.spending, groceries: { value: 50, isEstimate: false } } };
+    expect(overpayingPatch({ line: 'groceries', yours: 600, typical, position: 'above' }, tiny)).toBeNull();
   });
 });

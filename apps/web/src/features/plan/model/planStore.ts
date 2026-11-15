@@ -106,6 +106,8 @@ type PlanActions = {
   removeScenario: (id: string) => void;
   /** Adds a Next Move to a scenario's plan (once). */
   applyMove: (scenarioId: string, move: Move) => void;
+  /** Takes a Next Move off a scenario's plan (no-op when it is not there). */
+  removeMove: (scenarioId: string, moveId: string) => void;
   setOpenEvent: (id: string | null) => void;
   setChance: (patch: Partial<Pick<PlanData, 'chanceStatus' | 'chanceSettings' | 'fixedSeed' | 'chanceResult'>>) => void;
   /** Starts a run: 'running', a new run number (returned), no result. */
@@ -170,6 +172,12 @@ export const usePlanStore = create<PlanData & PlanActions>()((set, get) => {
       const current = get().movesApplied[scenarioId] ?? [];
       if (current.some((m) => m.id === move.id)) return;
       set((st) => ({ movesApplied: { ...st.movesApplied, [scenarioId]: [...current, move] } }));
+      changed();
+    },
+    removeMove: (scenarioId, moveId) => {
+      const current = get().movesApplied[scenarioId] ?? [];
+      if (!current.some((m) => m.id === moveId)) return;
+      set((st) => ({ movesApplied: { ...st.movesApplied, [scenarioId]: current.filter((m) => m.id !== moveId) } }));
       changed();
     },
     setOpenEvent: (id) => set({ openEventId: id }),

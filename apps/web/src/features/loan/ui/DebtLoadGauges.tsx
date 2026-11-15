@@ -49,14 +49,14 @@ export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gaug
   ] as const;
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-lg rounded-xl bg-surface px-xl py-xl shadow-md sm:px-2xl">
-      <div className="grid grid-cols-1 items-center gap-xl lg:grid-cols-[2fr_3fr]">
+    <section aria-labelledby={headingId} data-testid="loan-debt-load" className="flex min-w-0 flex-col gap-lg">
+      <div className="flex flex-col gap-lg">
         <div className="flex min-w-0 flex-col gap-xs">
-          <h2 id={headingId} className="flex items-center gap-sm font-display text-2xl font-extrabold leading-tight">
+          <h3 id={headingId} className="flex items-center gap-sm text-sm font-medium text-text-muted">
             {t.gauge.title}
             {isEstimate && <EstimateTag />}
-          </h2>
-          <p className="font-display text-4xl font-extrabold leading-tight tabular-nums sm:text-display sm:leading-display">
+          </h3>
+          <p className="font-display text-3xl font-extrabold leading-tight tabular-nums">
             <span className={ZONE_TEXT[before.zone]}>{formatRate(before.value)}</span>
             {showAfter && (
               <>
@@ -84,10 +84,14 @@ export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gaug
             <Marker label={t.gauge.before} gauge={before} max={max} hollow />
             {showAfter && <Marker label={t.gauge.after(selectedName)} gauge={after} max={max} />}
           </div>
-          <div aria-hidden="true" className="flex justify-between gap-sm text-sm font-semibold">
-            <span className="text-positive">{segments[0].label}</span>
-            <span className="text-warning">{segments[1].label}</span>
-            <span className="text-primary">{segments[2].label}</span>
+          <div aria-hidden="true" className="flex gap-xs text-xs font-semibold">
+            {segments
+              .filter((s) => s.to > s.from)
+              .map((s) => (
+                <span key={s.key} style={{ width: `${s.to - s.from}%` }} className={cx('min-w-0 truncate', ZONE_TEXT[s.key])}>
+                  {s.label}
+                </span>
+              ))}
           </div>
           <div className="flex flex-wrap gap-x-lg gap-y-xs text-xs text-text-muted">
             <span className="flex items-center gap-xs">
@@ -104,7 +108,7 @@ export function DebtLoadGauges({ gauge, selectedName }: { gauge: LoanLabVM['gaug
         </div>
       </div>
       <details className="text-xs text-text-muted">
-        <summary className="cursor-pointer font-medium">{t.gauge.howTitle}</summary>
+        <summary className="flex min-h-11 cursor-pointer items-center font-medium">{t.gauge.howTitle}</summary>
         <p className="mt-xs">
           {t.gauge.hint} {t.gauge.guidance(formatRate(yellow), formatRate(red))}
         </p>

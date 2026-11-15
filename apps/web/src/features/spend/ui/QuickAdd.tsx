@@ -41,7 +41,7 @@ export function QuickAdd({ vm, className }: QuickAddProps) {
             onChange={(e) => vm.setText(e.target.value)}
             placeholder={t.input.placeholder}
             disabled={locked}
-            className="min-h-11 min-w-0 flex-1 basis-56 rounded-md border border-border bg-bg px-md py-sm text-base text-text disabled:bg-surface"
+            className="min-h-11 min-w-0 flex-1 basis-40 rounded-md border border-border bg-bg px-md py-sm text-base text-text disabled:bg-surface"
           />
           {vm.speech.supported && (
             <Button
@@ -123,7 +123,7 @@ export function QuickAdd({ vm, className }: QuickAddProps) {
       )}
 
       <div className="flex flex-col gap-xs">
-        <span className="text-xs font-bold uppercase tracking-wide text-text-muted">{t.presets.title}</span>
+        <span className="section-label">{t.presets.title}</span>
         <ul className="flex flex-wrap gap-xs">
           {vm.presets.map((p) => {
             const name = t.presets.names[p.id];
@@ -135,7 +135,7 @@ export function QuickAdd({ vm, className }: QuickAddProps) {
                   onClick={() => vm.addPreset(p.id)}
                   disabled={!vm.ready}
                   aria-label={t.presets.aria(name, amount)}
-                  className="inline-flex min-h-11 items-center gap-xs rounded-full border border-dashed border-text-muted bg-surface px-md text-sm font-medium hover:bg-primary-soft disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-xs rounded-full border border-border bg-surface px-md text-sm font-medium transition hover:border-primary hover:bg-primary-soft active:scale-95 disabled:opacity-50 motion-reduce:transition-none"
                 >
                   <span aria-hidden="true">{p.emoji}</span>
                   <span>{name}</span>
@@ -150,7 +150,7 @@ export function QuickAdd({ vm, className }: QuickAddProps) {
 
       <div aria-live="polite" className="empty:hidden">
         {vm.lastAdded && (
-          <p className="flex flex-wrap items-center gap-sm text-sm" data-testid="spend-added">
+          <p className="animate-fade flex flex-wrap items-center gap-sm rounded-md bg-positive-soft px-md py-xs text-sm" data-testid="spend-added">
             <span>{t.added(vm.lastAdded.count)}</span>
             <Button size="sm" variant="ghost" onClick={vm.undo}>
               {t.undo}

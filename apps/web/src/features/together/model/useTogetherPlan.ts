@@ -2,12 +2,15 @@
 // while waiting, then the household view. Anyone else who opens the link is partner 2: they add
 // their numbers, then see the same view. Every number comes from ./compute.ts (the engine).
 import type { TogetherPartner, TogetherPlan } from '@lifeguessr/types';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { runEngine, toVMError } from '@/lib/model/errors';
 import { useAppReady } from '@/state';
 import { createTogetherClient, rememberRole, roleIn, type TogetherClient } from './client';
 import { togetherResult } from './compute';
-import type { TogetherPlanVM, TogetherRole, VMError } from './types';
+import type { SplitMode, TogetherPlanVM, TogetherRole, VMError } from './types';
+
+/** How long "Copied" shows after a copy. */
+export const COPIED_MS = 2_500;
 import { usePartnerForm } from './usePartnerForm';
 
 type LoadState =
@@ -31,6 +34,12 @@ export function useTogetherPlan(id: string, client?: TogetherClient): TogetherPl
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<VMError | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const [splitMode, setSplitMode] = useState<SplitMode>('income');
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+  }, []);
   const plan = state.status === 'ready' ? state.plan : null;
   const form = usePartnerForm();
 
@@ -63,10 +72,17 @@ export function useTogetherPlan(id: string, client?: TogetherClient): TogetherPl
   const url = typeof window === 'undefined' || !sharePath ? sharePath : new URL(sharePath, window.location.origin).toString();
 
   const copy = useCallback(() => {
-    void navigator.clipboard?.writeText(url).then(
-      () => setCopied(true),
-      () => setCopied(false),
-    );
+    const failed = () => {
+      setCopied(false);
+      setCopyFailed(true);
+    };
+    if (!navigator.clipboard?.writeText) return failed();
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyFailed(false);
+      setCopied(true);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), COPIED_MS);
+    }, failed);
   }, [url]);
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const share = useCallback(() => {
@@ -107,7 +123,7 @@ export function useTogetherPlan(id: string, client?: TogetherClient): TogetherPl
     storage: api.source,
     names: { p1: current.partner1.nickname ?? null, p2: current.partner2?.nickname ?? null },
     expiresOn: new Date(current.expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-    share: { url, copy, share: canShare ? share : null, copied },
+    share: { url, copy, share: canShare ? share : null, copied, copyFailed },
     waiting,
     refresh: role === 'partner1' && waiting && api.source === 'api' ? () => setAttempt((n) => n + 1) : null,
     form: showForm ? form.vm : null,
@@ -118,5 +134,7 @@ export function useTogetherPlan(id: string, client?: TogetherClient): TogetherPl
     cancelEdit: editing ? () => setEditing(false) : null,
     result: result?.status === 'ready' ? result.data : null,
     resultError: result?.status === 'error' ? result.error : null,
+    splitMode,
+    setSplitMode,
   };
 }

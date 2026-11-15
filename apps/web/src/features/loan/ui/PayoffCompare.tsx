@@ -44,22 +44,22 @@ export function PayoffCompare({ vm }: { vm: PayoffPlannerVM }) {
         <h3 className="text-lg font-bold">{t.planner.compare.title}</h3>
         {vm.isEstimate && <EstimateTag />}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left">
+      <div>
+        <table className="w-full table-fixed border-collapse text-left">
           <caption className="sr-only">{t.planner.compare.caption}</caption>
           <thead>
             <tr>
-              <th scope="col" className="pb-sm">
+              <th scope="col" className="w-[22%] pb-sm">
                 <span className="sr-only">{t.planner.compare.metric}</span>
               </th>
               {vm.columns.map((c) => (
-                <th key={c.method} scope="col" className="min-w-0 px-sm pb-sm align-top">
+                <th key={c.method} scope="col" className={cx('min-w-0 px-xs pb-sm align-top sm:px-sm', c.isSelected && 'rounded-t-lg bg-primary-soft pt-sm')}>
                   <span className="flex flex-col items-start gap-xs">
-                    <span className={cx('text-base', c.isSelected ? 'font-extrabold' : 'font-semibold')}>{t.planner.method.names[c.method]}</span>
+                    <span className={cx('text-sm sm:text-base', c.isSelected ? 'font-extrabold' : 'font-semibold')}>{t.planner.method.names[c.method]}</span>
                     {c.isSelected && (
                       <Tag className="border-ink text-text">{t.planner.compare.picked}</Tag>
                     )}
-                    <span className="text-xs font-normal text-text-muted">{t.planner.method.describes[c.method]}</span>
+                    <span className="hidden text-xs font-normal text-text-muted sm:block">{t.planner.method.describes[c.method]}</span>
                   </span>
                 </th>
               ))}
@@ -68,11 +68,11 @@ export function PayoffCompare({ vm }: { vm: PayoffPlannerVM }) {
           <tbody>
             {ROWS.map((row) => (
               <tr key={row.key} className="border-t border-border">
-                <th scope="row" className="py-sm pr-sm text-sm font-medium text-text-muted">
+                <th scope="row" className="py-sm pr-xs text-xs font-medium text-text-muted sm:text-sm">
                   {row.label}
                 </th>
                 {vm.columns.map((c) => (
-                  <td key={c.method} className={cx('px-sm py-sm tabular-nums', c.isSelected ? 'font-bold' : 'font-semibold')}>
+                  <td key={c.method} className={cx('px-xs py-sm text-sm tabular-nums break-words sm:px-sm sm:text-base', c.isSelected ? 'bg-primary-soft font-bold' : 'font-semibold')}>
                     {row.cell(c) ?? <span className="text-sm font-medium text-text-muted">{t.planner.compare.never}</span>}
                   </td>
                 ))}

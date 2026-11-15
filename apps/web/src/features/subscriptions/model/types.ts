@@ -103,6 +103,8 @@ export type StatementVM = {
   isShort: boolean;
   /** The latest day in the statement. */
   asOf: ChargeDate | null;
+  /** The findings come from the person's transactions (the ledger), not an upload. */
+  fromLedger: boolean;
   /** Read a CSV on this device and look for recurring charges. Needs the network (the categorizer). */
   upload: (file: File) => void;
   dismissError: () => void;

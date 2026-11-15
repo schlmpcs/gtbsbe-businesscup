@@ -6,74 +6,108 @@
 // "Mock" means a preview (nothing is saved, no reminders), not made-up numbers: every number comes
 // from @lifeguessr/engine on the user's profile (the demo profile until they build their own), from
 // what they type, or from a fixture the screen labels (illustrative lease terms, sample statement).
-import type { CostCategory, ForecastPoint, MonthEnd, Money, Rate } from '@lifeguessr/types';
+import type { CostCategory, MonthEnd, Money, Rate } from '@lifeguessr/types';
 import type { Loadable } from '@/lib/model/types';
 import type { MoveVM } from '@/features/forecast/model/types';
 
 export type { Loadable, VMError } from '@/lib/model/types';
 export type { MoveTarget, MoveVM } from '@/features/forecast/model/types';
-export type { CostCategory, ForecastPoint, MonthEnd, Money, MoveKind } from '@lifeguessr/types';
+export type { CostCategory, MonthEnd, Money, MoveKind } from '@lifeguessr/types';
 
 /** Where the preview note sends a free user. */
 export type ProPreviewVM = { isPro: boolean; href: string };
 
-// ----- S13 Decision: keep the car or lease a new one ------------------------------------------
+// ----- S13 Decision: keep my car or switch -------------------------------------------------
 
+/** Where a field's value comes from: the person's accounts / budget, a labelled example, or what they typed. */
+export type FieldOrigin = 'accounts' | 'budget' | 'example' | 'typed';
 
-/** The lease inputs. `null` = the box is empty. Money is per month except `dueAtSigning` (per term). */
-export type LeaseForm = { monthly: Money | null; termMonths: number | null; dueAtSigning: Money | null; running: Money | null };
-export type LeaseField = keyof LeaseForm;
+/** The car the person drives today. Money: balances for value / loanBalance, per month otherwise; apr a decimal. */
+export type CarField = 'value' | 'loanBalance' | 'loanPayment' | 'loanApr' | 'running';
+/** What they would do instead. */
+export type AlternativeKind = 'lease' | 'buy' | 'noCar';
+export type AlternativeField = 'monthly' | 'termMonths' | 'dueAtSigning' | 'running' | 'price' | 'downPayment' | 'apr';
+
+/** Why a field's value is refused (the screen words it). */
+export type DecideFieldError = 'required' | 'negative' | 'tooLarge' | 'term' | 'apr' | 'downAbovePrice' | 'paymentTooLow';
+
+/** One number box. `unit` tells the screen how to show it (money, money per month, a rate, months). */
+export type DecideFieldVM<K extends string> = {
+  key: K;
+  value: number | null;
+  unit: 'money' | 'monthly' | 'rate' | 'months';
+  origin: FieldOrigin;
+  /** The value is an estimate: an example, or a profile value that was itself estimated. */
+  isEstimate: boolean;
+  error: DecideFieldError | null;
+  max: number;
+};
+
+/** One path's car cost in a month, split for the stacked bar (engine carDecision). */
+export type CarCostVM = { payment: Money; running: Money; signing: Money; total: Money };
 
 export type DecideResultVM = {
-  keep: {
-    /** Σ balances of the profile's auto loans today. */
-    loanLeft: Money;
-    /** Months until they are paid off at the required payments (engine simulate); null = not within 10 years. */
-    monthsLeft: number | null;
-    /** Required auto-loan payments, per month. */
-    loanPayment: Money;
-    /** The profile's car running costs (insurance, fuel, upkeep), per month. */
-    running: Money;
-    runningIsEstimate: boolean;
-    /** Net worth at month 120, today's dollars (engine forecast). */
-    in10y: ForecastPoint;
-  };
-  lease: {
-    in10y: ForecastPoint;
-    /** How many times the amount due at signing is paid within the 10 years. */
-    signings: number;
-  };
-  /** keep.in10y.mid − lease.in10y.mid (positive = keeping is ahead). */
-  keepAdvantage10y: Money;
-  /** (lease payment + lease running costs) − today's running costs: what keeping saves each month once the loan is paid. */
-  monthlySavingAfterPayoff: Money;
-  better: 'keep' | 'lease';
-  /** |keepAdvantage10y| */
-  betterBy10y: Money;
-  /** Some input behind the two forecasts is an estimate. */
+  better: 'keep' | 'alternative';
+  /** |difference| at the horizon, today's dollars. */
+  betterBy: Money;
+  /** Within $500 at the horizon: call it a tie. */
+  isClose: boolean;
+  keepNetWorth: Money;
+  alternativeNetWorth: Money;
+  /** Net worth of both paths, one point per year (calendar year), today's dollars. */
+  years: { year: number; keep: Money; alternative: Money }[];
+  keepCost: CarCostVM;
+  keepCostAfterPayoff: CarCostVM;
+  /** Months until the car loan is paid off; 0 = no loan; null = not within 10 years. */
+  keepPayoffMonths: number | null;
+  alternativeCost: CarCostVM;
+  /** Paid once up front: a new car's down payment (0 otherwise). */
+  alternativeUpfront: Money;
+  /** Lease signings within 10 years (0 otherwise). */
+  signings: number;
+  /** Car value − loan left (negative = paid from cash to clear the loan). */
+  tradeInEquity: Money;
   isEstimate: boolean;
-  /** Who made the two 10-year numbers: always the rules engine (`forecast`), never the AI model, so they can differ from S10's. */
-  forecastSource: 'rules';
+  source: 'rules';
+};
+
+/** "Add to my plan": the chosen path as an Expense event on the active /plan scenario. */
+export type DecidePlanVM = {
+  /** Which path the button adds (the better one by default; the person can pick). */
+  path: 'keep' | 'alternative';
+  setPath: (path: 'keep' | 'alternative') => void;
+  /** Null = nothing to add for this path (keeping is already in the plan; no car lowers a budget line instead). */
+  event: { kind: 'leaseExpense' | 'financedExpense'; amount: Money; year: number } | null;
+  /** Why there is no event for this path. */
+  noEventReason: 'keep' | 'noCar' | null;
+  /** Net worth at retirement with the event − without it, on the active scenario (engine plan()). */
+  impact: Loadable<{ atRetirement: Money; retireAge: number }> | null;
+  scenarioName: string;
+  added: boolean;
+  add: () => void;
+  href: string;
 };
 
 export type DecideVM = {
   status: 'loading' | 'ready';
-  /** Still the demo profile: the screen names its cars (the Camry and the RAV4). */
-  isDemoProfile: boolean;
-  /** Calendar year at the 10-year horizon. */
+  /** This calendar year and the year at the 10-year horizon. */
+  startYear: number;
   horizonYear: number;
-  todaysDollars: true;
-  lease: {
-    form: LeaseForm;
-    /** Per field: still the illustrative sample value (not typed by the user). */
-    isEstimate: Record<LeaseField, boolean>;
-    invalidFields: LeaseField[];
-  };
-  setLease: (patch: Partial<LeaseForm>) => void;
-  /** Back to the illustrative lease terms. */
-  resetLease: () => void;
-  /** Null while a lease field is invalid. */
+  /** Still the demo profile (sample numbers). */
+  isDemoProfile: boolean;
+  /** The car fields come from the person's accounts / budget (else every car field is an example). */
+  carFromProfile: boolean;
+  car: DecideFieldVM<CarField>[];
+  setCar: (key: CarField, value: number | null) => void;
+  resetCar: () => void;
+  alternativeKind: AlternativeKind;
+  setAlternativeKind: (kind: AlternativeKind) => void;
+  alternative: DecideFieldVM<AlternativeField>[];
+  setAlternative: (key: AlternativeField, value: number | null) => void;
+  resetAlternative: () => void;
+  /** Null while a field is refused. */
   result: Loadable<DecideResultVM> | null;
+  plan: DecidePlanVM;
 };
 
 // ----- S14 Monthly check-in -------------------------------------------------------------------

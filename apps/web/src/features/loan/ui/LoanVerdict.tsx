@@ -1,42 +1,42 @@
 'use client';
 
+// The answer card under the offers: "Offer A costs $1,134 less than Offer B", the lowest monthly payment when
+// another offer has it, and the stacked total-cost bars. It names what the view-model found (best, the
+// isLowest flags) with the engine's totals; it computes nothing.
 import { loan as t } from '@/copy';
 import { formatMoney } from '@/ui-kit';
 import type { LoanLabVM, LoanOfferVM } from '../model/types';
+import { CostRace } from './CostRace';
 
-/**
- * The ink band under the offers (Figma S12): the bottom line in plain words. It only names the offers the
- * view-model flagged (isLowestCost / isLowestMonthly) with the engine's totals; it computes nothing.
- */
-export function LoanVerdict({ offers }: Pick<LoanLabVM, 'offers'>) {
+export function LoanVerdict({ offers, best, costScale }: Pick<LoanLabVM, 'offers' | 'best' | 'costScale'>) {
   const name = (o: LoanOfferVM) => t.offerName(offers.indexOf(o) + 1);
-  const cheapest = offers.filter((o) => o.isLowestCost && o.result);
   const lowestMonthly = offers.filter((o) => o.isLowestMonthly && o.result);
-  const names = (list: LoanOfferVM[]) => list.map(name).join(t.verdict.and);
-  const same =
-    cheapest.length > 0 && cheapest.length === lowestMonthly.length && cheapest.every((o) => lowestMonthly.includes(o));
+  const bestOffer = best ? offers.find((o) => o.id === best.id) ?? null : null;
+  const valid = offers.filter((o) => o.result).length;
 
-  let headline: string = t.verdict.none;
-  let detail: string | null = null;
-  if (cheapest.length > 0) {
-    const first = cheapest[0]!.result!;
-    headline = same
-      ? t.verdict.lowestBoth(names(cheapest), formatMoney(first.totalCost), formatMoney(first.monthly))
-      : t.verdict.lowestCost(names(cheapest), formatMoney(first.totalCost));
-    if (!same && lowestMonthly.length > 0) {
-      detail = t.verdict.lowestMonthly(names(lowestMonthly), formatMoney(lowestMonthly[0]!.result!.monthly));
-    }
+  let headline: string = valid === 1 ? t.verdict.one : t.verdict.none;
+  if (best?.runnerUp) {
+    const a = t.offerName(best.index);
+    const b = t.offerName(best.runnerUp.index);
+    headline = best.runnerUp.costsMore < 1 ? t.verdict.tie(a, b) : t.verdict.saves(a, b, formatMoney(best.runnerUp.costsMore));
   }
+  const monthlyElsewhere = bestOffer && lowestMonthly.length > 0 && !lowestMonthly.includes(bestOffer);
 
   return (
-    <section
-      aria-label={t.verdict.label}
-      data-testid="loan-verdict"
-      className="flex flex-col gap-xs rounded-xl bg-ink px-xl py-xl text-on-primary sm:px-2xl"
-    >
-      <p className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">{headline}</p>
-      {detail && <p className="text-base text-on-primary/80">{detail}</p>}
-      {cheapest.length > 0 && <p className="text-sm text-on-primary/60">{t.compare.totalCostHint}</p>}
+    <section aria-label={t.verdict.label} data-testid="loan-verdict" className="card card-pad flex min-w-0 flex-col gap-lg" aria-live="polite">
+      <div className="flex flex-col gap-sm">
+        {bestOffer && (
+          <span className="w-fit rounded-full bg-positive px-md py-xs text-sm font-bold text-on-primary">{t.verdict.pill(name(bestOffer))}</span>
+        )}
+        <p data-testid="loan-verdict-headline" className="font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+          {headline}
+        </p>
+        {bestOffer?.result && <p className="text-base text-text-muted">{t.verdict.total(name(bestOffer), formatMoney(bestOffer.result.totalCost))} {t.compare.totalCostHint}</p>}
+        {monthlyElsewhere && (
+          <p className="text-base font-semibold">{t.verdict.lowestMonthly(lowestMonthly.map(name).join(t.verdict.and), formatMoney(lowestMonthly[0]!.result!.monthly))}</p>
+        )}
+      </div>
+      <CostRace offers={offers} costScale={costScale} bestId={best?.id ?? null} />
     </section>
   );
 }

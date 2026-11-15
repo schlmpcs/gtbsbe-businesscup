@@ -34,81 +34,126 @@ export const mocks = {
   },
 
   decide: {
-    /** The ink sticker over the question; the screen is a preview (nothing is saved). */
-    eyebrow: 'Decisions · Preview',
-    /** The demo profile's cars (the Figma frame); a user's own profile gets the generic title. */
-    title: 'Keep the Camry or lease a RAV4?',
-    titleOwn: 'Keep your car or lease a new one?',
-    vs: 'VS',
-    /** Under each path: its 10-year net worth against the other path. */
-    effectLabel: 'Net worth vs the other path',
-    effectBy: (year: number) => `by ${year}`,
-    /** JF14: each path shows its own net worth (no ±); one sentence names the winner. */
-    levelLabel: (year: number) => `Net worth by ${year}`,
+    kicker: 'Decision · your car',
+    title: 'Keep your car or switch?',
+    lead: 'Your car against a lease, a new car or no car at all: what each leaves you with over 10 years.',
+    /** Over the alternative picker. */
+    compareWith: 'Compare keeping it with',
+    kinds: { lease: 'Lease a new one', buy: 'Buy a new one', noCar: 'Go car-free' },
+    kindsShort: { lease: 'Lease', buy: 'New car', noCar: 'No car' },
+    /** When the person has no car in their money yet. */
+    exampleNote: 'No car in your accounts or budget yet, so this is an example car. Change any number to make it yours.',
+    exampleLink: 'Add your car loan',
+    loading: 'Loading your numbers…',
+
+    // ----- verdict
+    verdictTitle: 'The answer',
+    pill: { keep: 'Keeping wins', alternative: { lease: 'Leasing wins', buy: 'A new car wins', noCar: 'Car-free wins' }, close: 'Too close to call' },
     sentence: (subject: string, amount: string, year: number) => `${subject} leaves you ${amount} richer by ${year}.`,
-    sentenceSubject: { keep: 'Keeping the Camry', keepOwn: 'Keeping your car', lease: 'Leasing the RAV4', leaseOwn: 'Leasing a new car' },
-    detailsTitle: 'Loan left and monthly savings',
-    editDisclosure: 'Change the lease terms',
-    better: 'Better path',
-    /** Labels of the engine purchases (never shown as results). */
-    purchaseLabels: { lease: 'Lease payment', signing: 'Due at signing' },
-    keep: {
-      title: 'Keep the 2021 Camry',
-      titleOwn: 'Keep your car',
-      loanLeft: 'Loan left',
-      loanLeftValue: (balance: string, monthsLeft: string) => `${balance} · ${monthsLeft}`,
-      noLoan: 'None',
-      payment: 'Loan payment',
-      running: 'Running costs',
+    subject: { keep: 'Keeping your car', lease: 'Leasing a new car', buy: 'Buying a new car', noCar: 'Going car-free' },
+    sentenceClose: (year: number) => `Both paths end up about the same by ${year}.`,
+    sentenceCloseSub: 'The difference is under $500. Pick the one you like driving.',
+    footnote: (year: number) => `Net worth in ${year}, in today’s dollars. Both count the car you own.`,
+    kpi: {
+      keep: (year: number) => `Keep it · ${year}`,
+      alternative: (kind: string, year: number) => `${kind} · ${year}`,
+      difference: 'Difference',
+      differenceHint: 'Keeping minus the other path',
     },
-    lease: {
-      title: 'Lease a new RAV4',
-      titleOwn: 'Lease a new car',
-      lease: 'Lease',
-      leaseValue: (amount: string, term: string) => `${amount} a month · ${term}`,
-      dueAtSigning: 'Due at signing',
-      running: 'Running costs',
-      /** Collapsed under the lease tile. */
-      assumptionTitle: 'Assumptions',
-      assumption: (signings: number) =>
-        `The trade-in pays off your car loan and you keep leasing: a new lease each term, paying the amount due at signing ${signings === 1 ? 'once' : `${signings} times`} in 10 years.`,
+
+    // ----- chart
+    chartTitle: 'Net worth over 10 years',
+    chartSubtitle: 'Today’s dollars, year by year',
+    chartLabel: (keepEnd: string, altEnd: string, alt: string, year: number) =>
+      `Line chart. Keeping your car reaches ${keepEnd} by ${year}; ${alt.toLowerCase()} reaches ${altEnd}.`,
+    lineKeep: 'Keep it',
+    tableYear: 'Year',
+
+    // ----- cost per month
+    costTitle: 'Car cost per month',
+    costSubtitle: 'This month, before prices rise',
+    costParts: { payment: 'Loan or lease payment', running: 'Insurance, fuel, upkeep', signing: 'Due at signing, spread out' },
+    costPartsNoCar: 'Transit, rides, rentals',
+    costRow: { keep: 'Keep it', lease: 'Lease', buy: 'New car', noCar: 'No car' },
+    afterPayoff: (months: string, amount: string) => `Once the loan is paid off (in ${months}), keeping costs ${amount} a month.`,
+    noLoanNote: 'No loan left on your car: keeping costs only what it takes to run it.',
+    neverPaidOff: 'At this payment the loan is not paid off within 10 years.',
+    upfront: (amount: string) => `Plus ${amount} down when you buy.`,
+    signings: (n: number) => `The lease is signed ${n === 1 ? 'once' : `${n} times`} in 10 years (a new one each term).`,
+    tradeIn: (amount: string) => `Selling your car puts ${amount} in your cash after the loan is cleared.`,
+    tradeInShort: (amount: string) => `Your car is worth ${amount} less than the loan: that gap is paid from your cash.`,
+
+    // ----- plan
+    plan: {
+      title: 'What it does to your plan',
+      choose: 'Add which path?',
+      paths: { keep: 'Keep it' },
+      impact: (age: number) => `Net worth at ${age} on your plan`,
+      scenario: (name: string) => `Measured on “${name}”, your active plan.`,
+      event: {
+        leaseExpense: (amount: string, year: number) => `Adds an Expense: ${amount} a month from ${year}, for 10 years.`,
+        financedExpense: (amount: string, year: number) => `Adds an Expense: a ${amount} car in ${year}, on a loan.`,
+      },
+      add: 'Add to my plan',
+      added: 'Added to your plan',
+      open: 'Open plan',
+      keepNote: 'Keeping is already in your plan: your car loan and Car budget line are part of it.',
+      noCarNote: 'Going car-free shows up in your plan as a lower Car budget line.',
+      noCarLink: 'Change it on Budget',
+      eventName: { lease: 'Car lease', buy: 'New car' },
     },
-    perMonth: (amount: string) => `${amount} a month`,
-    months: (n: number) => months(n),
-    never: 'not within 10 years',
-    scoreLabel: 'The result',
-    score: {
-      advantage: (better: string) => `more net worth if you ${better}`,
-      keepVerb: 'keep the Camry',
-      keepVerbOwn: 'keep your car',
-      leaseVerb: 'lease the RAV4',
-      leaseVerbOwn: 'lease a new car',
-      monthsLeft: 'until the car loan is paid off',
-      monthsLeftValue: (n: number) => `${n} mo`,
-      noLoan: 'no car loan',
-      saving: 'a month saved after that, by keeping',
-      extra: 'a month more after that, by keeping',
-    },
-    footnote: (year: number) => `By ${year}, in today’s dollars.`,
-    edit: {
-      title: 'The lease',
-      intro: 'Example terms. Enter a real offer.',
-      monthly: 'Lease payment',
-      monthlySuffix: '/mo',
-      termMonths: 'Term',
-      termSuffix: 'months',
-      dueAtSigning: 'Due at signing',
-      running: 'Running costs',
-      runningHint: 'Insurance, fuel, upkeep.',
-      errors: {
-        monthly: 'Enter a payment of $0 or more.',
-        termMonths: 'Enter a whole number of months (1 to 120).',
-        dueAtSigning: 'Enter an amount of $0 or more.',
-        running: 'Enter an amount of $0 or more.',
-      } as Record<string, string>,
-      fix: 'Fix the highlighted fields.',
-      reset: 'Reset',
-    },
+
+    // ----- inputs
+    carTitle: 'Your car',
+    altTitle: { lease: 'The lease', buy: 'The new car', noCar: 'Without a car' },
+    reset: 'Reset',
+    origin: { accounts: 'From your accounts', budget: 'From your budget', example: 'Example', typed: 'Yours' },
+    fields: {
+      car: {
+        value: 'What it’s worth',
+        loanBalance: 'Loan left',
+        loanPayment: 'Loan payment',
+        loanApr: 'Loan APR',
+        running: 'Running costs',
+      },
+      alternative: {
+        monthly: 'Lease payment',
+        termMonths: 'Term',
+        dueAtSigning: 'Due at signing',
+        running: 'Running costs',
+        price: 'Price',
+        downPayment: 'Down payment',
+        apr: 'Loan APR',
+      },
+      noCarMonthly: 'Getting around',
+    } as { car: Record<string, string>; alternative: Record<string, string>; noCarMonthly: string },
+    hints: {
+      value: 'About what a dealer would give you.',
+      running: 'Insurance, fuel, upkeep.',
+      noCar: 'Transit pass, rides, the odd rental.',
+      termLease: 'Usually 24 to 48 months.',
+    } as Record<string, string>,
+    suffix: { monthly: '/mo', months: 'months' },
+    errors: {
+      required: 'Enter a number.',
+      negative: 'Enter 0 or more.',
+      tooLarge: 'That is more than this tool handles.',
+      term: 'Enter whole months.',
+      apr: 'Enter an APR under 40%.',
+      downAbovePrice: 'The down payment can’t be more than the price.',
+      paymentTooLow: 'This payment doesn’t cover the interest, so the loan never shrinks.',
+    } as Record<string, string>,
+    fix: 'Fix the highlighted number to see the answer.',
+
+    // ----- how we calculate
+    howTitle: 'How we calculate',
+    how: [
+      'Both paths run month by month on your plan’s numbers (pay, spending, savings, debts) for 10 years, then are shown in today’s dollars.',
+      'Your car counts as something you own, losing about 15% of its value a year. Switching sells it first: what it’s worth minus the loan left goes to your cash.',
+      'A lease is paid every month and signed again each term; a new car is bought on the loan you enter; car-free swaps the car costs for what getting around costs you.',
+      'Numbers marked Example are illustrations, not quotes. Change them to your own.',
+    ],
+    sourceExample: (name: string) => `Example values: ${name}.`,
   },
 
   checkin: {

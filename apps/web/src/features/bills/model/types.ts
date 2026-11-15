@@ -24,13 +24,15 @@ export type BillVM = {
   dueDaySetByUser: boolean;
 };
 
-export type ChargeVM = { bill: BillVM; date: DayVM; isToday: boolean };
+export type ChargeVM = { bill: BillVM; date: DayVM; isToday: boolean; /** Due before today. */ isPast: boolean };
 
 export type CalendarCellVM = {
   /** Day of the month, or null for the padding before the 1st and after the last day. */
   day: number | null;
   iso: string | null;
   isToday: boolean;
+  /** Before today. */
+  isPast: boolean;
   charges: ChargeVM[];
   total: Money;
 };
@@ -47,6 +49,18 @@ export type MonthVM = {
   total: Money;
   /** At least one amount in the total is an estimate. */
   totalIsEstimate: boolean;
+  /** Due before today (gone out, by due date), and due today or later. A past month is all paid. */
+  paid: { total: Money; count: number };
+  toPay: { total: Money; count: number };
+  /** The month's total by kind (only kinds with a charge), `share` of the total 0–1, for the split bar. */
+  byKind: { kind: BillKindVM; total: Money; count: number; share: number }[];
+  /**
+   * The plain answer: toPay (current month, something still due), clear (current month, all gone out),
+   * future / past (another month), nothing (no bill falls in it).
+   */
+  verdict: 'toPay' | 'clear' | 'future' | 'past' | 'nothing';
+  /** Take-home pay a month minus the month's bills; null without a take-home pay. */
+  leftAfter: { takeHome: Money; amount: Money; isEstimate: boolean } | null;
 };
 
 export type BillsVM =

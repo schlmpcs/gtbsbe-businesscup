@@ -1,16 +1,34 @@
 'use client';
 
+// S11 answer: the verdict card (pill, the answer in three words, the reason, a KPI strip that counts up,
+// the with / without line over 10 years) and, collapsed, the other horizons and the cheapest way to pay.
+// Every number comes from useAfford() (engine canAfford + affordComfort); nothing is computed here.
 import { afford as t, forecast, workTime as wt } from '@/copy';
-import { Art, Card, cx, EstimateTag, ForecastChart, formatMoney, formatRate, Money, Stack, Sticker, Tag } from '@/ui-kit';
 import type { ReactNode } from 'react';
+import { Art, cx, EstimateTag, formatMoney, formatRate, Money, Tag } from '@/ui-kit';
+import { CountUp, KpiStrip, type KpiItem } from '@/ui-kit/reports';
+import { ToolLineChart } from '@/ui-kit/ToolLineChart';
 import type { AffordResultVM, AffordRulesVM, AffordVM, PayWithChoice, VMError } from '../model/types';
 import { Skeleton } from './controls';
 
-const VERDICT_TONE: Record<AffordResultVM['verdict'], string> = {
-  fits: 'text-positive',
-  wait: 'text-text',
-  no: 'text-text',
+const TIER_PILL: Record<AffordResultVM['tier'], string> = {
+  comfortable: 'bg-positive text-on-primary',
+  stretched: 'bg-warning text-ink',
+  notYet: 'bg-negative text-on-primary',
 };
+const TIER_TEXT: Record<AffordResultVM['tier'], string> = {
+  comfortable: 'text-positive',
+  stretched: 'text-text',
+  notYet: 'text-text',
+};
+
+/** "2.5" / "12": months of costs, one decimal under 10 (display rounding only). */
+export function monthsText(n: number): string {
+  if (n >= 24) return '24+';
+  return n < 10 ? String(Math.round(n * 10) / 10) : String(Math.round(n));
+}
+const cushionText = (n: number | null) => (n === null ? t.result.kpis.cushionNone : t.result.kpis.cushionValue(monthsText(n)));
+const loadText = (r: number | null) => (r === null ? t.result.kpis.noPay : formatRate(r, 0));
 
 function failsOnText(failsOn: NonNullable<AffordResultVM['failsOn']>, rules: AffordRulesVM): string {
   switch (failsOn) {
@@ -27,50 +45,36 @@ function errorText(error: VMError): string {
   return error.kind === 'notImplemented' ? t.result.errors.notImplemented : t.result.errors.other;
 }
 
-const STICKER_TONE = { fits: 'positive', wait: 'primary', no: 'ink' } as const;
-
-/** Big display size for the verdict sentence (Figma S11: ~80px on desktop). */
-const VERDICT_SIZE =
-  'font-display text-4xl font-extrabold leading-display tracking-tight sm:text-display xl:text-[length:calc(var(--text-display)*1.4)]';
-
-/** Headline verdict plus the plain-language reason; never blames the purchase for a plan that already breaks a rule. */
-function Verdict({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }) {
-  const headline =
-    data.verdict === 'fits'
-      ? t.result.verdicts.fits
-      : data.verdict === 'wait'
-        ? t.result.verdicts.wait(data.waitMonths ?? 0)
-        : t.result.verdicts.no;
-  const reason = data.failsOn ? failsOnText(data.failsOn, rules) : null;
-  const body = 'max-w-prose text-lg text-text-muted';
-
-  return (
-    <Stack gap="md">
-      <p data-testid="afford-verdict" data-verdict={data.verdict} className={cx(VERDICT_SIZE, VERDICT_TONE[data.verdict])}>
-        {headline}
+/** The reason under the answer; never blames the purchase for a plan that already breaks a rule. */
+function Reason({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }) {
+  const body = 'max-w-prose text-base text-text-muted sm:text-lg';
+  const r = t.result.reasons;
+  if (data.tier === 'comfortable')
+    return <p className={body}>{r.comfortable(cushionText(data.cushion.after), loadText(data.debtLoad.after))}</p>;
+  if (data.tier === 'stretched') {
+    return (
+      <p className={body}>
+        {data.stretchedBy === 'debtLoad'
+          ? r.stretchedDebt(loadText(data.debtLoad.after), formatRate(rules.debtLoadYellow, 0))
+          : r.stretchedCushion(cushionText(data.cushion.after), t.result.kpis.cushionValue(String(rules.comfortableCushionMonths)))}
       </p>
-      <WorkTime data={data} />
-      {data.verdict === 'fits' && data.baselineFails && (
-        <p role="note" className="rounded-lg bg-bg p-md text-sm">
-          {t.result.baseline.fits}
-        </p>
-      )}
-
-      {data.verdict === 'wait' && (
-        <>
-          {data.baselineFails ? <p className={body}>{t.result.baseline.wait}</p> : reason && <p className={body}>{reason}</p>}
-        </>
-      )}
-
-      {data.verdict === 'no' &&
-        (data.baselineFails ? (
-          <p className={body}>
-            {t.result.baseline.no} {reason}
-          </p>
-        ) : (
-          reason && <p className={body}>{reason}</p>
-        ))}
-    </Stack>
+    );
+  }
+  const reason = data.failsOn ? failsOnText(data.failsOn, rules) : null;
+  if (data.verdict === 'wait') {
+    return (
+      <div className="flex flex-col gap-xs">
+        <p className="text-lg font-semibold">{r.wait(data.waitMonths ?? 0)}</p>
+        {data.baselineFails ? <p className={body}>{t.result.baseline.wait}</p> : reason && <p className={body}>{reason}</p>}
+      </div>
+    );
+  }
+  return data.baselineFails ? (
+    <p className={body}>
+      {t.result.baseline.no} {reason}
+    </p>
+  ) : (
+    reason && <p className={body}>{reason}</p>
   );
 }
 
@@ -79,7 +83,7 @@ function WorkTime({ data }: { data: AffordResultVM }) {
   const w = data.workTime;
   if (!w) return null;
   return (
-    <p data-testid="afford-work-time" className="flex flex-wrap items-center gap-sm text-xl font-bold">
+    <p data-testid="afford-work-time" className="flex flex-wrap items-center gap-sm text-base font-semibold">
       <span>{wt.ofYourWork(w.unit, w.amount, w.per)}</span>
       {w.isEstimate && <EstimateTag />}
     </p>
@@ -95,17 +99,6 @@ function SourceLabel({ source, className }: { source: AffordResultVM['forecastSo
   );
 }
 
-/** A white fact card under the answer: a big number (or word) over a small label (Figma S11). */
-function Fact({ value, label, note }: { value: ReactNode; label: string; note?: string }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-xs rounded-xl bg-surface p-xl shadow-md">
-      <dt className="order-2 text-sm text-text-muted">{label}</dt>
-      <dd className="order-1 font-display text-3xl font-extrabold leading-tight tabular-nums sm:text-4xl">{value}</dd>
-      {note && <dd className="order-3 text-xs font-semibold text-primary">{note}</dd>}
-    </div>
-  );
-}
-
 /** The goal effect in one sentence (only when a goal is set). */
 function goalText(g: NonNullable<AffordResultVM['goalEffect']>): string {
   const target = formatMoney(g.target, { compact: true });
@@ -114,11 +107,38 @@ function goalText(g: NonNullable<AffordResultVM['goalEffect']>): string {
   return g.delayMonths === 0 ? t.result.goal.sameTime(target, g.reachYear) : t.result.goal.later(target, g.reachYear, g.delayMonths);
 }
 
-/**
- * JF14: where you will be with vs without the purchase at the furthest horizon (rules engine, labeled),
- * then the cost in words. No bare signed number as a headline.
- */
-function WithVsWithout({ data }: { data: AffordResultVM }) {
+function Kpis({ data }: { data: AffordResultVM }) {
+  const k = t.result.kpis;
+  const ten = data.horizons.find((h) => h.month === 120) ?? data.horizons.at(-1);
+  const items: KpiItem[] = [
+    {
+      id: 'cushion',
+      label: k.cushion,
+      value: data.cushion.after === null ? k.cushionNone : <CountUp value={data.cushion.after} format={(v) => k.cushionValue(monthsText(v))} />,
+      hint: data.cushion.before === null ? undefined : k.cushionNow(monthsText(data.cushion.before)),
+      tone: data.tier === 'comfortable' ? 'positive' : data.stretchedBy === 'cushion' || data.failsOn === 'cushion' ? 'warning' : 'default',
+    },
+  ];
+  if (ten) {
+    items.push({
+      id: 'netWorth',
+      label: k.netWorth,
+      value: <CountUp value={ten.with.mid} format={(v) => formatMoney(v)} />,
+      hint: Math.abs(ten.deltaMid) < 1 ? k.netWorthSame : k.netWorthHint(formatMoney(ten.deltaMid, { signed: true })),
+    });
+  }
+  items.push({
+    id: 'debtLoad',
+    label: k.debtLoad,
+    value: loadText(data.debtLoad.after),
+    hint: k.debtLoadNow(loadText(data.debtLoad.before)),
+    tone: data.stretchedBy === 'debtLoad' || data.failsOn === 'debtLoad' ? 'warning' : 'default',
+  });
+  return <KpiStrip items={items} aria-label={k.label} data-testid="afford-kpis" className="shadow-none" />;
+}
+
+/** "It costs you about $43K of net worth in 10 years." */
+function CostSentence({ data }: { data: AffordResultVM }) {
   const w = t.result.withVsWithout;
   const row = [...data.horizons].sort((a, b) => b.month - a.month)[0];
   if (!row) return null;
@@ -131,75 +151,20 @@ function WithVsWithout({ data }: { data: AffordResultVM }) {
         ? w.costs(formatMoney(-diff, { compact: true }), when)
         : w.gains(formatMoney(diff, { compact: true }), when);
   return (
-    <div data-testid="afford-horizons" className="flex w-full flex-col gap-sm">
-      <dl aria-label={w.label} className="grid grid-cols-2 gap-md">
-        <div className="flex min-w-0 flex-col gap-xs rounded-lg bg-bg p-md">
-          <dt className="order-2 text-sm text-text-muted">
-            {w.with} · {when}
-          </dt>
-          <dd className="order-1 font-display text-3xl font-extrabold tabular-nums">
-            <Money value={row.with.mid} compact />
-          </dd>
-        </div>
-        <div className="flex min-w-0 flex-col gap-xs rounded-lg bg-bg p-md">
-          <dt className="order-2 text-sm text-text-muted">
-            {w.without} · {when}
-          </dt>
-          <dd className="order-1 font-display text-3xl font-extrabold tabular-nums">
-            <Money value={row.without.mid} compact />
-          </dd>
-        </div>
-      </dl>
-      <p data-testid="afford-cost" className="text-lg font-semibold">
-        {sentence}
-      </p>
-      {data.goalEffect && (
-        <p data-testid="afford-goal-effect" className="text-lg">
-          {goalText(data.goalEffect)}
-        </p>
-      )}
-      <SourceLabel source={data.forecastSource} className="self-start" />
-    </div>
+    <p data-testid="afford-cost" className="text-base font-semibold">
+      {sentence}
+    </p>
   );
 }
 
-/** Collapsed (JF16): the other horizons and the cheapest way to pay. */
-function Details({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWithChoice }) {
-  return (
-    <details className="group rounded-xl bg-surface p-lg shadow-md">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-semibold">
-        <span>{t.result.detailsTitle}</span>
-        <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
-          ▾
-        </span>
-      </summary>
-      <div className="mt-md flex flex-col gap-md">
-        {data.horizons.length > 0 && <Horizons data={data} />}
-        <dl className="grid grid-cols-1 gap-md">
-          <Fact
-            value={data.cheapestWayFits ? t.result.cheapestWays[data.cheapestWay] : t.result.cheapestNone}
-            label={t.result.cheapestTitle}
-            note={
-              !data.cheapestWayFits
-                ? t.result.cheapestNoneNote
-                : data.cheapestWay === chosenWay
-                  ? t.result.cheapestSame
-                  : t.result.cheapestDifferent
-            }
-          />
-        </dl>
-      </div>
-    </details>
-  );
-}
-
-/** Collapsed: the rules behind the verdict (and the wait, and the cheapest way). */
-function HowWeDecide({ data }: { data: AffordResultVM }) {
+/** How we decide: the rules behind the verdict and the tier. */
+function HowWeDecide({ data, rules }: { data: AffordResultVM; rules: AffordRulesVM }) {
   return (
     <details className="text-sm text-text-muted">
-      <summary className="cursor-pointer font-medium">{t.result.howTitle}</summary>
-      <div className="mt-sm flex flex-col gap-xs">
+      <summary className="flex min-h-11 cursor-pointer items-center font-medium">{t.result.howTitle}</summary>
+      <div className="flex flex-col gap-xs">
         <p>{t.result.how}</p>
+        <p>{t.result.howTier(t.result.kpis.cushionValue(String(rules.comfortableCushionMonths)), formatRate(rules.debtLoadYellow, 0))}</p>
         {data.verdict === 'wait' && data.waitMonths !== null && <p>{t.result.waitBody(data.waitMonths)}</p>}
         <p>{t.result.cheapestHint}</p>
         {data.workTime && <p>{wt.hint(data.workTime.hoursPerWeek)}</p>}
@@ -211,31 +176,53 @@ function HowWeDecide({ data }: { data: AffordResultVM }) {
 function Horizons({ data }: { data: AffordResultVM }) {
   const h = t.result.horizonHeaders;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <caption className="sr-only">{t.result.horizonsCaption}</caption>
-        <thead>
-          <tr className="text-left text-xs text-text-muted">
-            <th scope="col" className="py-xs pr-sm font-medium">{h.when}</th>
-            <th scope="col" className="py-xs pr-sm text-right font-medium">{h.with}</th>
-            <th scope="col" className="py-xs pr-sm text-right font-medium">{h.without}</th>
-            <th scope="col" className="py-xs text-right font-medium">{h.delta}</th>
+    <table className="w-full text-sm">
+      <caption className="sr-only">{t.result.horizonsCaption}</caption>
+      <thead>
+        <tr className="text-left text-xs text-text-muted">
+          <th scope="col" className="py-xs pr-sm font-medium">{h.when}</th>
+          <th scope="col" className="py-xs pr-sm text-right font-medium">{h.with}</th>
+          <th scope="col" className="py-xs pr-sm text-right font-medium">{h.without}</th>
+          <th scope="col" className="py-xs text-right font-medium">{h.delta}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.horizons.map((row) => (
+          <tr key={row.month} className="border-t border-border">
+            <th scope="row" className="py-sm pr-sm text-left font-normal">{t.result.horizons[row.month]}</th>
+            <td className="py-sm pr-sm text-right tabular-nums"><Money value={row.with.mid} compact /></td>
+            <td className="py-sm pr-sm text-right tabular-nums"><Money value={row.without.mid} compact /></td>
+            <td className={cx('py-sm text-right font-semibold tabular-nums', row.deltaMid < 0 ? 'text-negative' : 'text-text')}>
+              <Money value={row.deltaMid} compact signed />
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {data.horizons.map((row) => (
-            <tr key={row.month} className="border-t border-border">
-              <th scope="row" className="py-sm pr-sm text-left font-normal">{t.result.horizons[row.month]}</th>
-              <td className="py-sm pr-sm text-right"><Money value={row.with.mid} compact /></td>
-              <td className="py-sm pr-sm text-right"><Money value={row.without.mid} compact /></td>
-              <td className={cx('py-sm text-right font-semibold', row.deltaMid < 0 ? 'text-negative' : 'text-text')}>
-                <Money value={row.deltaMid} compact signed />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** Collapsed: the other horizons and the cheapest way to pay. */
+function Details({ data, chosenWay }: { data: AffordResultVM; chosenWay: PayWithChoice }) {
+  const note = !data.cheapestWayFits ? t.result.cheapestNoneNote : data.cheapestWay === chosenWay ? t.result.cheapestSame : t.result.cheapestDifferent;
+  return (
+    <details className="group card card-pad">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-semibold">
+        <span>{t.result.detailsTitle}</span>
+        <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <div data-testid="afford-horizons" className="mt-md flex flex-col gap-lg">
+        {data.horizons.length > 0 && <Horizons data={data} />}
+        <SourceLabel source={data.forecastSource} />
+        <dl className="flex flex-col gap-xs rounded-lg bg-bg p-md">
+          <dt className="text-sm text-text-muted">{t.result.cheapestTitle}</dt>
+          <dd className="font-display text-2xl font-extrabold">{data.cheapestWayFits ? t.result.cheapestWays[data.cheapestWay] : t.result.cheapestNone}</dd>
+          <dd className="text-xs font-semibold text-primary">{note}</dd>
+        </dl>
+      </div>
+    </details>
   );
 }
 
@@ -248,94 +235,107 @@ export type AffordResultPanelProps = {
   chosenWay: PayWithChoice;
 };
 
-/** The big white answer card: tilted verdict sticker, giant verdict sentence, reason, and the crane art. */
-function AnswerCard({ sticker, children }: { sticker?: ReactNode; children: ReactNode }) {
+function EmptyAnswer({ children }: { children: ReactNode }) {
   return (
-    <section
-      aria-label={t.result.title}
-      className="grid grid-cols-1 items-center gap-xl rounded-xl bg-surface p-xl shadow-md sm:p-2xl md:grid-cols-[3fr_2fr]"
-    >
-      <div className="flex min-w-0 flex-col items-start gap-lg">
-        {sticker}
-        {children}
-      </div>
-      <Art name="afford-crane" className="mx-auto w-1/2 max-w-(--container-3xs) md:w-full" />
+    <section aria-label={t.result.title} className="card card-pad flex flex-col items-center gap-md py-2xl text-center">
+      <Art name="afford-crane" className="w-32" />
+      {children}
     </section>
   );
 }
 
-/** The answer (Figma S11, right): the verdict card, then the fact cards. */
-export function AffordVerdictTile({ result, rules, invalidFields, chosenWay }: Omit<AffordResultPanelProps, 'purchaseLabel'>) {
+/** The answer: verdict card, then the details. */
+export function AffordVerdictTile({ result, rules, invalidFields, chosenWay, purchaseLabel }: AffordResultPanelProps) {
   if (result === null) {
     return (
-      <AnswerCard>
-        <p className="font-display text-3xl font-extrabold leading-tight text-text-muted sm:text-4xl">
-          {invalidFields.length > 0 ? t.form.fixFields : t.form.empty}
-        </p>
-      </AnswerCard>
+      <EmptyAnswer>
+        <p className="font-display text-2xl font-extrabold leading-tight">{invalidFields.length > 0 ? t.form.fixFields : t.form.empty}</p>
+      </EmptyAnswer>
     );
   }
   if (result.status === 'loading') {
     return (
-      <AnswerCard>
+      <EmptyAnswer>
         <div className="w-full">
           <Skeleton label={t.result.loading} />
         </div>
-      </AnswerCard>
+      </EmptyAnswer>
     );
   }
   if (result.status === 'error') {
     return (
-      <AnswerCard>
+      <EmptyAnswer>
         <p role="alert" className="text-lg">
           {errorText(result.error)}
         </p>
-      </AnswerCard>
+      </EmptyAnswer>
     );
   }
 
   const data = result.data;
   return (
-    <div className="flex flex-col gap-lg" aria-live="polite">
-      <AnswerCard
-        sticker={
-          <Sticker tone={STICKER_TONE[data.verdict]} tilt={-4} className="px-lg! py-sm! text-base! shadow-md">
-            {t.result.stickers[data.verdict]}
-          </Sticker>
-        }
-      >
-        <Verdict data={data} rules={rules} />
-        <WithVsWithout data={data} />
-        <HowWeDecide data={data} />
-      </AnswerCard>
+    <div className="flex flex-col gap-lg">
+      <section aria-label={t.result.title} aria-live="polite" className="card card-pad flex min-w-0 flex-col gap-lg">
+        <div className="flex flex-wrap items-center justify-between gap-sm">
+          <span data-testid="afford-tier-pill" className={cx('rounded-full px-md py-xs text-sm font-bold', TIER_PILL[data.tier])}>
+            {t.result.tierPills[data.tier]}
+          </span>
+          <WorkTime data={data} />
+        </div>
+        <p
+          data-testid="afford-verdict"
+          data-verdict={data.verdict}
+          data-tier={data.tier}
+          className={cx('font-display text-4xl font-extrabold leading-display tracking-tight sm:text-5xl', TIER_TEXT[data.tier])}
+        >
+          {t.result.tiers[data.tier]}
+        </p>
+        <Reason data={data} rules={rules} />
+        {data.verdict === 'fits' && data.baselineFails && (
+          <p role="note" className="rounded-lg bg-bg p-md text-sm">
+            {t.result.baseline.fits}
+          </p>
+        )}
+        <Kpis data={data} />
+        <AffordChart data={data} purchaseLabel={purchaseLabel} />
+        {data.goalEffect && (
+          <p data-testid="afford-goal-effect" className="text-base">
+            {goalText(data.goalEffect)}
+          </p>
+        )}
+        <HowWeDecide data={data} rules={rules} />
+      </section>
       <Details data={data} chosenWay={chosenWay} />
     </div>
   );
 }
 
-/** The with / without chart and, collapsed, the table behind it (rules engine, labeled). */
-export function AffordEffects({ result, purchaseLabel }: Pick<AffordResultPanelProps, 'result' | 'purchaseLabel'>) {
-  if (result?.status !== 'ready') return null;
-  const data = result.data;
+/** Net worth with vs without over 10 years (rules engine, labeled), and the cost in words. */
+function AffordChart({ data, purchaseLabel }: { data: AffordResultVM; purchaseLabel: string }) {
+  const c = t.result.chart;
+  const last = data.chart.at(-1);
   return (
-    <Card data-testid="afford-chart">
-      <SourceLabel source={data.forecastSource} className="mb-sm" />
-      <ForecastChart
+    <div data-testid="afford-chart" className="flex flex-col gap-sm">
+      <ToolLineChart
         title={t.result.chartTitle(purchaseLabel)}
-        series={{ label: t.result.chartWith(purchaseLabel), points: data.withPoints }}
-        compare={{ label: t.result.chartWithout, points: data.withoutPoints }}
-        footnote={t.result.chartFootnote}
+        summary={last ? c.summary(formatMoney(last.with), formatMoney(last.without)) : ''}
+        series={[
+          { id: 'without', label: t.result.chartWithout, tone: 'ink', dashed: true, points: data.chart.map((p) => ({ x: p.year, y: p.without })) },
+          { id: 'with', label: t.result.chartWith(purchaseLabel), tone: 'primary', area: true, points: data.chart.map((p) => ({ x: p.year, y: p.with })) },
+        ]}
+        xTicks={[0, 2, 4, 6, 8, 10]}
+        formatX={c.tick}
+        formatY={(v) => formatMoney(v, { compact: true })}
       />
-    </Card>
+      <CostSentence data={data} />
+      <div className="flex flex-wrap items-center gap-sm">
+        <SourceLabel source={data.forecastSource} />
+        <span className="text-xs text-text-muted">{c.note}</span>
+      </div>
+    </div>
   );
 }
 
-/** Answer plus the chart, stacked (the screen places the two parts separately). */
 export function AffordResultPanel(props: AffordResultPanelProps) {
-  return (
-    <Stack gap="lg">
-      <AffordVerdictTile {...props} />
-      <AffordEffects result={props.result} purchaseLabel={props.purchaseLabel} />
-    </Stack>
-  );
+  return <AffordVerdictTile {...props} />;
 }

@@ -58,7 +58,19 @@ export type SubscriptionsDeps = {
    * tool has no findings yet, it is audited on open and the tool starts on "What we found". Default: none.
    */
   importedStatement?: () => StatementRead | null;
+  /**
+   * The person's ledger (Transactions), as the masked lines the detector reads. When it holds lines and
+   * the tool has no findings yet, or its findings are older than the ledger's last line, the ledger is
+   * audited on open: no upload needed, and the findings agree with Recurring. Default: none.
+   */
+  ledger?: LedgerForAudit;
 };
+
+/** The ledger as the audit reads it: loaded or not, its lines (null when empty) and its latest date. */
+export type LedgerForAudit = { ready: boolean; read: StatementRead | null; latest: string | null };
+
+const dayOf = (d: { month: string; day: number } | null | undefined): string | null =>
+  d ? `${d.month}-${String(d.day).padStart(2, '0')}` : null;
 
 const STEP_ORDER: readonly SubscriptionsStep[] = ['statement', 'findings', 'guess', 'ticks', 'reveal', 'plan'];
 
@@ -303,6 +315,24 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     }
   }, [ready, takeImported, auditStatement, emit]);
 
+  // The ledger: audited once it has loaded, when it is newer than the findings kept (or there are none).
+  const ledger = deps.ledger;
+  const ledgerAudited = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready || !ledger?.ready || !ledger.read || ledger.read.items.length === 0 || ledger.latest === null) return;
+    const key = `${ledger.latest}|${ledger.read.items.length}`;
+    if (ledgerAudited.current === key) return;
+    ledgerAudited.current = key;
+    const kept = dayOf(latest.current.audit?.asOf);
+    if (kept !== null && kept >= ledger.latest) return;
+    emit({ name: 'subs_started', props: { path: 'statement' } }, 'subs:started:statement');
+    try {
+      auditStatement(ledger.read);
+    } catch {
+      // the store refused it: the upload is still there
+    }
+  }, [ready, ledger, auditStatement, emit]);
+
   const uploadStatement = useCallback(
     (file: File) => {
       abort.current?.abort();
@@ -339,6 +369,7 @@ export function useSubscriptions(profile: Profile, deps: SubscriptionsDeps): Sub
     // Fewer months than charges the detector needs for a pattern: a monthly series cannot show in it.
     isShort: hasAudit && monthsCovered < subsMinCharges.value,
     asOf: state.audit?.asOf ?? null,
+    fromLedger: ledger?.latest != null && dayOf(state.audit?.asOf) === ledger.latest,
     upload: uploadStatement,
     dismissError,
   };
