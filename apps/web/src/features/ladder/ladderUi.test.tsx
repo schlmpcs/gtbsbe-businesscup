@@ -377,12 +377,14 @@ describe('DebtForm (S8)', () => {
     await userEvent.click(screen.getByRole('radio', { name: ladder.balance.debtKinds.student }));
     await userEvent.type(screen.getByLabelText(ladder.balance.balanceLabel), '20000');
     await userEvent.click(save);
-    expect(onSave).toHaveBeenLastCalledWith({ kind: 'student', balance: 20000, apr: 0.0639, minPayment: null });
+    // JF7: an untouched APR is the kind's prefilled typical rate, saved tagged as an estimate.
+    expect(onSave).toHaveBeenLastCalledWith({ kind: 'student', balance: 20000, apr: 0.0639, aprIsEstimate: true, minPayment: null });
     const apr = screen.getByLabelText(ladder.balance.aprLabel);
     await userEvent.clear(apr);
     await userEvent.type(apr, '5.5');
     await userEvent.click(save);
-    expect(onSave).toHaveBeenLastCalledWith({ kind: 'student', balance: 20000, apr: 0.055, minPayment: null });
+    // A typed APR is the user's own: no estimate tag.
+    expect(onSave).toHaveBeenLastCalledWith({ kind: 'student', balance: 20000, apr: 0.055, aprIsEstimate: false, minPayment: null });
   });
 });
 

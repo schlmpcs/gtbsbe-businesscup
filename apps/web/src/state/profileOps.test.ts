@@ -52,15 +52,24 @@ describe('profileOps', () => {
     expect(typed.debts.find((x) => x.id === id)!.minPayment).toEqual({ value: 80, isEstimate: false });
   });
 
-  it('mergeStatementTotals averages each category and detected pay, as measured values', () => {
+  it('keeps a prefilled APR tagged as an estimate until the user types one (JF7)', () => {
+    const { profile, id } = addDebt(cloneProfileDemo(), { kind: 'auto', balance: 18_000, apr: 0.0717, aprIsEstimate: true, minPayment: 412 });
+    expect(profile.debts.find((x) => x.id === id)).toMatchObject({ apr: 0.0717, aprIsEstimate: true, minPayment: { value: 412, isEstimate: false } });
+    const typed = updateDebt(profile, id, { kind: 'auto', balance: 18_000, apr: 0.059, minPayment: 412 });
+    expect(typed.debts.find((x) => x.id === id)).not.toHaveProperty('aprIsEstimate');
+  });
+
+  it('mergeStatementTotals averages each category as measured values, and leaves take-home pay to the S9 review', () => {
     const months: CategoryTotals[] = [
       { month: '2026-09', totals: totals({ groceries: 500, eatingOut: 300 }), oneOffs: [], detectedPay: 5000 },
       { month: '2026-10', totals: totals({ groceries: 700, eatingOut: 100 }), oneOffs: [{ label: 'TV', amount: 900 }] },
     ];
-    const next = mergeStatementTotals(cloneProfileDemo(), months);
+    const before = cloneProfileDemo();
+    const next = mergeStatementTotals(before, months);
     expect(next.spending.groceries).toEqual({ value: 600, isEstimate: false });
     expect(next.spending.eatingOut).toEqual({ value: 200, isEstimate: false });
-    expect(next.takeHomePay).toEqual({ value: 5000, isEstimate: false });
+    // JF7: pay found in a statement enters the profile only once the person confirms it.
+    expect(next.takeHomePay).toEqual(before.takeHomePay);
   });
 
   it('mergeStatementTotals leaves out a month the statement covers only in part, and keeps rent it never saw', () => {
@@ -73,7 +82,8 @@ describe('profileOps', () => {
     ];
     const next = mergeStatementTotals(p, months);
     expect(next.spending.groceries).toEqual({ value: 550, isEstimate: false });
-    expect(next.takeHomePay).toEqual({ value: 4800, isEstimate: false });
+    // JF7: pay in the totals no longer enters the profile by itself; the "We found" review owns it.
+    expect(next.takeHomePay).toEqual(p.takeHomePay);
     // A statement with no rent at all says it is paid from elsewhere, not that it is $0.
     expect(next.spending.rentUtilities).toEqual(p.spending.rentUtilities);
     expect(next.spending.childcare).toEqual({ value: 0, isEstimate: false });

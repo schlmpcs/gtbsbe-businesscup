@@ -115,7 +115,8 @@ export function BalanceSheet({ vm, progress }: BalanceSheetProps) {
                         initial={{
                           kind: d.kind,
                           balance: d.balance,
-                          apr: d.apr,
+                          // A prefilled APR stays an estimate unless the user types one (JF7).
+                          apr: d.aprIsEstimate ? null : d.apr,
                           // A skipped minimum stays skipped unless the user types one.
                           minPayment: d.minPaymentIsEstimate ? null : d.minPayment,
                         }}
@@ -275,8 +276,9 @@ function DebtRow({ debt, onEdit, onRemove }: { debt: DebtRowVM; onEdit: () => vo
   return (
     <div data-debt-id={debt.id} className="flex flex-col gap-xs rounded-lg bg-bg px-lg py-md">
       <div className="flex flex-wrap items-baseline justify-between gap-md">
-        <span className="text-base text-text-muted tabular-nums">
+        <span className="flex flex-wrap items-center gap-sm text-base text-text-muted tabular-nums">
           {kind} · {formatRate(debt.apr, 2)} {t.aprLabel}
+          {debt.aprIsEstimate && <EstimateTag className="bg-surface" />}
         </span>
         <span className="font-display text-2xl font-extrabold tabular-nums">{formatMoney(debt.balance)}</span>
       </div>

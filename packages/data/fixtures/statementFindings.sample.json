@@ -1,0 +1,41 @@
+{
+  "income": [
+    {
+      "id": "income-1",
+      "payer": "Acme Logistics Inc",
+      "payroll": true,
+      "cadence": "biweekly",
+      "deposits": 10,
+      "perDeposit": 2400,
+      "monthly": 5200
+    }
+  ],
+  "debts": [
+    {
+      "id": "debt-1",
+      "kind": "auto",
+      "creditor": "Toyota Financial",
+      "payments": 4,
+      "monthlyPayment": 412,
+      "apr": 0.0717,
+      "aprSource": {
+        "name": "Federal Reserve G.19, commercial bank rate on 72-month new car loans, Q3 2026",
+        "year": 2026,
+        "url": "https://www.federalreserve.gov/releases/g19/current/default.htm"
+      }
+    },
+    {
+      "id": "debt-2",
+      "kind": "card",
+      "creditor": "Capital One",
+      "payments": 4,
+      "monthlyPayment": 250,
+      "apr": 0.2236,
+      "aprSource": {
+        "name": "Federal Reserve G.19, credit card plans, accounts assessed interest, Q3 2026",
+        "year": 2026,
+        "url": "https://www.federalreserve.gov/releases/g19/current/default.htm"
+      }
+    }
+  ]
+}

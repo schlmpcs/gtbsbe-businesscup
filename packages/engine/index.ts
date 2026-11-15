@@ -39,6 +39,10 @@ export {
 } from './followUps';
 export { detectSubscriptions, auditTotals, type DetectSubscriptionsOptions } from './subscriptions';
 export {
+  findIncomeAndDebts, detectStatementFindings, nameFromLabel, type FindingLine, type StatementFindingsDetail,
+} from './findings';
+export { lenderOf, LENDERS, type Lender } from './lenders';
+export {
   sceneOf, carSprite, takeoutSprite, CAR_PRICE_BANDS, TAKEOUT_BUCKETS, CLUE_COST_CATEGORIES, LAYOUT_COST_CATEGORY,
   LAYOUTS, LAYOUT_BEDROOMS, KID_SPRITES, DECOR_SPRITE_IDS, DECOR_ROOMS, SPRITE_IDS,
   type DecorRoom, type SpriteId,

@@ -116,6 +116,7 @@ export const DebtSchema = z.object({
   kind: DebtKindSchema,
   balance: NonNegativeMoneySchema,
   apr: AprSchema,
+  aprIsEstimate: z.boolean().optional(),           // a typical rate for the kind, not the user's
   minPayment: estimate(NonNegativeMoneySchema),   // monthly
   extraPayment: NonNegativeMoneySchema.optional(), // monthly
 });

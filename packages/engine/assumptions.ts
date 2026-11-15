@@ -48,25 +48,74 @@ export const cardAprDefault = {
   },
 } satisfies Assumption<Rate>;
 
+// ----- APR by debt kind (S8 quick add, JF7 debts found in a statement) ---------------------------
+
+const G19_URL = 'https://www.federalreserve.gov/releases/g19/current/default.htm';
+
 /**
- * Default APR per debt kind when the user only types a balance (S8 quick add; shown as an estimate,
- * editable). Card: the sourced G.19 rate above. The others are typical levels of the series named
- * in the note, rounded; they are assumptions, not quotes. BNPL "pay in 4" plans charge no interest.
+ * A typical APR for each kind of debt, prefilled when the person gives only a balance (S8 quick add)
+ * or confirms a debt found in their statement (JF7). The statement shows what was paid, never the
+ * rate, so this is always shown as an estimate and stays editable. Each kind cites the series it is
+ * read from. Card, car and personal loans are the Federal Reserve G.19 "terms of credit" at
+ * commercial banks (release of Nov 6, 2026: the Q3 2026 figures, the same as August 2026).
+ *
+ * These are rates on new lending. Someone paying an older car loan or mortgage often has a lower
+ * rate, which is one more reason the screen asks them to type theirs if they know it.
+ */
+export const debtAprByKind = {
+  card: { value: cardAprDefault.value, source: cardAprDefault.source },
+  auto: {
+    value: 0.0717 as Rate,
+    source: { name: 'Federal Reserve G.19, commercial bank rate on 72-month new car loans, Q3 2026', year: 2026, url: G19_URL },
+    note: 'The 72-month term is the one G.19 quotes first and the most common new-car term; 60-month was 7.54%.',
+  },
+  personal: {
+    value: 0.119 as Rate,
+    source: { name: 'Federal Reserve G.19, commercial bank rate on 24-month personal loans, Q3 2026', year: 2026, url: G19_URL },
+  },
+  student: {
+    value: 0.0639 as Rate,
+    source: {
+      name: 'Federal Student Aid, fixed rate on Direct Loans for undergraduates, 2025-26',
+      year: 2025,
+      url: 'https://studentaid.gov/understand-aid/types/loans/interest-rates',
+    },
+    note: 'Most US student debt is federal Direct Loans; private student loans vary widely.',
+  },
+  mortgage: {
+    value: 0.0711 as Rate,
+    source: {
+      name: 'Freddie Mac Primary Mortgage Market Survey, 30-year fixed, week of Nov 12, 2026',
+      year: 2026,
+      url: 'https://www.freddiemac.com/pmms',
+    },
+    note: 'The rate on a new 30-year mortgage; a mortgage taken out in 2020-21 is often near 3%.',
+  },
+  bnpl: {
+    value: 0 as Rate,
+    source: {
+      name: 'CFPB, Buy Now, Pay Later: Market trends and consumer impacts (pay-in-4 loans charge no interest)',
+      year: 2022,
+      url: 'https://www.consumerfinance.gov/data-research/research-reports/buy-now-pay-later-market-trends-and-consumer-impacts/',
+    },
+  },
+} satisfies Record<'card' | 'auto' | 'student' | 'personal' | 'bnpl' | 'mortgage', Assumption<Rate>>;
+
+/**
+ * The same rates as one record by kind, for forms that only need the number (S8). The source of each
+ * rate is in `debtAprByKind`; this one names the release most of them come from.
  */
 export const debtAprDefaults = {
   value: {
-    card: cardAprDefault.value,
-    auto: 0.08 as Rate,
-    student: 0.0639 as Rate,
-    personal: 0.12 as Rate,
-    bnpl: 0 as Rate,
-    mortgage: 0.065 as Rate,
+    card: debtAprByKind.card.value,
+    auto: debtAprByKind.auto.value,
+    student: debtAprByKind.student.value,
+    personal: debtAprByKind.personal.value,
+    bnpl: debtAprByKind.bnpl.value,
+    mortgage: debtAprByKind.mortgage.value,
   },
-  assumption: true,
-  note:
-    'card: Fed G.19 (cardAprDefault). auto: about the G.19 60-month new-car rate (2025). student: federal ' +
-    'Direct Loan undergraduate rate 2025-26 (6.39%, studentaid.gov). personal: about the G.19 24-month ' +
-    'personal loan rate (2025). mortgage: about the Freddie Mac PMMS 30-year fixed (2025). bnpl: pay-in-4, 0%.',
+  source: { name: 'Federal Reserve G.19 (card, car and personal loans); see debtAprByKind for each kind', year: 2026, url: G19_URL },
+  note: 'student: Federal Student Aid Direct Loan rate. mortgage: Freddie Mac PMMS. bnpl: pay-in-4, 0% (CFPB).',
 } satisfies Assumption<Record<'card' | 'auto' | 'student' | 'personal' | 'bnpl' | 'mortgage', Rate>>;
 
 /** Card minimum payment when the user skips it: interest for the month + 1% of balance, floor $25. */
@@ -695,6 +744,78 @@ export const cushionBandMonths = {
 /** The work hours / cushion assumptions, spread into `assumptions` below. */
 export const workTimeCushionAssumptions = { workHoursPerWeek, cushionBandMonths } as const;
 
+// ----- JF7: income and debts found in a statement (findIncomeAndDebts) ---------------------------
+
+/**
+ * Pay schedules a paycheck can follow: the days between two paychecks and how many come in a year.
+ * Semimonthly and monthly pay are tied to dates in the month, so their gap is the average one
+ * (365.25 / 24 and / 12). `slack` is how many days a paycheck may land off its schedule: a payday on
+ * a weekend or holiday posts a business day or two early (or late), and a month-end payday moves
+ * with the month's length.
+ */
+export const payCadences = {
+  value: {
+    weekly: { days: 7, perYear: 52, slack: 2 },
+    biweekly: { days: 14, perYear: 26, slack: 3 },
+    semimonthly: { days: 365.25 / 24, perYear: 24, slack: 4 },
+    monthly: { days: 365.25 / 12, perYear: 12, slack: 4 },
+  },
+  assumption: true,
+  note: 'How US payroll runs (weekly, every other week, the 15th and last day, monthly). A weekly gap of 7 ± 2 cannot be mistaken for every-other-week (14 ± 3).',
+} satisfies Assumption<Record<'weekly' | 'biweekly' | 'semimonthly' | 'monthly', { days: number; perYear: number; slack: number }>>;
+
+/** Fewest deposits from one payer before we call it a paycheck: three show a schedule, two only a gap. */
+export const payMinDeposits = {
+  value: 3,
+  assumption: true,
+  note: 'Two deposits fit any schedule; a third on the same schedule is the first real evidence.',
+} satisfies Assumption<number>;
+
+/**
+ * Paychecks a stream may skip and still count as regular, as a share of the paydays it spans
+ * (at least one): an unpaid week, a payroll that posted twice in one slot, a job started mid-statement.
+ */
+export const payMissedShare = {
+  value: 0.25,
+  assumption: true,
+  note: 'Hourly and gig pay skips a week now and then; more gaps than this is not a schedule.',
+} satisfies Assumption<number>;
+
+/**
+ * A pay stream or a debt is current only if its last line is this close to the statement's end:
+ * a job that ended, or a loan paid off, before the last months of the statement is not today's
+ * income or debt. Pay: two pay periods plus slack. Debts: one monthly payment plus two weeks.
+ */
+export const findingsStaleAfter = {
+  value: { payPeriods: 2, debtDays: 45 },
+  assumption: true,
+  note: 'A missed paycheck or a payment that posts late should not hide a stream; two missed ones should.',
+} satisfies Assumption<{ payPeriods: number; debtDays: number }>;
+
+/** Fewest payments to one lender before we offer it as a debt (one payment can be a one-off purchase or fee). */
+export const debtMinPayments = {
+  value: 2,
+  assumption: true,
+} satisfies Assumption<number>;
+
+/**
+ * Two loans with the same lender (two car loans from one captive lender) are told apart by their
+ * fixed payment: payments within this share (or these dollars, whichever is larger) of each other
+ * are one loan. A mortgage payment moves a little when escrow is reset, which is why it isn't exact.
+ */
+export const debtSameLoanTolerance = {
+  value: { share: 0.05, dollars: 5 as Money },
+  assumption: true,
+} satisfies Assumption<{ share: number; dollars: Money }>;
+
+/**
+ * The JF7 assumptions, spread into `assumptions` below. `debtAprByKind` is a record of one sourced
+ * rate per kind rather than one assumption, so the map lists it as `debtAprDefaults`.
+ */
+export const statementFindingsAssumptions = {
+  payCadences, payMinDeposits, payMissedShare, findingsStaleAfter, debtMinPayments, debtSameLoanTolerance,
+} as const;
+
 /** All assumptions by name, for the "How we calculate" panel. */
 export const assumptions = {
   inflationAnnualFallback,
@@ -726,6 +847,7 @@ export const assumptions = {
   ...subscriptionAssumptions,
   ...subscriptionAuditAssumptions,
   ...workTimeCushionAssumptions,
+  ...statementFindingsAssumptions,
 } as const;
 
 export type AssumptionId = keyof typeof assumptions;

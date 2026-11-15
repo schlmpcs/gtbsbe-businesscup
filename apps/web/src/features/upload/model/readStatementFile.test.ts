@@ -19,6 +19,9 @@ const problem = async (p: Promise<unknown>) => {
   return null;
 };
 
+const csv = (text: string, name = 'a.csv', type = 'text/csv') =>
+  readStatementFile(new File([text], name, { type }), { categorize: fakeCategorize });
+
 describe('readStatementFile', () => {
   it('parses in the browser and sends only masked label, amount, month and day', async () => {
     const file = new File([readStatementSampleCsv()], 'Chase1234_Activity.CSV', { type: 'text/csv' });
@@ -66,9 +69,25 @@ describe('readStatementFile', () => {
     expect(summary).toMatchObject({ transactions: 10, skippedPending: 2, skippedOther: 0, convention: 'outflowPositive' });
   });
 
+  it('returns the paychecks and debts found (JF7) and forgets the previous statement’s', async () => {
+    const { statementFindingsSample } = await import('@lifeguessr/data/fixtures');
+    const file = new File([readStatementSampleCsv()], 'sample.csv', { type: 'text/csv' });
+    const first = await readStatementFile(file, { categorize: fakeCategorize });
+    expect(first.findings).toEqual(statementFindingsSample);
+
+    // A new read replaces the findings; a failed read clears them, so a stale paycheck is never offered.
+    const { forgetStatementFindings, useStatementFindingsStore } = await import('./statementFindings');
+    const bad = await problem(csv('Date,Description,Amount\n2026-10-01,FREE,0.00'));
+    expect(bad).toBe('noTransactions');
+    expect(useStatementFindingsStore.getState().findings).toBeNull();
+
+    const again = await readStatementFile(file, { categorize: fakeCategorize });
+    expect(again.findings).toEqual(statementFindingsSample);
+    forgetStatementFindings();
+  });
+
   it('refuses files it cannot use, before sending anything', async () => {
     fakeCategorize.mockClear();
-    const csv = (text: string, name = 'a.csv', type = 'text/csv') => readStatementFile(new File([text], name, { type }), { categorize: fakeCategorize });
     expect(await problem(csv('x', 'statement.pdf', 'application/pdf'))).toBe('notCsv');
     expect(await problem(readStatementFile(
       new File([new Uint8Array(MAX_STATEMENT_FILE_BYTES + 1)], 'big.csv', { type: 'text/csv' }), { categorize: fakeCategorize },

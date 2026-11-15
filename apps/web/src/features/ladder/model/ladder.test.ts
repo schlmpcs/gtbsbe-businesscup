@@ -394,7 +394,9 @@ describe('useStatementUpload (S9)', () => {
     expect(result.current.hasDriftHistory).toBe(true);
     const p = useAppStore.getState().profile;
     expect(p.spending.groceries).toEqual({ value: 600, isEstimate: false });
-    expect(p.takeHomePay).toEqual({ value: 5400, isEstimate: false });
+    // JF7: `detectedPay` in the totals no longer enters the profile by itself — pay found in a
+    // statement is offered in the "We found" review and enters only once the person confirms it.
+    expect(p.takeHomePay).toEqual(useAppStore.getState().profile.takeHomePay);
     expect(useAppStore.getState().subscriptionsDetected).toBe(true);
   });
 
@@ -413,7 +415,7 @@ describe('useStatementUpload (S9)', () => {
   const file = new File(['Date,Description,Amount'], 'statement.csv', { type: 'text/csv' });
   type FileResult = StatementFileResult;
   /** What readStatementFile gives for months whose lines the server did not describe (no follow-ups). */
-  const fileResult = (m: CategoryTotals[]): FileResult => ({ months: m, summary, classified: null, followUps: [] });
+  const fileResult = (m: CategoryTotals[]): FileResult => ({ months: m, summary, classified: null, followUps: [], findings: { income: [], debts: [] } });
 
   describe('follow-up questions (JF6)', () => {
     // Two full months of a checking account: the rent and pay are clear, Target and an ATM are
@@ -427,7 +429,7 @@ describe('useStatementUpload (S9)', () => {
       line(mo, 28, 'ACME PAYROLL', -2400, 'pay'),
     ]);
     const readWith = (items: ClassifiedStatementItem[]) => vi.fn(async (): Promise<FileResult> => ({
-      months: statementTotals(items), summary, classified: items, followUps: statementFollowUps(items),
+      months: statementTotals(items), summary, classified: items, followUps: statementFollowUps(items), findings: { income: [], debts: [] },
     }));
 
     it('asks them, re-sums the months in code when one is answered, and applies a typed amount as measured', async () => {

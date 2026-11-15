@@ -111,6 +111,7 @@ export type DuelHintRequest = { anonId: string; date: string; round: DuelRound }
 export type Estimate<T> = { value: T; isEstimate: boolean };
 export type Debt = { id: string; kind: 'card'|'auto'|'student'|'personal'|'bnpl'|'mortgage';
   balance: Money; apr: Rate;
+  aprIsEstimate?: boolean;       // true = a typical rate for the kind (engine debtAprByKind), not the user's; absent = typed
   minPayment: Estimate<Money>;   // monthly; defaulted from assumptions when the user skips it
   extraPayment?: Money };        // monthly, set by moves
 /**
@@ -457,6 +458,7 @@ export * from './payoff';
 export * from './overpaying';
 export * from './subscriptions';
 export * from './subscriptionAudit';
+export * from './statementFindings';
 export * from './avatar';
 export * from './together';
 export * from './plan';

@@ -149,10 +149,10 @@ describe('add-account form', () => {
     expect(card.minPayment.value).toBeCloseTo(57.2667, 4);
     expect(card.minPayment.isEstimate).toBe(true);
 
-    // Personal loan: APR 12%, 24 months; r = 0.01, payment = 10,000 × 0.01 / (1 − 1.01^−24) = 470.73.
+    // Personal loan: APR 11.9%, 24 months; r = 0.0099167, payment = 10,000 × 0.0099167 / (1 − 1.0099167^−24) = 470.27.
     const loan = liabilityEstimates('loan', 10000, { debtKind: 'personal' });
-    expect(loan.apr).toEqual({ value: 0.12, isEstimate: true });
-    expect(loan.minPayment.value).toBeCloseTo(470.73, 2);
+    expect(loan.apr).toEqual({ value: 0.119, isEstimate: true });
+    expect(loan.minPayment.value).toBeCloseTo(470.27, 2);
     expect(loan.minPayment.isEstimate).toBe(true);
 
     const form = newAccountForm('creditCard');

@@ -78,15 +78,24 @@ export function newDebtId(p: Profile, kind: Debt['kind']): string {
   }
 }
 
-/** Debt fields the balance sheet edits. `minPayment: null` = the user skipped it (estimate). */
-export type DebtInput = { kind: Debt['kind']; balance: Money; apr: Rate; minPayment: Money | null };
+/**
+ * Debt fields the balance sheet edits. `minPayment: null` = the user skipped it (estimate).
+ * `aprIsEstimate: true` = the APR is the kind's typical rate we prefilled, not one the user typed
+ * (S8 quick add, a debt confirmed from the statement); absent or false = the user's own rate.
+ */
+export type DebtInput = { kind: Debt['kind']; balance: Money; apr: Rate; aprIsEstimate?: boolean; minPayment: Money | null };
 
 function debtFrom(id: string, input: DebtInput, extraPayment?: Money): Debt {
   const minPayment =
     input.minPayment === null
       ? { value: estimatedMinPayment(input.balance, input.apr, input.kind), isEstimate: true }
       : measured(input.minPayment);
-  return { id, kind: input.kind, balance: input.balance, apr: input.apr, minPayment, ...(extraPayment ? { extraPayment } : {}) };
+  return {
+    id, kind: input.kind, balance: input.balance, apr: input.apr,
+    ...(input.aprIsEstimate ? { aprIsEstimate: true } : {}),
+    minPayment,
+    ...(extraPayment ? { extraPayment } : {}),
+  };
 }
 
 /** Add a debt; returns the new profile and the debt's id. */
@@ -164,9 +173,14 @@ export function mergeStatementHistory(existing: readonly CategoryTotals[], incom
  * Statement totals → Profile: each category becomes its monthly mean (measured), taken over the
  * months the statement covers in full (`statementAverages`), so an export that stops on the 12th
  * doesn't pull every category down. One-off charges are not in `totals`, so they don't inflate the
- * figures. Pay detected in the statement becomes take-home pay. A category the averages leave out
- * (housing or groceries the statement shows none of: paid from another account) keeps its value
- * and flag, so a card-only statement never claims the rent is $0.
+ * figures. A category the averages leave out (housing or groceries the statement shows none of:
+ * paid from another account) keeps its value and flag, so a card-only statement never claims the
+ * rent is $0.
+ *
+ * Take-home pay is left alone. It used to become the mean of the months' `detectedPay`, which a
+ * month with three biweekly paychecks or a statement ending mid-month skews, and which nobody
+ * confirmed. Pay found in a statement now enters the profile only when the person confirms it in
+ * the S9 "We found" review (JF7, features/upload: engine findIncomeAndDebts, paydays × amount).
  */
 export function mergeStatementTotals(p: Profile, months: readonly CategoryTotals[]): Profile {
   const avg = statementAverages(months);
@@ -176,8 +190,7 @@ export function mergeStatementTotals(p: Profile, months: readonly CategoryTotals
     const value = avg.spending[c];
     if (value !== undefined) spending[c] = measured(value);
   }
-  const takeHomePay = avg.takeHomePay !== null ? measured(avg.takeHomePay) : p.takeHomePay;
-  return { ...p, spending, takeHomePay };
+  return { ...p, spending };
 }
 
 // ----- Future life events (S10 "Coming up") ----------------------------------------------------
