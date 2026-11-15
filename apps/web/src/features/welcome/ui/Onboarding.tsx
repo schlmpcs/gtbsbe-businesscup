@@ -2,7 +2,7 @@
 // animates entrances and counts numbers up to the value the model gives. No number is computed here.
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { welcome as t } from '@/copy';
 import { Art, Button, cx, Icon, Sticker } from '@/ui-kit';
 import type { AnalysisIcon, AnalysisRowVM, AnalysisVM, LifeLineKpiVM, OnboardingVM, RevealVM } from '../model/types';
@@ -22,71 +22,119 @@ export type OnboardingProps = {
 
 const DARK_STEPS = new Set(['analyzing', 'reveal', 'future']);
 
+/** One headline scale for every step, so the story keeps its rhythm. */
+const H1 = 'font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl';
+const LEAD = 'max-w-(--container-lg) text-lg leading-relaxed text-text-muted';
+/** Small caps labels on the dark steps. */
+const DARK_LABEL = 'block text-xs font-bold uppercase tracking-wide text-chart-6';
+/** A quiet panel on the dark steps. */
+const DARK_PANEL = 'rounded-lg bg-on-primary/5 ring-1 ring-on-primary/10';
+
 export function Onboarding({ vm, Link, uploadHref, doneHref, warmup }: OnboardingProps) {
   const dark = DARK_STEPS.has(vm.step);
+  const wide = vm.step === 'play' || (vm.step === 'analyzing' && !!vm.analysis);
   return (
     <main
       data-testid="onboarding"
       data-step={vm.step}
-      className={cx('min-h-[calc(100dvh-64px)] transition-colors duration-700', dark ? 'bg-ink text-on-primary' : 'bg-bg')}
+      className={cx('min-h-[calc(100dvh-64px)] transition-colors duration-700', dark ? 'text-on-primary' : 'text-text')}
     >
-      <div className="mx-auto grid w-full max-w-(--container-6xl) gap-xl px-lg py-xl lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-3xl lg:py-3xl">
-        <div className="lg:hidden"><Progress vm={vm} dark={dark} /></div>
-        {vm.step === 'play' ? (
-          <div className="order-2 flex min-w-0 flex-col gap-xl lg:col-span-2">
-            <div className="hidden lg:block"><Progress vm={vm} dark={dark} /></div>
-            <div key="play" className="ob-fade-up">{warmup}</div>
-          </div>
-        ) : vm.step === 'analyzing' && vm.analysis ? (
-          <div className="order-2 flex min-w-0 flex-col gap-xl lg:col-span-2">
-            <div className="hidden lg:block"><Progress vm={vm} dark={dark} /></div>
+      <Backdrop dark={dark} />
+      <div className="mx-auto flex min-h-[calc(100dvh-64px)] w-full max-w-(--container-6xl) flex-col px-lg pt-lg lg:pt-xl">
+        <Progress vm={vm} dark={dark} />
+        <div className={cx('grid flex-1 content-start gap-xl py-xl lg:content-center lg:py-3xl',
+          !wide && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-3xl')}>
+          {vm.step === 'play' ? (
+            <div key="play" className="ob-fade-up min-w-0">{warmup}</div>
+          ) : vm.step === 'analyzing' && vm.analysis ? (
             <AnalyzingStep analysis={vm.analysis} />
-          </div>
-        ) : (
-        <div className="order-2 flex min-w-0 flex-col gap-lg lg:order-none">
-          <div className="hidden lg:block"><Progress vm={vm} dark={dark} /></div>
-          <div key={vm.step} className="ob-fade-up flex min-w-0 flex-col gap-lg">
-            {vm.step === 'guess' && <GuessStep vm={vm} />}
-            {vm.step === 'connect' && <ConnectStep vm={vm} Link={Link} uploadHref={uploadHref} />}
-            {vm.step === 'connecting' && <ConnectingStep vm={vm} Link={Link} uploadHref={uploadHref} />}
-            {vm.step === 'reveal' && vm.reveal && <RevealStep vm={vm} reveal={vm.reveal} />}
-            {vm.step === 'future' && <FutureStep vm={vm} />}
-            {vm.step === 'decision' && <DecisionStep vm={vm} Link={Link} doneHref={doneHref} />}
-          </div>
+          ) : (
+            <>
+              <div key={vm.step} className="ob-fade-up order-2 flex min-w-0 max-w-(--container-xl) flex-col gap-lg lg:order-none">
+                {vm.step === 'guess' && <GuessStep vm={vm} />}
+                {vm.step === 'connect' && <ConnectStep vm={vm} Link={Link} uploadHref={uploadHref} />}
+                {vm.step === 'connecting' && <ConnectingStep vm={vm} Link={Link} uploadHref={uploadHref} />}
+                {vm.step === 'reveal' && vm.reveal && <RevealStep vm={vm} reveal={vm.reveal} />}
+                {vm.step === 'future' && <FutureStep vm={vm} />}
+                {vm.step === 'decision' && <DecisionStep vm={vm} Link={Link} doneHref={doneHref} />}
+              </div>
+              <House vm={vm} dark={dark} badge={vm.step === 'guess' ? t.guess.mystery : null} />
+            </>
+          )}
         </div>
-        )}
-        {vm.step !== 'analyzing' && vm.step !== 'play' && <House vm={vm} />}
       </div>
     </main>
+  );
+}
+
+/** The page behind the story: warm paper with a soft glow, cross-fading to ink for the reveal. Fixed and
+    behind everything, so the shell's footer sits on the same colour. */
+function Backdrop({ dark }: { dark: boolean }) {
+  const light: CSSProperties = {
+    background:
+      'radial-gradient(60% 55% at 78% 45%, var(--color-primary-soft) 0%, transparent 70%),' +
+      ' radial-gradient(40% 40% at 8% 100%, var(--color-surface) 0%, transparent 70%), var(--color-bg)',
+  };
+  const ink: CSSProperties = {
+    background:
+      'radial-gradient(55% 50% at 78% 42%, color-mix(in srgb, var(--color-primary) 22%, transparent) 0%, transparent 70%),' +
+      ' radial-gradient(45% 45% at 0% 0%, color-mix(in srgb, var(--color-on-primary) 6%, transparent) 0%, transparent 70%), var(--color-ink)',
+  };
+  return (
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10">
+      <div className="absolute inset-0" style={light} />
+      <div className={cx('absolute inset-0 transition-opacity duration-700', dark ? 'opacity-100' : 'opacity-0')} style={ink} />
+    </div>
   );
 }
 
 function Progress({ vm, dark }: { vm: OnboardingVM; dark: boolean }) {
   return (
     <div className="flex items-center gap-md">
-      {vm.step !== 'play' && (
+      {vm.step !== 'play' ? (
         <button type="button" onClick={vm.back} aria-label={t.back}
-          className={cx('flex size-10 shrink-0 items-center justify-center rounded-full', dark ? 'bg-on-primary/10' : 'bg-surface shadow-sm')}>
+          className={cx('flex size-10 shrink-0 items-center justify-center rounded-full transition hover:-translate-x-0.5',
+            dark ? 'bg-on-primary/10 ring-1 ring-on-primary/15 hover:bg-on-primary/15' : 'bg-surface shadow-sm ring-1 ring-border hover:shadow-md')}>
           <Icon name="arrowLeft" size={18} />
         </button>
-      )}
+      ) : <span aria-hidden="true" className="size-10 shrink-0" />}
       <div role="progressbar" aria-label={t.progressLabel(vm.stepIndex, vm.stepCount)} aria-valuemin={1} aria-valuemax={vm.stepCount}
         aria-valuenow={vm.stepIndex} className="flex flex-1 gap-xs">
         {Array.from({ length: vm.stepCount }, (_, i) => (
-          <span key={i} className={cx('h-1.5 flex-1 rounded-full transition-colors duration-500',
-            i < vm.stepIndex ? 'bg-primary' : dark ? 'bg-on-primary/15' : 'bg-border')} />
+          <span key={i} className={cx('h-1.5 flex-1 overflow-hidden rounded-full transition-colors duration-500', dark ? 'bg-on-primary/15' : 'bg-border')}>
+            <span className={cx('block h-full rounded-full bg-primary transition-[width] duration-700 ease-out', i < vm.stepIndex ? 'w-full' : 'w-0')} />
+          </span>
         ))}
       </div>
+      <span aria-hidden="true" className={cx('w-10 shrink-0 text-right text-xs font-bold tabular-nums', dark ? 'text-chart-6' : 'text-text-muted')}>
+        {t.progressShort(vm.stepIndex, vm.stepCount)}
+      </span>
     </div>
   );
 }
 
-function House({ vm }: { vm: OnboardingVM }) {
+/** The house that builds itself as the story goes, on a soft stage of light. */
+function House({ vm, dark, badge }: { vm: OnboardingVM; dark: boolean; badge: string | null }) {
   return (
-    <div aria-hidden="true" className="relative order-1 mx-auto w-full max-w-48 sm:max-w-72 lg:order-none lg:max-w-(--container-md)">
-      <div key={vm.house} className={cx('ob-pop', DARK_STEPS.has(vm.step) && 'rounded-xl bg-bg p-lg shadow-md')}>
-        <Art name={vm.house} className="w-full" />
+    <div aria-hidden="true" className={cx('relative order-1 mx-auto w-full lg:order-none lg:max-w-(--container-md)',
+      dark ? 'max-w-40 sm:max-w-56' : 'max-w-52 sm:max-w-72')}>
+      <span className={cx('absolute inset-[6%] rounded-full blur-2xl transition-colors duration-700',
+        dark ? 'bg-on-primary/10' : 'bg-surface')} />
+      {/* Ground: a shadow on paper, a pool of warm light on ink (it also hides the cutouts' pale baked shadow). */}
+      <span className={cx('absolute inset-x-[8%] bottom-[2%] h-[16%] rounded-full blur-2xl transition-colors duration-700',
+        dark ? 'bg-primary-soft/25' : 'bg-ink/20')} />
+      <div className="ob-float relative">
+        <div key={vm.house} className="ob-pop">
+          {/* On ink the base fades into the glow (the cutouts carry a pale baked floor at their foot). */}
+          <Art name={vm.house} loading="eager"
+            className={cx('w-full', dark && '[mask-image:linear-gradient(to_bottom,#000_78%,transparent_96%)]')} />
+        </div>
       </div>
+      {badge && (
+        <span className="ob-pop absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2" style={{ animationDelay: '300ms' }}>
+          <Sticker tone="ink" tilt={-4} className="px-lg py-sm font-display text-2xl tracking-[0.2em] sm:text-3xl">{badge}</Sticker>
+        </span>
+      )}
     </div>
   );
 }
@@ -99,21 +147,20 @@ function GuessStep({ vm }: { vm: OnboardingVM }) {
   return (
     <>
       <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.guess.sticker}</Sticker>
-      <p aria-hidden="true" className="font-display text-6xl font-extrabold tracking-tight text-text-muted/40 sm:text-8xl">{t.guess.mystery}</p>
-      <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">{t.guess.title}</h1>
-      <p className="max-w-(--container-xl) text-lg text-text-muted">{t.guess.body}</p>
-      <div className="flex flex-col gap-md rounded-xl bg-surface p-xl shadow-md">
+      <h1 className={H1}>{t.guess.title}</h1>
+      <p className={LEAD}>{t.guess.body}</p>
+      <div className="mt-xs flex flex-col gap-lg rounded-xl bg-surface p-xl shadow-md ring-1 ring-border">
         <div className="flex items-baseline justify-between gap-md">
           <label htmlFor="ob-guess" className="text-xs font-bold uppercase tracking-wide text-text-muted">{g.label}</label>
-          <output htmlFor="ob-guess" data-testid="onboarding-guess" className="font-display text-4xl font-extrabold tabular-nums">{g.formatValue(g.value)}</output>
+          <output htmlFor="ob-guess" data-testid="onboarding-guess" className="font-display text-4xl font-extrabold tabular-nums sm:text-5xl">{g.formatValue(g.value)}</output>
         </div>
         <input
           id="ob-guess" type="range" min={g.min} max={g.max} step={g.step} value={g.value}
           aria-valuetext={g.formatValue(g.value)} onChange={(e) => vm.setGuess(Number(e.target.value))}
-          className="w-full cursor-pointer accent-primary"
-          style={{ background: `linear-gradient(90deg, var(--color-primary) ${pct}%, transparent ${pct}%)`, borderRadius: 999 }}
+          className="ob-range"
+          style={{ '--ob-fill': `${pct}%` } as CSSProperties}
         />
-        <div aria-hidden="true" className="flex justify-between text-xs text-text-muted tabular-nums">
+        <div aria-hidden="true" className="flex justify-between text-xs font-semibold text-text-muted tabular-nums">
           <span>{g.formatValue(g.min)}</span><span>{g.formatValue(g.max)}</span>
         </div>
       </div>
@@ -130,30 +177,30 @@ function ConnectStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkCom
   return (
     <>
       <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.connect.sticker}</Sticker>
-      <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">{t.connect.title}</h1>
-      <p className="max-w-(--container-xl) text-lg text-text-muted">{t.connect.body}</p>
-      <div className="grid grid-cols-2 gap-sm sm:grid-cols-3">
+      <h1 className={H1}>{t.connect.title}</h1>
+      <p className={LEAD}>{t.connect.body}</p>
+      <div className="mt-xs grid grid-cols-2 gap-sm">
         {vm.banks.map((b, i) => (
           <button
             key={b.id} type="button" onClick={() => vm.connect(b.id)} data-testid={`bank-${b.id}`}
             style={{ animationDelay: `${i * 60}ms` }}
-            className="ob-fade-up group flex min-h-24 flex-col items-start justify-between gap-md rounded-lg border-2 border-transparent bg-surface p-lg text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus-visible:border-primary"
+            className="ob-fade-up group flex min-h-16 items-center gap-sm rounded-lg bg-surface px-sm py-sm sm:gap-md sm:px-md text-left shadow-sm ring-1 ring-border transition hover:-translate-y-0.5 hover:shadow-md hover:ring-2 hover:ring-primary focus-visible:ring-2 focus-visible:ring-primary"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG mark */}
-            <img src={b.logo} alt="" width={32} height={32} className="size-8 transition-transform group-hover:scale-110" />
-            <span className="flex w-full items-center justify-between gap-sm text-sm font-bold leading-tight">
-              {b.name}
-              <Icon name="arrowRight" size={16} className="shrink-0 text-text-muted opacity-0 transition group-hover:opacity-100" />
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-strong sm:size-10">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG mark */}
+              <img src={b.logo} alt="" width={24} height={24} className="size-6 transition-transform group-hover:scale-110" />
             </span>
+            <span className="min-w-0 flex-1 text-sm font-bold leading-tight sm:text-base">{b.name}</span>
+            <Icon name="arrowRight" size={16} className="hidden shrink-0 text-text-muted sm:block transition group-hover:translate-x-0.5 group-hover:text-primary" />
           </button>
         ))}
       </div>
-      <ul className="flex flex-wrap gap-x-lg gap-y-xs text-sm text-text-muted">
+      <ul className="flex flex-col gap-x-lg gap-y-xs text-xs font-semibold text-text-muted sm:flex-row sm:flex-wrap">
         {t.connect.privacy.map((p) => (
-          <li key={p} className="flex items-center gap-xs"><Icon name="shield" size={16} className="text-positive" />{p}</li>
+          <li key={p} className="flex items-center gap-xs"><Icon name="shield" size={14} className="shrink-0 text-positive" />{p}</li>
         ))}
       </ul>
-      <Link href={uploadHref} className="self-start text-sm font-semibold text-primary hover:underline">{t.connect.upload}</Link>
+      <Link href={uploadHref} className="self-start text-sm font-semibold text-primary underline-offset-4 hover:underline">{t.connect.upload}</Link>
     </>
   );
 }
@@ -161,44 +208,53 @@ function ConnectStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkCom
 function ConnectingStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkComponent; uploadHref: string }) {
   const c = vm.connecting!;
   const bank = vm.banks.find((b) => b.name === c.bankName);
+  const phases = t.connecting.phases;
   return (
-    <div className="flex flex-col gap-xl rounded-xl bg-surface p-xl shadow-md" data-testid="onboarding-connecting">
-      <div className="flex items-center gap-md">
-        {bank && (
-          <span className="flex size-12 items-center justify-center rounded-md bg-surface-strong">
-            {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG mark */}
-            <img src={bank.logo} alt="" width={28} height={28} className="size-7" />
+    <div className="flex flex-col gap-lg" data-testid="onboarding-connecting">
+      <Sticker tone="ink" tilt={-2} className="self-start text-sm"><Icon name="lock" size={14} />{t.connecting.sticker}</Sticker>
+      <h1 className={H1}>{t.connecting.title(c.bankName)}</h1>
+      <div className="mt-xs flex flex-col gap-xl rounded-xl bg-surface p-xl shadow-md ring-1 ring-border">
+        <div className="flex items-center gap-md" aria-hidden="true">
+          {bank && (
+            <span className="flex size-12 items-center justify-center rounded-md bg-surface-strong">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG mark */}
+              <img src={bank.logo} alt="" width={28} height={28} className="size-7" />
+            </span>
+          )}
+          <span className="relative h-0.5 flex-1 overflow-hidden rounded-full bg-border">
+            <span className="absolute inset-y-0 left-0 rounded-full bg-primary transition-[width] duration-700 ease-out"
+              style={{ width: `${Math.min(100, (c.phase / phases.length) * 100)}%` }} />
           </span>
-        )}
-        <span className="flex gap-xs text-primary" aria-hidden="true">
-          {[0, 1, 2].map((i) => <span key={i} className="size-2 animate-pulse rounded-full bg-current" style={{ animationDelay: `${i * 150}ms` }} />)}
-        </span>
-        <span className="flex size-12 items-center justify-center rounded-md bg-ink text-on-primary"><Icon name="lock" size={22} /></span>
-      </div>
-      <h1 className="font-display text-3xl font-extrabold leading-tight sm:text-4xl">{t.connecting.title(c.bankName)}</h1>
-      <ol className="flex flex-col gap-md" aria-live="polite">
-        {t.connecting.phases.map((label, i) => {
-          const done = c.phase > i;
-          const active = c.phase === i && !c.failed;
-          return (
-            <li key={label} className={cx('flex items-center gap-md text-base transition-opacity', c.phase < i && 'opacity-35')}>
-              <span className={cx('flex size-7 shrink-0 items-center justify-center rounded-full',
-                done ? 'bg-positive text-on-primary' : active ? 'border-2 border-primary border-t-transparent animate-spin' : 'border-2 border-border')}>
-                {done && <Icon name="check" size={15} strokeWidth={3} />}
-              </span>
-              <span className={cx(done ? 'font-semibold' : active ? 'font-bold' : undefined)}>{label}</span>
-              {i === 2 && c.readLabel && <span className="ml-auto whitespace-nowrap text-sm font-semibold text-positive tabular-nums">{c.readLabel}</span>}
-            </li>
-          );
-        })}
-      </ol>
-      {c.failed && (
-        <div className="flex flex-wrap items-center gap-md">
-          <p className="text-sm text-negative">{t.connecting.error}</p>
-          <Button onClick={vm.retry}>{t.connecting.retry}</Button>
-          <Link href={uploadHref} className="text-sm font-semibold text-primary hover:underline">{t.connect.upload}</Link>
+          <span className="flex size-12 items-center justify-center rounded-md bg-ink text-on-primary"><Icon name="lock" size={22} /></span>
         </div>
-      )}
+        <ol className="flex flex-col" aria-live="polite">
+          {phases.map((label, i) => {
+            const done = c.phase > i;
+            const active = c.phase === i && !c.failed;
+            const last = i === phases.length - 1;
+            return (
+              <li key={label} className={cx('relative flex gap-md transition-opacity duration-500', !last && 'pb-lg', c.phase < i && 'opacity-40')}>
+                {!last && <span aria-hidden="true" className={cx('absolute left-3.5 top-8 bottom-1 w-0.5 -translate-x-1/2 rounded-full', done ? 'bg-positive' : 'bg-border')} />}
+                <span className={cx('flex size-7 shrink-0 items-center justify-center rounded-full',
+                  done ? 'bg-positive text-on-primary' : active ? 'border-2 border-primary border-t-transparent animate-spin' : 'border-2 border-border')}>
+                  {done && <Icon name="check" size={15} strokeWidth={3} />}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-md pt-0.5">
+                  <span className={cx('text-base', done ? 'font-semibold' : active ? 'font-bold' : undefined)}>{label}</span>
+                  {i === 2 && c.readLabel && <span className="whitespace-nowrap text-sm font-semibold text-positive tabular-nums">{c.readLabel}</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        {c.failed && (
+          <div className="flex flex-wrap items-center gap-md">
+            <p className="text-sm text-negative">{t.connecting.error}</p>
+            <Button onClick={vm.retry}>{t.connecting.retry}</Button>
+            <Link href={uploadHref} className="text-sm font-semibold text-primary hover:underline">{t.connect.upload}</Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -227,6 +283,9 @@ function AnalyzingStep({ analysis: a }: { analysis: AnalysisVM }) {
   const spent = useCountUp(a.complete ? a.spent : spentSoFar, 600);
   const left = a.rows.find((r) => r.id === 'left');
   const buckets = a.rows.filter((r) => r.id !== 'left');
+  // The last small bucket stretches over an otherwise empty end of the grid (2 columns, 3 from xl).
+  const small = buckets.filter((r) => r.id !== 'pay').length;
+  const lastSpan: BucketSpan = small % 2 === 1 ? (small % 3 === 1 ? 'full' : 'two-only') : small % 3 === 1 ? 'xl-full' : 'one';
   return (
     <section data-testid="onboarding-analyzing" aria-live="polite" className="grid gap-xl lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-2xl">
       {/* Feed */}
@@ -235,11 +294,11 @@ function AnalyzingStep({ analysis: a }: { analysis: AnalysisVM }) {
           <Sticker tone="primary" tilt={-2} className="text-sm">{a.complete ? t.analyzing.complete : t.analyzing.progress(pct)}</Sticker>
           {a.rangeLabel && <span className="text-sm font-semibold text-chart-6">{a.rangeLabel}</span>}
         </div>
-        <h1 className="font-display text-4xl font-extrabold leading-tight">{a.title}</h1>
+        <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">{a.title}</h1>
         <div className="h-1 w-full overflow-hidden rounded-full bg-on-primary/10">
           <div className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out" style={{ width: `${pct}%` }} />
         </div>
-        <div className="relative flex min-h-[340px] flex-col gap-sm overflow-hidden rounded-xl bg-on-primary/5 p-lg ring-1 ring-on-primary/10">
+        <div className="relative flex min-h-[340px] flex-1 flex-col gap-sm overflow-hidden rounded-xl bg-on-primary/5 p-lg ring-1 ring-on-primary/10">
           <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-chart-6">
             <span>{t.analyzing.feed}</span>
             {active && active.count > 0 && <span>{t.analyzing.lines(active.count)}</span>}
@@ -265,16 +324,17 @@ function AnalyzingStep({ analysis: a }: { analysis: AnalysisVM }) {
       <div className="flex min-w-0 flex-col gap-md">
         <div className="flex items-end justify-between gap-md">
           <div>
-            <span className="block text-xs font-bold uppercase tracking-wide text-chart-6">{t.analyzing.spent}</span>
+            <span className={DARK_LABEL}>{t.analyzing.spent}</span>
             <span className="font-display text-5xl font-extrabold tabular-nums">{a.complete ? a.spentLabel : dollars(spent)}</span>
           </div>
           {a.ofLabel && <span className="pb-sm text-sm text-chart-6">{a.ofLabel}</span>}
         </div>
         <div className="grid grid-cols-2 gap-sm xl:grid-cols-3">
-          {buckets.map((r) => {
+          {buckets.map((r, k) => {
             const i = a.rows.indexOf(r);
             return (
-              <Bucket key={r.id} row={r} state={i < a.done ? 'done' : i === a.done ? 'active' : 'waiting'} wide={r.id === 'pay'}
+              <Bucket key={r.id} row={r} state={i < a.done ? 'done' : i === a.done ? 'active' : 'waiting'}
+                span={r.id === 'pay' ? 'full' : k === buckets.length - 1 ? lastSpan : 'one'}
                 refCb={(el) => { if (el) bucketRefs.current.set(r.id, el); else bucketRefs.current.delete(r.id); }} />
             );
           })}
@@ -368,7 +428,15 @@ function FlyingChips({ row, target }: { row: AnalysisRowVM; target: () => HTMLEl
   );
 }
 
-function Bucket({ row, state, wide, refCb }: { row: AnalysisRowVM; state: 'done' | 'active' | 'waiting'; wide: boolean; refCb: (el: HTMLElement | null) => void }) {
+type BucketSpan = 'one' | 'full' | 'two-only' | 'xl-full';
+const SPAN: Record<BucketSpan, string | undefined> = {
+  one: undefined,
+  full: 'col-span-2 xl:col-span-3',
+  'two-only': 'col-span-2 xl:col-span-1',
+  'xl-full': 'xl:col-span-3',
+};
+
+function Bucket({ row, state, span, refCb }: { row: AnalysisRowVM; state: 'done' | 'active' | 'waiting'; span: BucketSpan; refCb: (el: HTMLElement | null) => void }) {
   const value = useCountUp(state === 'done' ? row.value : 0, 700);
   const color = rowColor(row);
   return (
@@ -376,7 +444,7 @@ function Bucket({ row, state, wide, refCb }: { row: AnalysisRowVM; state: 'done'
       ref={refCb}
       className={cx(
         'relative flex min-h-24 flex-col justify-between gap-xs overflow-hidden rounded-lg p-md ring-1 transition-all duration-500',
-        wide && 'col-span-2 xl:col-span-3',
+        SPAN[span],
         state === 'active' ? 'scale-[1.02] bg-on-primary/10 ring-2' : 'bg-on-primary/5 ring-on-primary/10',
         state === 'waiting' && 'opacity-45',
       )}
@@ -440,13 +508,15 @@ function RevealStep({ vm, reveal }: { vm: OnboardingVM; reveal: RevealVM }) {
   return (
     <>
       <Sticker tone="primary" tilt={-2} className="self-start text-sm">{t.reveal.sticker}</Sticker>
-      <h1 className="font-display text-3xl font-extrabold sm:text-4xl">{t.reveal.title}</h1>
-      <p data-testid="onboarding-networth" className={cx('font-display text-6xl font-extrabold tabular-nums tracking-tight sm:text-8xl', reveal.netWorth < 0 && 'text-primary')}>
-        {landed ? reveal.netWorthLabel : dollars(shown)}
-      </p>
+      <div className="flex flex-col gap-xs">
+        <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{t.reveal.title}</h1>
+        <p data-testid="onboarding-networth" className={cx('font-display text-7xl font-extrabold leading-none tabular-nums tracking-tight sm:text-8xl lg:text-9xl', reveal.netWorth < 0 && 'text-primary')}>
+          {landed ? reveal.netWorthLabel : dollars(shown)}
+        </p>
+      </div>
       <div className="ob-fade-up flex flex-wrap items-center gap-sm" style={{ animationDelay: '1.3s' }}>
-        <span className="rounded-full bg-on-primary/10 px-md py-xs text-sm font-semibold">{reveal.guessLabel}</span>
-        <span className={cx('rounded-full px-md py-xs text-sm font-bold', reveal.offTone === 'good' ? 'bg-positive' : 'bg-primary')}>{reveal.offLabel}</span>
+        <span className="rounded-full bg-on-primary/10 px-md py-xs text-sm font-semibold ring-1 ring-on-primary/15">{reveal.guessLabel}</span>
+        <span className={cx('rounded-full px-md py-xs text-sm font-bold text-on-primary', reveal.offTone === 'good' ? 'bg-positive' : 'bg-primary')}>{reveal.offLabel}</span>
       </div>
       <div className="ob-fade-up grid grid-cols-2 gap-sm" style={{ animationDelay: '1.6s' }}>
         <Fact label={t.reveal.own} value={reveal.ownLabel} />
@@ -455,11 +525,11 @@ function RevealStep({ vm, reveal }: { vm: OnboardingVM; reveal: RevealVM }) {
         {reveal.spendingLabel && <Fact label={t.reveal.spending} value={`${reveal.spendingLabel}${t.reveal.perMonth}`} />}
       </div>
       {reveal.topCategories.length > 0 && (
-        <div className="ob-fade-up flex flex-col gap-sm rounded-lg bg-on-primary/5 p-lg" style={{ animationDelay: '1.9s' }}>
-          <span className="text-xs font-bold uppercase tracking-wide text-chart-6">{t.reveal.topCategories}</span>
+        <div className={cx('ob-fade-up flex flex-col gap-sm p-lg', DARK_PANEL)} style={{ animationDelay: '1.9s' }}>
+          <span className={DARK_LABEL}>{t.reveal.topCategories}</span>
           {reveal.topCategories.map((c) => (
             <div key={c.label} className="flex items-center gap-md text-sm">
-              <span className="w-28 shrink-0 font-semibold">{c.label}</span>
+              <span className="w-32 shrink-0 truncate font-semibold">{c.label}</span>
               <span className="h-2 flex-1 overflow-hidden rounded-full bg-on-primary/10">
                 <span className="block h-full rounded-full bg-primary transition-[width] duration-1000" style={{ width: `${Math.round(c.share * 100)}%` }} />
               </span>
@@ -477,8 +547,8 @@ function RevealStep({ vm, reveal }: { vm: OnboardingVM; reveal: RevealVM }) {
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-on-primary/5 p-md">
-      <span className="block text-xs font-bold uppercase tracking-wide text-chart-6">{label}</span>
+    <div className={cx('flex flex-col gap-xs px-lg py-md', DARK_PANEL)}>
+      <span className={DARK_LABEL}>{label}</span>
       <span className="font-display text-2xl font-extrabold tabular-nums">{value}</span>
     </div>
   );
@@ -488,19 +558,25 @@ function Fact({ label, value }: { label: string; value: string }) {
 
 function FutureStep({ vm }: { vm: OnboardingVM }) {
   const ll = vm.lifeline;
-  if (ll.status !== 'ready') return <div className="h-80 animate-pulse rounded-xl bg-on-primary/5" />;
+  if (ll.status !== 'ready') return <div className={cx('h-96 animate-pulse rounded-xl', DARK_PANEL)} />;
   const kAt = ll.kpis.find((k) => k.id === 'atRetirement')!;
   const kChance = ll.kpis.find((k) => k.id === 'chance')!;
   return (
     <>
       <Sticker tone="primary" tilt={-2} className="self-start text-sm">{t.future.sticker}</Sticker>
-      <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-5xl">{t.future.title}</h1>
-      <MiniChart points={ll.chart.selected} ageDomain={ll.chart.ageDomain} valueDomain={ll.chart.valueDomain} callout={ll.chart.retireCallout} />
-      <div className="grid grid-cols-2 gap-sm">
-        <DarkKpi kpi={kAt} />
-        <DarkKpi kpi={kChance} measuring={t.future.measuring} />
+      <h1 className={H1}>{t.future.title}</h1>
+      <div className={cx('mt-xs flex flex-col overflow-hidden rounded-xl', DARK_PANEL)}>
+        <div className="px-md pt-lg">
+          <MiniChart points={ll.chart.selected} ageDomain={ll.chart.ageDomain} valueDomain={ll.chart.valueDomain} callout={ll.chart.retireCallout} />
+        </div>
+        <div className="grid grid-cols-2 divide-x divide-on-primary/10 border-t border-on-primary/10">
+          <DarkKpi kpi={kAt} />
+          <DarkKpi kpi={kChance} measuring={t.future.measuring} />
+        </div>
       </div>
-      <p className="ob-fade-up rounded-lg bg-on-primary/5 p-md text-sm text-chart-6" style={{ animationDelay: '1.8s' }}>{t.future.value}</p>
+      <p className="ob-fade-up flex items-start gap-sm text-sm leading-relaxed text-chart-6" style={{ animationDelay: '1.8s' }}>
+        <Icon name="spark" size={16} className="mt-0.5 shrink-0 text-primary" />{t.future.value}
+      </p>
       <Button size="lg" onClick={vm.next} className="self-stretch sm:self-start" data-testid="onboarding-next">
         {t.future.cta} <Icon name="arrowRight" size={18} />
       </Button>
@@ -510,9 +586,9 @@ function FutureStep({ vm }: { vm: OnboardingVM }) {
 
 function DarkKpi({ kpi, measuring }: { kpi: LifeLineKpiVM; measuring?: string }) {
   return (
-    <div className="rounded-lg bg-on-primary/5 p-md">
-      <span className="block text-xs font-bold uppercase tracking-wide text-chart-6">{kpi.label}</span>
-      <span className={cx('font-display text-3xl font-extrabold tabular-nums', kpi.id === 'chance' && kpi.tone === 'bad' && 'text-primary')}>
+    <div className="flex flex-col gap-xs px-lg py-md">
+      <span className={DARK_LABEL}>{kpi.label}</span>
+      <span className={cx('font-display text-3xl font-extrabold tabular-nums sm:text-4xl', kpi.id === 'chance' && kpi.tone === 'bad' && 'text-primary')}>
         {kpi.value ?? <span className="text-base font-semibold text-chart-6">{measuring ?? kpi.note}</span>}
       </span>
     </div>

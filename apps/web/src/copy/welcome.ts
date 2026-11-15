@@ -2,6 +2,7 @@
 // 90 → one decision. Every number arrives formatted from features/onboarding/model.
 export const welcome = {
   progressLabel: (step: number, total: number) => `Step ${step} of ${total}`,
+  progressShort: (step: number, total: number) => `${step}/${total}`,
   back: 'Back',
   skip: 'Skip',
   warmup: {
@@ -11,7 +12,7 @@ export const welcome = {
   guess: {
     sticker: 'Now you',
     title: 'What are you worth today?',
-    body: 'A stranger’s life is a game. Yours is harder: everything you own minus everything you owe. Most people miss by more than $10,000, and nobody can plan a life on a guess. Take one, then we’ll check it.',
+    body: 'Everything you own minus everything you owe. Most people miss by more than $10,000. Take a guess, then we’ll check it.',
     mystery: '$ ? ? ?',
     label: 'My guess',
     cta: 'Lock my guess',
@@ -25,6 +26,7 @@ export const welcome = {
     searchHint: 'More banks soon',
   },
   connecting: {
+    sticker: 'Secure link',
     title: (bank: string) => `Connecting to ${bank}`,
     phases: [
       'Opening a secure connection',
@@ -81,7 +83,7 @@ export const welcome = {
     atRetirement: (age: number) => `Net worth at ${age}`,
     chance: 'Chance of success',
     measuring: 'Simulating 500 lives…',
-    value: 'Budget apps charge up to $299 a year and need a week of syncing to show this. You got it in a minute, with no sign-up.',
+    value: 'Budget apps charge up to $299 a year and a week of syncing for this view. You got it in a minute, with no sign-up.',
     cta: 'Try one decision',
   },
   decision: {
