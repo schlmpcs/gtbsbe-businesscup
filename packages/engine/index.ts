@@ -65,6 +65,7 @@ export {
 // nobody edits this barrel later.
 export { plan } from './plan';                                                                 // MP3
 export { monteCarlo } from './monteCarlo';                                                     // MP5
+export { decisionSweep, eventAtYear, DECISION_SWEEP_MAX_YEARS } from './decision';            // home Life line
 export { defaultEvent, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown } from './planEvents'; // MP4
 export { defaultEventSources, type DefaultEventSources } from './planEvents';                  // MP4 (the editor's sources, MP7b)
 export { accountsToProfile, profileToAccounts, netWorthSummary, HOME_ACCOUNT_ID } from './accounts';            // MP8
