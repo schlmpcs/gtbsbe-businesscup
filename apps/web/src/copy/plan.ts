@@ -245,7 +245,12 @@ export const plan = {
       belowZero: 'Below $0: you owe more than you own',
       inDollars: (unit: string) => `In ${unit.charAt(0).toLowerCase()}${unit.slice(1)}`,
       tooltipHeader: (year: number, age: number) => `${year} · age ${age}`,
-      marker: (title: string, year: number, age: number) => `${title}, ${year} (age ${age}). Open to edit; arrow keys move it a year.`,
+      marker: (title: string, year: number, age: number) =>
+        `${title}, ${year} (age ${age}). Drag it or use the arrow keys to move it a year; press Enter to edit.`,
+      /** Spoken value of a draggable event badge. */
+      markerValue: (year: number, age: number) => `${year}, age ${age}`,
+      /** Live label next to a badge while it is dragged ("Retire at 69 · 2051"). */
+      dragLabel: (title: string, year: number, age: number) => `${title} at ${age} · ${year}`,
       retireLine: (age: number) => `Retire at ${age}`,
       showTable: 'Show as a table',
       hideTable: 'Hide table',

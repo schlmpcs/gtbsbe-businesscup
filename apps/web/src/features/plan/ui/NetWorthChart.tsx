@@ -3,7 +3,8 @@
 // The hero card of /plan: the KPI strip (rules-based, from usePlan → kpis), "money lasts until" as a
 // status pill, the display toggle, and one big net worth chart: years along the bottom (age in the
 // tooltip), $0 line with the zone below it hatched, event badges along the top with a thin line down
-// to their year (click opens the editor; arrow keys move it a year), the retirement line, and the
+// to their year (click opens the editor; drag one along the years, or use the arrow keys / Home / End,
+// to move it), the retirement line, and the
 // "AI estimate" as a separate dashed series only when the view-model says it passed its checks.
 import { plan as copy } from '@/copy';
 import { Tag, cx } from '@/ui-kit';
@@ -82,16 +83,23 @@ export function NetWorthChart({ kpis, chart, aiLine, display, onDisplayChange, o
         xTicks={chart.xTicks.map((k) => ({ x: k.year, label: k.label }))}
         xLabel={(year) => t.tooltipHeader(year, ageOf.get(year) ?? 0)}
         {...(chart.retireYear !== null && retireAge !== undefined ? { reference: { x: chart.retireYear, label: t.retireLine(retireAge) } } : {})}
-        markers={chart.markers.map((m) => ({
-          id: m.id,
-          x: m.year,
-          label: t.marker(m.label, m.year, m.age),
-          icon: <EventIcon id={m.icon} className="size-md" />,
-          badgeStyle: eventBadgeStyle(m.icon),
-          dim: !m.enabled,
-          onSelect: () => onOpenEvent(m.id),
-          onNudge: (d) => onMoveEvent(m.id, m.year + d),
-        }))}
+        markers={chart.markers.map((m) => {
+          // Age at another year of the same person: their age shifts one for one with the year.
+          const ageIn = (year: number) => ageOf.get(year) ?? m.age + (year - m.year);
+          return {
+            id: m.id,
+            x: m.year,
+            label: t.marker(m.label, m.year, m.age),
+            icon: <EventIcon id={m.icon} className="size-md" />,
+            badgeStyle: eventBadgeStyle(m.icon),
+            dim: !m.enabled,
+            onSelect: () => onOpenEvent(m.id),
+            onMove: (year: number) => onMoveEvent(m.id, year),
+            range: chart.yearRange,
+            valueText: (year: number) => t.markerValue(year, ageIn(year)),
+            dragLabel: (year: number) => t.dragLabel(m.label, year, ageIn(year)),
+          };
+        })}
         footnote={t.inDollars(display.label)}
       />
       {aiLine.status === 'shown' && <p className="text-xs text-text-muted">{t.aiNote}</p>}

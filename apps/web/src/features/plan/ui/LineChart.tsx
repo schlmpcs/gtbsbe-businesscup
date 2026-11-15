@@ -7,8 +7,9 @@
 // are HTML placed by percent, so text stays readable at any width (390px phones included).
 // Geometry only: every value it plots arrives from a view-model; it maps values to positions, picks
 // round axis ticks and formats them. The lines draw in from the left (CSS; none with reduced motion).
-import { useId, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { cx, formatMoney } from '@/ui-kit';
+import { snapX, xAtClient } from './chartScale';
 import { MOTION, useEntered } from './motion';
 
 export type ChartPoint = { x: number; y: number; /** Tooltip text; defaults to compact dollars. */ label?: string };
@@ -39,9 +40,34 @@ export type ChartMarker = {
   badgeStyle?: CSSProperties;
   dim?: boolean;
   onSelect?: () => void;
-  /** Keyboard nudge: −1 / +1 along x. */
-  onNudge?: (delta: number) => void;
+  /**
+   * Move the marker to a new x (whole steps inside `range`). With both set the badge is a slider:
+   * drag it with mouse or touch, or use the arrow keys / Home / End.
+   */
+  onMove?: (x: number) => void;
+  range?: { min: number; max: number };
+  /** The slider's spoken value for an x ("2051, age 69"). */
+  valueText?: (x: number) => string;
+  /** The live label shown while dragging ("Retire at 69 · 2051"). */
+  dragLabel?: (x: number) => string;
 };
+
+/** A drag in progress (pointer captured on one badge). */
+type DragSession = {
+  id: string;
+  pointerId: number;
+  /** Pointer x minus the marker's x at grab time, in x units: no jump when the grab is off-center. */
+  grab: number;
+  startClientX: number;
+  moved: boolean;
+  /** Last x sent to onMove, and the x waiting for the next animation frame. */
+  sent: number;
+  pending: number;
+  frame: number;
+  onMove: (x: number) => void;
+};
+/** Pixels the pointer must travel before a press becomes a drag (below it, it is a click). */
+const DRAG_SLOP = 4;
 export type ChartTick = { x: number; label: string };
 /** A sideways histogram at the right edge, on the chart's own y scale. */
 export type ChartSideHistogram = { label: string; bins: readonly { from: number; to: number; count: number; label: string }[] };
@@ -111,6 +137,13 @@ export function LineChart({
   const clipId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const [hoverX, setHoverX] = useState<number | null>(null);
   const entered = useEntered(animateKey);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const session = useRef<DragSession | null>(null);
+  const suppressClick = useRef(false);
+  const [drag, setDrag] = useState<{ id: string; x: number } | null>(null);
+  useEffect(() => () => {
+    if (session.current?.frame) cancelAnimationFrame(session.current.frame);
+  }, []);
 
   const allX = [
     ...series.flatMap((s) => s.points.map((p) => p.x)),
@@ -151,8 +184,85 @@ export function LineChart({
           .filter((r): r is { s: ChartSeries; p: ChartPoint } => r.p !== undefined);
   const hoverBand = hoverX === null ? undefined : band?.points.find((p) => p.x === hoverX);
 
+  // While dragging, the dragged badge sits at the pointer's year (the view-model catches up each frame).
+  const placed = markers.map((m) => (drag && drag.id === m.id ? { ...m, x: drag.x } : m));
+  const dragged = drag ? placed.find((m) => m.id === drag.id) : undefined;
+
+  // Pointer x → chart x through the inverse of the grid SVG's screen matrix.
+  const clientToX = (clientX: number): number | null => {
+    const ctm = svgRef.current?.getScreenCTM();
+    return ctm ? xAtClient(clientX, ctm, VB, xMin, xMax) : null;
+  };
+  const endDrag = (e: PointerEvent<HTMLDivElement>) => {
+    const d = session.current;
+    if (!d || d.pointerId !== e.pointerId) return;
+    session.current = null;
+    if (d.frame) cancelAnimationFrame(d.frame);
+    if (d.moved) {
+      suppressClick.current = true;
+      if (d.pending !== d.sent) d.onMove(d.pending);
+    }
+    setDrag(null);
+  };
+  const handleProps = (m: ChartMarker) => {
+    const range = m.range;
+    const onMove = m.onMove;
+    if (!range || !onMove) return {};
+    const to = (x: number) => {
+      const v = snapX(x, range.min, range.max);
+      if (v !== m.x) onMove(v);
+    };
+    return {
+      role: 'slider',
+      'aria-valuemin': range.min,
+      'aria-valuemax': range.max,
+      'aria-valuenow': m.x,
+      'aria-valuetext': m.valueText?.(m.x),
+      onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+        const next =
+          e.key === 'ArrowRight' || e.key === 'ArrowUp' ? m.x + 1
+          : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? m.x - 1
+          : e.key === 'Home' ? range.min
+          : e.key === 'End' ? range.max
+          : null;
+        if (next !== null) { e.preventDefault(); to(next); }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); m.onSelect?.(); }
+      },
+      onPointerDown: (e: PointerEvent<HTMLDivElement>) => {
+        suppressClick.current = false;
+        if (e.button !== 0 || session.current) return;
+        const at = clientToX(e.clientX);
+        if (at === null) return;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        session.current = { id: m.id, pointerId: e.pointerId, grab: at - m.x, startClientX: e.clientX, moved: false, sent: m.x, pending: m.x, frame: 0, onMove };
+      },
+      onPointerMove: (e: PointerEvent<HTMLDivElement>) => {
+        const d = session.current;
+        if (!d || d.id !== m.id || d.pointerId !== e.pointerId) return;
+        if (!d.moved && Math.abs(e.clientX - d.startClientX) < DRAG_SLOP) return;
+        const at = clientToX(e.clientX);
+        if (at === null) return;
+        const x = snapX(at - d.grab, range.min, range.max);
+        if (!d.moved) { d.moved = true; setDrag({ id: m.id, x }); }
+        if (x === d.pending) return;
+        d.pending = x;
+        setDrag({ id: m.id, x });
+        // One plan() per animation frame at most.
+        if (!d.frame) {
+          d.frame = requestAnimationFrame(() => {
+            d.frame = 0;
+            if (d.pending !== d.sent) { d.sent = d.pending; d.onMove(d.pending); }
+          });
+        }
+      },
+      onPointerUp: endDrag,
+      onPointerCancel: endDrag,
+      onLostPointerCapture: endDrag,
+    };
+  };
+
   // Badges that share (about) a year sit side by side, centered on it.
-  const sorted = [...markers].sort((a, b) => a.x - b.x);
+  const sorted = [...placed].sort((a, b) => a.x - b.x);
   const offsets = new Map<string, number>();
   for (let i = 0; i < sorted.length; ) {
     let j = i + 1;
@@ -218,32 +328,41 @@ export function LineChart({
         <div className="relative min-w-0">
           {markers.length > 0 && (
             <div className="relative h-3xl">
-              {markers.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={m.onSelect}
-                  onKeyDown={(e: KeyboardEvent<HTMLButtonElement>) => {
-                    if (!m.onNudge) return;
-                    if (e.key === 'ArrowRight') { e.preventDefault(); m.onNudge(1); }
-                    if (e.key === 'ArrowLeft') { e.preventDefault(); m.onNudge(-1); }
-                  }}
-                  aria-label={m.label}
-                  title={m.label}
-                  data-marker={m.id}
-                  className={cx(
-                    // 32px badge with a 44px hit area.
-                    'absolute top-xs flex size-2xl -translate-x-1/2 items-center justify-center rounded-full text-text shadow-sm',
-                    'before:absolute before:-inset-1.5 before:content-[""]',
-                    'transition-transform hover:-translate-y-0.5 hover:scale-110 motion-reduce:transition-none',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-                    m.dim && 'opacity-40',
-                  )}
-                  style={{ left: `calc(${fx(m.x) * 100}% + ${(offsets.get(m.id) ?? 0) * 34}px)`, ...m.badgeStyle }}
-                >
-                  {m.icon}
-                </button>
-              ))}
+              {placed.map((m) => {
+                const movable = !!(m.onMove && m.range);
+                const isDragged = drag?.id === m.id;
+                return (
+                  <div
+                    key={m.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (suppressClick.current) { suppressClick.current = false; return; }
+                      m.onSelect?.();
+                    }}
+                    onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); m.onSelect?.(); }
+                    }}
+                    {...handleProps(markers.find((o) => o.id === m.id) ?? m)}
+                    aria-label={m.label}
+                    title={isDragged ? undefined : m.label}
+                    data-marker={m.id}
+                    className={cx(
+                      // 32px badge with a 44px hit area.
+                      'absolute top-xs flex size-2xl -translate-x-1/2 select-none items-center justify-center rounded-full text-text shadow-sm',
+                      'before:absolute before:-inset-1.5 before:content-[""]',
+                      'transition-transform hover:-translate-y-0.5 hover:scale-110 motion-reduce:transition-none',
+                      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                      movable ? 'cursor-grab touch-none' : 'cursor-pointer',
+                      isDragged && 'z-10 -translate-y-0.5 scale-110 cursor-grabbing shadow-md',
+                      m.dim && !isDragged && 'opacity-40',
+                    )}
+                    style={{ left: `calc(${fx(m.x) * 100}% + ${(offsets.get(m.id) ?? 0) * 34}px)`, ...m.badgeStyle }}
+                  >
+                    {m.icon}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -258,7 +377,7 @@ export function LineChart({
             )}
 
             {/* Grid, $0 line and event / retirement lines: static. */}
-            <svg aria-hidden="true" viewBox={`0 0 ${VB} ${VB}`} preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
+            <svg ref={svgRef} aria-hidden="true" viewBox={`0 0 ${VB} ${VB}`} preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
               {y.ticks.map((v) => (
                 <line
                   key={v}
@@ -269,7 +388,7 @@ export function LineChart({
                   vectorEffect="non-scaling-stroke"
                 />
               ))}
-              {markers.map((m) => (
+              {placed.map((m) => (
                 <line key={m.id} x1={fx(m.x) * VB} x2={fx(m.x) * VB} y1={0} y2={VB} stroke="var(--color-text-muted)" strokeOpacity={0.35} strokeWidth={1} vectorEffect="non-scaling-stroke" />
               ))}
               {reference && (
@@ -335,7 +454,25 @@ export function LineChart({
               </span>
             )}
 
-            {hoverX !== null && (hoverRows.length > 0 || hoverBand) && (
+            {dragged && (
+              <>
+                <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2 bg-primary" style={{ left: `${fx(dragged.x) * 100}%` }} />
+                {dragged.dragLabel && (
+                  <span
+                    data-drag-label
+                    className="pointer-events-none absolute top-3xl z-20 whitespace-nowrap rounded-sm bg-text px-sm py-xs text-xs font-semibold text-surface shadow-md tabular-nums"
+                    style={{
+                      left: `${fx(dragged.x) * 100}%`,
+                      transform: fx(dragged.x) > 0.7 ? 'translateX(calc(-100% - 8px))' : 'translateX(8px)',
+                    }}
+                  >
+                    {dragged.dragLabel(dragged.x)}
+                  </span>
+                )}
+              </>
+            )}
+
+            {!drag && hoverX !== null && (hoverRows.length > 0 || hoverBand) && (
               <>
                 <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 w-px bg-text-muted" style={{ left: `${fx(hoverX) * 100}%` }} />
                 {hoverRows.map(({ s, p }) => (
