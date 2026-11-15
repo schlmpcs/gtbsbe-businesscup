@@ -9,6 +9,7 @@ export { Initials, initialsOf } from './Initials';
 export { KpiStrip, type KpiItem } from './KpiStrip';
 export { Meter, type MeterProps } from './Meter';
 export { Panel, type PanelProps } from './Panel';
+export { PlanImpactPanel, type PlanImpactPanelProps } from './PlanImpactPanel';
 export { Ring, type RingProps } from './Ring';
 export { useWidth } from './useWidth';
 export { Segmented, type SegmentedOption, type SegmentedProps } from './Segmented';

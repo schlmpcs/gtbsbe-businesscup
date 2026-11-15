@@ -46,10 +46,10 @@ function Metrics({ r }: { r: LoanResult }) {
   return (
     <>
       <td className="flex basis-full flex-wrap items-baseline gap-x-sm">
-        <span className="font-display text-display font-extrabold leading-display tabular-nums">
+        <span className="font-display text-4xl font-extrabold leading-tight tabular-nums">
           <Money value={r.monthly} />
         </span>
-        <span aria-hidden="true" className="text-lg text-text-muted">
+        <span aria-hidden="true" className="text-base text-text-muted">
           {t.compare.perMonth}
         </span>
       </td>
@@ -79,7 +79,7 @@ function EditToggle({ open, name, controls, onToggle }: { open: boolean; name: s
       aria-controls={open ? controls : undefined}
       aria-label={open ? t.edit.closeLabel(name) : t.edit.openLabel(name)}
       onClick={onToggle}
-      className="ml-auto rounded-md px-sm py-xs text-sm font-semibold text-primary transition-colors hover:bg-primary-soft"
+      className="ml-auto min-h-11 rounded-md px-md py-xs text-sm font-semibold text-primary transition-colors hover:bg-primary-soft"
     >
       {open ? t.edit.close : t.edit.open}
     </button>
@@ -93,7 +93,7 @@ function AddOfferCard({ onAdd }: { onAdd: () => void }) {
       type="button"
       onClick={onAdd}
       className={cx(
-        'flex w-full flex-col items-center justify-center gap-xs rounded-xl border-2 border-dashed border-border px-xl py-2xl',
+        'flex w-full flex-col items-center justify-center gap-xs rounded-(--card-radius) border-2 border-dashed border-border px-xl py-xl',
         'text-lg font-bold text-text-muted transition-colors hover:border-primary hover:text-primary',
       )}
     >
@@ -165,7 +165,7 @@ export function OfferCompare({ offers, selectedOfferId, selectOffer, edit }: Off
             ))}
           </tr>
         </thead>
-        <tbody className="grid grid-cols-1 gap-xl pt-lg md:grid-cols-2 lg:grid-cols-3">
+        <tbody className="grid grid-cols-1 gap-lg pt-lg md:grid-cols-2 lg:grid-cols-3">
           {offers.map((o) => {
             const selected = o.id === selectedOfferId;
             const editing = edit !== undefined && editingId === o.id;
@@ -179,9 +179,9 @@ export function OfferCompare({ offers, selectedOfferId, selectOffer, edit }: Off
               <tr
                 key={o.id}
                 className={cx(
-                  'relative flex min-w-0 flex-wrap content-start items-baseline gap-x-sm gap-y-md rounded-xl bg-surface p-xl transition-shadow',
+                  'relative flex min-w-0 flex-wrap content-start items-baseline gap-x-sm gap-y-sm rounded-(--card-radius) bg-surface p-lg transition-shadow sm:p-xl',
                   o.isLowestCost && 'ring-4 ring-primary ring-inset',
-                  selected ? 'shadow-lg' : 'shadow-md',
+                  selected ? 'shadow-lg outline-2 outline-offset-2 outline-ink' : 'shadow-(--card-shadow)',
                 )}
               >
                 <th scope="row" className="flex basis-full flex-col items-stretch gap-md text-left font-normal">
@@ -205,7 +205,7 @@ export function OfferCompare({ offers, selectedOfferId, selectOffer, edit }: Off
                       aria-pressed={selected}
                       aria-label={t.compare.select(name(o))}
                       onClick={() => selectOffer(o.id)}
-                      className="rounded-lg font-display text-3xl font-extrabold leading-tight text-text transition-colors hover:text-primary"
+                      className="min-h-11 rounded-lg font-display text-2xl font-extrabold leading-tight text-text transition-colors hover:text-primary"
                     >
                       {name(o)}
                     </button>

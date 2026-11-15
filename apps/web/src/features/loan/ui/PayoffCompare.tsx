@@ -53,7 +53,7 @@ export function PayoffCompare({ vm }: { vm: PayoffPlannerVM }) {
                 <span className="sr-only">{t.planner.compare.metric}</span>
               </th>
               {vm.columns.map((c) => (
-                <th key={c.method} scope="col" className={cx('min-w-0 px-xs pb-sm align-top sm:px-sm', c.isSelected && 'rounded-t-lg bg-primary-soft pt-sm')}>
+                <th key={c.method} scope="col" className={cx('min-w-0 px-xs pt-sm pb-sm align-top sm:px-sm', c.isSelected && 'rounded-t-lg bg-primary-soft')}>
                   <span className="flex flex-col items-start gap-xs">
                     <span className={cx('text-sm sm:text-base', c.isSelected ? 'font-extrabold' : 'font-semibold')}>{t.planner.method.names[c.method]}</span>
                     {c.isSelected && (
