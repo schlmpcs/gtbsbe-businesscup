@@ -43,6 +43,8 @@ test('forecast → exact preview → consent → publish → privacy disclosure 
   expect(payload).toEqual(preview);
   await expect(page.getByRole('button', {name:'Unpublish',exact:true})).toBeVisible();
   await page.goto('/me/upload');
+  // "Exactly what we keep" sits inside the collapsed "What we keep" disclosure: open that first.
+  await page.getByTestId('what-we-keep-details').locator('summary').first().click();
   await page.getByText('Exactly what we keep', { exact: true }).click();
   await expect(page.getByText(/Published avatar: age band/)).toBeVisible();
   await page.goto('/future');
