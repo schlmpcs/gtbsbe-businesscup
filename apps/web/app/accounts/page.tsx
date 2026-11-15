@@ -3,7 +3,8 @@
 // P2 Accounts (/accounts): thin route. The view-model hooks feed the presentational screen.
 // Accounts live in this browser's store; nothing here reaches a server. The add sheet's "Connect your
 // bank (demo)" opens the demo bank link (features/bankDemo, labelled a demo); its transactions go to
-// /transactions, whose CSV import reads them like any statement file.
+// /transactions, whose import reads them like any statement file and fills every screen from them
+// (this page's checking account included: bankDemo/model/fillAll).
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';

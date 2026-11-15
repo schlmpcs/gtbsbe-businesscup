@@ -5,10 +5,14 @@
 import type {
   CategoryTotals, CostCategory, Debt, ForecastPoint, HomeTenure, KidAge, Money, ProfilePatch, Rate, Source,
 } from '@lifeguessr/types';
+import type { readStatementFile } from '@/features/upload/model/readStatementFile';
 import type { HomeSummary } from '@/lib/model/home';
 import type { DebtLoadGaugeVM } from '@/lib/model/profile';
 import type { EstimatedMoney, ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
 import type { DebtInput } from '@/state';
+
+/** The CSV pipeline's reader; `readFile` takes another one (the demo bank's, which also fills every screen). */
+export type StatementReader = typeof readStatementFile;
 
 export type { DebtLoadGaugeVM, DebtLoadZone } from '@/lib/model/profile';
 export type { EstimatedMoney, ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
@@ -440,7 +444,7 @@ export type StatementUploadVM = {
    * Read a CSV statement in the browser and categorize it (T6/T7), ending in `submitTotals`.
    * null when no reader is available: the screen then shows the file picker as unavailable.
    */
-  readFile: ((file: File) => void) | null;
+  readFile: ((file: File, reader?: StatementReader) => void) | null;
   /**
    * "Try with sample statement": the sample statement fixture, read through the same pipeline as
    * `readFile` (parsed and masked in the browser, then categorized). Ends in review like a file.

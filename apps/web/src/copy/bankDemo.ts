@@ -61,6 +61,12 @@ export const bankDemo = {
     privacy: 'Read in your browser like a CSV: only shop names, amounts and dates go out to be sorted.',
   },
 
+  /** What a connected demo bank fills on the other screens (names only live in this browser). */
+  fill: {
+    checkingName: (bank: string) => `Checking · ${bank}`,
+    goalName: 'Emergency fund (demo)',
+  },
+
   error: {
     title: 'The demo bank did not answer.',
     retry: 'Try again',

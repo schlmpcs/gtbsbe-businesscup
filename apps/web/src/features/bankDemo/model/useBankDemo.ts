@@ -111,7 +111,7 @@ export const transactionsHandoffHref = (id: DemoBankId): string => `/transaction
  */
 export function useBankDemoHandoff(
   bank: string | null,
-  onFile: (file: File) => void,
+  onFile: (file: File, bankId: DemoBankId) => void,
   done: () => void,
   fetchStatement: typeof defaultFetch = defaultFetch,
 ): void {
@@ -120,7 +120,7 @@ export function useBankDemoHandoff(
     if (!bank || !isDemoBankId(bank) || handled.current === bank) return;
     handled.current = bank;
     fetchStatement(bank)
-      .then((text) => onFile(statementFile(bank, text)))
+      .then((text) => onFile(statementFile(bank, text), bank))
       .catch(() => undefined)
       .finally(done);
   }, [bank, onFile, done, fetchStatement]);

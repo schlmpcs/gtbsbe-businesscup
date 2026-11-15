@@ -5,10 +5,13 @@
 // reuses the existing view-models: the practice duel (chapter 1), useGuessYourself + useClosestLife
 // (2), useStatementUpload + useQuickSliders + the month reveal (3), and the /plan hooks (4). Chapter 3's
 // "Connect your bank" is the demo bank link (features/bankDemo, labelled a demo): its statement goes
-// to useStatementUpload.readFile, the same pipeline as an uploaded CSV.
+// to useStatementUpload.readFile, the same pipeline as an uploaded CSV, and also fills the ledger,
+// accounts, budget and goals (bankDemo/model/fillAll), so every screen has the bank's data.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useCallback } from 'react';
+import type { DemoBankId } from '@/features/bankDemo/model/banks';
+import { demoBankReader } from '@/features/bankDemo/model/fillAll';
 import { useBankDemo } from '@/features/bankDemo/model/useBankDemo';
 import { BankDemoSheet } from '@/features/bankDemo/ui/BankDemoSheet';
 import { useClosestLife } from '@/features/ladder/model/useClosestLife';
@@ -52,7 +55,8 @@ export default function StartPage({ searchParams }: { searchParams: SearchParams
   const closest = useClosestLife();
   const upload = useStatementUpload();
   const { readFile } = upload;
-  const onDemoStatement = useCallback((file: File) => readFile?.(file), [readFile]);
+  // The demo bank's statement is read once, for this review AND every other screen (fillAll).
+  const onDemoStatement = useCallback((file: File, bankId: DemoBankId) => readFile?.(file, demoBankReader(bankId)), [readFile]);
   const bank = useBankDemo({ onUse: onDemoStatement });
   const sliders = useQuickSliders();
   const reveal = useMonthReveal();

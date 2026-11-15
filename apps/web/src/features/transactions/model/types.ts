@@ -95,7 +95,8 @@ export type TransactionsVM = {
   options: { categories: StatementClass[]; accounts: { id: string; name: string }[]; months: YearMonth[] };
   importState: ImportStateVM;
   /** Reads a statement file on this device and adds its lines (those already there are skipped). Never throws. */
-  importCsv: (file: File) => Promise<void>;
+  /** `importer` replaces the plain import for this file (the demo bank's, which also fills every screen). */
+  importCsv: (file: File, importer?: (file: File) => Promise<{ added: number; duplicates: number }>) => Promise<void>;
   /** Adds one line; returns its id, or null when `date` or `amount` is invalid. */
   add: (input: NewTransactionInput) => string | null;
   /** Sets one line's category; with `applyAll`, every line of the same merchant too. */

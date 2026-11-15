@@ -138,7 +138,7 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
   }, []);
 
   /** Read a statement file (the user's, or the downloaded sample) through the one pipeline. */
-  const read = useCallback((source: File | ((signal: AbortSignal) => Promise<File>)) => {
+  const read = useCallback((source: File | ((signal: AbortSignal) => Promise<File>), reader: typeof readStatementFile = readStatementFile) => {
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;
@@ -146,7 +146,7 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
     setError(null);
     clearReview();
     setApplied(false);
-    const readOne = (file: File) => readStatementFile(file, { anonId: getAnonId(), signal: controller.signal });
+    const readOne = (file: File) => reader(file, { anonId: getAnonId(), signal: controller.signal });
     (typeof source === 'function' ? source(controller.signal).then(readOne) : readOne(source))
       .then(
         ({ months, summary, classified, followUps }) => {
@@ -164,7 +164,7 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
       );
   }, [readStatementFile, review, clearReview]);
 
-  const readFile = useCallback((file: File) => read(file), [read]);
+  const readFile = useCallback((file: File, reader?: typeof readStatementFile) => read(file, reader), [read]);
   const trySample = useCallback(
     () => read((signal) => fetchSampleStatement({ signal })),
     [read, fetchSampleStatement],
