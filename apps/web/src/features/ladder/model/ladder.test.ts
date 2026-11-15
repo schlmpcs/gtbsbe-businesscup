@@ -630,7 +630,7 @@ describe('useLadderProgress', () => {
       ['S9', '/me/upload', false], // your spending: imported from a statement (or set by hand on S7)
       ['S8', '/me/balance', false], // the demo profile has measured fields, but they are a sample
     ]);
-    expect(result.current.futureHref).toBe('/start?ch=4');
+    expect(result.current.futureHref).toBe('/plan');
     expect(result.current.byHandHref).toBe('/me/sliders');
     expect(result.current.in10ySource).toBe('rules'); // the ladder's number is the engine's preview, never the model's
 

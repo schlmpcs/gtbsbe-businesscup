@@ -1,6 +1,7 @@
 // /start onboarding end to end: one warm-up round of today's duel → guess → demo bank connection (the sample statement through the real
 // parser and categorizer) → the analysis of the statement → net worth reveal → plan to 90 → one decision → Home with the Life line.
 import { expect, test } from '@playwright/test';
+import { lifeline } from '../src/copy/lifeline';
 import { welcome as t } from '../src/copy/welcome';
 
 test('onboarding: warm-up duel, guess, connect a bank (demo), see what you are worth, drag one decision', async ({ page }) => {
@@ -36,8 +37,13 @@ test('onboarding: warm-up duel, guess, connect a bank (demo), see what you are w
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title);
   await page.getByTestId('onboarding-next').click();
   await expect(page.getByTestId('onboarding')).toHaveAttribute('data-step', 'decision');
-  await page.getByTestId('onboarding-decision').fill('35');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Buy a home 4 years sooner');
+  // Buy the home up to 4 years sooner than the plan's age (the slider starts there; the age depends on today's date).
+  const decision = page.getByTestId('onboarding-decision');
+  const planAge = Number(await decision.inputValue());
+  const soonerAge = Math.max(Number(await decision.getAttribute('min')), planAge - 4);
+  expect(soonerAge).toBeLessThan(planAge);
+  await decision.fill(String(soonerAge));
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(lifeline.lead.sooner(planAge - soonerAge));
 
   await page.getByRole('link', { name: t.decision.cta }).click();
   await expect(page).toHaveURL(/\/dashboard$/);

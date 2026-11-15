@@ -20,8 +20,10 @@ describe('landing and the stored record', () => {
     expect(parseRecord('{"chapter":4,"done":true,"practiceError":0.3}')).toEqual({ chapter: 4, done: true, practiceError: 0.3 });
   });
 
-  it('puts chapters 2–4 in the URL', () => {
+  it('sends chapters 1–3 to the onboarding at /start and chapter 4 (the plan to 90) to /plan', () => {
     expect(chapterHref(1)).toBe('/start');
-    expect(chapterHref(4)).toBe('/start?ch=4');
+    expect(chapterHref(2)).toBe('/start');
+    expect(chapterHref(3)).toBe('/start');
+    expect(chapterHref(4)).toBe('/plan');
   });
 });

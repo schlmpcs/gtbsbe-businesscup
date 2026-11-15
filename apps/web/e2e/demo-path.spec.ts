@@ -1,9 +1,10 @@
 // T8: the 2-minute demo path (docs/PRODUCT.md → Two-minute demo script) in one spec, phone and
-// desktop: the landing's Start → the onboarding story (3 practice duels → guess your month → ZIP and
-// household → the sample statement → guess vs. reality → the plan to 90 with Chance of success and Next
-// Moves) → Open my dashboard → "/" now goes to the dashboard → today's five duels at /play (a hint in the
-// first) → fine-tune by hand → Loan Lab compare. Selectors come from the copy files and roles, so a
-// Figma restyle does not break it.
+// desktop: the landing's Start → the onboarding at /start (one round of today's duel → guess what you
+// are worth → connect a bank (demo: the sample statement through the real parser and categorizer) → the
+// analysis → the net worth reveal → the plan to 90 → one decision) → Open the dashboard → "/" now goes to
+// the dashboard → the rest of today's five duels at /play (the warm-up's pick counts; a hint in round 2)
+// → fine-tune by hand → Loan Lab compare. Selectors come from the copy files and roles, so a Figma
+// restyle does not break it.
 //
 // It runs in both ways the duel can be built, with the same steps: against the server
 // (NEXT_PUBLIC_DUEL_SOURCE=api, production's build: CI's e2e-production job, with the store) and in
@@ -13,22 +14,24 @@
 // When the build sends funnel events (NEXT_PUBLIC_EVENTS_SOURCE=api with a store, as CI's e2e job
 // runs it), it also checks that each step of the path was recorded, that what was sent carries no
 // personal data, and that GET /api/events/funnel counts it.
-import { fileURLToPath } from 'node:url';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import type { ClientFunnelEvent, FunnelReport } from '@lifeguessr/types';
 import { common } from '../src/copy/common';
 import { duel } from '../src/copy/duel';
-import { ladder } from '../src/copy/ladder';
+import { lifeline } from '../src/copy/lifeline';
 import { loan } from '../src/copy/loan';
 import { onboarding } from '../src/copy/onboarding';
+import { welcome } from '../src/copy/welcome';
 
-const SAMPLE_STATEMENT = fileURLToPath(new URL('../../../packages/data/fixtures/statement.sample.csv', import.meta.url));
 const EVENTS_ON = process.env.NEXT_PUBLIC_EVENTS_SOURCE === 'api';
 
-/** The funnel steps this path goes through, in the order it reaches them. */
+/**
+ * The funnel steps this path goes through, in the order it reaches them. The /start onboarding sends
+ * play_started and duel_picked (its warm-up round is today's round 1) and statement_applied (the demo
+ * bank's statement); its net worth guess is not a funnel event.
+ */
 const PATH_EVENTS = [
-  'own_guess_submitted', 'closest_life_chosen', 'statement_applied', 'play_started', 'hint_opened', 'duel_picked',
-  'sliders_adjusted', 'loan_compared',
+  'play_started', 'duel_picked', 'statement_applied', 'hint_opened', 'sliders_adjusted', 'loan_compared',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 
 let pageErrors: string[] = [];
@@ -81,9 +84,11 @@ function stored(page: Page, name: ClientFunnelEvent['name']): Promise<unknown> {
   );
 }
 
-test('demo path: landing → story (practice, guess, statement, plan) → dashboard → 5 duels → by hand → Loan Lab', async ({ page }) => {
+test('demo path: landing → /start (warm-up duel, guess, demo bank, reveal, plan, decision) → dashboard → 5 duels → by hand → Loan Lab', async ({ page }) => {
   test.setTimeout(150_000);
   const o = onboarding;
+  const w = welcome;
+  const onboardingMain = page.getByTestId('onboarding');
 
   // ----- 0. A first visit: the landing, one Start -----
   await page.goto('/');
@@ -92,82 +97,88 @@ test('demo path: landing → story (practice, guess, statement, plan) → dashbo
   await page.getByRole('link', { name: o.landing.start, exact: true }).click();
   await expect(page).toHaveURL(/\/start$/);
 
-  // ----- 1. Chapter 1: three practice duels (not the daily five), then the average error -----
-  await expect(h1(page)).toHaveText(o.story.chapters[1].title);
-  await expect(page.getByText(o.practice.note)).toBeVisible();
-  for (let round = 1; round <= 3; round++) {
-    await expect(page.getByText(o.practice.round(round, 3))).toBeVisible();
-    await page.getByRole('button', { name: /^Life A costs more/ }).click();
-    const own = page.getByRole('slider', { name: o.practice.guessLabel('A') });
-    await own.focus();
-    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
-    await page.getByRole('button', { name: o.practice.reveal }).click();
-    for (const letter of ['A', 'B'] as const) {
-      await expect(page.getByTestId(`practice-total-value-${letter}`)).toHaveAttribute('data-value', /^\$[\d,]+$/);
-      await expect(page.getByRole('list', { name: o.practice.barsLabel(letter) })).toBeVisible();
-    }
-    await page.getByRole('button', { name: round === 3 ? o.practice.finish : o.practice.next }).click();
-  }
-  await expect(page.getByTestId('practice-average')).toHaveText(/^You were off by \d+% on average\.$/);
+  // ----- 1. The warm-up: one round of today's duel (it counts as today's round 1 on /play) -----
+  await expect(onboardingMain).toHaveAttribute('data-step', 'play');
+  const warmup = page.getByTestId('duel-warmup');
+  await expect(warmup).toBeVisible();
+  const warmupPicked = stored(page, 'duel_picked');
+  // Pick Life A; retried until hydrated and the round has loaded.
+  await expect(async () => {
+    await warmup.getByRole('button', { name: /^Life A costs more/ }).click({ timeout: 2_000 });
+    await expect(warmup.getByRole('button', { name: w.warmup.cta })).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
+  // The reveal: the engine's monthly total of each life, with its breakdown.
+  await expect(warmup.getByText(/^Right! \+[\d,]+ points$|^Not this time · 0 points$/)).toBeVisible();
+  for (const letter of ['A', 'B'] as const) await expect(warmup.getByRole('list', { name: duel.reveal.breakdownLabel(letter) })).toBeVisible();
+  await warmupPicked;
   await expectNoSideScroll(page);
-  await page.getByRole('button', { name: o.practice.onward }).click();
+  await warmup.getByRole('button', { name: w.warmup.cta }).click();
 
-  // ----- 2. Chapter 2: the gut guess, then ZIP + household -----
-  await expect(page).toHaveURL(/\/start\?ch=2$/);
-  await expect(h1(page)).toHaveText(o.story.chapters[2].title);
-  const guess = page.getByRole('slider', { name: ladder.guess.sliderLabel });
-  await guess.focus();
-  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
-  const ownGuess = stored(page, 'own_guess_submitted');
-  await page.getByRole('button', { name: o.guess.lock }).click();
-  await ownGuess;
-  await expect(page.getByRole('button', { name: o.guess.next })).toBeDisabled();
-  await expect(page.getByTestId('zip-needed')).toHaveText(ladder.closest.about.zipNeeded);
-  await page.getByLabel(ladder.closest.about.zip).fill('75205');
-  const chosen = stored(page, 'closest_life_chosen');
-  await page.getByRole('button', { name: o.guess.next }).click();
-  await chosen;
+  // ----- 2. What are you worth? A gut guess, locked in -----
+  await expect(onboardingMain).toHaveAttribute('data-step', 'guess');
+  await expect(h1(page)).toHaveText(w.guess.title);
+  // Retried until the page is hydrated (a fill before that is reset by React).
+  await expect(async () => {
+    await page.locator('#ob-guess').fill('40000');
+    await expect(page.getByTestId('onboarding-guess')).toHaveText('$40,000', { timeout: 1_000 });
+  }).toPass();
+  await page.getByTestId('onboarding-lock').click();
 
-  // ----- 3. Chapter 3: import a bank CSV (the sample file), then guess vs. reality -----
-  await expect(page).toHaveURL(/\/start\?ch=3$/);
-  await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
-  await expect(page.getByTestId('statement-summary')).toBeVisible({ timeout: 20_000 });
+  // ----- 3. Connect a bank (a labelled demo): the sample statement goes through the real pipeline -----
+  await expect(h1(page)).toHaveText(w.connect.title);
+  await expectNoSideScroll(page);
   const applied = stored(page, 'statement_applied');
-  await page.getByRole('button', { name: o.month.use }).click();
+  const categorized = page.waitForRequest((r) => r.url().endsWith('/api/statement/categorize') && r.method() === 'POST');
+  await page.getByTestId('bank-chase').click();
+  await expect(page.getByTestId('onboarding-connecting')).toContainText(w.connecting.title('Chase'));
+  await categorized;
+  await expect(onboardingMain).toHaveAttribute('data-step', 'analyzing', { timeout: 60_000 });
+  await expect(page.getByTestId('onboarding-analyzing')).toBeVisible();
   await applied;
-  const reveal = page.getByTestId('month-reveal');
-  await expect(reveal).toHaveAttribute('data-from', 'statement');
-  await expect(page.getByTestId('reveal-guess')).toHaveAttribute('data-value', /^\$[\d,]+$/);
-  await expect(page.getByTestId('reveal-actual')).toHaveAttribute('data-value', /^\$[\d,]+$/);
-  await expect(page.getByRole('list', { name: o.month.breakdownLabel }).getByRole('listitem').first()).toBeVisible();
-  await expectNoSideScroll(page);
-  await page.getByRole('button', { name: o.month.onward }).click();
 
-  // ----- 4. Chapter 4: the plan to 90, Chance of success (Monte Carlo), the next moves -----
-  await expect(page).toHaveURL(/\/start\?ch=4$/);
-  await expect(page.getByTestId('story-plan-line')).toBeVisible();
-  await expect(page.getByTestId('story-chance')).toHaveAttribute('data-status', 'done', { timeout: 20_000 });
-  await expect(page.getByRole('meter', { name: o.future.chanceLabel })).toHaveAttribute('aria-valuetext', /^\d+%$/);
-  await expect(page.getByTestId('story-moves').getByRole('listitem').first()).toBeVisible();
+  // ----- 4. The answer: net worth from the accounts, next to the guess -----
+  await expect(onboardingMain).toHaveAttribute('data-step', 'reveal', { timeout: 30_000 });
+  await expect(page.getByTestId('onboarding-networth')).toHaveText(/^−?\$[\d,]+$/);
+  await expect(page.getByText(w.reveal.guessed('$40,000'))).toBeVisible();
   await expectNoSideScroll(page);
-  await page.getByRole('link', { name: o.future.dashboard }).click();
+  await page.getByTestId('onboarding-next').click();
+
+  // ----- 5. The plan to 90, then one decision dragged on it -----
+  await expect(h1(page)).toHaveText(w.future.title);
+  await expectNoSideScroll(page);
+  await page.getByTestId('onboarding-next').click();
+  await expect(onboardingMain).toHaveAttribute('data-step', 'decision');
+  // Buy the home up to 4 years sooner than the plan's age (the slider starts there; the age depends on today's date).
+  const decision = page.getByTestId('onboarding-decision');
+  const planAge = Number(await decision.inputValue());
+  const soonerAge = Math.max(Number(await decision.getAttribute('min')), planAge - 4);
+  expect(soonerAge).toBeLessThan(planAge);
+  await decision.fill(String(soonerAge));
+  await expect(h1(page)).toContainText(lifeline.lead.sooner(planAge - soonerAge));
+  await expectNoSideScroll(page);
+  await page.getByRole('link', { name: w.decision.cta }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  // The story is finished: "/" now opens the dashboard.
+  await expect(page.getByTestId('lifeline')).toBeVisible();
+  // The onboarding is finished: "/" now opens the dashboard.
   await page.goto('/');
   await expect(page).toHaveURL(/\/dashboard$/);
 
-  // ----- 5. Play today's five duels at /play -----
+  // ----- 6. The rest of today's five duels at /play: round 1 is the warm-up's pick -----
   await page.goto('/play');
   await expect(h1(page)).toHaveText(duel.title);
-  // Each life: four fact groups, and the hint explains what it opens before you pay for it.
-  await expect(page.getByRole('list', { name: duel.card.factsLabel }).first().getByRole('listitem')).toHaveCount(4);
-  await expect(page.getByText(duel.hint.explain)).toBeVisible();
-  // One hint in the first round: one more fact on each card, for −10% of the round's points.
-  await page.getByRole('button', { name: duel.hint.offer('10%') }).click();
-  await expect(page.getByText(duel.hint.used('900'))).toBeVisible();
   for (let round = 1; round <= 5; round++) {
-    await expect(page.getByText(duel.round(round, 5))).toBeVisible();
-    await page.getByRole('button', { name: /^Life A costs more/ }).click();
+    if (round > 1) {
+      await expect(page.getByText(duel.round(round, 5))).toBeVisible();
+      // Each life: four fact groups, and the hint explains what it opens before you pay for it.
+      await expect(page.getByRole('list', { name: duel.card.factsLabel }).first().getByRole('listitem')).toHaveCount(4);
+      await expect(page.getByText(duel.hint.explain)).toBeVisible();
+    }
+    if (round === 2) {
+      // One hint in round 2: one more fact on each card, for −10% of the round's points.
+      await page.getByRole('button', { name: duel.hint.offer('10%') }).click();
+      await expect(page.getByText(duel.hint.used('900'))).toBeVisible();
+    }
+    if (round > 1) await page.getByRole('button', { name: /^Life A costs more/ }).click();
     // The reveal: both monthly totals, each with its category breakdown, computed by the engine.
     await expect(page.getByText(/^Right! \+[\d,]+ points$|^Not this time · 0 points$/)).toBeVisible();
     for (const letter of ['A', 'B'] as const) {
@@ -183,7 +194,7 @@ test('demo path: landing → story (practice, guess, statement, plan) → dashbo
   await expectNoSideScroll(page);
   if (EVENTS_ON) await expect.poll(() => sentEvents.filter((e) => e.name === 'duel_picked').length, { timeout: 10_000 }).toBe(5);
 
-  // ----- 6. Fine-tune by hand (S7): the month follows -----
+  // ----- 7. Fine-tune by hand (S7): the month follows -----
   await page.goto('/me/sliders');
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
@@ -195,7 +206,7 @@ test('demo path: landing → story (practice, guess, statement, plan) → dashbo
   await adjusted;
   await expectNoSideScroll(page);
 
-  // ----- 7. Loan Lab (S12): three offers side by side, the debt-load gauge, pick another -----
+  // ----- 8. Loan Lab (S12): three offers side by side, the debt-load gauge, pick another -----
   await page.goto('/loan');
   const table = page.getByRole('table', { name: loan.compare.caption });
   await expect(table).toBeVisible();
@@ -212,9 +223,9 @@ test('demo path: landing → story (practice, guess, statement, plan) → dashbo
   await expect
     .poll(() => PATH_EVENTS.filter((name) => !sentEvents.some((e) => e.name === name)), { timeout: 15_000 })
     .toEqual([]);
-  // The duel reports its hint and each round it picked (useDuel).
+  // The duel reports its hint and each round it picked (useDuel): round 1 from the warm-up on /start.
   const hints = sentEvents.filter((e) => e.name === 'hint_opened');
-  expect(hints.map((e) => (e as Extract<ClientFunnelEvent, { name: 'hint_opened' }>).props)).toEqual([{ round: 1 }]);
+  expect(hints.map((e) => (e as Extract<ClientFunnelEvent, { name: 'hint_opened' }>).props)).toEqual([{ round: 2 }]);
   const picked = sentEvents.filter((e) => e.name === 'duel_picked');
   expect(picked.map((e) => (e as Extract<ClientFunnelEvent, { name: 'duel_picked' }>).props.round)).toEqual([1, 2, 3, 4, 5]);
 

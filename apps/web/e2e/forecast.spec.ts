@@ -58,10 +58,11 @@ test('first visit: the landing has no numbers; See a sample plan opens /plan wit
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(l.title);
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
-  // "Use my numbers" starts the story at your own month.
+  // "Use my numbers" opens the onboarding at /start (its first step: one round of today's duel).
   await page.goto('/plan');
   await banner.getByRole('link', { name: common.sampleBanner.cta }).click();
-  await expect(page).toHaveURL(/\/start\?ch=2$/);
+  await expect(page).toHaveURL(/\/start$/);
+  await expect(page.getByTestId('onboarding')).toHaveAttribute('data-step', 'play');
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
 });
 

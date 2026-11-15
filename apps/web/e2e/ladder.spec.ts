@@ -1,12 +1,12 @@
 // Ladder S5–S9 (Y9, T6/T7): build a profile end to end in a real browser, on phone and desktop.
-// closest life → your spending (a statement first; by hand as the fallback) → balance sheet → the story's chapter 4 (/start?ch=4),
+// closest life → your spending (a statement first; by hand as the fallback) → balance sheet → the plan to 90 (/plan),
 // through each step's CTA.
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { common } from '../src/copy/common';
 import { forecast } from '../src/copy/forecast';
 import { ladder } from '../src/copy/ladder';
-import { onboarding } from '../src/copy/onboarding';
+import { plan } from '../src/copy/plan';
 
 let pageErrors: string[] = [];
 
@@ -27,6 +27,14 @@ const SAMPLE_STATEMENT = fileURLToPath(new URL('../../../packages/data/fixtures/
 /** Saved state read: neither the steps nor the screen says "Loading your numbers…" any more. */
 const loaded = (page: Page) => expect(page.getByText(ladder.shell.loading)).toHaveCount(0);
 
+/** The plan screen (/plan): its heading, the five rules-based KPIs and the net worth chart. */
+async function expectPlanScreen(page: Page) {
+  await expect(page.getByRole('heading', { level: 1, name: plan.screen.title })).toBeVisible();
+  await expect(page.locator('[data-kpi]')).toHaveCount(5);
+  await expect(page.locator('[data-kpi]').first().getByText(plan.screen.kpiSource)).toBeVisible();
+  await expect(page.getByRole('figure', { name: plan.screen.chart.title })).toBeVisible();
+}
+
 /** The saved app state (Zustand persist in localStorage). */
 async function savedProfile(page: Page) {
   return page.evaluate(() => {
@@ -35,7 +43,7 @@ async function savedProfile(page: Page) {
   });
 }
 
-test('closest life → your spending (by hand) → balance sheet with a new debt → the plan (chapter 4)', async ({ page }) => {
+test('closest life → your spending (by hand) → balance sheet with a new debt → the plan (/plan)', async ({ page }) => {
   // Against a deployment with a model key the last step may wait up to 25 s for the forecast on top of the
   // steps before it: three times the default timeout.
   test.slow();
@@ -118,16 +126,15 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   const in10y = (await line.getByText(/^−?\$[\d,]+$/).textContent()) ?? '';
   expect(in10y).toMatch(/\$/);
 
-  // The ladder's last CTA opens the story's chapter 4: the plan to 90 of the profile built above.
+  // The ladder's last CTA opens /plan: the plan to 90 of the profile built above.
   await page.getByRole('link', { name: ladder.shell.cta.last }).click();
-  await expect(page).toHaveURL(/\/start\?ch=4$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(onboarding.story.chapters[4].title);
-  await expect(page.getByTestId('story-plan-line')).toBeVisible();
+  await expect(page).toHaveURL(/\/plan$/);
+  await expectPlanScreen(page);
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);
 });
 
-test('statement first: import the sample, answer one follow-up, skip one, and reach the plan (chapter 4) without a slider', async ({ page }) => {
+test('statement first: import the sample, answer one follow-up, skip one, and reach the plan (/plan) without a slider', async ({ page }) => {
   test.slow(); // the last step may wait for the model's forecast on a deployment with a key
   await page.goto('/me/closest');
   await loaded(page);
@@ -193,8 +200,8 @@ test('statement first: import the sample, answer one follow-up, skip one, and re
   await expect(page.getByTestId('from-about')).toBeVisible();
   await expect(page.getByLabel(ladder.balance.fields.age)).toHaveCount(0);
   await page.getByRole('link', { name: ladder.shell.cta.last }).click();
-  await expect(page).toHaveURL(/\/start\?ch=4$/);
-  await expect(page.getByTestId('story-plan-line')).toBeVisible();
+  await expect(page).toHaveURL(/\/plan$/);
+  await expectPlanScreen(page);
 
   // The sliders, if opened, show the imported numbers for confirmation, not entry.
   await page.goto('/me/sliders');

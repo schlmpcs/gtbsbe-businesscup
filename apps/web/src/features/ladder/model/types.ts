@@ -57,7 +57,7 @@ export type LadderProgressVM = {
   bandNarrowed: Rate;
   /** Inputs the forecast reads that are still estimates, out of all of them. */
   estimates: { left: number; total: number };
-  /** "See your future →": the onboarding story's chapter 4 (/start?ch=4, the plan to 90). */
+  /** "See your future →": the plan to 90 (/plan). */
   futureHref: string;
   /** S7: set your spending by hand, the alternative to importing a statement on S9. */
   byHandHref: string;
