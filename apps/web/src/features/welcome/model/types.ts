@@ -5,7 +5,8 @@ import type { LifeLineKpiVM, LifeLinePoint, LifeLineVM } from '@/features/lifeli
 
 export type { LifeLineVM, LifeLineKpiVM, LifeLinePoint } from '@/features/lifeline/model/types';
 
-export type OnboardingStep = 'play' | 'about' | 'guess' | 'balances' | 'connect' | 'connecting' | 'analyzing' | 'reveal' | 'future' | 'decision';
+/** In order; `connecting` is part of `connect`, `found` is the balances form after the connection. */
+export type OnboardingStep = 'play' | 'about' | 'guess' | 'connect' | 'connecting' | 'analyzing' | 'found' | 'reveal' | 'future' | 'decision';
 
 /** `logo`: a public path to the bank's mark (public/banks, Simple Icons, CC0). */
 export type BankVM = { id: string; name: string; logo: string };
@@ -64,8 +65,11 @@ export type RevealVM = {
   topCategories: { label: string; amountLabel: string; share: number }[];
 };
 
-/** One typed field of the "About you" / "Add it up" forms (raw text; the model parses and checks it). */
-export type FieldVM = { id: string; label: string; hint?: string; value: string; invalid: boolean; prefix?: string; suffix?: string; inputMode: 'numeric' | 'decimal'; placeholder?: string };
+/**
+ * One typed field of the "About you" / "Anything else?" forms (raw text; the model parses and checks it).
+ * `tag`: where a prefilled value came from ("from Chase").
+ */
+export type FieldVM = { id: string; label: string; hint?: string; value: string; invalid: boolean; prefix?: string; suffix?: string; inputMode: 'numeric' | 'decimal'; placeholder?: string; tag?: string };
 
 export type AboutVM = {
   age: FieldVM;
@@ -82,9 +86,12 @@ export type AboutVM = {
   submit: () => void;
 };
 
+/** The "found" step: the statement's balance prefilled (tagged), the other boxes for what it can't see. */
 export type BalancesVM = {
   own: FieldVM[];
   owe: FieldVM[];
+  /** "Not at Chase? Add it here." (null before any connection). */
+  note: string | null;
   setField: (id: string, value: string) => void;
   canSubmit: boolean;
   submit: () => void;
@@ -118,7 +125,11 @@ export type OnboardingVM = {
   lockGuess: () => void;
   banks: BankVM[];
   connect: (bankId: string) => void;
+  /** "Rather upload a statement (CSV)": the same read, analysis and form as a bank. */
+  upload: (file: File) => void;
   connecting: {
+    /** A demo bank, or a statement the person uploaded. */
+    source: 'bank' | 'file';
     bankName: string;
     /** Index of the phase in progress (copy.onboarding.connecting.phases); = length when done. */
     phase: number;

@@ -130,6 +130,37 @@ describe('accounts store', () => {
   });
 });
 
+describe('growth and its AI note', () => {
+  const note = { source: 'ai', reason: 'Luxury sedans lose about 12% a year after year 5.' } as const;
+
+  it('stores an accepted AI estimate as growth plus a note; any later growth edit drops the note', () => {
+    const id = store().addAccount({ group: 'vehicle', name: 'BMW 540i 2018', balance: 28_000 })!;
+    expect(store().updateAccount(id, { growth: -0.12, growthNote: note })).toBe(true);
+    expect(account(id)).toMatchObject({ growth: -0.12, growthNote: note });
+
+    store().updateAccount(id, { growth: -0.1 }); // the person typed their own rate
+    expect(account(id).growth).toBe(-0.1);
+    expect(account(id).growthNote).toBeUndefined();
+
+    store().updateAccount(id, { growth: -0.12, growthNote: note });
+    store().updateAccount(id, { growth: null }); // back to the default
+    expect(account(id).growth).toBeUndefined();
+    expect(account(id).growthNote).toBeUndefined();
+  });
+
+  it('a name or balance edit keeps the note; a note without a rate is refused', () => {
+    const id = store().addAccount({ group: 'vehicle', name: 'Car', balance: 9_000 })!;
+    store().updateAccount(id, { growth: -0.12, growthNote: note });
+    store().updateAccount(id, { name: 'Old car' });
+    store().setBalance(id, 8_000);
+    expect(account(id).growthNote).toEqual(note);
+
+    const plain = store().addAccount({ group: 'vehicle', name: 'Bike', balance: 500 })!;
+    store().updateAccount(plain, { growthNote: note });
+    expect(account(plain).growthNote).toBeUndefined();
+  });
+});
+
 describe('delete all my data', () => {
   it('deleteAllMyData() empties the accounts store', async () => {
     store().addAccount({ group: 'cash', name: 'Savings', balance: 1200 });

@@ -2,8 +2,9 @@
 // form becomes the store's `AccountForm` (lib/model/addAccount.ts). A blank minimum payment or APR is
 // not filled in here: the engine's default is what the store keeps (`liabilityEstimates`).
 import { returnAnnualNominal, vehicleDepreciationAnnual } from '@lifeguessr/engine';
-import type { AccountGroup, Money, Rate } from '@lifeguessr/types';
+import type { AccountGroup, AiGrowthNote, Money, Rate } from '@lifeguessr/types';
 import { accounts as copy } from '@/copy';
+import { noteFor, type AiFill } from './growthAi';
 import { formatRate } from '@/lib/format';
 import { DEFAULT_LOAN_KIND, isLiabilityGroup, LOAN_KINDS, type AccountForm, type LoanKind } from '@/lib/model/addAccount';
 import type { AddAccountFieldId, AddAccountFieldVM, AddAccountLabelKey } from './types';
@@ -33,7 +34,7 @@ const DEFAULT_GROWTH = {
 } satisfies Partial<Record<AccountGroup, Rate>>;
 
 /** The yearly change field's placeholder (the default as it would be typed, e.g. "−15") and hint. */
-function growthWords(group: AccountGroup): { placeholder: string | null; hint: string | null } {
+export function growthWords(group: AccountGroup): { placeholder: string | null; hint: string | null } {
   if (group === 'vehicle' || group === 'investments' || group === 'retirement') {
     const pct = formatRate(DEFAULT_GROWTH[group], 2); // "−15%"
     return { placeholder: pct.replace('%', ''), hint: copy.form.growthHint[group](pct) };
@@ -78,7 +79,12 @@ export function parsePercent(text: string): Rate | null {
   return /^-?\d*\.?\d+$|^-?\d+\.$/.test(t) ? Number(t) / 100 : Number.NaN;
 }
 
-export type FormState = { values: Partial<Record<AddAccountFieldId, string>>; estimates: Partial<Record<AddAccountFieldId, boolean>> };
+export type FormState = {
+  values: Partial<Record<AddAccountFieldId, string>>;
+  estimates: Partial<Record<AddAccountFieldId, boolean>>;
+  /** What "Estimate with AI" wrote into the growth field; it is labeled (and stored as an AI estimate) only while that text is unchanged. */
+  aiGrowth?: AiFill;
+};
 
 export const emptyForm = (): FormState => ({ values: {}, estimates: {} });
 
@@ -112,23 +118,30 @@ export function toFields(group: AccountGroup, form: FormState, showErrors: boole
       error,
       placeholder,
       hint,
+      aiReason: spec.id === 'growth' ? (noteFor(form.aiGrowth ?? null, value)?.reason ?? null) : null,
       ...(spec.id === 'debtKind' ? { options: DEBT_KINDS } : {}),
     };
   });
 }
 
-/** The form the store adds an account from, and the growth rate to set on it (assets only), or null when a field is invalid. */
-export function buildForm(group: AccountGroup, form: FormState): { form: AccountForm; growth: Rate | null } | null {
+/**
+ * The form the store adds an account from, the growth rate to set on it (assets only) and, when that rate
+ * is the AI's untouched proposal, its AI note; or null when a field is invalid.
+ */
+export function buildForm(group: AccountGroup, form: FormState): { form: AccountForm; growth: Rate | null; growthNote: AiGrowthNote | null } | null {
   const fields = toFields(group, form, true);
   if (fields.some((f) => f.error !== null)) return null;
   const balance = parseMoney(valueOf(form, 'balance')) as Money;
   const out: AccountForm = { group, name: valueOf(form, 'name').trim(), balance };
-  if (!isLiabilityGroup(group)) return { form: out, growth: parsePercent(valueOf(form, 'growth')) };
+  if (!isLiabilityGroup(group)) {
+    const growth = parsePercent(valueOf(form, 'growth'));
+    return { form: out, growth, growthNote: growth === null ? null : noteFor(form.aiGrowth ?? null, valueOf(form, 'growth')) };
+  }
   const apr = parsePercent(valueOf(form, 'apr')) as Rate;
   out.apr = { value: apr, isEstimate: false };
   if (group === 'loan') out.debtKind = valueOf(form, 'debtKind') as LoanKind;
   // A typed minimum is the person's number (measured); a blank one is left to the engine's default.
   const given = parseMoney(valueOf(form, 'minPayment'));
   if (given !== null) out.minPayment = { value: given, isEstimate: false };
-  return { form: out, growth: null };
+  return { form: out, growth: null, growthNote: null };
 }

@@ -275,6 +275,23 @@ export type GrowthRowVM = {
   rateLabel: string;
   hint: string;
   source?: Source;
+  /**
+   * The AI's proposal for this group ("Estimate with AI"), shown NEXT TO the default above, never in its
+   * place, until the person applies it. Absent before asking, or when this group's proposal failed the checks.
+   */
+  suggestion?: { rate: Rate; rateLabel: string; reason: string; applied: boolean };
+  /** Present while the rate in use is an applied AI estimate: label it "AI estimate" with this reason. */
+  aiNote?: { reason: string };
+};
+/** "Estimate with AI" for the growth defaults. The AI proposes rates only; plan() and monteCarlo() project with them. */
+export type GrowthAiVM = {
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  /** Why there is no suggestion (an error), or which groups got none; null otherwise. */
+  message: string | null;
+  /** True when at least one suggestion is not applied yet. */
+  canApplyAll: boolean;
+  ask: () => void;
+  applyAll: () => void;
 };
 export type AssumptionsVM = {
   fields: AssumptionFieldVM[];
@@ -285,7 +302,11 @@ export type AssumptionsVM = {
   error: 'savingsSplit' | 'withdrawalOrder' | null;
   errorMessage: string | null;
   update: (key: AssumptionKey, value: PlanFieldValue) => void;
+  /** A typed rate or null ("Use default"); either way an AI note on that group is dropped. */
   updateGrowth: (group: AccountGroup, rate: Rate | null) => void;
+  growthAi: GrowthAiVM;
+  /** Uses the group's AI suggestion as its override, marked as an AI estimate. Does nothing without one. */
+  applyGrowthSuggestion: (group: AccountGroup) => void;
   /** Must list every group of the current order exactly once; else refused (`error`). */
   setWithdrawalOrder: (order: AccountGroup[]) => boolean;
   /** Shares must sum to 1 (within 0.0001); else refused (`error`). */

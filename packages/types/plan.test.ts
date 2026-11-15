@@ -6,7 +6,8 @@ import type {
   ACCOUNT_GROUPS, ASSET_GROUPS, LIABILITY_GROUPS, PLAN_EVENT_TYPES,
   AccountGroupSchema, AccountSchema, BudgetIncomeRowSchema, BudgetRowSchema, CashFlowSummarySchema, LedgerTransactionSchema,
   MonteCarloResultSchema, MonteCarloSettingsSchema, PlanAssumptionsSchema, PlanEventSchema, PlanResultSchema, PlanYearSchema,
-  ScenarioSchema,
+  ScenarioSchema, GrowthEstimateRequestSchema, GrowthEstimateResponseSchema, AiGrowthNoteSchema,
+  AiGrowthNote, GrowthEstimateRequest, GrowthEstimateResponse,
   Account, AccountGroup, AssetGroup, BudgetIncomeRow, BudgetRow, CashFlowSummary, LedgerTransaction, LiabilityGroup,
   MonteCarloResult, MonteCarloSettings, PlanAssumptions, PlanEvent, PlanEventType, PlanResult, PlanYear, Scenario,
 } from './index';
@@ -37,6 +38,11 @@ describe('planner schemas match the contracts', () => {
     expectTypeOf<CashFlowSummary>().toExtend<z.input<typeof CashFlowSummarySchema>>();
     expectTypeOf<z.infer<typeof LedgerTransactionSchema>>().toExtend<LedgerTransaction>();
     expectTypeOf<LedgerTransaction>().toExtend<z.input<typeof LedgerTransactionSchema>>();
+    expectTypeOf<z.infer<typeof AiGrowthNoteSchema>>().toEqualTypeOf<AiGrowthNote>();
+    expectTypeOf<z.infer<typeof GrowthEstimateRequestSchema>>().toExtend<GrowthEstimateRequest>();
+    expectTypeOf<GrowthEstimateRequest>().toExtend<z.input<typeof GrowthEstimateRequestSchema>>();
+    expectTypeOf<z.infer<typeof GrowthEstimateResponseSchema>>().toExtend<GrowthEstimateResponse>();
+    expectTypeOf<GrowthEstimateResponse>().toExtend<z.input<typeof GrowthEstimateResponseSchema>>();
 
     expectTypeOf<AccountGroup>().toEqualTypeOf<(typeof ACCOUNT_GROUPS)[number]>();
     expectTypeOf<AccountGroup>().toEqualTypeOf<z.infer<typeof AccountGroupSchema>>();

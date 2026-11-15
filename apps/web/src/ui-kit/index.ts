@@ -41,6 +41,7 @@ export { Sticker, type StickerProps, type StickerTone } from './Sticker';
 export { Stat, type StatProps, type StatTone } from './Stat';
 export { Tabs, type TabItem, type TabsProps } from './Tabs';
 export { Tag, type TagProps, type TagVariant } from './Tag';
+export { TweenText, tweenText, useTweenText } from './TweenText';
 
 /** Where a number comes from ({ name, year, url? }); re-exported so ui/ files can type props. */
 export type { Source } from '@lifeguessr/types';

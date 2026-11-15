@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { welcome as t } from '@/copy';
-import { Art, Button, cx, Icon, Sticker } from '@/ui-kit';
+import { Art, Button, cx, EstimateTag, Icon, Sticker, TweenText } from '@/ui-kit';
 import type { AboutVM, AnalysisIcon, AnalysisRowVM, AnalysisVM, BalancesVM, FieldVM, LifeLineKpiVM, OnboardingVM, RevealVM } from '../model/types';
 
 type LinkComponent = (props: { href: string; className?: string; children: ReactNode }) => ReactNode;
@@ -12,8 +12,6 @@ type LinkComponent = (props: { href: string; className?: string; children: React
 export type OnboardingProps = {
   vm: OnboardingVM;
   Link: LinkComponent;
-  /** Statement upload (S9), for "Rather upload a statement". */
-  uploadHref: string;
   /** Where "Open my plan" goes (Home, with the Life line filled in). */
   doneHref: string;
   /** Step 1: one round of today's duel (the route renders the game's own warm-up). */
@@ -32,7 +30,7 @@ const DARK_LABEL = 'block text-xs font-bold uppercase tracking-wide text-chart-6
 /** A quiet panel on the dark steps. */
 const DARK_PANEL = 'rounded-lg bg-on-primary/5 ring-1 ring-on-primary/10';
 
-export function Onboarding({ vm, Link, uploadHref, doneHref, warmup, decisionChart }: OnboardingProps) {
+export function Onboarding({ vm, Link, doneHref, warmup, decisionChart }: OnboardingProps) {
   const dark = DARK_STEPS.has(vm.step);
   const wide = vm.step === 'play' || vm.step === 'decision' || (vm.step === 'analyzing' && !!vm.analysis);
   return (
@@ -57,9 +55,9 @@ export function Onboarding({ vm, Link, uploadHref, doneHref, warmup, decisionCha
               <div key={vm.step} className="ob-fade-up order-2 flex min-w-0 max-w-(--container-xl) flex-col gap-lg lg:order-none">
                 {vm.step === 'about' && <AboutStep about={vm.about} />}
                 {vm.step === 'guess' && <GuessStep vm={vm} />}
-                {vm.step === 'balances' && <BalancesStep balances={vm.balances} />}
-                {vm.step === 'connect' && <ConnectStep vm={vm} Link={Link} uploadHref={uploadHref} />}
-                {vm.step === 'connecting' && <ConnectingStep vm={vm} Link={Link} uploadHref={uploadHref} />}
+                {vm.step === 'connect' && <ConnectStep vm={vm} />}
+                {vm.step === 'connecting' && <ConnectingStep vm={vm} />}
+                {vm.step === 'found' && <BalancesStep balances={vm.balances} />}
                 {vm.step === 'reveal' && vm.reveal && <RevealStep vm={vm} reveal={vm.reveal} />}
                 {vm.step === 'future' && <FutureStep vm={vm} />}
               </div>
@@ -153,12 +151,19 @@ function TextField({ field, onChange, error }: { field: FieldVM; onChange: (v: s
   const id = `ob-${field.id}`;
   return (
     <div className="flex min-w-0 flex-col gap-xs">
-      <label htmlFor={id} className={FIELD_LABEL}>{field.label}</label>
+      {field.tag ? (
+        <span className="flex flex-wrap items-center justify-between gap-x-sm gap-y-xs">
+          <label htmlFor={id} className={FIELD_LABEL}>{field.label}</label>
+          <span id={`${id}-tag`} className="flex items-center gap-xs rounded-full bg-positive/10 px-sm py-0.5 text-xs font-bold text-positive">
+            <Icon name="check" size={12} strokeWidth={3} />{field.tag}
+          </span>
+        </span>
+      ) : <label htmlFor={id} className={FIELD_LABEL}>{field.label}</label>}
       <div className={cx('flex min-h-12 items-center gap-xs rounded-lg bg-bg px-md ring-1 transition focus-within:ring-2 focus-within:ring-primary',
         field.invalid ? 'ring-2 ring-negative' : 'ring-border')}>
         {field.prefix && <span className="font-display text-xl font-extrabold text-text-muted">{field.prefix}</span>}
         <input id={id} data-testid={id} type="text" inputMode={field.inputMode} autoComplete="off" value={field.value}
-          placeholder={field.placeholder} aria-invalid={field.invalid || undefined}
+          placeholder={field.placeholder} aria-invalid={field.invalid || undefined} aria-describedby={field.tag ? `${id}-tag` : undefined}
           onChange={(e) => onChange(e.target.value)}
           className="min-w-0 flex-1 bg-transparent py-sm font-display text-xl font-extrabold tabular-nums outline-none placeholder:text-text-muted/50" />
         {field.suffix && <span className="text-sm font-semibold text-text-muted">{field.suffix}</span>}
@@ -210,7 +215,7 @@ function AboutStep({ about: a }: { about: AboutVM }) {
   );
 }
 
-// ----- 2b. Add it up ---------------------------------------------------------------------------
+// ----- 3b. Here's what we found: the statement's balance filled in, anything else typed ---------
 
 function BalancesStep({ balances: b }: { balances: BalancesVM }) {
   const c = t.balances;
@@ -228,6 +233,7 @@ function BalancesStep({ balances: b }: { balances: BalancesVM }) {
       <h1 className={H1}>{c.title}</h1>
       <p className={LEAD}>{c.body}</p>
       <div className={PANEL}>
+        {b.note && <p className="text-sm font-semibold text-text-muted" data-testid="onboarding-found-note">{b.note}</p>}
         {group(c.own, b.own, 'text-positive')}
         {group(c.owe, b.owe, 'text-negative')}
       </div>
@@ -270,9 +276,9 @@ function GuessStep({ vm }: { vm: OnboardingVM }) {
   );
 }
 
-// ----- 2. Connect ------------------------------------------------------------------------------
+// ----- 3. Connect: balance and spending in one connection (or an uploaded statement) ------------
 
-function ConnectStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkComponent; uploadHref: string }) {
+function ConnectStep({ vm }: { vm: OnboardingVM }) {
   return (
     <>
       <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.connect.sticker}</Sticker>
@@ -299,19 +305,37 @@ function ConnectStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkCom
           <li key={p} className="flex items-center gap-xs"><Icon name="shield" size={14} className="shrink-0 text-positive" />{p}</li>
         ))}
       </ul>
-      <Link href={uploadHref} className="self-start text-sm font-semibold text-primary underline-offset-4 hover:underline">{t.connect.upload}</Link>
+      <UploadPicker onFile={vm.upload} className="self-start" />
     </>
   );
 }
 
-function ConnectingStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkComponent; uploadHref: string }) {
+/** "Rather upload a statement (CSV)": the file is read in this browser, then takes the bank's path. */
+function UploadPicker({ onFile, className }: { onFile: (file: File) => void; className?: string }) {
+  return (
+    <label className={cx('cursor-pointer text-sm font-semibold text-primary underline-offset-4 hover:underline focus-within:underline', className)}>
+      {t.connect.upload}
+      <input
+        type="file" accept=".csv,text/csv" className="sr-only" data-testid="onboarding-upload"
+        onChange={(e) => {
+          const picked = e.target.files?.[0];
+          e.target.value = '';
+          if (picked) onFile(picked);
+        }}
+      />
+    </label>
+  );
+}
+
+function ConnectingStep({ vm }: { vm: OnboardingVM }) {
   const c = vm.connecting!;
-  const bank = vm.banks.find((b) => b.name === c.bankName);
-  const phases = t.connecting.phases;
+  const file = c.source === 'file';
+  const bank = file ? undefined : vm.banks.find((b) => b.name === c.bankName);
+  const phases = file ? t.connecting.file.phases : t.connecting.phases;
   return (
     <div className="flex flex-col gap-lg" data-testid="onboarding-connecting">
-      <Sticker tone="ink" tilt={-2} className="self-start text-sm"><Icon name="lock" size={14} />{t.connecting.sticker}</Sticker>
-      <h1 className={H1}>{t.connecting.title(c.bankName)}</h1>
+      <Sticker tone="ink" tilt={-2} className="self-start text-sm"><Icon name="lock" size={14} />{file ? t.connecting.file.sticker : t.connecting.sticker}</Sticker>
+      <h1 className={H1}>{file ? t.connecting.file.title : t.connecting.title(c.bankName)}</h1>
       <div className="mt-xs flex flex-col gap-xl rounded-xl bg-surface p-xl shadow-md ring-1 ring-border">
         <div className="flex items-center gap-md" aria-hidden="true">
           {bank && (
@@ -348,9 +372,9 @@ function ConnectingStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: Link
         </ol>
         {c.failed && (
           <div className="flex flex-wrap items-center gap-md">
-            <p className="text-sm text-negative">{t.connecting.error}</p>
-            <Button onClick={vm.retry}>{t.connecting.retry}</Button>
-            <Link href={uploadHref} className="text-sm font-semibold text-primary hover:underline">{t.connect.upload}</Link>
+            <p className="text-sm text-negative">{file ? t.connecting.file.error : t.connecting.error}</p>
+            {!file && <Button onClick={vm.retry}>{t.connecting.retry}</Button>}
+            <UploadPicker onFile={vm.upload} />
           </div>
         )}
       </div>
@@ -729,19 +753,30 @@ function MiniChart({ points, ageDomain, valueDomain, callout }: {
 
 // ----- 5. Decision -----------------------------------------------------------------------------
 
+/** Where a value sits on the decision slider's track: the thumb's centre (the .ob-range thumb is 1.75rem wide). */
+const onTrack = (share: number) => `calc(0.875rem + (100% - 1.75rem) * ${share})`;
+
 function DecisionStep({ vm, Link, doneHref, chart }: { vm: OnboardingVM; Link: LinkComponent; doneHref: string; chart?: ReactNode }) {
   const ll = vm.lifeline;
   if (ll.status !== 'ready') return null;
   const s = ll.slider;
   const k = ll.kpis.find((x) => x.id === 'chance')!;
+  const span = Math.max(1, s.max - s.min);
+  const share = (age: number) => (age - s.min) / span;
+  const baseShare = share(s.base);
+  const toneText = (tone: string) => (tone === 'bad' ? 'text-primary' : tone === 'good' ? 'text-positive' : 'text-chart-6');
   return (
     <div className="grid gap-xl lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
       <div className="flex min-w-0 flex-col gap-lg">
         <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.decision.sticker}</Sticker>
-        <h1 className="font-display text-3xl font-extrabold leading-tight sm:text-5xl">
+        {/* Room for three lines, so a longer headline never pushes the slider down mid-drag. */}
+        <h1 className="min-h-[3lh] font-display text-3xl font-extrabold leading-tight sm:text-5xl">
           {ll.headline.lead}
-          {ll.headline.payoff && <>, <span className={ll.headline.payoffTone === 'bad' ? 'text-negative' : 'text-primary'}>{ll.headline.payoff}</span></>}
+          {ll.headline.payoff && <>, <span className={ll.headline.payoffTone === 'bad' ? 'text-negative' : 'text-primary'}><TweenText text={ll.headline.payoff} /></span></>}
         </h1>
+        <p data-testid="onboarding-decision-why" className="-mt-sm min-h-[3lh] text-sm leading-relaxed text-text-muted">
+          {ll.headline.why ?? t.decision.title}
+        </p>
         <div className="relative flex flex-col gap-md rounded-xl bg-ink p-xl text-on-primary">
           <div className="flex items-end justify-between gap-md">
             <span className="font-display text-2xl font-extrabold">
@@ -749,20 +784,57 @@ function DecisionStep({ vm, Link, doneHref, chart }: { vm: OnboardingVM; Link: L
             </span>
             <span className="text-right">
               <span className="block text-xs font-bold uppercase tracking-wide text-chart-6">{k.label}</span>
-              <span className={cx('font-display text-4xl font-extrabold tabular-nums', k.tone === 'bad' ? 'text-primary' : k.tone === 'good' ? 'text-positive' : undefined)}>
-                {k.value ?? k.note}
+              <span className={cx('block font-display text-4xl font-extrabold tabular-nums', k.tone === 'bad' ? 'text-primary' : k.tone === 'good' ? 'text-positive' : undefined)}>
+                {k.value ? <TweenText text={k.value} /> : k.note}
               </span>
+              {/* Always one line tall: "▼ −100 pts", "same as your plan", or empty at the plan's age. */}
+              <span className={cx('block min-h-[1lh] text-xs font-bold tabular-nums', toneText(k.tone))}>{k.delta}</span>
             </span>
           </div>
-          <label htmlFor="ob-decision" className="sr-only">{s.label}</label>
-          <input id="ob-decision" data-testid="onboarding-decision" type="range" min={s.min} max={s.max} step={1} value={s.value}
-            aria-valuetext={s.formatValue(s.value)} onChange={(e) => ll.setAge(Number(e.target.value))}
-            className="w-full cursor-pointer accent-primary" />
-          <div aria-hidden="true" className="flex justify-between text-xs text-chart-6 tabular-nums">
-            <span>{s.min}</span><span>{s.max}</span>
+          <div className="relative pt-lg">
+            {/* The plan's age: a tick on the track and its label above it. */}
+            <span aria-hidden="true" className={cx('pointer-events-none absolute top-0 whitespace-nowrap text-xs font-bold text-chart-6',
+              baseShare < 0.15 ? '-translate-x-[0.875rem]' : baseShare > 0.85 ? '-translate-x-[calc(100%-0.875rem)]' : '-translate-x-1/2')}
+              style={{ left: onTrack(baseShare) }}>
+              {s.baseLabel}
+            </span>
+            <span aria-hidden="true" className="pointer-events-none absolute top-[calc(var(--spacing-lg)-0.25rem)] h-[1.125rem] w-0.5 -translate-x-1/2 rounded-full bg-chart-6"
+              style={{ left: onTrack(baseShare) }} />
+            <label htmlFor="ob-decision" className="sr-only">{s.label}</label>
+            <input id="ob-decision" data-testid="onboarding-decision" type="range" min={s.min} max={s.max} step={1} value={s.value}
+              aria-valuetext={s.formatValue(s.value)} onChange={(e) => ll.setAge(Number(e.target.value))}
+              className="ob-range relative" style={{ '--ob-fill': `${share(s.value) * 100}%` } as CSSProperties} />
+          </div>
+          {/* The Chance of success at every age on the slider, from the same simulations (fixed seed). */}
+          <div className="flex flex-col gap-xs">
+            <div className="relative h-4 mx-[0.875rem]" role={s.chances ? 'img' : undefined}
+              aria-label={s.chances ? `${s.chancesLabel}: ${s.chances.map((c) => c.label).join(', ')}` : undefined}>
+              {s.chances
+                ? s.chances.map((c) => (
+                  <span key={c.age} title={c.label}
+                    className={cx('absolute bottom-0 -translate-x-1/2 rounded-sm transition-[height,opacity] duration-300',
+                      c.tone === 'good' ? 'bg-positive' : 'bg-primary', c.age === s.value ? 'opacity-100' : 'opacity-45')}
+                    style={{ left: `${share(c.age) * 100}%`, width: `calc(${100 / span}% - 3px)`, height: `${Math.max(12, c.pct)}%` }} />
+                ))
+                : <span className="absolute inset-x-0 bottom-0 h-1 animate-pulse rounded-full bg-on-primary/10" />}
+            </div>
+            <div aria-hidden="true" className="flex justify-between text-xs text-chart-6 tabular-nums">
+              <span>{s.min}</span><span>{s.chancesLabel}</span><span>{s.max}</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-sm border-t border-on-primary/10 pt-md">
+            <span className="flex items-center gap-sm text-xs font-bold uppercase tracking-wide text-chart-6">
+              <Icon name="home" size={14} />{s.origin}
+              {s.isEstimate && <span className="ml-auto normal-case tracking-normal" title={s.estimateNote}><EstimateTag /></span>}
+            </span>
+            <ul className="flex flex-wrap gap-xs">
+              {s.facts.map((f) => (
+                <li key={f.label} className="rounded-full bg-on-primary/10 px-sm py-xs text-xs font-semibold tabular-nums">{f.label}</li>
+              ))}
+            </ul>
           </div>
           {s.value === s.base && (
-            <span aria-hidden="true" className="absolute -top-3 right-lg rotate-[-6deg] rounded-full bg-primary px-md py-xs text-sm font-extrabold">
+            <span aria-hidden="true" className="ob-pop absolute -top-3 right-lg rotate-[-6deg] rounded-full bg-primary px-md py-xs text-sm font-extrabold">
               {t.decision.hint}
             </span>
           )}
