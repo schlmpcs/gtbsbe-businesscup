@@ -71,7 +71,7 @@ export type DecideResultVM = {
 
 /** "Add to my plan": the chosen path as an Expense event on the active /plan scenario. */
 export type DecidePlanVM = {
-  /** Which path the button adds (the better one by default; the person can pick). */
+  /** Which path the card measures and adds (the alternative by default; the person can pick). */
   path: 'keep' | 'alternative';
   setPath: (path: 'keep' | 'alternative') => void;
   /** Null = nothing to add for this path (keeping is already in the plan; no car lowers a budget line instead). */

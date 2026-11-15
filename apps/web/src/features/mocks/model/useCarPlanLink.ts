@@ -50,7 +50,8 @@ export function useCarPlanLink({
   startYear: number;
 }): DecidePlanVM {
   const [chosen, setChosen] = useState<'keep' | 'alternative' | null>(null);
-  const path = chosen ?? result?.better ?? 'keep';
+  // The switch by default: it is the path that has something to add (keeping is already in the plan).
+  const path = chosen ?? 'alternative';
   const draft = useMemo(
     () => (result && alternative ? carPlanDraft(path, alternative, result, startYear) : null),
     [result, alternative, path, startYear],

@@ -29,7 +29,9 @@ function ticks(lo: number, hi: number): number[] {
   const mag = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? 10 * mag;
   const out: number[] = [];
-  for (let v = Math.floor(lo / step) * step; v <= hi + step * 0.001; v += step) out.push(v);
+  const first = Math.floor(lo / step) * step;
+  const last = Math.ceil(hi / step) * step;
+  for (let v = first; v <= last + step * 0.001; v += step) out.push(v);
   return out;
 }
 

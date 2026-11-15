@@ -195,6 +195,9 @@ export const mocks = {
       soFar: (day: number, days: number) => `Day ${day} of ${days}`,
     },
 
+    paceTitle: 'Month-end projection',
+    paceNote: (day: number, days: number) => `Spent so far against the projection. The line marks today, day ${day} of ${days}.`,
+
     // ----- category bars
     barsTitle: 'Usual month vs this month',
     barsSubtitle: (inProgress: boolean) => (inProgress ? 'By category, this month projected to its end' : 'By category'),

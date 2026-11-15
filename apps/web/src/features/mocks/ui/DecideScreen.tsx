@@ -265,7 +265,7 @@ function NumberField<K extends string>({
         value={f.value}
         onValueChange={(v) => onChange(f.key, v)}
         prefix={f.unit === 'money' || f.unit === 'monthly' ? '$' : undefined}
-        suffix={f.unit === 'monthly' ? t.suffix.monthly : f.unit === 'months' ? t.suffix.months : undefined}
+        suffix={f.unit === 'monthly' ? t.suffix.monthly : f.unit === 'months' ? t.suffix.months : f.unit === 'rate' ? '%' : undefined}
         percent={f.unit === 'rate'}
         max={f.max}
         maxFractionDigits={f.unit === 'months' ? 0 : 2}

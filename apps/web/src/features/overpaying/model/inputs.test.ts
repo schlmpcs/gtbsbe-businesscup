@@ -53,6 +53,17 @@ describe('clamps', () => {
 });
 
 describe('initialDraft', () => {
+  it('the person’s transactions (monthly averages) fill rent, groceries and childcare first, tagged as such', () => {
+    const profile = cloneProfileDemo();
+    const { draft, prefill } = initialDraft(profile, undefined, null, { rentUtilities: 2012.4, groceries: 611.6, eatingOut: 300 });
+    expect(draft.inputs.amounts).toMatchObject({ rent: 2012, groceries: 612, carInsurance: null });
+    expect(prefill.amounts).toMatchObject({ rent: 'ledger', groceries: 'ledger', carInsurance: null });
+    // Without a profile, the transactions still fill what they can (no ZIP).
+    const cold = initialDraft(null, undefined, null, { groceries: 480 });
+    expect(cold.draft.inputs.amounts.groceries).toBe(480);
+    expect(cold.prefill).toMatchObject({ zip: false, amounts: { groceries: 'ledger', rent: null } });
+  });
+
   it('without a profile or saved inputs: asks for nothing but defaults', () => {
     const { draft, prefill } = initialDraft(null, undefined);
     expect(draft.inputs).toEqual(emptyInputs());

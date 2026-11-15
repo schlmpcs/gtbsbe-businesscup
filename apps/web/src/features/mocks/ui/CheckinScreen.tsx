@@ -372,13 +372,13 @@ export function CheckinScreen({ vm, Link }: { vm: CheckinVM; Link: LinkComponent
               {month.inProgress && month.day !== null && month.daysInMonth !== null && (
                 <div className="card card-pad flex flex-col gap-sm" data-testid="checkin-pace">
                   <div className="flex flex-wrap items-baseline justify-between gap-md text-sm">
-                    <span className="font-semibold">{t.kpi.soFar}</span>
+                    <span className="font-semibold">{t.paceTitle}</span>
                     <span className="tabular-nums text-text-muted">
                       {money(compare.spentSoFar)} / {money(compare.projected)}
                     </span>
                   </div>
                   <Meter value={compare.projected > 0 ? compare.spentSoFar / compare.projected : 0} tone="c1" size="md" marker={month.day / month.daysInMonth} />
-                  <span className="text-xs text-text-muted">{t.kpiHint.soFar(month.day, month.daysInMonth)}</span>
+                  <span className="text-xs text-text-muted">{t.paceNote(month.day, month.daysInMonth)}</span>
                 </div>
               )}
               <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
