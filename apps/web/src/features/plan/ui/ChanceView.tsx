@@ -23,9 +23,11 @@ export function ChanceView({ vm }: { vm: ChanceOfSuccessVM }) {
                 {copy.chance.running}
               </p>
             )}
-            {vm.status === 'idle' && (
+            {(vm.status === 'idle' || vm.status === 'error') && (
               <div className="flex flex-col items-start gap-md">
-                <p className="text-sm">{vm.idleMessage}</p>
+                <p className="text-sm" role={vm.status === 'error' ? 'alert' : undefined}>
+                  {vm.status === 'error' ? vm.errorMessage : vm.idleMessage}
+                </p>
                 <Button onClick={vm.run}>{t.run}</Button>
               </div>
             )}

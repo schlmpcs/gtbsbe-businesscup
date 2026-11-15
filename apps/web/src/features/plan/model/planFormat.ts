@@ -1,18 +1,15 @@
 // Display helpers shared by the /plan hooks. Rounding happens here and nowhere else (the engine never
 // rounds). No amounts in event names, no math beyond picking a value out of the plan.
-import type { Money, PlanEvent, PlanKpis, PlanResult, Rate } from '@lifeguessr/types';
+import type { Money, PlanEvent, PlanKpis, Rate } from '@lifeguessr/types';
 import { plan as copy } from '@/copy';
 import { formatMoney, formatRate } from '@/lib/format';
-import { EVENT_ICONS, FIXTURE_FIRST_AGE, FIXTURE_FIRST_YEAR } from './fixturePlan';
+import { EVENT_ICONS } from './planEngine';
 import type { PlanKpiVM, PlanTone } from './types';
 
 export const money = (v: Money): string => formatMoney(v);
 export const signedMoney = (v: Money): string => formatMoney(v, { signed: true });
 export const pct = (v: Rate, digits = 1): string => formatRate(v, digits);
 export const toneOf = (v: number): PlanTone => (v >= 0 ? 'good' : 'bad');
-
-/** Age in the plan's calendar. */
-export const ageAtYear = (year: number): number => FIXTURE_FIRST_AGE + (year - FIXTURE_FIRST_YEAR);
 
 export function kpiVMs(kpis: PlanKpis, endAge: number): PlanKpiVM[] {
   const nw = (id: 'netWorthEndOfYear' | 'netWorthAtRetirement' | 'netWorthAtEnd', label: string, value: Money): PlanKpiVM => ({
@@ -33,9 +30,6 @@ export function kpiVMs(kpis: PlanKpis, endAge: number): PlanKpiVM[] {
     },
   ];
 }
-
-/** The year a plan reports its retirement figure for. */
-export const retireYearOf = (result: PlanResult): number => FIXTURE_FIRST_YEAR + (result.kpis.retireAge - FIXTURE_FIRST_AGE);
 
 export function eventSummary(e: PlanEvent): string {
   const s = copy.eventSummary;

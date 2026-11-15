@@ -60,7 +60,9 @@ export {
 // nobody edits this barrel later.
 export { plan } from './plan';                                                                 // MP3
 export { monteCarlo, monteCarloPercentiles, nearestRank } from './monteCarlo';                  // MP5
-export { defaultEvent, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown } from './planEvents'; // MP4
+export {
+  defaultEvent, defaultEventSources, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown, type DefaultEventSources,
+} from './planEvents'; // MP4
 export { accountsToProfile, profileToAccounts, netWorthSummary } from './accounts';            // MP8
 export { budgetRows, budgetRowsForYear } from './budget';                                      // MP9
 export { cashFlowSummary } from './cashFlow';                                                  // MP9

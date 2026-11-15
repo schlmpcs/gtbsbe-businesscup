@@ -1,66 +1,91 @@
-// The three best next moves of the active scenario, ranked by net worth at retirement. Fixture-backed:
-// the move list, the success-rate deltas and the explanations are stand-ins until moves come from the
-// engine (MP6) and /api/ai/explain writes the explanation; the retirement effect is the fixture plan
-// with and without the move's event.
-import type { PlanEvent, Rate } from '@lifeguessr/types';
-import { useCallback, useMemo } from 'react';
-import { plan as copy } from '@/copy';
-import { FIXTURE_FIRST_YEAR, fixturePlan } from './fixturePlan';
+// Next Moves on /plan, ranked on the active scenario's plan (docs/ENGINEERING.md → "Scenarios, Compare
+// and moves on the plan"). The candidates are the engine's level 1 moves for the person's profile
+// (moveCandidates: pay the highest-rate card first, trim the largest flexible category, cancel unused
+// subscriptions when a statement found them). Each one is measured by running plan() with and without
+// its patch: effectAtRetirement = net worth at retirement with the move − without it. rankCandidates
+// (the engine's rule) sorts them, drops effects under $1 and keeps the top 3.
+//
+// "Add to plan" adds the move to the active scenario (planStore.movesApplied): the scenario's plan then
+// runs on the profile with the move's patch. The profile itself is not changed. An added move stays on
+// the list, measured as the plan with all its moves minus the plan without this one.
+//
+// The change in Chance of success is not measured here yet (it needs a same-seed Monte Carlo before and
+// after each move, MP6): successRateDelta is null and the card leaves it out.
+import { moveCandidates, rankCandidates, type MoveCandidate } from '@lifeguessr/engine';
+import type { Money, Move } from '@lifeguessr/types';
+import { useCallback, useDeferredValue, useMemo } from 'react';
+import { ai, common, forecast, plan as copy } from '@/copy';
+import { useAppStore } from '@/state/store';
+import { NO_MOVES, planOf, profileFor, usePlanInputs } from './planEngine';
 import { signedMoney, toneOf } from './planFormat';
 import { usePlanStore } from './planStore';
 import type { PlanMoveVM, PlanMovesVM } from './types';
 
-type FixtureMove = { id: string; event: (year: number) => PlanEvent; successRateDelta: Rate };
+/** How many moves the card shows (applied ones always stay). */
+const MOVES_SHOWN = 3;
 
-const MOVES: readonly FixtureMove[] = [
-  { id: 'move-extra-income', successRateDelta: 0.06, event: (year) => ({ id: 'ev-move-extra-income', type: 'income', year, enabled: true, monthly: 400 }) },
-  { id: 'move-windfall', successRateDelta: 0.04, event: (year) => ({ id: 'ev-move-windfall', type: 'windfall', year, enabled: true, amount: 10_000 }) },
-  { id: 'move-side-income', successRateDelta: 0.03, event: (year) => ({ id: 'ev-move-side-income', type: 'income', year, enabled: true, monthly: 250 }) },
-];
-
-export const movePts = (rate: Rate): string => {
+export const movePts = (rate: number): string => {
   const n = Math.round(rate * 100);
   return `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n)} pts`;
 };
 
-export function usePlanMoves(): PlanMovesVM {
-  const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
-  const edit = usePlanStore((s) => s.edit);
-  const scenarioId = scenario?.id;
+function moveVM(m: Move | MoveCandidate, effect: Money, added: boolean): PlanMoveVM {
+  const categoryLabel = m.category ? common.categories[m.category] : undefined;
+  return {
+    id: m.id,
+    title: forecast.moves.title(m.kind, categoryLabel),
+    effectAtRetirement: copy.moves.effectAtRetirement(signedMoney(effect)),
+    effectAtRetirementRaw: effect,
+    successRateDelta: null,
+    successRateDeltaRaw: null,
+    explanation: `${ai.moveSummary(m.kind, m.category)} ${copy.moves.measured}`,
+    added,
+    tone: toneOf(effect),
+  };
+}
 
+export function usePlanMoves(): PlanMovesVM {
+  const liveScenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
+  const liveApplied = usePlanStore((s) => s.movesApplied[s.activeId] ?? NO_MOVES);
+  const applyMove = usePlanStore((s) => s.applyMove);
+  const subscriptionsDetected = useAppStore((s) => s.subscriptionsDetected);
+  const liveInputs = usePlanInputs();
+  // Measuring the moves re-runs plan() a few times: let a drag on the chart paint first.
+  const scenario = useDeferredValue(liveScenario);
+  const applied = useDeferredValue(liveApplied);
+  const inputs = useDeferredValue(liveInputs);
+
+  const ranked = useMemo((): { vms: PlanMoveVM[]; byId: Map<string, Move> } => {
+    const byId = new Map<string, Move>();
+    if (!scenario) return { vms: [], byId };
+    const retirementOf = (moves: readonly Move[]) => planOf(inputs, scenario, moves).kpis.netWorthAtRetirement;
+    const withAll = retirementOf(applied);
+
+    // Moves already in the plan: what each one adds on top of the others.
+    const appliedVMs = applied.map((m) => moveVM(m, withAll - retirementOf(applied.filter((x) => x.id !== m.id)), true));
+
+    // New candidates on the profile with the applied moves; the applied ones count as taken.
+    const profile = profileFor(inputs, applied);
+    const taken = { ...profile, doneMoveIds: [...profile.doneMoveIds, ...applied.map((m) => m.id)] };
+    const candidates = moveCandidates(taken, { subscriptionsDetected });
+    const measured = rankCandidates(taken, candidates, (c) => retirementOf([...applied, { ...c, effect10y: 0 }]) - withAll);
+    for (const m of measured) byId.set(m.id, m);
+    const fresh = measured.slice(0, Math.max(0, MOVES_SHOWN - appliedVMs.length)).map((m) => moveVM(m, m.effect10y, false));
+
+    const vms = [...appliedVMs, ...fresh].sort((a, b) => b.effectAtRetirementRaw - a.effectAtRetirementRaw);
+    return { vms, byId };
+  }, [scenario, applied, inputs, subscriptionsDetected]);
+
+  const scenarioId = liveScenario?.id;
   const addToPlan = useCallback(
     (moveId: string) => {
-      const move = MOVES.find((m) => m.id === moveId);
+      const move = ranked.byId.get(moveId);
       if (!move || !scenarioId) return;
-      const event = move.event(FIXTURE_FIRST_YEAR + 1);
-      edit(scenarioId, (s) => (s.events.some((e) => e.id === event.id) ? s : { ...s, events: [...s.events, event] }));
+      // effect10y holds the effect it was ranked by (rankCandidates); the plan reads only the patch.
+      applyMove(scenarioId, move);
     },
-    [edit, scenarioId],
+    [ranked, applyMove, scenarioId],
   );
 
-  const moves = useMemo((): PlanMoveVM[] => {
-    if (!scenario) return [];
-    return MOVES.map((m) => {
-      const event = m.event(FIXTURE_FIRST_YEAR + 1);
-      const added = scenario.events.some((e) => e.id === event.id);
-      const withMove = added ? scenario : { ...scenario, events: [...scenario.events, event] };
-      const effect = fixturePlan(withMove).kpis.netWorthAtRetirement - fixturePlan(scenario, added ? event.id : undefined).kpis.netWorthAtRetirement;
-      const text = copy.moves.items[m.id]!;
-      return {
-        id: m.id,
-        title: text.title,
-        effectAtRetirement: copy.moves.effectAtRetirement(signedMoney(effect)),
-        effectAtRetirementRaw: effect,
-        successRateDelta: copy.moves.successRateDelta(movePts(m.successRateDelta)),
-        successRateDeltaRaw: m.successRateDelta,
-        explanation: text.explanation,
-        added,
-        tone: toneOf(effect),
-      };
-    })
-      .sort((a, b) => b.effectAtRetirementRaw - a.effectAtRetirementRaw)
-      .slice(0, 3);
-  }, [scenario]);
-
-  return useMemo(() => ({ moves, addToPlan }), [moves, addToPlan]);
+  return useMemo(() => ({ moves: ranked.vms, addToPlan }), [ranked, addToPlan]);
 }

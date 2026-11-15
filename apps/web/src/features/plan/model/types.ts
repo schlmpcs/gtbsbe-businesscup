@@ -268,7 +268,7 @@ export type CompareVM =
 
 // ----- useChanceOfSuccess ---------------------------------------------------------------------
 
-export type ChanceStatus = 'idle' | 'running' | 'done';
+export type ChanceStatus = 'idle' | 'running' | 'done' | 'error';
 export type HistogramVM = { id: 'atRetirement' | 'atEnd' | 'shortfallAge'; title: string; xLabel: string; bins: { from: number; to: number; count: number; label: string }[] };
 export type ChanceResultVM = {
   /** Whole percent for the gauge, 0–100. */
@@ -307,7 +307,9 @@ export type ChanceOfSuccessVM = {
   result: ChanceResultVM | null;
   settings: ChanceSettingsVM;
   idleMessage: string;
-  /** Starts a run (the worker, in MP7b). */
+  /** Only when status is 'error'. */
+  errorMessage: string | null;
+  /** Starts a run of the engine's monteCarlo() on the active scenario. */
   run: () => void;
   updateSettings: (patch: ChanceSettingsPatch) => void;
   /** On: a fixed seed (same result every run). Off: a new seed each run. */
@@ -322,16 +324,16 @@ export type PlanMoveVM = {
   /** Net worth change at retirement from adding the move, signed: "+$41,000". */
   effectAtRetirement: string;
   effectAtRetirementRaw: Money;
-  /** Change in the chance of success, in percentage points, signed: "+4 pts". */
-  successRateDelta: string;
-  successRateDeltaRaw: Rate;
+  /** Change in the chance of success, in percentage points, signed: "+4 pts". Null until it is measured (same-seed Monte Carlo). */
+  successRateDelta: string | null;
+  successRateDeltaRaw: Rate | null;
   explanation: string;
   added: boolean;
   tone: PlanTone;
 };
 export type PlanMovesVM = {
   moves: PlanMoveVM[];
-  /** Adds the move's event to the active scenario. */
+  /** Adds the move to the active scenario's plan. */
   addToPlan: (moveId: string) => void;
 };
 

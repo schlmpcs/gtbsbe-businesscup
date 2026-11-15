@@ -43,7 +43,7 @@
     {
       "id": "ev-buy-home",
       "type": "buyHome",
-      "year": 2031,
+      "year": 2032,
       "enabled": true,
       "homeValue": 350000.0,
       "downPayment": 70000.0,

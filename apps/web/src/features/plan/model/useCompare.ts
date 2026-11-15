@@ -1,8 +1,8 @@
-// Compare two scenarios: both net worth series, the differences and one sentence. Fixture-backed
-// (fixturePlan.ts) until MP3 lands.
+// Compare two scenarios: both net worth series, the differences and one sentence. Both plans are the
+// engine's plan() on the person's inputs (planEngine.ts), with each scenario's applied moves.
 import { useCallback, useMemo, useState } from 'react';
 import { plan as copy } from '@/copy';
-import { fixturePlan } from './fixturePlan';
+import { NO_MOVES, planOf, usePlanInputs } from './planEngine';
 import { money, signedMoney, toneOf } from './planFormat';
 import { usePlanStore } from './planStore';
 import type { CompareVM, PlanTone } from './types';
@@ -12,6 +12,8 @@ const SAME_WITHIN = 0.5;
 
 export function useCompare(aId: string, bId: string): CompareVM {
   const scenarios = usePlanStore((s) => s.scenarios);
+  const movesApplied = usePlanStore((s) => s.movesApplied);
+  const inputs = usePlanInputs();
   const [swapped, setSwapped] = useState(false);
   const swap = useCallback(() => setSwapped((v) => !v), []);
   const [firstId, secondId] = swapped ? [bId, aId] : [aId, bId];
@@ -20,8 +22,8 @@ export function useCompare(aId: string, bId: string): CompareVM {
     const a = scenarios.find((s) => s.id === firstId);
     const b = scenarios.find((s) => s.id === secondId);
     if (!a || !b) return { status: 'notFound' };
-    const pa = fixturePlan(a);
-    const pb = fixturePlan(b);
+    const pa = planOf(inputs, a, movesApplied[a.id] ?? NO_MOVES);
+    const pb = planOf(inputs, b, movesApplied[b.id] ?? NO_MOVES);
     const n = Math.min(pa.years.length, pb.years.length);
     const series = Array.from({ length: n }, (_, i) => ({ year: pa.years[i]!.year, age: pa.years[i]!.age, a: pa.years[i]!.netWorth, b: pb.years[i]!.netWorth }));
 
@@ -33,7 +35,7 @@ export function useCompare(aId: string, bId: string): CompareVM {
     const tone = (d: number): PlanTone | null => (Math.abs(d) < SAME_WITHIN ? null : toneOf(d));
 
     const direction = Math.abs(dRet) < SAME_WITHIN ? 'same' : dRet > 0 ? 'higher' : 'lower';
-    const age = a.assumptions.retireAge;
+    const age = pa.kpis.retireAge;
     const diffLabel = money(Math.abs(dRet));
     const sentence =
       direction === 'same'
@@ -57,5 +59,5 @@ export function useCompare(aId: string, bId: string): CompareVM {
       sentence,
       swap,
     };
-  }, [scenarios, firstId, secondId, swap]);
+  }, [scenarios, movesApplied, inputs, firstId, secondId, swap]);
 }

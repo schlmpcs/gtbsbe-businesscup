@@ -1,17 +1,15 @@
 // /plan page: the KPI cards, the net worth chart with event markers, the three tables, the display unit
-// and the autosave indicator. Runs on the placeholder plan fixture until MP3 lands (fixturePlan.ts).
+// and the autosave indicator. Every number is the engine's plan() of the active scenario on the person's
+// profile, accounts and area (planEngine.ts); this hook only picks values out and formats them.
 import type { PlanEvent } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { plan as copy } from '@/copy';
-import { accountLabel, EVENT_ICONS, FIXTURE_FIRST_YEAR, FIXTURE_LAST_YEAR, fixturePlan, yearAtAge } from './fixturePlan';
-import { ageAtYear, eventSummary, iconOf, kpiVMs, money } from './planFormat';
+import { accountLabel, ageAt, calendarOf, clampYearTo, EVENT_ICONS, NO_MOVES, planOf, usePlanInputs, yearAt } from './planEngine';
+import { eventSummary, iconOf, kpiVMs, money } from './planFormat';
 import { usePlanStore } from './planStore';
 import type {
   PlanAccountsTableVM, PlanCashFlowTableVM, PlanChartVM, PlanDisplay, PlanEventRowVM, PlanVM,
 } from './types';
-
-/** Clamp to the plan's calendar and round to a whole year. */
-export const clampYear = (year: number): number => Math.min(FIXTURE_LAST_YEAR, Math.max(FIXTURE_FIRST_YEAR, Math.round(year)));
 
 /** `e` moved to `year`; an end year that would come before the start moves with it. */
 export function movedEvent(e: PlanEvent, year: number): PlanEvent {
@@ -25,7 +23,11 @@ export function movedEvent(e: PlanEvent, year: number): PlanEvent {
 export function usePlan(scenarioId: string): PlanVM {
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === scenarioId));
   const saveState = usePlanStore((s) => s.saveState);
+  const moves = usePlanStore((s) => s.movesApplied[scenarioId] ?? NO_MOVES);
   const edit = usePlanStore((s) => s.edit);
+  const inputs = usePlanInputs();
+  const endAge = scenario?.assumptions.endAge ?? 0;
+  const cal = useMemo(() => calendarOf(inputs.profile, endAge), [inputs.profile, endAge]);
 
   const setDisplay = useCallback(
     (display: PlanDisplay) => edit(scenarioId, (s) => ({ ...s, assumptions: { ...s.assumptions, display } })),
@@ -33,23 +35,24 @@ export function usePlan(scenarioId: string): PlanVM {
   );
   const moveEvent = useCallback(
     (id: string, year: number) => {
-      const y = clampYear(year);
+      const y = clampYearTo(cal, year);
       edit(scenarioId, (s) => ({
         ...s,
         assumptions: s.events.some((e) => e.id === id && e.type === 'retire')
-          ? { ...s.assumptions, retireAge: ageAtYear(y) }
+          ? { ...s.assumptions, retireAge: ageAt(cal, y) }
           : s.assumptions,
         events: s.events.map((e) => (e.id === id ? movedEvent(e, y) : e)),
       }));
     },
-    [edit, scenarioId],
+    [edit, scenarioId, cal],
   );
 
   return useMemo((): PlanVM => {
     if (!scenario) return { status: 'notFound', disclaimer: copy.disclaimer };
-    const result = fixturePlan(scenario);
+    const result = planOf(inputs, scenario, moves);
     const { years } = result;
-    const retireYear = yearAtAge(scenario.assumptions.retireAge);
+    const retireYear = yearAt(cal, result.kpis.retireAge);
+    const ageAtYear = (year: number) => ageAt(cal, year);
 
     const chart: PlanChartVM = {
       points: years.map((y) => ({ year: y.year, age: y.age, netWorth: y.netWorth, netWorthLabel: money(y.netWorth), belowZero: y.netWorth < 0 })),
@@ -59,15 +62,14 @@ export function usePlan(scenarioId: string): PlanVM {
       xTicks: years.filter((y, i) => i === 0 || y.age % 5 === 0).map((y) => ({ year: y.year, age: y.age, label: String(y.year) })),
       yDomain: [Math.min(...years.map((y) => y.netWorth)), Math.max(...years.map((y) => y.netWorth))],
       retireYear,
-      yearRange: { min: FIXTURE_FIRST_YEAR, max: FIXTURE_LAST_YEAR },
+      yearRange: { min: cal.firstYear, max: cal.lastYear },
     };
 
     const columnIds: string[] = [];
     for (const y of years) for (const a of y.accounts) if (!columnIds.includes(a.accountId)) columnIds.push(a.accountId);
     const columns: PlanAccountsTableVM['columns'] = columnIds.map((accountId) => {
-      const label = accountLabel(accountId, scenario.events);
-      const group = label?.group ?? 'otherAsset';
-      return { accountId, name: label?.name ?? accountId, group, groupLabel: copy.groups[group] };
+      const { name, group } = accountLabel(accountId, inputs, scenario);
+      return { accountId, name, group, groupLabel: copy.groups[group] };
     });
     const accounts: PlanAccountsTableVM = {
       columns,
@@ -129,5 +131,5 @@ export function usePlan(scenarioId: string): PlanVM {
       setDisplay,
       moveEvent,
     };
-  }, [scenario, saveState, setDisplay, moveEvent]);
+  }, [scenario, moves, inputs, cal, saveState, setDisplay, moveEvent]);
 }

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-// P8 /plan, P9 ?view=compare, P10 ?view=chance on the fixtures.
+// P8 /plan, P9 ?view=compare, P10 ?view=chance on the engine (demo profile and demo scenarios).
 test.describe('/plan', () => {
   test('shows the rules-based KPIs, the chart and Next Moves; adds an event', async ({ page }) => {
     await page.goto('/plan');

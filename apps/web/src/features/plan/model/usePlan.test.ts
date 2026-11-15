@@ -1,21 +1,40 @@
 // @vitest-environment jsdom
-// usePlan, useScenarios, useEventCatalog on the MP2 fixtures: no network, no engine.
+// usePlan, useScenarios, useEventCatalog on the engine: the demo profile (what the profile store holds
+// before the person enters anything) at 2026-11, ZIP 75206, and the demo scenarios. Expected numbers are
+// the engine's plan() of the same inputs, called here directly, so the hooks are checked to show the
+// engine's numbers and nothing else.
+import { findArea } from '@lifeguessr/data/areas';
+import { scenarioDemo } from '@lifeguessr/data/fixtures/plan';
+import { plan } from '@lifeguessr/engine';
+import type { PlanResult, Scenario } from '@lifeguessr/types';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTOSAVE_MS, resetPlanStore } from './planStore';
+import { stampProfile } from '@/state/profile';
+import { useAppStore } from '@/state/store';
+import { money } from './planFormat';
+import { AUTOSAVE_MS, resetPlanStore, usePlanStore } from './planStore';
 import type { PlanVM } from './types';
 import { useEventCatalog } from './useEventCatalog';
 import { usePlan } from './usePlan';
 import { useScenarios } from './useScenarios';
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+  vi.setSystemTime(new Date('2026-11-14T12:00:00'));
+  useAppStore.getState().reset();
   resetPlanStore();
-  vi.useFakeTimers();
 });
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
+
+/** The engine's plan of `scenario` on the profile store's profile at 2026-11 and its ZIP's area data. */
+function enginePlan(scenario: Scenario): PlanResult {
+  const profile = stampProfile(useAppStore.getState().profile, '2026-11');
+  return plan(profile, [], scenario, findArea(profile.zip) ?? undefined);
+}
+const active = (id = 'baseline') => usePlanStore.getState().scenarios.find((s) => s.id === id)!;
 
 function ready(vm: PlanVM) {
   if (vm.status !== 'ready') throw new Error('plan not ready');
@@ -23,46 +42,58 @@ function ready(vm: PlanVM) {
 }
 
 describe('usePlan', () => {
-  it('shows the four KPI cards from the fixture plan, formatted, with tones and tooltips', () => {
+  it('shows the four KPI cards of the engine plan, formatted, with tones and tooltips', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     const vm = ready(result.current);
-    // plan.demo.json kpis: netWorthEndOfYear −3,213.62; atRetirement (age 67) 109,000; atEnd (age 90) −220,433.05; shortfall at age 35.
-    expect(vm.kpis.map((k) => [k.id, k.value, k.tone])).toEqual([
-      ['netWorthEndOfYear', '−$3,214', 'bad'],
-      ['netWorthAtRetirement', '$109,000', 'good'],
-      ['netWorthAtEnd', '−$220,433', 'bad'],
-      ['shortfall', 'Age 35', 'bad'],
+    const k = enginePlan(active()).kpis;
+    expect(vm.kpis.map((x) => [x.id, x.value, x.raw])).toEqual([
+      ['netWorthEndOfYear', money(k.netWorthEndOfYear), k.netWorthEndOfYear],
+      ['netWorthAtRetirement', money(k.netWorthAtRetirement), k.netWorthAtRetirement],
+      ['netWorthAtEnd', money(k.netWorthAtEnd), k.netWorthAtEnd],
+      ['shortfall', 'Past 90', null],
     ]);
-    expect(vm.kpis.every((k) => k.tooltip.length > 0 && k.tooltipKey === k.id)).toBe(true);
+    // The demo story: today's balance sheet is below zero (card + car loan), the $350,000 home in 2032
+    // is paid from savings, and the money lasts past 90.
+    expect(vm.kpis[0]!.tone).toBe('bad');
+    expect(k.netWorthAtRetirement).toBeGreaterThan(500_000);
+    expect(k.shortfallAge).toBeNull();
+    expect(vm.kpis.every((x) => x.tooltip.length > 0 && x.tooltipKey === x.id)).toBe(true);
     expect(vm.disclaimer).toMatch(/educational simulation/i);
   });
 
-  it('builds the chart, its event markers and x ticks, and the three tables', () => {
+  it('builds the chart, its event markers and x ticks, and the three tables from plan()', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     const vm = ready(result.current);
+    const p = enginePlan(active());
     // 2026 (age 32) to 2084 (age 90) = 59 plan years.
     expect(vm.chart.points).toHaveLength(59);
-    expect(vm.chart.points[0]).toEqual({ year: 2026, age: 32, netWorth: -3213.62, netWorthLabel: '−$3,214', belowZero: true });
-    expect(vm.chart.points[1]!.belowZero).toBe(false); // 2027: 13,192.46
+    expect(vm.chart.points.map((x) => x.netWorth)).toEqual(p.years.map((y) => y.netWorth));
+    expect(vm.chart.points[0]).toMatchObject({ year: 2026, age: 32, belowZero: true });
     expect(vm.chart.markers.map((m) => [m.id, m.year, m.icon]).sort()).toEqual([
-      ['ev-buy-home', 2029, 'home'],
+      ['ev-buy-home', 2032, 'home'],
       ['ev-retire', 2061, 'beach'],
       ['ev-social-security', 2061, 'shield'],
     ]);
     expect(vm.chart.retireYear).toBe(2061); // 2026 + (67 − 32)
+    expect(vm.chart.yearRange).toEqual({ min: 2026, max: 2084 });
     expect(vm.chart.xTicks[0]).toEqual({ year: 2026, age: 32, label: '2026' });
     expect(vm.chart.xTicks.map((t) => t.age % 5)).toEqual([2, ...vm.chart.xTicks.slice(1).map(() => 0)]);
 
     expect(vm.tables.accounts.rows).toHaveLength(59);
-    expect(vm.tables.accounts.columns.map((c) => c.name)).toContain('Checking');
-    expect(vm.tables.accounts.rows[0]!.cells['checking-1']).toMatchObject({ start: '$3,800', end: '$5,678' });
+    // The home and its mortgage are rows of their own, named after the event.
+    const names = vm.tables.accounts.columns.map((c) => c.name);
+    expect(names).toEqual(expect.arrayContaining(['Home', 'Mortgage']));
     expect(vm.tables.accounts.rows.find((r) => r.isRetirementYear)!.year).toBe(2061);
-    // 2026 cash flow: income 10,400, expenses 8,521.84, net 1,878.16.
-    expect(vm.tables.cashFlow.rows[0]).toMatchObject({ incomeLabel: '$10,400', expensesLabel: '$8,522', netLabel: '$1,878', netTone: 'good' });
+    const y0 = p.years[0]!;
+    const income = y0.cashFlow.income.reduce((s, l) => s + l.amount, 0);
+    expect(vm.tables.cashFlow.rows[0]).toMatchObject({ incomeLabel: money(income), netLabel: money(y0.cashFlow.net) });
+    // 2032: the $70,000 down payment is a one-time cost of that year.
+    const y2032 = vm.tables.cashFlow.rows.find((r) => r.year === 2032)!;
+    expect(y2032.expenseLines.find((l) => l.key === 'oneOffCosts')!.label).toBe('One-time costs and down payments');
     expect(vm.tables.events.map((e) => [e.id, e.year, e.age])).toEqual([
-      ['ev-buy-home', 2029, 35], ['ev-retire', 2061, 67], ['ev-social-security', 2061, 67],
+      ['ev-buy-home', 2032, 38], ['ev-retire', 2061, 67], ['ev-social-security', 2061, 67],
     ]);
-    expect(vm.tables.events[0]!.summary).toBe('$615,400 home, 20% down'); // 123,080 / 615,400 = 0.2
+    expect(vm.tables.events[0]!.summary).toBe('$350,000 home, 20% down'); // 70,000 / 350,000 = 0.2
   });
 
   it('returns notFound for an unknown scenario', () => {
@@ -70,11 +101,11 @@ describe('usePlan', () => {
     expect(result.current.status).toBe('notFound');
   });
 
-  it('moveEvent changes the event year in state, clamped to the plan years', () => {
+  it('moveEvent changes the event year, clamped to the plan years, and the plan follows', () => {
     const { result } = renderHook(() => usePlan('baseline'));
-    act(() => ready(result.current).moveEvent('ev-buy-home', 2031.4));
-    expect(ready(result.current).tables.events.find((e) => e.id === 'ev-buy-home')!.year).toBe(2031);
-    expect(ready(result.current).chart.markers.find((m) => m.id === 'ev-buy-home')!.year).toBe(2031);
+    act(() => ready(result.current).moveEvent('ev-buy-home', 2034.4));
+    expect(ready(result.current).tables.events.find((e) => e.id === 'ev-buy-home')!.year).toBe(2034);
+    expect(ready(result.current).kpis[1]!.raw).toBe(enginePlan(active()).kpis.netWorthAtRetirement);
     act(() => ready(result.current).moveEvent('ev-buy-home', 2200));
     expect(ready(result.current).chart.markers.find((m) => m.id === 'ev-buy-home')!.year).toBe(2084);
     act(() => ready(result.current).moveEvent('ev-buy-home', 1990));
@@ -92,7 +123,7 @@ describe('usePlan', () => {
   it('autosave: saving right after a change, saved 300 ms later', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     expect(ready(result.current).saveState).toBe('saved');
-    act(() => ready(result.current).moveEvent('ev-buy-home', 2030));
+    act(() => ready(result.current).moveEvent('ev-buy-home', 2033));
     expect(ready(result.current)).toMatchObject({ saveState: 'saving', saveLabel: 'Saving…' });
     act(() => void vi.advanceTimersByTime(AUTOSAVE_MS - 1));
     expect(ready(result.current).saveState).toBe('saving');
@@ -100,24 +131,42 @@ describe('usePlan', () => {
     expect(ready(result.current)).toMatchObject({ saveState: 'saved', saveLabel: 'Saved just now' });
   });
 
-  it('setDisplay("future") grows the values by inflation', () => {
+  it('setDisplay("future") shows the engine plan in nominal dollars', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     act(() => ready(result.current).setDisplay('future'));
     const vm = ready(result.current);
     expect(vm.display.value).toBe('future');
-    // Retirement is plan index 35 (2061): 109,000 × 1.03^35 = 109,000 × 2.81386 = 306,711.
-    expect(vm.kpis[1]!.value).toBe('$306,711');
+    const k = enginePlan(active()).kpis;
+    expect(vm.kpis[1]!.raw).toBe(k.netWorthAtRetirement);
+    expect(k.netWorthAtRetirement).toBeGreaterThan(enginePlan(scenarioDemo as Scenario).kpis.netWorthAtRetirement);
+  });
+
+  it('a profile change moves the plan: the hooks read the profile store', () => {
+    const { result } = renderHook(() => usePlan('baseline'));
+    const before = ready(result.current).kpis[1]!.raw as number;
+    act(() => useAppStore.getState().setSpending('eatingOut', 140)); // $200 a month less
+    const after = ready(result.current).kpis[1]!.raw as number;
+    expect(after).toBeGreaterThan(before);
+    expect(after).toBe(enginePlan(active()).kpis.netWorthAtRetirement);
   });
 });
 
 describe('useScenarios', () => {
-  it('lists the two fixture scenarios, the first active, and can compare', () => {
+  it('lists the two demo scenarios, the first active, and can compare', () => {
     const { result } = renderHook(() => useScenarios());
     expect(result.current.items.map((s) => [s.id, s.name, s.active])).toEqual([
       ['baseline', 'Baseline', true],
       ['with-kid', 'Baseline + a kid', false],
     ]);
     expect(result.current.canCompare).toBe(true);
+  });
+
+  it('a profile of the person’s own gets the engine Baseline: Retire and Social Security at 67', () => {
+    act(() => useAppStore.getState().setSpending('eatingOut', 300)); // the profile is now the person's own
+    const { result } = renderHook(() => useScenarios());
+    expect(result.current.items.map((s) => s.name)).toEqual(['Baseline']);
+    const events = usePlanStore.getState().scenarios[0]!.events;
+    expect(events.map((e) => [e.type, e.year])).toEqual([['retire', 2061], ['socialSecurity', 2061]]);
   });
 
   it('select, add (duplicate the active one), rename and remove', () => {
@@ -160,7 +209,7 @@ describe('useEventCatalog', () => {
     expect(result.current.entries.every((e) => e.title && e.description && e.icon)).toBe(true);
   });
 
-  it('add(type) creates the event with its defaults and opens the editor on it', () => {
+  it('add(type) creates the event with the engine defaults and opens the editor on it', () => {
     const catalog = renderHook(() => useEventCatalog());
     const plan = renderHook(() => usePlan('baseline'));
     let id: string | null = null;
@@ -170,7 +219,8 @@ describe('useEventCatalog', () => {
     const row = ready(plan.result.current).tables.events.find((e) => e.id === id)!;
     expect(row).toMatchObject({ type: 'haveKid', year: 2027, enabled: true });
     // Dallas County infant childcare in the demo ZIP's area data.
-    expect(row.summary).toMatch(/^\$\d[\d,]* a month of childcare for 5 years$/);
+    const childcare = findArea('75206')!.childcareMonthly!.infant;
+    expect(row.summary).toBe(`${money(childcare)} a month of childcare for 5 years`);
     act(() => catalog.result.current.closeEditor());
     expect(catalog.result.current.openEventId).toBeNull();
   });

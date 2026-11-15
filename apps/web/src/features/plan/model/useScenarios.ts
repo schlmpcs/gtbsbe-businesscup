@@ -1,8 +1,11 @@
-// The scenario tabs of /plan: pick, duplicate, rename, remove. Fixture-backed (planStore.ts) until MP7b
-// moves the scenarios into the browser store.
-import { useCallback, useMemo } from 'react';
+// The scenario tabs of /plan: pick, duplicate, rename, remove. Until the person changes a scenario, the
+// scenarios follow the profile (planStore.ts → seedScenarios): the demo pair on the demo profile, the
+// engine's Baseline on the person's own.
+import { useCallback, useEffect, useMemo } from 'react';
 import { plan as copy } from '@/copy';
-import { usePlanStore } from './planStore';
+import { useAppStore } from '@/state/store';
+import { calendarOf, eventContext, usePlanInputs } from './planEngine';
+import { seedScenarios, usePlanStore } from './planStore';
 import type { ScenariosVM } from './types';
 
 export const DEFAULT_SCENARIO_ICON = 'home';
@@ -14,6 +17,18 @@ export function useScenarios(): ScenariosVM {
   const addScenario = usePlanStore((s) => s.addScenario);
   const removeScenario = usePlanStore((s) => s.removeScenario);
   const edit = usePlanStore((s) => s.edit);
+  const seed = usePlanStore((s) => s.seed);
+  const inputs = usePlanInputs();
+  const demo = useAppStore((s) => s.profileOrigin === 'demo');
+
+  useEffect(() => {
+    const first = usePlanStore.getState().scenarios[0];
+    if (!first) return;
+    const cal = calendarOf(inputs.profile, first.assumptions.endAge);
+    const key = `${demo ? 'demo' : 'own'}:${cal.firstYear}:${cal.birthYear}`;
+    if (usePlanStore.getState().seedKey === key) return;
+    seed(key, seedScenarios(demo, eventContext(inputs, first)));
+  }, [inputs, demo, seed]);
 
   const add = useCallback((): string => {
     const { scenarios: all, activeId: current } = usePlanStore.getState();
@@ -23,7 +38,7 @@ export function useScenarios(): ScenariosVM {
     let n = all.length + 1;
     while (taken.has(copy.scenarios.defaultName(n))) n++;
     const id = `scenario-${crypto.randomUUID()}`;
-    addScenario({ ...structuredClone(source), id, name: copy.scenarios.defaultName(n) });
+    addScenario({ ...structuredClone(source), id, name: copy.scenarios.defaultName(n) }, source.id);
     return id;
   }, [addScenario]);
 

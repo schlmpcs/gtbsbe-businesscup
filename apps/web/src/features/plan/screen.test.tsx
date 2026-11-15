@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 // P8 /plan, P9 Compare and P10 Chance of success: the presentational screen wired to its real
-// view-model hooks on the MP2 fixtures (no network, no worker).
+// view-model hooks on the engine: the demo profile at 2026-11 and the demo scenarios (no network).
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { plan as copy } from '@/copy';
+import { useAppStore } from '@/state/store';
 import { resetPlanStore } from './model/planStore';
 import { useAiLine, type AiLinePreview } from './model/useAiLine';
 import { useAssumptions } from './model/useAssumptions';
@@ -49,8 +50,10 @@ function Harness({ initialView = 'plan', ai }: { initialView?: PlanViewId; ai?: 
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+  vi.setSystemTime(new Date('2026-11-14T12:00:00'));
+  useAppStore.getState().reset();
   resetPlanStore();
-  vi.useFakeTimers();
 });
 afterEach(() => {
   cleanup();
@@ -66,7 +69,8 @@ describe('PlanScreen', () => {
   });
 
   it('shows the four rules-based KPIs, the chart with event markers and the AI estimate line', () => {
-    const { container } = render(<Harness ai={{ status: 'shown' }} />);
+    const points = [{ year: 2026, netWorth: -3000 }, { year: 2030, netWorth: 60000 }];
+    const { container } = render(<Harness ai={{ status: 'shown', points }} />);
     expect(screen.getByRole('heading', { level: 1, name: t.title })).toBeTruthy();
     const kpis = container.querySelectorAll('[data-kpi]');
     expect(kpis).toHaveLength(4);
@@ -74,8 +78,8 @@ describe('PlanScreen', () => {
     expect(within(kpis[0] as HTMLElement).getByText(copy.kpi.netWorthEndOfYear.label)).toBeTruthy();
 
     expect(screen.getByRole('figure', { name: t.chart.title })).toBeTruthy();
-    // Markers for the fixture's events (Retire, Social Security, Buy a home).
-    expect(screen.getByRole('button', { name: new RegExp(`^${copy.events.buyHome.title}, 2029`) })).toBeTruthy();
+    // Markers for the demo scenario's events (Retire, Social Security, Buy a home).
+    expect(screen.getByRole('button', { name: new RegExp(`^${copy.events.buyHome.title}, 2032`) })).toBeTruthy();
     // The AI line is a separate, labeled series.
     expect(screen.getByText(copy.aiLine.label)).toBeTruthy();
     expect(screen.getByText(t.chart.aiNote)).toBeTruthy();
@@ -120,6 +124,8 @@ describe('PlanScreen', () => {
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: t.chance.run }));
     });
+    expect(screen.getByText(copy.chance.running)).toBeTruthy();
+    act(() => void vi.advanceTimersByTime(0));
     expect(screen.getByTestId('chance-pct').textContent).toMatch(/%$/);
     expect(screen.getByRole('meter')).toBeTruthy();
     expect(screen.getByRole('figure', { name: t.chance.fanTitle })).toBeTruthy();

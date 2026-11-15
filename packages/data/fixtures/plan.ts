@@ -29,11 +29,13 @@ export const accountsDemo: readonly Account[] = deepFreeze(AccountSchema.array()
 
 /**
  * The Baseline scenario of the demo profile (age 32 in 2026, ZIP 75206): Retire at 67 (2061), Social
- * Security at 67 (estimate: 40% of take-home), and Buy a home in 2031: a $350,000 home with 20% ($70,000)
+ * Security at 67 (estimate: 40% of take-home), and Buy a home in 2032: a $350,000 home with 20% ($70,000)
  * down, 30 years at the mortgage default (Freddie Mac PMMS), the ZIP's ACS tax rate and NAIC insurance.
- * The price is the demo person's choice, below the ZIP's ACS median ($615,400): plan() shows that on
- * $5,200 a month of take-home the median home's $123,080 down payment in 2029 runs the plan short at
- * 35 (about $41,500 of cash saved by then), while this home leaves no shortfall.
+ * The price and year are the demo person's choice, below the ZIP's ACS median ($615,400): on $5,200 a
+ * month of take-home, plan() runs the median home's $123,080 down payment in 2029 short at 35 (about
+ * $41,500 of cash saved by then); this home in 2032 is paid from cash saved (about $71,500), leaves no
+ * shortfall, and works in about 86% of monteCarlo() paths (seed 42). In 2031 it would draw on the
+ * retirement account and work in only about half of them.
  */
 export const scenarioDemo: Readonly<Scenario> = deepFreeze(ScenarioSchema.parse(scenarioJson));
 

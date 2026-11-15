@@ -24,7 +24,7 @@ export function NextMoves({ vm }: { vm: PlanMovesVM }) {
                   <span className={cx('font-display text-xl font-extrabold tabular-nums', m.tone === 'bad' ? 'text-negative' : 'text-positive')}>
                     {m.effectAtRetirement}
                   </span>
-                  <span className="text-sm text-text-muted">{m.successRateDelta}</span>
+                  {m.successRateDelta !== null && <span className="text-sm text-text-muted">{m.successRateDelta}</span>}
                 </div>
               </div>
               <p className="text-sm">{m.explanation}</p>
