@@ -1,12 +1,12 @@
-// Chapter 3, "Let's find out.": pick how to count the month (import a CSV, try the sample statement, or
-// set it with sliders), then the BIG REVEAL: "Your guess $X" vs "Your real month $Y" as two growing bars
+// Chapter 3, "Let's find out.": pick how to count the month (connect a bank, a DEMO labelled as such
+// whose sheet the route renders; import a CSV; try the sample statement; or set it with sliders), then the BIG REVEAL: "Your guess $X" vs "Your real month $Y" as two growing bars
 // with the gap in dollars and percent, and where the month goes. The statement review keeps the S9
 // fixes: the summary and "Use these numbers" sit on top, and going on applies a pending statement
 // (nothing read is dropped). Every number comes from the view-models (useStatementUpload,
 // useQuickSliders, useMonthReveal).
 import { useId, useState, type CSSProperties, type ReactNode } from 'react';
-import { common, ladder, onboarding } from '@/copy';
-import { Art, Button, cx, EstimateTag, formatMoney, formatRate, Slider, Tag } from '@/ui-kit';
+import { bankDemo, common, ladder, onboarding } from '@/copy';
+import { Art, Button, buttonClassName, cx, EstimateTag, formatMoney, formatRate, Slider, Tag } from '@/ui-kit';
 import type { MonthRevealVM, QuickSlidersVM, StatementUploadError, StatementUploadVM } from '../model/types';
 import { Count } from './Count';
 
@@ -21,6 +21,12 @@ export type ChapterMonthProps = {
   sliders: QuickSlidersVM;
   reveal: MonthRevealVM;
   onDone: () => void;
+  /**
+   * Opens the demo bank link (features/bankDemo, rendered by the route). Its "Use these transactions"
+   * hands the statement to `upload.readFile`, and this chapter then shows the statement's review.
+   * Without it the "Connect your bank" card is not offered.
+   */
+  onConnectBank?: () => void;
 };
 
 function errorText(error: StatementUploadError | null): string {
@@ -38,9 +44,11 @@ function errorText(error: StatementUploadError | null): string {
   }
 }
 
-export function ChapterMonth({ upload, sliders, reveal, onDone }: ChapterMonthProps) {
+export function ChapterMonth({ upload, sliders, reveal, onDone, onConnectBank }: ChapterMonthProps) {
   // A statement already under review (e.g. after a reload of this chapter) opens on its review.
-  const [step, setStep] = useState<Step>(upload.status === 'review' || upload.status === 'reading' ? 'statement' : 'choose');
+  const [chosen, setStep] = useState<Step>(upload.status === 'review' || upload.status === 'reading' ? 'statement' : 'choose');
+  // A statement that starts reading while the choices show (the demo bank link handed one over) opens its review too.
+  const step: Step = chosen === 'choose' && (upload.status === 'review' || upload.status === 'reading') ? 'statement' : chosen;
   const toReveal = () => {
     // Going on with a statement under review uses its numbers, as "Use these numbers" does.
     if (upload.status === 'review') upload.apply();
@@ -60,6 +68,7 @@ export function ChapterMonth({ upload, sliders, reveal, onDone }: ChapterMonthPr
             setStep('statement');
           }}
           onSliders={() => setStep('sliders')}
+          onConnectBank={onConnectBank}
         />
       )}
       {step === 'statement' && (
@@ -97,24 +106,89 @@ function OptionCard({
 }) {
   const inner = (
     <>
-      {art && <Art name={art} className="w-20 shrink-0" imgClassName="aspect-square" loading="eager" />}
+      {art && <Art name={art} className="w-14 shrink-0 sm:w-16" imgClassName="aspect-square" loading="eager" />}
       <span className="flex min-w-0 flex-1 flex-col gap-xs text-left">
         {badge && <Tag className="self-start border-primary font-bold text-primary">{badge}</Tag>}
-        <span className="font-display text-xl font-extrabold leading-tight">{title}</span>
+        <span className="font-display text-lg font-extrabold leading-tight">{title}</span>
         <span className="text-sm text-text-muted">{body}</span>
         {children}
       </span>
     </>
   );
-  const cls = 'ob-press flex w-full items-center gap-md rounded-xl bg-surface p-lg text-text shadow-md transition-shadow hover:shadow-lg';
+  const cls = 'flex w-full items-center gap-md rounded-xl bg-surface p-lg text-text shadow-sm transition-shadow hover:shadow-md';
   return onClick ? (
-    <button type="button" onClick={onClick} className={cls} data-testid={testId}>
+    <button type="button" onClick={onClick} className={cx(cls, 'ob-press')} data-testid={testId}>
       {inner}
     </button>
   ) : (
-    <div className={cx(cls, 'border-2 border-dashed border-primary')} data-testid={testId}>
+    <div className={cls} data-testid={testId}>
       {inner}
     </div>
+  );
+}
+
+/** The first, biggest choice: the demo bank link, labelled a demo with sample data. */
+function BankCard({ onClick }: { onClick: () => void }) {
+  const b = bankDemo;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid="month-bank"
+      className="ob-press flex w-full flex-col gap-md rounded-xl border-2 border-primary bg-surface p-xl text-left text-text shadow-md transition-shadow hover:shadow-lg sm:flex-row sm:items-center"
+    >
+      <Art name="coins" className="w-20 shrink-0 sm:w-24" imgClassName="aspect-square" loading="eager" />
+      <span className="flex min-w-0 flex-1 flex-col gap-sm">
+        <Tag className="self-start border-primary font-bold text-primary" data-testid="month-bank-badge">
+          {b.badge}
+        </Tag>
+        <span className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">{b.entry.title}</span>
+        <span className="text-sm text-text-muted">{b.disclaimer}</span>
+      </span>
+      <span aria-hidden="true" className={cx(buttonClassName({ size: 'lg' }), 'self-stretch sm:self-center')}>
+        {b.entry.cta}
+      </span>
+    </button>
+  );
+}
+
+/** Our own file button (the native one is visually hidden: its text would follow the browser's language). */
+function FilePicker({ disabled, onFile }: { disabled: boolean; onFile: (file: File) => void }) {
+  const inputId = useId();
+  const [name, setName] = useState<string | null>(null);
+  return (
+    <span className="mt-xs flex min-w-0 flex-wrap items-center gap-sm">
+      <input
+        id={inputId}
+        type="file"
+        accept=".csv,text/csv"
+        disabled={disabled}
+        aria-label={u.pickerLabel}
+        data-testid="month-csv-input"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file) return;
+          setName(file.name);
+          onFile(file);
+        }}
+        className="peer sr-only"
+      />
+      <label
+        htmlFor={inputId}
+        aria-hidden="true"
+        className={cx(
+          buttonClassName({ variant: 'secondary' }),
+          'min-h-11 cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
+          disabled && 'pointer-events-none opacity-50',
+        )}
+      >
+        {t.pickFile}
+      </label>
+      <span className="min-w-0 truncate text-sm text-text-muted" data-testid="month-csv-name">
+        {name ? t.chosenFile(name) : t.noFile}
+      </span>
+    </span>
   );
 }
 
@@ -123,34 +197,28 @@ function Choose({
   onFile,
   onSample,
   onSliders,
+  onConnectBank,
 }: {
   upload: StatementUploadVM;
   onFile: (file: File) => void;
   onSample: () => void;
   onSliders: () => void;
+  onConnectBank?: () => void;
 }) {
-  const inputId = useId();
   const o = t.options;
   const canRead = upload.readFile !== null && upload.status !== 'loading';
+  const bank = onConnectBank && upload.readFile !== null;
   return (
     <div className="flex flex-col gap-md">
       <h2 className="font-display text-2xl font-extrabold">{t.chooseTitle}</h2>
+      {bank && (
+        <>
+          <BankCard onClick={onConnectBank} />
+          <h3 className="mt-sm text-sm font-semibold text-text-muted">{t.otherOptions}</h3>
+        </>
+      )}
       <OptionCard title={o.csv.title} body={canRead ? o.csv.body : u.pickerUnavailable} badge={o.csv.badge} art="upload" testId="month-csv">
-        <label htmlFor={inputId} className="sr-only">
-          {u.pickerLabel}
-        </label>
-        <input
-          id={inputId}
-          type="file"
-          accept=".csv,text/csv"
-          disabled={!canRead}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onFile(file);
-            e.target.value = '';
-          }}
-          className="mt-xs w-full text-sm text-text-muted file:mr-md file:min-h-11 file:cursor-pointer file:rounded-lg file:border-0 file:bg-ink file:px-lg file:text-base file:font-bold file:text-on-primary disabled:opacity-60"
-        />
+        <FilePicker disabled={!canRead} onFile={onFile} />
       </OptionCard>
       {upload.readFile !== null && <OptionCard title={o.sample.title} body={o.sample.body} art="little-things" onClick={onSample} testId="month-sample" />}
       <OptionCard title={o.sliders.title} body={o.sliders.body} art="coins" onClick={onSliders} testId="month-sliders" />
