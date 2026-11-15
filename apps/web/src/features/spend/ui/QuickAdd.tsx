@@ -3,7 +3,7 @@
 // on Home. Presentational: everything comes from QuickAddVM.
 import { useId } from 'react';
 import { common, spend as t } from '@/copy';
-import { Button, cx, formatMoney, Row, Stack } from '@/ui-kit';
+import { Button, formatMoney, Row, Select, Stack } from '@/ui-kit';
 import type { QuickAddVM } from '../model/types';
 
 export type QuickAddProps = { vm: QuickAddVM; className?: string };
@@ -85,14 +85,13 @@ export function QuickAdd({ vm, className }: QuickAddProps) {
                 <li key={d.key} className="flex flex-wrap items-center justify-between gap-sm rounded-md bg-surface px-md py-sm">
                   <span className="min-w-0 text-sm font-medium">{d.label ?? '—'}</span>
                   <span className="flex items-center gap-sm">
-                    <select
+                    <Select
+                      size="sm"
+                      fullWidth={false}
                       aria-label={t.confirm.categoryLabel(what)}
                       value={d.categoryGuessed ? '' : d.category}
                       onChange={(e) => vm.setDraftCategory(d.key, e.target.value as typeof d.category)}
-                      className={cx(
-                        'min-h-11 rounded-md border bg-bg px-sm text-sm',
-                        d.categoryGuessed ? 'border-dashed border-warning' : 'border-border',
-                      )}
+                      needsReview={d.categoryGuessed}
                     >
                       {d.categoryGuessed && (
                         <option value="" disabled>
@@ -104,7 +103,7 @@ export function QuickAdd({ vm, className }: QuickAddProps) {
                           {common.categories[c]}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                     <span className="font-semibold tabular-nums">{formatMoney(d.amount, { cents: true })}</span>
                   </span>
                 </li>

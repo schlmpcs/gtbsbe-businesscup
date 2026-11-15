@@ -19,6 +19,7 @@ import {
   NumberInput,
   Percent,
   Row,
+  Select,
   Sheet,
   Slider,
   SourceNote,
@@ -162,6 +163,25 @@ export function KitShowcase() {
           <Field label={t.inputs.term} error={termInvalid ? t.inputs.termError : undefined}>
             <NumberInput value={term} onValueChange={setTerm} suffix={t.inputs.months} maxFractionDigits={0} />
           </Field>
+          <Field label={t.inputs.select} hint={t.inputs.selectHint}>
+            <Select defaultValue={t.inputs.selectOptions[1]}>
+              {t.inputs.selectOptions.map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </Select>
+          </Field>
+          <Row>
+            <Select aria-label={t.inputs.pill} variant="pill" size="sm" fullWidth={false}>
+              {t.inputs.pillOptions.map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </Select>
+            <Select aria-label={t.inputs.pill} size="sm" fullWidth={false} needsReview>
+              {t.inputs.pillOptions.map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </Select>
+          </Row>
         </Stack>
       </Card>
 

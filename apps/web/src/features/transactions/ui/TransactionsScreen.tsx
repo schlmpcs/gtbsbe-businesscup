@@ -5,7 +5,7 @@
 // useTransactions; the route passes its Link component, the import link and today's date.
 import { useState, type ComponentType, type ReactNode } from 'react';
 import { bankDemo, planner, transactions as t } from '@/copy';
-import { Button, buttonClassName, cx, formatMoney, formatMonthYear, PageHeader, Tag } from '@/ui-kit';
+import { Button, buttonClassName, cx, formatMoney, formatMonthYear, PageHeader, Select, Tag } from '@/ui-kit';
 import { EmptyState, KpiStrip, Panel, Segmented } from '@/ui-kit/reports';
 import type { DirectionFilter, ImportStateVM, StatementClass, TransactionsVM } from '../model/types';
 import { AddTransactionForm } from './AddTransactionForm';
@@ -23,7 +23,7 @@ export type TransactionsScreenProps = {
   onConnectBank?: () => void;
 };
 
-const SELECT = 'min-h-11 w-full min-w-0 rounded-lg border border-border bg-bg px-sm text-base sm:text-sm';
+const SEARCH_INPUT = 'min-h-11 w-full min-w-0 rounded-lg border border-border bg-bg px-sm text-base sm:text-sm';
 const DIRECTIONS: DirectionFilter[] = ['all', 'in', 'out'];
 
 export function TransactionsScreen({ vm, links, Link, today, openImport = false, onConnectBank }: TransactionsScreenProps) {
@@ -254,7 +254,7 @@ function Filters({ vm }: { vm: TransactionsVM }) {
           value={f.query}
           onChange={(e) => vm.search(e.target.value)}
           data-testid="transactions-search"
-          className={cx(SELECT, 'flex-1 px-md')}
+          className={cx(SEARCH_INPUT, 'flex-1 px-md')}
         />
         {f.query !== '' && (
           <Button variant="ghost" size="sm" onClick={() => vm.search('')}>
@@ -263,12 +263,12 @@ function Filters({ vm }: { vm: TransactionsVM }) {
         )}
       </div>
       <div className="grid grid-cols-1 gap-sm sm:grid-cols-3">
-        <select
+        <Select
+          size="sm"
           aria-label={t.screen.category}
           value={f.category}
           onChange={(e) => vm.setFilter('category', e.target.value as StatementClass | 'all')}
           data-testid="transactions-filter-category"
-          className={SELECT}
         >
           <option value="all">{t.allCategories}</option>
           {vm.options.categories.map((c) => (
@@ -276,13 +276,13 @@ function Filters({ vm }: { vm: TransactionsVM }) {
               {planner.categories[c]}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
+          size="sm"
           aria-label={t.screen.account}
           value={f.accountId}
           onChange={(e) => vm.setFilter('accountId', e.target.value)}
           data-testid="transactions-filter-account"
-          className={SELECT}
         >
           <option value="all">{t.allAccounts}</option>
           {vm.options.accounts.map((a) => (
@@ -290,13 +290,13 @@ function Filters({ vm }: { vm: TransactionsVM }) {
               {a.name}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
+          size="sm"
           aria-label={t.screen.month}
           value={f.month}
           onChange={(e) => vm.setFilter('month', e.target.value)}
           data-testid="transactions-filter-month"
-          className={SELECT}
         >
           <option value="all">{t.screen.allMonths}</option>
           {vm.options.months.map((m) => (
@@ -304,7 +304,7 @@ function Filters({ vm }: { vm: TransactionsVM }) {
               {formatMonthYear(m)}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <Segmented
         legend={t.screen.direction}

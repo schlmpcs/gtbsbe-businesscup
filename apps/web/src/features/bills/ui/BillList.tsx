@@ -1,11 +1,10 @@
 // Every bill with its due day, editable inline (a select per bill), and the paydays.
 import { bills as t } from '@/copy';
-import { cx, EstimateTag, formatMoney, Tag } from '@/ui-kit';
+import { cx, EstimateTag, formatMoney, Select, Tag } from '@/ui-kit';
 import type { BillVM } from '../model/types';
 import { KIND_DOT } from './kind';
 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
-const SELECT = 'min-h-11 rounded-lg border-2 border-border bg-surface px-sm py-xs text-base tabular-nums';
 
 export type BillListProps = {
   bills: BillVM[];
@@ -38,18 +37,19 @@ export function BillList({ bills, onDueDay }: BillListProps) {
             </span>
           </div>
           <div className="flex items-center gap-sm">
-            <select
+            <Select
               aria-label={t.list.dueDay(b.label)}
               value={b.dueDay}
               onChange={(e) => onDueDay(b.id, Number(e.target.value))}
-              className={SELECT}
+              fullWidth={false}
+              className="tabular-nums"
             >
               {DAYS.map((d) => (
                 <option key={d} value={d}>
                   {t.list.dayOption(d)}
                 </option>
               ))}
-            </select>
+            </Select>
             {b.dueDaySetByUser && (
               <button type="button" onClick={() => onDueDay(b.id, null)} className="min-h-11 text-sm font-semibold text-primary hover:underline">
                 {t.list.reset}
@@ -78,24 +78,24 @@ export function PaydaysForm({ days, isEstimate, onChange }: PaydaysFormProps) {
       <div className="flex flex-wrap gap-md">
         <label className="flex flex-col gap-xs text-sm">
           {t.payday.first}
-          <select value={first} onChange={(e) => set(Number(e.target.value), second)} className={SELECT}>
+          <Select value={first} onChange={(e) => set(Number(e.target.value), second)} fullWidth={false} className="tabular-nums">
             {DAYS.map((d) => (
               <option key={d} value={d}>
                 {t.list.dayOption(d)}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-xs text-sm">
           {t.payday.second}
-          <select value={second} onChange={(e) => set(first, Number(e.target.value))} className={SELECT}>
+          <Select value={second} onChange={(e) => set(first, Number(e.target.value))} fullWidth={false} className="tabular-nums">
             <option value={0}>{t.payday.noSecond}</option>
             {DAYS.map((d) => (
               <option key={d} value={d}>
                 {t.list.dayOption(d)}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
       {isEstimate && (

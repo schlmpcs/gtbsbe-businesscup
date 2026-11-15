@@ -32,6 +32,7 @@ export { LockNotice, type LockNoticeProps } from './LockNotice';
 export { Money, Percent, type MoneyProps, type PercentProps } from './Money';
 export { NumberInput, type NumberInputProps } from './NumberInput';
 export { Scoreboard, type ScoreboardItem, type ScoreboardProps } from './Scoreboard';
+export { Select, type SelectProps, type SelectSize, type SelectVariant } from './Select';
 export { Sheet, type SheetProps } from './Sheet';
 export { LOG_SLIDER_POSITIONS, Slider, sliderScale, type SliderProps } from './Slider';
 export { SourceNote, type SourceNoteProps } from './SourceNote';

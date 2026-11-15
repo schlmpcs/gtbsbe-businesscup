@@ -2,11 +2,8 @@
 
 // One editable plan value (an event field or an assumption): picks the control from `kind` and shows the
 // label, hint, estimate tag and source the view-model gives. Values go back untouched through onChange.
-import { Field, NumberInput, SourceNote, cx, useFieldControl } from '@/ui-kit';
+import { Field, NumberInput, Select, SourceNote, cx } from '@/ui-kit';
 import type { EventFieldKind, PlanFieldValue, Source } from '../model/types';
-
-export const SELECT_CLASS =
-  'min-h-11 w-full rounded-md border border-border bg-bg px-md text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 export type PlanFieldProps = {
   field: {
@@ -71,23 +68,20 @@ export function PlanField({ field: f, onChange, className }: PlanFieldProps) {
 
 /** A native select wired to the surrounding <Field> label. Options keep their own type (15 vs '15'). */
 function ChoiceSelect({ field: f, onChange }: { field: PlanFieldProps['field']; onChange: PlanFieldProps['onChange'] }) {
-  const control = useFieldControl();
   const options = f.options ?? [];
   return (
-    <select
-      {...control}
+    <Select
       value={String(f.value)}
       onChange={(e) => {
         const opt = options.find((o) => String(o.value) === e.target.value);
         if (opt) onChange(f.key, opt.value);
       }}
-      className={SELECT_CLASS}
     >
       {options.map((o) => (
         <option key={String(o.value)} value={String(o.value)}>
           {o.label}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

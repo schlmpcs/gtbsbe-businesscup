@@ -41,6 +41,11 @@ export const kitShowcase = {
     termError: 'Pick a term between 1 and 84 months.',
     dollar: '$',
     percent: '%',
+    select: 'Compare with',
+    selectHint: 'A Select: a real <select> in the kit style.',
+    selectOptions: ['Baseline', 'Scenario 2', 'Buy a home in 2033'],
+    pill: 'Category',
+    pillOptions: ['Groceries', 'Eating out', 'Transport'],
   },
   gauge: { label: 'Debt load', hint: 'Monthly debt payments ÷ take-home pay. Thresholds come from engine assumptions.' },
   tabs: {

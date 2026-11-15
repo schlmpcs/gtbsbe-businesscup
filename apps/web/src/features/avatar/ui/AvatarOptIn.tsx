@@ -1,5 +1,5 @@
 import { avatar as t } from '@/copy';
-import { Button, Card } from '@/ui-kit';
+import { Button, Card, Select } from '@/ui-kit';
 import type { AvatarVM } from '../model/types';
 import { AvatarCard } from './AvatarCard';
 export function AvatarOptIn({ vm }: { vm: AvatarVM }) {
@@ -31,7 +31,9 @@ export function AvatarOptIn({ vm }: { vm: AvatarVM }) {
             </label>
             <label>
               {t.fields['facts.kids']}{' '}
-              <select
+              <Select
+                size="sm"
+                fullWidth={false}
                 value={vm.facts.kids}
                 onChange={(event) =>
                   vm.setFacts({
@@ -45,11 +47,13 @@ export function AvatarOptIn({ vm }: { vm: AvatarVM }) {
                     {value === 3 ? '3+' : value}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label>
               {t.fields['facts.householdAdults']}{' '}
-              <select
+              <Select
+                size="sm"
+                fullWidth={false}
                 value={vm.facts.householdAdults}
                 onChange={(event) =>
                   vm.setFacts({
@@ -60,7 +64,7 @@ export function AvatarOptIn({ vm }: { vm: AvatarVM }) {
               >
                 <option value={1}>1</option>
                 <option value={2}>2</option>
-              </select>
+              </Select>
             </label>
           </fieldset>
           <Button
