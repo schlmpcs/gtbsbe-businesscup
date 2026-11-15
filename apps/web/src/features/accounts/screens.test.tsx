@@ -94,7 +94,7 @@ describe('AccountDetailScreen', () => {
   it('shows a card with its summary and the estimate tag on its defaulted minimum', () => {
     render(<Detail id="card-1" />);
     expect(screen.getByRole('heading', { level: 1, name: 'Credit card' })).toBeInTheDocument();
-    expect(screen.getByTestId('account-balance')).toHaveTextContent(formatMoney(6400, { cents: true }));
+    expect(screen.getByTestId('account-balance')).toHaveTextContent(formatMoney(6400));
     const summary = screen.getByTestId('account-summary');
     expect(summary).toHaveTextContent('24.36%');
     expect(summary).toHaveTextContent(formatMoney(193.92, { cents: true }));
@@ -109,7 +109,7 @@ describe('AccountDetailScreen', () => {
     expect(screen.getByText(t.detailScreen.invalidBalance)).toBeInTheDocument();
     fireEvent.change(screen.getByTestId('account-new-balance'), { target: { value: '6,000' } });
     fireEvent.click(screen.getByTestId('account-save-balance'));
-    expect(screen.getByTestId('account-balance')).toHaveTextContent(formatMoney(6000, { cents: true }));
+    expect(screen.getByTestId('account-balance')).toHaveTextContent(formatMoney(6000));
   });
 
   it('lists the lines of the checking account', () => {

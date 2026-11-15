@@ -1,11 +1,12 @@
 // Ladder S5–S9 (Y9, T6/T7): build a profile end to end in a real browser, on phone and desktop.
-// closest life → your spending (a statement first; by hand as the fallback) → balance sheet → /future,
+// closest life → your spending (a statement first; by hand as the fallback) → balance sheet → the story's chapter 4 (/start?ch=4),
 // through each step's CTA.
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { common } from '../src/copy/common';
 import { forecast } from '../src/copy/forecast';
 import { ladder } from '../src/copy/ladder';
+import { onboarding } from '../src/copy/onboarding';
 
 let pageErrors: string[] = [];
 
@@ -34,7 +35,7 @@ async function savedProfile(page: Page) {
   });
 }
 
-test('closest life → your spending (by hand) → balance sheet with a new debt → /future', async ({ page }) => {
+test('closest life → your spending (by hand) → balance sheet with a new debt → the plan (chapter 4)', async ({ page }) => {
   // Against a deployment with a model key the last step may wait up to 25 s for the forecast on top of the
   // steps before it: three times the default timeout.
   test.slow();
@@ -117,27 +118,16 @@ test('closest life → your spending (by hand) → balance sheet with a new debt
   const in10y = (await line.getByText(/^−?\$[\d,]+$/).textContent()) ?? '';
   expect(in10y).toMatch(/\$/);
 
-  // S10: the CTA leads to the forecast of the profile built above. S10 shows the same number only while its
-  // own answer is the rules forecast (always so in CI, where there is no model key); with the model's answer
-  // it shows another number, labeled as the AI's.
+  // The ladder's last CTA opens the story's chapter 4: the plan to 90 of the profile built above.
   await page.getByRole('link', { name: ladder.shell.cta.last }).click();
-  await expect(page).toHaveURL(/\/future$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.future.title(10));
-  const headlineSource = page.getByTestId('at-horizon').getByTestId('forecast-source');
-  await expect(headlineSource).toBeVisible({ timeout: 30_000 }); // the model has up to 25 s before the rules answer
-  if ((await headlineSource.getAttribute('data-source')) === 'rules') {
-    await expect(headlineSource).toHaveText(forecast.source.rules);
-    await expect(page.getByTestId('at-horizon')).toContainText(in10y);
-  } else {
-    await expect(headlineSource).toHaveText(forecast.source.ai);
-  }
-  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
-  await expect(page.getByRole('figure', { name: forecast.future.chartTitle(10) }).locator('.recharts-line-curve').first()).toBeVisible();
+  await expect(page).toHaveURL(/\/start\?ch=4$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(onboarding.story.chapters[4].title);
+  await expect(page.getByTestId('story-plan-line')).toBeVisible();
   const after = await savedProfile(page);
   expect(after?.profile.debts.some((d) => d.kind === 'student' && Math.abs(d.apr - 0.05) < 1e-9)).toBe(true);
 });
 
-test('statement first: import the sample, answer one follow-up, skip one, and reach /future without a slider', async ({ page }) => {
+test('statement first: import the sample, answer one follow-up, skip one, and reach the plan (chapter 4) without a slider', async ({ page }) => {
   test.slow(); // the last step may wait for the model's forecast on a deployment with a key
   await page.goto('/me/closest');
   await loaded(page);
@@ -203,9 +193,8 @@ test('statement first: import the sample, answer one follow-up, skip one, and re
   await expect(page.getByTestId('from-about')).toBeVisible();
   await expect(page.getByLabel(ladder.balance.fields.age)).toHaveCount(0);
   await page.getByRole('link', { name: ladder.shell.cta.last }).click();
-  await expect(page).toHaveURL(/\/future$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.future.title(10));
-  await expect(page.getByTestId('at-horizon').getByTestId('forecast-source')).toBeVisible({ timeout: 30_000 });
+  await expect(page).toHaveURL(/\/start\?ch=4$/);
+  await expect(page.getByTestId('story-plan-line')).toBeVisible();
 
   // The sliders, if opened, show the imported numbers for confirmation, not entry.
   await page.goto('/me/sliders');

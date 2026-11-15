@@ -66,6 +66,9 @@ test('transactions: empty state, manual add and a category change', async ({ pag
   const empty = page.getByTestId('transactions-empty');
   await expect(empty).toBeVisible();
   await expect(empty.getByRole('link', { name: t.screen.importGuided })).toHaveAttribute('href', '/me/upload');
+  // One import control, not two.
+  await expect(empty.getByText(t.import, { exact: true })).toHaveCount(1);
+  await expect(page.getByTestId('transactions-import')).toHaveCount(0);
   await expectNoSideScroll(page);
 
   await page.getByTestId('transactions-add').click();
@@ -78,6 +81,12 @@ test('transactions: empty state, manual add and a category change', async ({ pag
   await expect(row).toBeVisible();
   await expect(page.getByTestId('transactions-summary-count')).toHaveText('1');
   await expectNoSideScroll(page);
+
+  // With lines, "Import CSV" opens one panel: the file picker plus the guided path.
+  await page.getByTestId('transactions-import').click();
+  const panel = page.getByTestId('transactions-import-panel');
+  await expect(panel.getByRole('link', { name: t.screen.importGuided })).toHaveAttribute('href', '/me/upload');
+  await expect(panel.getByLabel(t.screen.importFile)).toBeAttached();
 
   await row.getByRole('combobox').selectOption('eatingOut');
   await expect(row.getByRole('combobox')).toHaveValue('eatingOut');

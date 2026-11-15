@@ -95,6 +95,8 @@ export const accounts = {
     chartTooFew: 'Your net worth line starts when you have balances from two different months.',
     periodLabel: 'Period',
     summaryTitle: 'Assets and liabilities',
+    splitLabel: 'Assets against liabilities',
+    groupCount: (n: number) => `${n} ${n === 1 ? 'account' : 'accounts'}`,
     summaryModeLabel: 'Show as',
     groupsTitle: 'Your accounts',
     excludedTag: 'Not counted',

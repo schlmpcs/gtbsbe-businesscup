@@ -5,7 +5,8 @@
 // useTransactions; the route passes its Link component, the import link and today's date.
 import { useState, type ComponentType, type ReactNode } from 'react';
 import { planner, transactions as t } from '@/copy';
-import { Button, buttonClassName, Card, Choice, cx, formatMoney, formatMonthYear, PageHeader, Stack } from '@/ui-kit';
+import { Button, buttonClassName, cx, formatMoney, formatMonthYear, PageHeader } from '@/ui-kit';
+import { EmptyState, KpiStrip, Panel, Segmented } from '@/ui-kit/reports';
 import type { DirectionFilter, ImportStateVM, StatementClass, TransactionsVM } from '../model/types';
 import { AddTransactionForm } from './AddTransactionForm';
 import { TransactionList } from './TransactionList';
@@ -16,76 +17,101 @@ export type TransactionsScreenProps = {
   Link: ComponentType<{ href: string; className?: string; children?: ReactNode }>;
   /** 'YYYY-MM-DD' the add form's date starts at. */
   today?: string;
+  /** Open the import panel on arrival (the dashboard's "Import CSV" links here with ?import=1). */
+  openImport?: boolean;
 };
 
-const SELECT = 'min-h-11 w-full min-w-0 rounded-lg border-2 border-border bg-surface px-sm text-base';
+const SELECT = 'min-h-11 w-full min-w-0 rounded-lg border border-border bg-bg px-sm text-base sm:text-sm';
 const DIRECTIONS: DirectionFilter[] = ['all', 'in', 'out'];
 
-export function TransactionsScreen({ vm, links, Link, today }: TransactionsScreenProps) {
+export function TransactionsScreen({ vm, links, Link, today, openImport = false }: TransactionsScreenProps) {
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(openImport);
   const [applyAll, setApplyAll] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
   const noLines = vm.ready && vm.options.months.length === 0;
 
   return (
-    <main className="mx-auto w-full max-w-(--container-5xl) px-lg py-xl sm:py-3xl">
-      <Stack gap="2xl">
-        <PageHeader title={t.title} intro={t.screen.intro} />
-        {!vm.ready ? (
-          <div role="status" aria-live="polite" className="h-96 animate-pulse rounded-xl bg-surface">
-            <span className="sr-only">{t.screen.loading}</span>
-          </div>
-        ) : (
-          <>
+    <main className="page flex flex-col gap-xl">
+      <PageHeader
+        title={t.title}
+        intro={t.screen.intro}
+        aside={
+          vm.ready && !noLines ? (
             <div className="flex flex-wrap gap-sm">
+              <Button variant="ghost" onClick={() => setExportFailed(vm.export() === 'failed')}>
+                {t.export}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setImporting((o) => !o)}
+                aria-expanded={importing}
+                aria-controls="transactions-import"
+                data-testid="transactions-import"
+              >
+                {t.import}
+              </Button>
               <Button onClick={() => setAdding((a) => !a)} aria-expanded={adding} data-testid="transactions-add">
                 {t.add}
               </Button>
-              <ImportButton vm={vm} />
-              <Link href={links.upload} className={buttonClassName({ variant: 'ghost' })}>
-                {t.screen.importGuided}
-              </Link>
-              {!noLines && (
-                <Button variant="ghost" onClick={() => setExportFailed(vm.export() === 'failed')}>
-                  {t.export}
-                </Button>
-              )}
             </div>
-            <ImportStatus state={vm.importState} />
-            {exportFailed && (
-              <p role="alert" className="text-sm text-negative">
-                {t.screen.exportFailed}
-              </p>
-            )}
-            {adding && (
-              <Card title={t.addForm.title}>
-                <AddTransactionForm onAdd={vm.add} accounts={vm.options.accounts} defaultDate={today} onDone={() => setAdding(false)} />
-              </Card>
-            )}
-            {noLines ? (
-              <Card data-testid="transactions-empty" className="flex flex-col items-center gap-md text-center">
-                <h2 className="font-display text-3xl font-extrabold">{t.screen.emptyAllTitle}</h2>
-                <p className="max-w-prose text-text-muted">{t.screen.emptyAllBody}</p>
-                <div className="flex flex-wrap justify-center gap-sm">
-                  <Link href={links.upload} className={buttonClassName({ variant: 'primary' })}>
-                    {t.screen.importGuided}
-                  </Link>
-                  {!adding && (
-                    <Button variant="secondary" onClick={() => setAdding(true)}>
-                      {t.add}
-                    </Button>
-                  )}
+          ) : undefined
+        }
+      />
+      {!vm.ready ? (
+        <div role="status" aria-live="polite" className="h-96 animate-pulse rounded-(--card-radius) bg-surface">
+          <span className="sr-only">{t.screen.loading}</span>
+        </div>
+      ) : (
+        <>
+          {!noLines && importing && (
+            <Panel title={t.screen.importTitle} data-testid="transactions-import-panel">
+              <div id="transactions-import">
+                <ImportPanel vm={vm} links={links} Link={Link} />
+              </div>
+            </Panel>
+          )}
+          <ImportStatus state={vm.importState} />
+          {exportFailed && (
+            <p role="alert" className="text-sm text-negative">
+              {t.screen.exportFailed}
+            </p>
+          )}
+          {adding && (
+            <Panel title={t.addForm.title}>
+              <AddTransactionForm onAdd={vm.add} accounts={vm.options.accounts} defaultDate={today} onDone={() => setAdding(false)} />
+            </Panel>
+          )}
+          {noLines ? (
+            <EmptyState
+              data-testid="transactions-empty"
+              art="upload"
+              title={t.screen.emptyAllTitle}
+              body={t.screen.emptyAllBody}
+              actions={
+                <div className="flex w-full flex-col items-center gap-md">
+                  <div className="flex flex-wrap justify-center gap-sm">
+                    <ImportButton vm={vm} />
+                    {!adding && (
+                      <Button variant="secondary" onClick={() => setAdding(true)} data-testid="transactions-add">
+                        {t.add}
+                      </Button>
+                    )}
+                  </div>
+                  <GuidedLink links={links} Link={Link} />
                 </div>
-              </Card>
-            ) : (
-              <>
-                <Summary vm={vm} />
+              }
+            />
+          ) : (
+            <>
+              <Summary vm={vm} />
+              <Panel aria-label={t.title} delay={60}>
                 <Filters vm={vm} />
-                <Card className="p-lg sm:p-xl">
-                  <label className="mb-md flex min-h-11 items-center gap-sm text-sm">
-                    <input type="checkbox" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} className="size-5 accent-primary" />
-                    {t.applyAll}
-                  </label>
+                <label className="mt-md flex min-h-11 items-center gap-sm text-sm text-text-muted">
+                  <input type="checkbox" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} className="size-5 accent-primary" />
+                  {t.applyAll}
+                </label>
+                <div className="mt-md border-t border-border pt-md">
                   {vm.rows.length === 0 ? (
                     <p className="py-xl text-center text-text-muted" data-testid="transactions-no-match">
                       {t.empty}
@@ -93,25 +119,49 @@ export function TransactionsScreen({ vm, links, Link, today }: TransactionsScree
                   ) : (
                     <TransactionList rows={vm.rows} onCategory={vm.setCategory} applyAll={applyAll} />
                   )}
-                  <Pager vm={vm} />
-                </Card>
-              </>
-            )}
-          </>
-        )}
-        <p className="text-xs text-text-muted">
-          {t.localOnly} {planner.educational}
-        </p>
-      </Stack>
+                </div>
+                <Pager vm={vm} />
+              </Panel>
+            </>
+          )}
+        </>
+      )}
+      <p className="text-xs text-text-muted">
+        {t.localOnly} {planner.educational}
+      </p>
     </main>
+  );
+}
+
+/** The one import control: pick a CSV here, or take the guided path (it has a sample statement). */
+function ImportPanel({ vm, links, Link }: { vm: TransactionsVM; links: { upload: string }; Link: TransactionsScreenProps['Link'] }) {
+  return (
+    <div className="flex flex-col gap-md">
+      <p className="max-w-prose text-sm text-text-muted">{t.screen.importBody}</p>
+      <div className="flex flex-wrap items-center gap-md">
+        <ImportButton vm={vm} />
+        <GuidedLink links={links} Link={Link} />
+      </div>
+    </div>
+  );
+}
+
+function GuidedLink({ links, Link }: { links: { upload: string }; Link: TransactionsScreenProps['Link'] }) {
+  return (
+    <span className="text-sm text-text-muted">
+      {t.screen.importNoFile}{' '}
+      <Link href={links.upload} className="font-semibold text-primary underline-offset-2 hover:underline">
+        {t.screen.importGuided}
+      </Link>
+    </span>
   );
 }
 
 function ImportButton({ vm }: { vm: TransactionsVM }) {
   const busy = vm.importState.status === 'reading';
   return (
-    <label className={cx(buttonClassName({ variant: 'secondary' }), 'cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-focus', busy && 'opacity-50')}>
-      {t.import}
+    <label className={cx(buttonClassName(), 'cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus', busy && 'opacity-50')}>
+      {busy ? t.importStates.reading : t.import}
       <input
         type="file"
         accept=".csv,text/csv"
@@ -145,23 +195,18 @@ function ImportStatus({ state }: { state: ImportStateVM }) {
 }
 
 function Summary({ vm }: { vm: TransactionsVM }) {
-  const items = [
-    { id: 'count', label: t.summary.count, value: String(vm.summary.count) },
-    { id: 'income', label: t.summary.income, value: formatMoney(vm.summary.income, { cents: true }) },
-    { id: 'spending', label: t.summary.spending, value: formatMoney(vm.summary.spending, { cents: true }) },
-    ...(vm.summary.largest ? [{ id: 'largest', label: t.summary.largest, value: formatMoney(vm.summary.largest.amount, { cents: true }) }] : []),
-  ];
+  const tile = (id: string, value: string) => <span data-testid={`transactions-summary-${id}`}>{value}</span>;
   return (
-    <dl className="grid grid-cols-2 gap-sm sm:grid-cols-4" data-testid="transactions-summary">
-      {items.map((i) => (
-        <div key={i.id} className="flex min-w-0 flex-col gap-xs rounded-lg bg-surface p-md shadow-sm">
-          <dt className="text-xs text-text-muted">{i.label}</dt>
-          <dd className="truncate text-lg font-bold tabular-nums" data-testid={`transactions-summary-${i.id}`}>
-            {i.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <KpiStrip
+      data-testid="transactions-summary"
+      aria-label={t.summaryLabel}
+      items={[
+        { id: 'count', label: t.summary.count, value: tile('count', String(vm.summary.count)) },
+        { id: 'income', label: t.summary.income, dot: 'positive', tone: 'positive', value: tile('income', formatMoney(vm.summary.income)) },
+        { id: 'spending', label: t.summary.spending, dot: 'c2', value: tile('spending', formatMoney(vm.summary.spending)) },
+        ...(vm.summary.largest ? [{ id: 'largest', label: t.summary.largest, value: tile('largest', formatMoney(vm.summary.largest.amount)) }] : []),
+      ]}
+    />
   );
 }
 
@@ -229,7 +274,7 @@ function Filters({ vm }: { vm: TransactionsVM }) {
           ))}
         </select>
       </div>
-      <Choice
+      <Segmented
         legend={t.screen.direction}
         name="transactions-direction"
         value={f.direction}

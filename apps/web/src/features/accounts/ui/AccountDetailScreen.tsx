@@ -6,7 +6,8 @@
 // feature's ui) as slots, so this screen never imports another feature.
 import { useState, type ReactNode } from 'react';
 import { accounts as t, planner } from '@/copy';
-import { Button, buttonClassName, Card, Choice, cx, EstimateTag, Field, formatMoney, formatMonthYear, formatRate, Stack, Tag, useFieldControl } from '@/ui-kit';
+import { Button, buttonClassName, Card, cx, EstimateTag, Field, formatMoney, formatMonthYear, formatRate, Stack, Tag, useFieldControl } from '@/ui-kit';
+import { Segmented } from '@/ui-kit/reports';
 import type { AccountPeriod, AccountVM } from '../model/types';
 import type { LinkComponent } from './AccountsScreen';
 import { BalanceChart } from './BalanceChart';
@@ -30,7 +31,7 @@ export function AccountDetailScreen({ vm, links, Link, transactions, renderAddLi
     </Link>
   );
   return (
-    <main className="mx-auto w-full max-w-(--container-5xl) px-lg py-xl sm:py-3xl">
+    <main className="page">
       <Stack gap="2xl">
         {back}
         {!vm.ready ? (
@@ -75,14 +76,14 @@ function Detail({ vm, account, transactions, renderAddLine }: { vm: AccountVM; a
         <h1 className="font-display text-4xl font-extrabold leading-tight break-words">{account.name}</h1>
         <p className="flex flex-wrap items-center gap-sm">
           <span className="font-display text-3xl font-extrabold tabular-nums" data-testid="account-balance">
-            {formatMoney(account.balance, { cents: true })}
+            {formatMoney(account.balance)}
           </span>
           {account.isEstimate && <EstimateTag />}
         </p>
       </header>
 
       <Card className="flex flex-col gap-lg">
-        <Choice
+        <Segmented
           legend={t.screen.periodLabel}
           name="account-period"
           value={vm.period}

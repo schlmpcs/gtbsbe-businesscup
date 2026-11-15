@@ -1,7 +1,8 @@
 // T8: the 2-minute demo path (docs/PRODUCT.md → Two-minute demo script) in one spec, phone and
-// desktop: a first visit to Today → Play → today's five duels (a hint in the first) → the day
-// result's "Price my own month" → guess your own month → closest life → sliders → You in 10 years →
-// upload the sample statement → Loan Lab compare. Selectors come from the copy files and roles, so a
+// desktop: the landing's Start → the onboarding story (3 practice duels → guess your month → ZIP and
+// household → the sample statement → guess vs. reality → the plan to 90 with Chance of success and Next
+// Moves) → Open my dashboard → "/" now goes to the dashboard → today's five duels at /play (a hint in the
+// first) → fine-tune by hand → Loan Lab compare. Selectors come from the copy files and roles, so a
 // Figma restyle does not break it.
 //
 // It runs in both ways the duel can be built, with the same steps: against the server
@@ -17,17 +18,17 @@ import { expect, test, type Page, type Request } from '@playwright/test';
 import type { ClientFunnelEvent, FunnelReport } from '@lifeguessr/types';
 import { common } from '../src/copy/common';
 import { duel } from '../src/copy/duel';
-import { forecast } from '../src/copy/forecast';
 import { ladder } from '../src/copy/ladder';
 import { loan } from '../src/copy/loan';
+import { onboarding } from '../src/copy/onboarding';
 
 const SAMPLE_STATEMENT = fileURLToPath(new URL('../../../packages/data/fixtures/statement.sample.csv', import.meta.url));
 const EVENTS_ON = process.env.NEXT_PUBLIC_EVENTS_SOURCE === 'api';
 
 /** The funnel steps this path goes through, in the order it reaches them. */
 const PATH_EVENTS = [
-  'play_started', 'hint_opened', 'duel_picked', 'own_guess_submitted', 'closest_life_chosen', 'statement_applied',
-  'sliders_adjusted', 'forecast_viewed', 'loan_compared',
+  'own_guess_submitted', 'closest_life_chosen', 'statement_applied', 'play_started', 'hint_opened', 'duel_picked',
+  'sliders_adjusted', 'loan_compared',
 ] as const satisfies readonly ClientFunnelEvent['name'][];
 
 let pageErrors: string[] = [];
@@ -80,17 +81,83 @@ function stored(page: Page, name: ClientFunnelEvent['name']): Promise<unknown> {
   );
 }
 
-test('demo path: first visit → Play → 5 duels → own guess → statement → by hand → forecast → Loan Lab', async ({ page }) => {
-  test.setTimeout(120_000);
+test('demo path: landing → story (practice, guess, statement, plan) → dashboard → 5 duels → by hand → Loan Lab', async ({ page }) => {
+  test.setTimeout(150_000);
+  const o = onboarding;
 
-  // ----- 0. A first visit to Today (S1) and its Play -----
+  // ----- 0. A first visit: the landing, one Start -----
   await page.goto('/');
-  const first = forecast.today.firstVisit;
-  await expect(h1(page)).toHaveText(first.title);
-  await page.getByTestId('play').getByRole('link', { name: first.play, exact: true }).click();
-  await expect(page).toHaveURL(/\/play$/);
+  await expect(h1(page)).toHaveText(o.landing.title);
+  await expectNoSideScroll(page);
+  await page.getByRole('link', { name: o.landing.start, exact: true }).click();
+  await expect(page).toHaveURL(/\/start$/);
 
-  // ----- 1. Play today's five duels at /play (S2 → S3 → day result) -----
+  // ----- 1. Chapter 1: three practice duels (not the daily five), then the average error -----
+  await expect(h1(page)).toHaveText(o.story.chapters[1].title);
+  await expect(page.getByText(o.practice.note)).toBeVisible();
+  for (let round = 1; round <= 3; round++) {
+    await expect(page.getByText(o.practice.round(round, 3))).toBeVisible();
+    await page.getByRole('button', { name: /^Life A costs more/ }).click();
+    const own = page.getByRole('slider', { name: o.practice.guessLabel('A') });
+    await own.focus();
+    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+    await page.getByRole('button', { name: o.practice.reveal }).click();
+    for (const letter of ['A', 'B'] as const) {
+      await expect(page.getByTestId(`practice-total-value-${letter}`)).toHaveAttribute('data-value', /^\$[\d,]+$/);
+      await expect(page.getByRole('list', { name: o.practice.barsLabel(letter) })).toBeVisible();
+    }
+    await page.getByRole('button', { name: round === 3 ? o.practice.finish : o.practice.next }).click();
+  }
+  await expect(page.getByTestId('practice-average')).toHaveText(/^You were off by \d+% on average\.$/);
+  await expectNoSideScroll(page);
+  await page.getByRole('button', { name: o.practice.onward }).click();
+
+  // ----- 2. Chapter 2: the gut guess, then ZIP + household -----
+  await expect(page).toHaveURL(/\/start\?ch=2$/);
+  await expect(h1(page)).toHaveText(o.story.chapters[2].title);
+  const guess = page.getByRole('slider', { name: ladder.guess.sliderLabel });
+  await guess.focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
+  const ownGuess = stored(page, 'own_guess_submitted');
+  await page.getByRole('button', { name: o.guess.lock }).click();
+  await ownGuess;
+  await expect(page.getByRole('button', { name: o.guess.next })).toBeDisabled();
+  await expect(page.getByTestId('zip-needed')).toHaveText(ladder.closest.about.zipNeeded);
+  await page.getByLabel(ladder.closest.about.zip).fill('75205');
+  const chosen = stored(page, 'closest_life_chosen');
+  await page.getByRole('button', { name: o.guess.next }).click();
+  await chosen;
+
+  // ----- 3. Chapter 3: import a bank CSV (the sample file), then guess vs. reality -----
+  await expect(page).toHaveURL(/\/start\?ch=3$/);
+  await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
+  await expect(page.getByTestId('statement-summary')).toBeVisible({ timeout: 20_000 });
+  const applied = stored(page, 'statement_applied');
+  await page.getByRole('button', { name: o.month.use }).click();
+  await applied;
+  const reveal = page.getByTestId('month-reveal');
+  await expect(reveal).toHaveAttribute('data-from', 'statement');
+  await expect(page.getByTestId('reveal-guess')).toHaveAttribute('data-value', /^\$[\d,]+$/);
+  await expect(page.getByTestId('reveal-actual')).toHaveAttribute('data-value', /^\$[\d,]+$/);
+  await expect(page.getByRole('list', { name: o.month.breakdownLabel }).getByRole('listitem').first()).toBeVisible();
+  await expectNoSideScroll(page);
+  await page.getByRole('button', { name: o.month.onward }).click();
+
+  // ----- 4. Chapter 4: the plan to 90, Chance of success (Monte Carlo), the next moves -----
+  await expect(page).toHaveURL(/\/start\?ch=4$/);
+  await expect(page.getByTestId('story-plan-line')).toBeVisible();
+  await expect(page.getByTestId('story-chance')).toHaveAttribute('data-status', 'done', { timeout: 20_000 });
+  await expect(page.getByRole('meter', { name: o.future.chanceLabel })).toHaveAttribute('aria-valuetext', /^\d+%$/);
+  await expect(page.getByTestId('story-moves').getByRole('listitem').first()).toBeVisible();
+  await expectNoSideScroll(page);
+  await page.getByRole('link', { name: o.future.dashboard }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  // The story is finished: "/" now opens the dashboard.
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/dashboard$/);
+
+  // ----- 5. Play today's five duels at /play -----
+  await page.goto('/play');
   await expect(h1(page)).toHaveText(duel.title);
   // One hint in the first round: one more fact on each card, for −10% of the round's points.
   await page.getByRole('button', { name: duel.hint.offer('10%') }).click();
@@ -110,50 +177,10 @@ test('demo path: first visit → Play → 5 duels → own guess → statement �
   await expect(page.getByRole('heading', { name: duel.summary.heading })).toBeVisible();
   await expect(page.getByRole('list', { name: duel.summary.gridLabel }).getByRole('listitem')).toHaveCount(5);
   await expectNoSideScroll(page);
-  // The game's events leave in their own batch before the next page (see `stored`).
   if (EVENTS_ON) await expect.poll(() => sentEvents.filter((e) => e.name === 'duel_picked').length, { timeout: 10_000 }).toBe(5);
-  await page.getByRole('link', { name: duel.summary.cta }).click();
-  await expect(page).toHaveURL(/\/me\/guess$/);
 
-  // ----- 2. Guess your own month (S5) -----
-  await expect(h1(page)).toHaveText(ladder.screens.S5);
-  const own = page.getByRole('slider', { name: ladder.guess.sliderLabel });
-  await own.focus();
-  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
-  const ownGuess = stored(page, 'own_guess_submitted');
-  // Locking the guess goes straight on (only the gut guess: nothing to compare it with yet).
-  await page.getByRole('link', { name: ladder.guess.submit }).click();
-  await ownGuess;
-
-  // ----- 3. About you (S6): the household and ZIP build the starting month for that area -----
-  await expect(page).toHaveURL(/\/me\/closest$/);
-  await page.getByLabel(ladder.closest.about.zip).fill('75205');
-  // The month built from the answers is preselected (JF13); tapping it starts from it.
-  const choose = page.getByRole('button', { name: new RegExp(`^${ladder.closest.choose}`) });
-  await expect(choose).toHaveAttribute('aria-pressed', 'true');
-  const chosen = stored(page, 'closest_life_chosen');
-  await choose.click();
-  await expect(page.getByText(ladder.closest.chosenNote)).toBeVisible();
-  await chosen;
-
-  // ----- 4. Your spending (S9): import the sample statement, nothing to type -----
-  await page.getByRole('link', { name: ladder.shell.cta.S6 }).click();
-  await expect(page).toHaveURL(/\/me\/upload$/);
-  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('aria-current', 'step');
-  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'false');
-  await page.getByLabel(ladder.upload.pickerLabel).setInputFiles(SAMPLE_STATEMENT);
-  await expect(page.getByTestId('statement-summary')).toBeVisible();
-  const applied = stored(page, 'statement_applied');
-  await page.getByRole('button', { name: ladder.upload.apply }).click();
-  await expect(page.getByText(ladder.upload.applied)).toBeVisible();
-  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('data-done', 'true');
-  await applied;
-  await expectNoSideScroll(page);
-
-  // ----- 5. Fine-tune by hand (S7, the same step): the month and the 10-year number follow -----
-  await page.getByRole('link', { name: ladder.upload.fork.byHandLink }).click();
-  await expect(page).toHaveURL(/\/me\/sliders$/);
-  await expect(page.locator('[data-rung="S9"]')).toHaveAttribute('aria-current', 'step');
+  // ----- 6. Fine-tune by hand (S7): the month follows -----
+  await page.goto('/me/sliders');
   const eatingOut = page.getByRole('slider', { name: common.categories.eatingOut });
   const monthCost = page.getByTestId('month-cost');
   const costBefore = await monthCost.textContent();
@@ -163,21 +190,6 @@ test('demo path: first visit → Play → 5 duels → own guess → statement �
   await expect(monthCost).not.toHaveText(costBefore ?? '');
   await adjusted;
   await expectNoSideScroll(page);
-
-  // ----- 6. You in 10 years (S10), through the step CTAs: S7 → S8 → the forecast -----
-  await page.getByRole('link', { name: ladder.shell.cta.S7 }).click();
-  await expect(page).toHaveURL(/\/me\/balance$/);
-  const viewed = stored(page, 'forecast_viewed');
-  await page.getByRole('link', { name: ladder.shell.cta.last }).click();
-  await expect(page).toHaveURL(/\/future$/);
-  await expect(h1(page)).toHaveText(forecast.future.title(10));
-  await page.getByTestId('chart-disclosure-summary').click(); // JF16: behind a disclosure
-  const chart = page.getByRole('figure', { name: forecast.future.chartTitle(10) });
-  await expect(chart.locator('.recharts-line-curve').first()).toBeVisible();
-  await expect(chart.locator('.recharts-area-area').first()).toBeVisible();
-  await expect(page.getByTestId('at-horizon').getByText(/^(If our estimates are off|AI model’s range): −?\$[\d,]+ to −?\$[\d,]+$/)).toBeVisible();
-  await expect(page.getByTestId('moves').getByRole('article').first()).toBeVisible();
-  await viewed;
 
   // ----- 7. Loan Lab (S12): three offers side by side, the debt-load gauge, pick another -----
   await page.goto('/loan');

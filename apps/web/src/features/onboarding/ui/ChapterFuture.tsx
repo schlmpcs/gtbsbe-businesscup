@@ -157,7 +157,6 @@ function PlanLine({ points, retireYear }: { points: PlanChartPoint[]; retireYear
 // ----- Chance of success ------------------------------------------------------------------------
 
 const R = 52;
-const C = 2 * Math.PI * R;
 
 function ChanceCard({ vm }: { vm: ChanceOfSuccessVM }) {
   const r = vm.result;

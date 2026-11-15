@@ -21,6 +21,8 @@ test('Budget: create from my spending, then planned vs actual by group', async (
   await expect(page.getByRole('heading', { level: 1, name: budget.title })).toBeVisible();
   await expect(page.getByRole('link', { name: budget.emptyLinks.upload })).toHaveAttribute('href', '/me/upload');
   await page.getByRole('button', { name: budget.create }).click();
+  await expect(page.getByTestId('budget-totals')).toBeVisible();
+  await expect(page.getByTestId('budget-donut')).toBeVisible();
   for (const g of Object.values(planner.budgetGroups)) await expect(page.getByRole('heading', { name: g })).toBeVisible();
   await expect(page.getByRole('textbox', { name: budget.editPlanned(planner.categories.groceries) })).toBeVisible();
   await noSideScroll(page);
@@ -29,16 +31,17 @@ test('Budget: create from my spending, then planned vs actual by group', async (
 test('Cash flow: empty state points to import', async ({ page }) => {
   await page.goto('/cashflow');
   await expect(page.getByRole('heading', { level: 1, name: cashflow.title })).toBeVisible();
+  await expect(page.getByRole('heading', { name: cashflow.emptyTitle })).toBeVisible();
   await expect(page.getByRole('link', { name: cashflow.emptyLinks.upload })).toHaveAttribute('href', '/me/upload');
   await noSideScroll(page);
 });
 
-test('Recurring: list and calendar', async ({ page }) => {
+test('Recurring: remaining due, calendar and the list', async ({ page }) => {
   await page.goto('/recurring');
   await expect(page.getByRole('heading', { level: 1, name: recurring.title })).toBeVisible();
-  await expect(page.getByRole('heading', { name: recurring.sections.income })).toBeVisible();
-  await page.getByRole('tab', { name: recurring.views.calendar }).click();
+  await expect(page.getByTestId('recurring-kpis').getByText(recurring.kpis.remaining)).toBeVisible();
   await expect(page.getByRole('table')).toBeVisible();
+  await expect(page.getByRole('heading', { name: recurring.sections.income })).toBeVisible();
   await noSideScroll(page);
 });
 

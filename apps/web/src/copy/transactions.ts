@@ -6,6 +6,7 @@ export const transactions = {
   allAccounts: 'All accounts',
   directions: { all: 'All', in: 'Money in', out: 'Money out' },
   summary: { count: 'Transactions', income: 'Income', spending: 'Spending', largest: 'Largest' },
+  summaryLabel: 'Totals for the transactions shown',
   import: 'Import CSV',
   importStates: {
     idle: '',
@@ -34,13 +35,16 @@ export const transactions = {
     noAccount: 'No account',
     overridden: 'You picked this category',
     changeCategory: (label: string) => `Category for ${label}`,
-    /** The import link to the guided statement flow (S9). */
-    importGuided: 'Import a CSV',
+    /** The secondary path inside "Import CSV": the guided statement flow (S9), which has a sample statement. */
+    importGuided: 'Use the guided import (with a sample statement)',
     importFile: 'Choose a CSV file',
+    importTitle: 'Import a bank statement',
+    importBody: 'Pick a CSV file from your bank. It is read in this browser; only masked merchant labels are sent to sort them into categories.',
+    importNoFile: 'No file at hand?',
     importDone: (added: number, skipped: number) =>
       `Imported ${added} ${added === 1 ? 'line' : 'lines'}${skipped > 0 ? `, skipped ${skipped} already here` : ''}.`,
     emptyAllTitle: 'No transactions yet',
-    emptyAllBody: 'Import a bank statement (it is read in this browser) or add a line by hand.',
+    emptyAllBody: 'Import a bank statement (it is read in this browser) or add a line by hand. Then see what you really spend.',
     page: (page: number, count: number) => `Page ${page} of ${count}`,
     prev: 'Previous',
     next: 'Next',

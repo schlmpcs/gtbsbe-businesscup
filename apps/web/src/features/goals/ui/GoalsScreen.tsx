@@ -5,7 +5,8 @@
 // route passes Link and the hrefs.
 import { useState, type ComponentType, type FormEvent, type ReactNode } from 'react';
 import { goals as t } from '@/copy';
-import { Button, buttonClassName, Card, cx, EstimateTag, Field, formatMoney, NumberInput, PageHeader, Row, Stack, Tabs } from '@/ui-kit';
+import { Button, buttonClassName, cx, EstimateTag, Field, formatMoney, formatRate, NumberInput, PageHeader, Tabs } from '@/ui-kit';
+import { EmptyState, Panel, Ring } from '@/ui-kit/reports';
 import type { GoalsVM, SaveUpGoalStatus, SaveUpGoalVM } from '../model/types';
 
 export type GoalsLinks = { loan: string; guess: string; upload: string };
@@ -16,12 +17,15 @@ export type GoalsScreenProps = {
   Link: ComponentType<{ href: string; className?: string; children?: ReactNode }>;
 };
 
-const STATUS_TEXT: Record<SaveUpGoalStatus, string> = { onTrack: 'text-positive', atRisk: 'text-warning', completed: 'text-positive' };
+const STATUS_CHIP: Record<SaveUpGoalStatus, string> = {
+  onTrack: 'bg-positive-soft text-positive',
+  atRisk: 'bg-warning/20 text-text',
+  completed: 'bg-positive text-on-primary',
+};
 
 export function GoalsScreen({ vm, links, Link }: GoalsScreenProps) {
   return (
-    <main className="mx-auto w-full max-w-(--container-5xl) px-lg py-xl sm:py-3xl">
-      <Stack gap="xl">
+    <main className="page flex flex-col gap-xl">
         <PageHeader title={t.title} intro={t.intro} />
         <Tabs
           label={t.tabsLabel}
@@ -42,52 +46,58 @@ export function GoalsScreen({ vm, links, Link }: GoalsScreenProps) {
               id: 'payDown',
               label: t.tabs.payDown,
               panel: (
-                <Card title={t.payDown.title} data-testid="goals-paydown">
-                  <Stack gap="md">
-                    <p className="text-text-muted">{t.payDown.body}</p>
-                    <Link href={links.loan} className={cx(buttonClassName(), 'self-start')}>
+                <EmptyState
+                  data-testid="goals-paydown"
+                  art="loan"
+                  title={t.payDown.title}
+                  body={t.payDown.body}
+                  actions={
+                    <Link href={links.loan} className={buttonClassName()}>
                       {t.payDown.cta}
                     </Link>
-                  </Stack>
-                </Card>
+                  }
+                />
               ),
             },
           ]}
         />
         <p className="text-xs text-text-muted">{t.estimate}</p>
-      </Stack>
     </main>
   );
 }
 
 function SaveUp({ vm, links, Link }: GoalsScreenProps) {
   return (
-    <Stack gap="lg">
-      <AddGoalForm onAdd={vm.addGoal} invalid={vm.inputError} />
+    <div className="flex flex-col gap-xl">
       {vm.goals.length === 0 ? (
-        <Card tone="muted" data-testid="goals-empty" title={t.emptyTitle} headingLevel={3}>
-          <Stack gap="md">
-            <p className="text-sm text-text-muted">{t.empty}</p>
-            <Row gap="md">
+        <EmptyState
+          data-testid="goals-empty"
+          art="coins"
+          headingLevel={3}
+          title={t.emptyTitle}
+          body={t.empty}
+          actions={
+            <>
               <Link href={links.guess} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
                 {t.emptyLinks.guess}
               </Link>
               <Link href={links.upload} className={buttonClassName({ variant: 'ghost', size: 'sm' })}>
                 {t.emptyLinks.upload}
               </Link>
-            </Row>
-          </Stack>
-        </Card>
+            </>
+          }
+        />
       ) : (
-        <ul className="grid grid-cols-[minmax(0,1fr)] gap-lg md:grid-cols-2">
-          {vm.goals.map((g) => (
-            <li key={g.id}>
-              <GoalCard goal={g} onRemove={() => vm.remove(g.id)} />
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-xl md:grid-cols-2">
+          {vm.goals.map((g, i) => (
+            <li key={g.id} className="flex">
+              <GoalCard goal={g} onRemove={() => vm.remove(g.id)} delay={i * 60} />
             </li>
           ))}
         </ul>
       )}
-    </Stack>
+      <AddGoalForm onAdd={vm.addGoal} invalid={vm.inputError} />
+    </div>
   );
 }
 
@@ -105,7 +115,7 @@ function AddGoalForm({ onAdd, invalid }: { onAdd: GoalsVM['addGoal']; invalid: b
     }
   };
   return (
-    <Card title={t.form.title} headingLevel={3}>
+    <Panel title={t.form.title} headingLevel={3} className="border-dashed">
       <form onSubmit={submit} aria-label={t.add} className="flex flex-col gap-md" noValidate>
         <div className="grid grid-cols-[minmax(0,1fr)] gap-md sm:grid-cols-3">
           <Field label={t.form.name} id="goal-name">
@@ -135,54 +145,58 @@ function AddGoalForm({ onAdd, invalid }: { onAdd: GoalsVM['addGoal']; invalid: b
           {t.add}
         </Button>
       </form>
-    </Card>
+    </Panel>
   );
 }
 
-function GoalCard({ goal, onRemove }: { goal: SaveUpGoalVM; onRemove: () => void }) {
+function GoalCard({ goal, onRemove, delay }: { goal: SaveUpGoalVM; onRemove: () => void; delay: number }) {
   const projection = goal.projection.status === 'ready' ? goal.projection.data : null;
+  const tone = goal.status === 'completed' || goal.status === 'onTrack' ? 'positive' : goal.status === 'atRisk' ? 'warning' : 'primary';
   return (
-    <Card
-      title={goal.name}
-      headingLevel={3}
-      data-testid="goal-card"
-      action={
-        goal.status && (
-          <span className={cx('text-sm font-semibold', STATUS_TEXT[goal.status])}>{t.statuses[goal.status]}</span>
-        )
-      }
-    >
-      <Stack gap="md">
-        <div aria-hidden="true" className="h-sm w-full overflow-hidden rounded-full bg-surface-strong">
-          <div
-            className={cx('h-full rounded-full', goal.status === 'completed' ? 'bg-positive' : 'bg-chart-1')}
-            style={{ width: `${Math.min(100, Math.max(0, goal.savedShare * 100))}%` }}
-          />
-        </div>
-        <p className="text-sm tabular-nums">{t.saved(formatMoney(goal.saved), formatMoney(goal.target))}</p>
-        <p className="text-sm text-text-muted">{t.eta(goal.years)}</p>
-        {goal.transactions.length > 0 && <p className="text-xs text-text-muted">{t.transactions(goal.transactions.length)}</p>}
-        {goal.projection.status === 'error' && <p className="text-sm text-text-muted">{t.projectionError}</p>}
-        {projection && (
-          <div className="flex flex-col gap-xs rounded-md bg-surface-strong p-md text-sm">
-            <span className="flex flex-wrap items-center gap-sm text-text-muted">
-              {t.monthlyToStayOnTrack}
-              <EstimateTag />
-            </span>
-            <span className="font-display text-2xl font-extrabold tabular-nums">{formatMoney(projection.monthlyToStayOnTrack)}</span>
-            {!projection.reachable && <span className="text-negative">{t.unreachable}</span>}
-            <span className="text-text-muted">
-              {t.projected}: <span className="tabular-nums text-text">{formatMoney(projection.projected.mid)}</span>
-            </span>
-            <span className="text-xs text-text-muted tabular-nums">
-              {t.projectedRange(formatMoney(projection.projected.low), formatMoney(projection.projected.high))}
-            </span>
+    <Panel headingLevel={3} data-testid="goal-card" delay={delay} className="flex w-full flex-col gap-lg">
+      <div className="flex items-center gap-lg">
+        <Ring value={goal.savedShare} tone={tone} className="w-24 sm:w-28">
+          <span className="font-display text-xl font-extrabold tabular-nums">{formatRate(goal.savedShare, 0)}</span>
+          <span className="text-xs text-text-muted">{t.savedLabel}</span>
+        </Ring>
+        <div className="flex min-w-0 flex-1 flex-col gap-xs">
+          <div className="flex flex-wrap items-center gap-sm">
+            <h3 className="min-w-0 break-words text-lg font-bold leading-tight">{goal.name}</h3>
+            {goal.status && (
+              <span className={cx('rounded-full px-sm py-0.5 text-xs font-semibold', STATUS_CHIP[goal.status])}>{t.statuses[goal.status]}</span>
+            )}
           </div>
-        )}
-        <Button variant="ghost" size="sm" className="self-start" aria-label={t.removeLabel(goal.name)} onClick={onRemove}>
-          {t.remove}
-        </Button>
-      </Stack>
-    </Card>
+          <p className="text-sm tabular-nums">
+            <span className="sr-only">{t.saved(formatMoney(goal.saved), formatMoney(goal.target))}</span>
+            <span aria-hidden="true">
+              <span className="font-display text-2xl font-extrabold">{formatMoney(goal.saved)}</span>{' '}
+              <span className="text-text-muted">{t.ofTarget(formatMoney(goal.target))}</span>
+            </span>
+          </p>
+          <p className="text-sm text-text-muted">{t.eta(goal.years)}</p>
+          {goal.transactions.length > 0 && <p className="text-xs text-text-muted">{t.transactions(goal.transactions.length)}</p>}
+        </div>
+      </div>
+      {goal.projection.status === 'error' && <p className="text-sm text-text-muted">{t.projectionError}</p>}
+      {projection && (
+        <div className="flex flex-col gap-xs rounded-lg bg-surface-strong p-md text-sm">
+          <span className="flex flex-wrap items-center gap-sm text-text-muted">
+            {t.monthlyToStayOnTrack}
+            <EstimateTag />
+          </span>
+          <span className="font-display text-2xl font-extrabold tabular-nums">{formatMoney(projection.monthlyToStayOnTrack)}</span>
+          {!projection.reachable && <span className="text-negative">{t.unreachable}</span>}
+          <span className="text-text-muted">
+            {t.projected}: <span className="tabular-nums text-text">{formatMoney(projection.projected.mid)}</span>
+          </span>
+          <span className="text-xs text-text-muted tabular-nums">
+            {t.projectedRange(formatMoney(projection.projected.low), formatMoney(projection.projected.high))}
+          </span>
+        </div>
+      )}
+      <Button variant="ghost" size="sm" className="mt-auto self-start" aria-label={t.removeLabel(goal.name)} onClick={onRemove}>
+        {t.remove}
+      </Button>
+    </Panel>
   );
 }
