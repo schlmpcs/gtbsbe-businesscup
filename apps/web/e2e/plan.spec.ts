@@ -18,6 +18,22 @@ test.describe('/plan', () => {
     await expect(page.getByRole('button', { name: 'Edit Have a kid' })).toBeVisible();
   });
 
+  test('the plan is saved in this browser: add an event, reload, it is still there', async ({ page }) => {
+    await page.goto('/plan');
+    await page.getByRole('button', { name: 'Add event' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /Windfall/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+    await page.getByRole('tab', { name: 'Events' }).click();
+    await expect(page.getByRole('button', { name: 'Edit Windfall' })).toBeVisible();
+    await expect(page.locator('[data-save-state]')).toHaveAttribute('data-save-state', 'saved');
+    await expect(page.locator('[data-save-state]')).toHaveText('Saved just now');
+
+    await page.reload();
+    await page.getByRole('tab', { name: 'Events' }).click();
+    await expect(page.getByRole('button', { name: 'Edit Windfall' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit Buy a home' })).toBeVisible();
+  });
+
   test('event badges on the chart open the editor; the year table scrolls inside its card', async ({ page }) => {
     await page.goto('/plan');
     await page.getByRole('button', { name: /^Buy a home, 2032/ }).click();

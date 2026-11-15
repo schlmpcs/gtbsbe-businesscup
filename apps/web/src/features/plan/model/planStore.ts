@@ -233,7 +233,7 @@ function ensureHydrated(): void {
   if (!usePlanStore.persist.hasHydrated()) void usePlanStore.persist.rehydrate();
 }
 
-export const usePlanStore = create<PlanData & PlanActions>()(persist((set, get) => {
+export const usePlanStore = create<PlanData & PlanActions>()(persist<PlanData & PlanActions, [], [], PersistedPlan>((set, get) => {
   /**
    * 'saving' now; 300 ms after the last change, 'saved' if the write of that change went through, or
    * 'error' if the browser refused it (private window, storage full or blocked). Every change is written

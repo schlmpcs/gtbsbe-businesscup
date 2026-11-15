@@ -14,7 +14,7 @@ import { useAppStore } from '@/state/store';
 import { useAccountsUiStore } from '@/features/accounts/model/accountsStore';
 import { initialBudgetData, useBudgetStore } from '@/features/budget/model/budgetStore';
 import { initialGoalsData, useGoalsStore } from '@/features/goals/model/goalsStore';
-import { initialPlanData, usePlanStore } from '@/features/plan/model/planStore';
+import { initialPlanData, resetPlanStore, usePlanStore } from '@/features/plan/model/planStore';
 import { useRecurringStore } from '@/features/recurring/model/recurringStore';
 import { useGoalLinks } from '@/features/transactions/model/goalLinks';
 import { markLedgerLoaded, setLedgerStore } from '@/features/transactions/model/transactionsStore';
@@ -49,7 +49,8 @@ export async function resetFixtureStores(): Promise<void> {
   useDashboardStore.setState({ ...initialDashboardData(), duelStreak: 3 });
   await Promise.all([useBudgetStore, useGoalsStore, useGoalLinks, useRecurringStore, useDashboardStore].map((s) => s.persist.rehydrate()));
 
-  // Plan: the fixture scenarios, none with an event yet.
+  // Plan: the fixture scenarios, none with an event yet; nothing saved, loaded (so changes are saved).
+  resetPlanStore();
   const plan = initialPlanData();
   usePlanStore.setState({ ...plan, scenarios: plan.scenarios.map((s) => ({ ...s, events: [] })) });
 }

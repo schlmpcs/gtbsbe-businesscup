@@ -62,6 +62,10 @@ test.describe('S11 Can I Afford It?', () => {
     await expect(page).toHaveURL(/\/plan$/);
     await page.getByRole('tab', { name: planCopy.screen.tabs.events }).click();
     await expect(page.getByRole('button', { name: planCopy.screen.events.edit('Couch') })).toBeVisible();
+    // The plan is saved in this browser: a reload keeps the event.
+    await page.reload();
+    await page.getByRole('tab', { name: planCopy.screen.tabs.events }).click();
+    await expect(page.getByRole('button', { name: planCopy.screen.events.edit('Couch') })).toBeVisible();
   });
 });
 
@@ -95,6 +99,9 @@ test.describe('S12 Loan Lab', () => {
     await expect(card.getByTestId('tool-plan-added')).toBeVisible();
     await card.getByRole('link', { name: new RegExp(toolPlan.open) }).click();
     await expect(page).toHaveURL(/\/plan$/);
+    await page.getByRole('tab', { name: planCopy.screen.tabs.events }).click();
+    await expect(page.getByRole('button', { name: planCopy.screen.events.edit(loan.plan.eventName(loan.offerName(2))) })).toBeVisible();
+    await page.reload();
     await page.getByRole('tab', { name: planCopy.screen.tabs.events }).click();
     await expect(page.getByRole('button', { name: planCopy.screen.events.edit(loan.plan.eventName(loan.offerName(2))) })).toBeVisible();
   });

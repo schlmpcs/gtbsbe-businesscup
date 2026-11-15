@@ -2,6 +2,7 @@
 // desktop.
 import { expect, test, type Page } from '@playwright/test';
 import { mocks } from '../src/copy/mocks';
+import { plan as planCopy } from '../src/copy/plan';
 import { toolPlan } from '../src/copy/toolPlan';
 
 let pageErrors: string[] = [];
@@ -59,7 +60,8 @@ test.describe('S13 Decision: keep your car or switch', () => {
     await expect(plan.getByTestId('tool-plan-added')).toBeVisible();
     await plan.getByRole('link', { name: new RegExp(toolPlan.open) }).click();
     await expect(page).toHaveURL(/\/plan/);
-    await expect(page.getByText(d.plan.eventName.lease).first()).toBeVisible();
+    await page.getByRole('tab', { name: planCopy.screen.tabs.events }).click();
+    await expect(page.getByRole('tabpanel').getByText(d.plan.eventName.lease).first()).toBeVisible();
   });
 });
 
