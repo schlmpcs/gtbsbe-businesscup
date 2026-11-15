@@ -5,7 +5,7 @@ import type { LifeLineVM } from '@/features/lifeline/model/types';
 
 export type { LifeLineVM, LifeLineKpiVM, LifeLinePoint } from '@/features/lifeline/model/types';
 
-export type OnboardingStep = 'play' | 'guess' | 'connect' | 'connecting' | 'analyzing' | 'reveal' | 'future' | 'decision';
+export type OnboardingStep = 'play' | 'about' | 'guess' | 'balances' | 'connect' | 'connecting' | 'analyzing' | 'reveal' | 'future' | 'decision';
 
 /** `logo`: a public path to the bank's mark (public/banks, Simple Icons, CC0). */
 export type BankVM = { id: string; name: string; logo: string };
@@ -64,6 +64,32 @@ export type RevealVM = {
   topCategories: { label: string; amountLabel: string; share: number }[];
 };
 
+/** One typed field of the "About you" / "Add it up" forms (raw text; the model parses and checks it). */
+export type FieldVM = { id: string; label: string; hint?: string; value: string; invalid: boolean; prefix?: string; suffix?: string; inputMode: 'numeric' | 'decimal'; placeholder?: string };
+
+export type AboutVM = {
+  age: FieldVM;
+  zip: FieldVM;
+  takeHome: FieldVM;
+  adults: 1 | 2;
+  kids: number;
+  maxKids: number;
+  setField: (id: 'age' | 'zip' | 'takeHome', value: string) => void;
+  setAdults: (n: 1 | 2) => void;
+  setKids: (n: number) => void;
+  /** Every required answer is there and valid. */
+  canSubmit: boolean;
+  submit: () => void;
+};
+
+export type BalancesVM = {
+  own: FieldVM[];
+  owe: FieldVM[];
+  setField: (id: string, value: string) => void;
+  canSubmit: boolean;
+  submit: () => void;
+};
+
 export type OnboardingVM = {
   status: 'loading' | 'ready';
   step: OnboardingStep;
@@ -72,7 +98,9 @@ export type OnboardingVM = {
   stepCount: number;
   house: HouseArt;
   guess: { value: number; min: number; max: number; step: number; label: string; formatValue: (v: number) => string };
-  /** The warm-up duel round is done (or skipped): on to the guess. */
+  about: AboutVM;
+  balances: BalancesVM;
+  /** The warm-up duel round is done (or skipped): on to "About you". */
   finishWarmup: () => void;
   setGuess: (v: number) => void;
   lockGuess: () => void;

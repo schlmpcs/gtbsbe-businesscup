@@ -1,5 +1,5 @@
-// /start onboarding: "you don't know what you're worth" → connect a bank (demo) → the truth → your life to
-// 90 → one decision. Every number arrives formatted from features/onboarding/model.
+// /start onboarding: about you → "you don't know what you're worth" → add it up → connect a bank for
+// spending (demo) → the truth → your life to 90 → one decision. Every number arrives formatted from features/onboarding/model.
 export const welcome = {
   progressLabel: (step: number, total: number) => `Step ${step} of ${total}`,
   progressShort: (step: number, total: number) => `${step}/${total}`,
@@ -11,18 +11,55 @@ export const welcome = {
     /** Below the warm-up's reveal: opens both lives side by side, category by category, with sources. */
     more: 'See every cost side by side, with sources',
   },
-  guess: {
+  about: {
     sticker: 'Now you',
+    title: 'First, a bit about you.',
+    body: 'Your age, area and pay set your forecast. Nothing here leaves this browser, and there’s no sign-up.',
+    age: 'Your age',
+    ageHint: (min: number, max: number) => `${min}–${max}`,
+    zip: 'ZIP code',
+    zipHint: 'Optional. Sets local home prices and costs.',
+    takeHome: 'Take-home pay',
+    takeHomeHint: 'After tax, per month. Add your partner’s if you share money.',
+    perMonth: '/mo',
+    household: 'Who’s in your household?',
+    adults: { 1: 'Just me', 2: 'Me + partner' } as Record<1 | 2, string>,
+    kids: 'Kids',
+    kidsValue: (n: number) => (n === 0 ? 'None' : String(n)),
+    kidMinus: 'One fewer kid',
+    kidPlus: 'One more kid',
+    invalid: { age: 'Enter your age in years.', zip: 'A ZIP has 5 digits.', takeHome: 'Enter your monthly take-home pay.' },
+    cta: 'Next',
+  },
+  guess: {
+    sticker: 'Gut check',
     title: 'What are you worth today?',
-    body: 'Everything you own minus everything you owe. Most people miss by more than $10,000. Take a guess, then we’ll check it.',
+    body: 'Everything you own minus everything you owe. Most people miss by more than $10,000. Take a guess, then we’ll add it up.',
     mystery: '$ ? ? ?',
     label: 'My guess',
     cta: 'Lock my guess',
   },
+  balances: {
+    sticker: 'Let’s add it up',
+    title: 'What do you have, and what do you owe?',
+    body: 'Rough numbers are fine. Leave a box empty if it’s $0.',
+    own: 'You have',
+    owe: 'You owe',
+    fields: {
+      cash: 'Checking & savings',
+      retirement: 'Retirement & investments (401(k), IRA, brokerage)',
+      card: 'Credit cards',
+      student: 'Student loans',
+      auto: 'Car loan',
+      personal: 'Other loans',
+    } as Record<'cash' | 'retirement' | 'card' | 'student' | 'auto' | 'personal', string>,
+    invalid: 'Enter a dollar amount.',
+    cta: 'Add it up',
+  },
   connect: {
-    sticker: 'Let’s check',
-    title: 'Ask your bank.',
-    body: 'Pick your bank. We read balances and a few months of spending, sort it into categories and keep only the totals.',
+    sticker: 'Now your spending',
+    title: 'Where does your month go?',
+    body: 'Pick your bank and we sort a few months of spending into categories, keeping only the totals. Demo: every bank loads a sample statement for now.',
     privacy: ['No password stored', 'Lines never leave your browser', 'Only category totals are kept'],
     upload: 'Rather upload a statement (CSV)',
     searchHint: 'More banks soon',

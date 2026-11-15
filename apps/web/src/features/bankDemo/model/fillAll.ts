@@ -28,6 +28,11 @@ export const DEMO_GOAL_YEARS = 2;
 
 export type DemoFillDeps = {
   readStatementFile?: typeof defaultReadStatementFile;
+  /**
+   * The /start onboarding asked the person for their take-home pay and balances first: keep those
+   * (the statement then supplies spending only, not the paycheck it detects or its last balance).
+   */
+  keepTyped?: { takeHomePay: Money };
 };
 
 export type DemoFillResult = { read: StatementFileResult; imported: ImportResult };
@@ -90,7 +95,8 @@ export async function fillFromStatement(
   const read = await readFile(file, { ...readDeps, anonId: readDeps.anonId ?? getAnonId() });
   const imported = await ledger().importRead(read);
   useAppStore.getState().applyStatementTotals(read.months);
-  fillChecking(bankName, latestBalance(await file.text()));
+  if (deps.keepTyped) useAppStore.getState().setField('takeHomePay', deps.keepTyped.takeHomePay);
+  fillChecking(bankName, deps.keepTyped ? null : latestBalance(await file.text()));
   await Promise.all([fillBudget(), fillGoal()]);
   return { read, imported };
 }

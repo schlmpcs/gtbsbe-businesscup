@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
 // /start onboarding: the reveal (pure) and the guess step. The connect flow runs end to end in
 // e2e/onboarding.spec.ts (it reads the sample statement through the real pipeline).
+import { useAppStore } from '@/state';
 import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { StatementMonthVM } from '@/features/ladder/model/types';
 import { analysisRows, BANKS, GUESS, revealOf, useOnboarding } from './useOnboarding';
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  useAppStore.getState().reset();
+});
 
 const month = (over: Partial<Record<CostCategory, number>>, detectedPay: number | null = 4800): StatementMonthVM => {
   const totals = Object.fromEntries(COST_CATEGORIES.map((c) => [c, over[c] ?? 0])) as Record<CostCategory, number>;
@@ -73,33 +77,63 @@ describe('analysisRows', () => {
 });
 
 describe('useOnboarding', () => {
-  it('starts on the warm-up duel with an empty plot; finishing it moves to the guess, and back returns to it', () => {
+  const fillAbout = (r: { current: ReturnType<typeof useOnboarding> }) => {
+    act(() => r.current.about.setField('age', '41'));
+    act(() => r.current.about.setField('zip', '94110'));
+    act(() => r.current.about.setField('takeHome', '$7,250'));
+    act(() => r.current.about.submit());
+  };
+
+  it('warm-up → About you (the person’s own age, ZIP and pay enter the profile) → guess; back walks it in reverse', () => {
     const { result } = renderHook(() => useOnboarding());
-    expect(result.current).toMatchObject({ step: 'play', stepIndex: 1, stepCount: 7, house: 'empty-plot', reveal: null, analysis: null });
+    expect(result.current).toMatchObject({ step: 'play', stepIndex: 1, stepCount: 9, house: 'empty-plot', reveal: null, analysis: null });
     act(() => result.current.finishWarmup());
-    expect(result.current).toMatchObject({ step: 'guess', stepIndex: 2, house: 'empty-plot', reveal: null });
+    expect(result.current).toMatchObject({ step: 'about', stepIndex: 2 });
+    expect(result.current.about.age.value).toBe('');
+    act(() => result.current.about.submit());
+    expect(result.current.step).toBe('about');
+    expect(result.current.about.age.invalid).toBe(true);
+    fillAbout(result);
+    expect(result.current).toMatchObject({ step: 'guess', stepIndex: 3 });
+    const p = useAppStore.getState().profile;
+    expect(p.age.value).toBe(41);
+    expect(p.zip).toBe('94110');
+    expect(p.takeHomePay).toEqual({ value: 7250, isEstimate: false });
+    act(() => result.current.back());
+    expect(result.current.step).toBe('about');
     act(() => result.current.back());
     expect(result.current.step).toBe('play');
   });
 
-  it('the guess snaps to $1,000 and stays in range; locking it moves to connect', () => {
+  it('the guess snaps to $1,000 and stays in range; locking it asks for balances, which replace the sample’s debts', () => {
     const { result } = renderHook(() => useOnboarding());
     act(() => result.current.finishWarmup());
+    fillAbout(result);
     act(() => result.current.setGuess(12_345));
     expect(result.current.guess.value).toBe(12_000);
     act(() => result.current.setGuess(10_000_000));
     expect(result.current.guess.value).toBe(GUESS.max);
     act(() => result.current.lockGuess());
-    expect(result.current).toMatchObject({ step: 'connect', stepIndex: 3, house: 'house-blueprint' });
+    expect(result.current).toMatchObject({ step: 'balances', house: 'house-blueprint' });
+    act(() => result.current.balances.setField('cash', '12,000'));
+    act(() => result.current.balances.setField('student', '30000'));
+    act(() => result.current.balances.submit());
+    expect(result.current).toMatchObject({ step: 'connect', stepIndex: 5 });
+    const p = useAppStore.getState().profile;
+    expect(p.cash.value).toBe(12_000);
+    expect(p.retirement.value).toBe(0);
+    expect(p.debts.map((d) => [d.kind, d.balance])).toEqual([['student', 30_000]]);
     expect(result.current.banks).toBe(BANKS);
     act(() => result.current.back());
-    expect(result.current.step).toBe('guess');
+    expect(result.current.step).toBe('balances');
   });
 
   it('an unknown bank does nothing', () => {
     const { result } = renderHook(() => useOnboarding());
     act(() => result.current.finishWarmup());
+    fillAbout(result);
     act(() => result.current.lockGuess());
+    act(() => result.current.balances.submit());
     act(() => result.current.connect('nope'));
     expect(result.current.step).toBe('connect');
   });
