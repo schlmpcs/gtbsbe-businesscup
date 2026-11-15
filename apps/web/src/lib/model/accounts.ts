@@ -1,8 +1,10 @@
 // The Accounts store (MP8, #168; P2): the person's accounts, kept in this browser only.
 //
 // - Accounts live in localStorage through the same `safeStorage` as the profile, under their own key.
-//   Account names are personal (CLAUDE.md rule 6): they are never sent to the server. The profile
+//   Account names are personal (CLAUDE.md rule 6): they are never stored on the server. The profile
 //   derived from them (balances and debts, no names) is what a session save and the forecast carry.
+//   The one time a name leaves the browser is an explicit "Estimate with AI" tap (/api/ai/growth: the
+//   account's type, name and value, not stored, not logged).
 // - Every balance edit sets the account's history point for this month (one per month, last edit wins).
 // - One source of truth: when accounts change, the profile every other screen reads is re-derived with
 //   the engine's `accountsToProfile` and stored through the app store's `setProfile`.
@@ -15,7 +17,7 @@
 import { accountsToProfile, profileToAccounts } from '@lifeguessr/engine';
 import {
   AccountSchema,
-  type Account, type AccountGroup, type Debt, type Estimate, type Money, type Profile, type Rate, type YearMonth,
+  type Account, type AccountGroup, type AiGrowthNote, type Debt, type Estimate, type Money, type Profile, type Rate, type YearMonth,
 } from '@lifeguessr/types';
 import { useEffect } from 'react';
 import { create } from 'zustand';
@@ -170,6 +172,11 @@ export type AccountChanges = {
   minPayment?: Money | null;
   debtKind?: LoanKind;
   growth?: Rate | null;
+  /**
+   * With `growth`: marks that rate as an accepted AI estimate (label + reason). A growth change without a
+   * note drops any old one, so a rate the person typed is never labeled as the AI's. Ignored without `growth`.
+   */
+  growthNote?: AiGrowthNote;
 };
 
 export type AccountsData = {
@@ -244,8 +251,14 @@ export const useAccountsStore = create<AccountsState>()(() => ({
       else if (changes.apr !== undefined) next.apr = changes.apr;
       if (changes.minPayment === null) delete next.minPayment;
       else if (changes.minPayment !== undefined) next.minPayment = { value: changes.minPayment, isEstimate: false };
-      if (changes.growth === null) delete next.growth;
-      else if (changes.growth !== undefined) next.growth = changes.growth;
+      if (changes.growth !== undefined) {
+        delete next.growthNote;
+        if (changes.growth === null) delete next.growth;
+        else {
+          next.growth = changes.growth;
+          if (changes.growthNote) next.growthNote = { ...changes.growthNote };
+        }
+      }
       return next;
     }),
   setExcluded: (id, excluded) =>

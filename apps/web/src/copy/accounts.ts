@@ -43,6 +43,9 @@ export const accounts = {
     created: 'Created',
     excluded: 'Left out of net worth',
     transactions: 'Transactions',
+    /** The yearly change row of an asset with that field; "Default" when the plan's default applies. */
+    growth: 'Change per year',
+    growthDefault: 'Default',
   },
   estimate: 'Estimate',
 
@@ -102,6 +105,22 @@ export const accounts = {
     moneyPlaceholder: '0',
   },
 
+  /** "Estimate with AI" next to the yearly change field (Add account and Account detail). */
+  growthAi: {
+    button: 'Estimate with AI',
+    loading: 'Asking the AI…',
+    /** The tag on a rate the AI proposed; its one-line reason sits next to it. */
+    label: 'AI estimate',
+    privacy: 'The name you typed, the type and the value go to the AI to make the estimate. Nothing is stored.',
+    scope: 'The AI only suggests the rate. You can change it; our engine runs your plan with it.',
+    needsInput: 'Type a name and a value first.',
+    errors: {
+      unavailable: 'The AI estimate isn’t available right now. The field stays as it was.',
+      rateLimited: 'Too many AI requests. Try again in a minute; the field stays as it was.',
+      failed: 'We couldn’t get a sensible AI estimate. The field stays as it was.',
+    },
+  },
+
   /** The Accounts screen (MP17). Amounts come from the view-model; these are only the words around them. */
   screen: {
     intro: 'Everything you own and owe, in one place. Accounts stay in this browser.',
@@ -124,7 +143,7 @@ export const accounts = {
     emptyTitle: 'Add your first account',
     emptyBody: 'Type a balance for checking, savings, a card or a loan. Or import a bank statement to start with your transactions.',
     importCta: 'Import a CSV',
-    privacy: 'Account names and balances stay in this browser.',
+    privacy: 'Account names and balances stay in this browser (unless you tap “Estimate with AI”, which sends one account’s name, type and value, not stored).',
   },
 
   /** Account detail (/accounts/[id]). */
@@ -143,6 +162,9 @@ export const accounts = {
     rename: 'Rename',
     newName: 'Account name',
     saveName: 'Save name',
+    growthLabel: 'Change per year, in percent (blank = default)',
+    saveGrowth: 'Save change per year',
+    invalidGrowth: 'Enter a percent, like -12 or 4.5, or leave it blank.',
     blankName: 'Enter a name.',
     exclude: 'Leave out of net worth',
     include: 'Count in net worth',
