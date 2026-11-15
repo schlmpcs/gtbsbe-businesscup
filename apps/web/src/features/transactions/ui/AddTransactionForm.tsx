@@ -4,7 +4,7 @@
 // is typed and hands the view-model a NewTransactionInput; the view-model says whether it was usable.
 import { useState } from 'react';
 import { planner, transactions as t } from '@/copy';
-import { Button, Choice, Field, useFieldControl } from '@/ui-kit';
+import { Button, Choice, Field, Select as KitSelect, useFieldControl } from '@/ui-kit';
 import type { NewTransactionInput, StatementClass } from '../model/types';
 import { ALL_CATEGORIES } from './TransactionList';
 
@@ -39,15 +39,14 @@ function Input(props: { value: string; onChange: (v: string) => void; type?: str
 }
 
 function Select<T extends string>(props: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; testId: string }) {
-  const control = useFieldControl();
   return (
-    <select {...control} value={props.value} onChange={(e) => props.onChange(e.target.value as T)} data-testid={props.testId} className={INPUT}>
+    <KitSelect value={props.value} onChange={(e) => props.onChange(e.target.value as T)} data-testid={props.testId}>
       {props.options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
         </option>
       ))}
-    </select>
+    </KitSelect>
   );
 }
 

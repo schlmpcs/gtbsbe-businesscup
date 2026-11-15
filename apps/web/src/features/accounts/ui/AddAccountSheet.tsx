@@ -3,7 +3,7 @@
 // Add account (P2): pick a type, then fill its form. A sheet from the bottom on phones, a dialog on wider
 // screens. Presentational: the fields, their errors and the estimate tags come from useAddAccount.
 import { accounts as t, bankDemo, planner } from '@/copy';
-import { Button, buttonClassName, cx, Field, Sheet, Stack, Tag, useFieldControl } from '@/ui-kit';
+import { Button, buttonClassName, cx, Field, Select, Sheet, Stack, Tag, useFieldControl } from '@/ui-kit';
 import type { AddAccountFieldVM, AddAccountVM, GrowthAiFieldVM } from '../model/types';
 import type { LinkComponent } from './AccountsScreen';
 
@@ -227,21 +227,19 @@ function TextControl({ field, onChange }: { field: AddAccountFieldVM; onChange: 
 }
 
 function SelectControl({ field, onChange }: { field: AddAccountFieldVM; onChange: (value: string) => void }) {
-  const control = useFieldControl();
   return (
-    <select
-      {...control}
+    <Select
       name={field.id}
       value={field.value}
       onChange={(e) => onChange(e.target.value)}
       data-testid={`add-account-${field.id}`}
-      className={cx(INPUT, field.error ? 'border-negative' : 'border-border')}
+      invalid={Boolean(field.error)}
     >
       {(field.options ?? []).map((o) => (
         <option key={o} value={o}>
           {o in t.loanKinds ? t.loanKinds[o as keyof typeof t.loanKinds] : o}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

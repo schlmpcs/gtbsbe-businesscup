@@ -4,7 +4,7 @@
 // Every price shows its year, its source and an estimate tag. A running total stays on screen.
 import { useId } from 'react';
 import { subscriptions as t } from '@/copy';
-import { Button, Card, cx, EstimateTag, formatMoney, Row, SourceNote, Stack } from '@/ui-kit';
+import { Button, Card, cx, EstimateTag, formatMoney, Row, Select, SourceNote, Stack } from '@/ui-kit';
 import type { TickServiceVM, TicksVM } from '../model/types';
 
 export type TickListProps = { ticks: TicksVM; canReveal: boolean; onNext: () => void };
@@ -97,18 +97,19 @@ function TickRow({ service, toggle }: { service: TickServiceVM; toggle: TicksVM[
           <label htmlFor={planId} className="sr-only">
             {t.ticks.planLabel(service.name)}
           </label>
-          <select
+          <Select
             id={planId}
+            size="sm"
+            fullWidth={false}
             value={plan.id}
             onChange={(e) => toggle(service.serviceId, e.target.value)}
-            className="rounded-md border-2 border-border bg-bg px-md py-xs text-sm"
           >
             {service.plans.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} · {formatMoney(p.price, { cents: true })}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
       <div className="pl-2xl">

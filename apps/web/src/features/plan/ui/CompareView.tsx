@@ -2,10 +2,9 @@
 
 // Plan › Compare (useCompare): two scenarios overlaid, the sentence and the difference table.
 import { plan as copy } from '@/copy';
-import { Button, Field, cx, useFieldControl } from '@/ui-kit';
+import { Button, Field, Select, cx } from '@/ui-kit';
 import type { CompareVM, ScenariosVM } from '../model/types';
 import { LineChart } from './LineChart';
-import { SELECT_CLASS } from './PlanField';
 
 export type CompareViewProps = {
   vm: CompareVM;
@@ -102,14 +101,13 @@ export function CompareView({ vm, scenarios, compareWithId, onCompareWith }: Com
 }
 
 function CompareSelect({ value, options, onChange }: { value: string; options: { id: string; name: string }[]; onChange: (id: string) => void }) {
-  const control = useFieldControl();
   return (
-    <select {...control} value={value} onChange={(e) => onChange(e.target.value)} className={SELECT_CLASS}>
+    <Select value={value} onChange={(e) => onChange(e.target.value)}>
       {options.map((o) => (
         <option key={o.id} value={o.id}>
           {o.name}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

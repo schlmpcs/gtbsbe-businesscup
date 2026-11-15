@@ -6,7 +6,7 @@
 import { useId, useState } from 'react';
 import { common, lifeEvents as t } from '@/copy';
 import {
-  Button, Choice, cx, EstimateTag, Field, formatMoney, formatMonthYear, NumberInput, SourceNote, useFieldControl,
+  Button, Choice, cx, EstimateTag, Field, formatMoney, formatMonthYear, NumberInput, Select, SourceNote, useFieldControl,
 } from '@/ui-kit';
 import type {
   LifeEventCategory, LifeEventDraft, LifeEventErrors, LifeEventKind, LifeEventShortcutVM, LifeEventsVM, LifeEventVM, YearMonth,
@@ -160,20 +160,14 @@ function MonthInput({ value, min, max, onChange }: { value: string; min: YearMon
 function CategorySelect({
   value, categories, onChange,
 }: { value: LifeEventCategory; categories: readonly LifeEventCategory[]; onChange: (c: LifeEventCategory) => void }) {
-  const control = useFieldControl();
   return (
-    <select
-      {...control}
-      value={value}
-      onChange={(e) => onChange(e.target.value as LifeEventCategory)}
-      className="w-full rounded-md border border-border bg-bg px-md py-md text-base"
-    >
+    <Select value={value} onChange={(e) => onChange(e.target.value as LifeEventCategory)}>
       {categories.map((c) => (
         <option key={c} value={c}>
           {common.categories[c]}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 

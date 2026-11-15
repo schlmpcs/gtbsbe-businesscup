@@ -4,7 +4,7 @@
 // whole dollars. Presentational: rows come from the view-model; a category change is an event
 // (`onCategory`), left out where the screen cannot change one (Account detail).
 import { planner, transactions as t } from '@/copy';
-import { cx, formatMoney, formatMonth } from '@/ui-kit';
+import { cx, formatMoney, formatMonth, Select } from '@/ui-kit';
 import { CategoryChip, CLASS_TONE, Initials, TONE_BG } from '@/ui-kit/reports';
 import type { StatementClass, TransactionRowVM, TransactionTone } from '../model/types';
 
@@ -71,19 +71,20 @@ export function TransactionList({ rows, onCategory, applyAll = false, showAccoun
             <span className="col-span-3 row-start-3 flex min-w-0 items-center gap-xs pl-[3.25rem] sm:col-span-1 sm:row-start-auto sm:pl-0">
               {onCategory ? (
                 <span className="relative flex min-w-0 max-w-full items-center">
-                  <span aria-hidden="true" className={cx('pointer-events-none absolute left-sm size-2 rounded-full', TONE_BG[CLASS_TONE[r.category]])} />
-                  <select
+                  <span aria-hidden="true" className={cx('pointer-events-none absolute left-sm z-10 size-2 rounded-full', TONE_BG[CLASS_TONE[r.category]])} />
+                  <Select
+                    variant="pill"
+                    size="sm"
                     aria-label={t.screen.changeCategory(r.label)}
                     value={r.category}
                     onChange={(e) => onCategory(r.id, e.target.value as StatementClass, applyAll)}
-                    className="min-h-11 w-full min-w-0 cursor-pointer appearance-auto rounded-full border border-transparent bg-surface-strong py-0 pr-sm pl-lg text-xs font-medium hover:border-border sm:min-h-8"
                   >
                     {ALL_CATEGORIES.map((c) => (
                       <option key={c} value={c}>
                         {planner.categories[c]}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </span>
               ) : (
                 <CategoryChip category={r.category} name={planner.categories[r.category]} />
