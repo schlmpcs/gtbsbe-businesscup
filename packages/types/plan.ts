@@ -5,7 +5,8 @@
 //
 // Units as everywhere: Money is unrounded US dollars (each field says monthly, yearly or balance),
 // Rate is a decimal per year (0.065 = 6.5%). Plan event amounts are in today's dollars, like LifeEvent.
-// Privacy (CLAUDE.md rule 6): account names, event names and transactions stay in the browser.
+// Privacy (CLAUDE.md rule 6): account names, event names and transactions stay in the browser. The one
+// exception: "Estimate with AI" sends one account's name, type and value when the person taps it (not stored).
 import type {
   AreaData, CostCategory, Debt, Estimate, LifeEvent, Money, Profile, Rate, StatementClass, YearMonth,
 } from './index';
@@ -22,15 +23,45 @@ export type LiabilityGroup = (typeof LIABILITY_GROUPS)[number];
 export type Account = {
   id: string;
   group: AccountGroup;
-  name: string;                     // user's label; stays in the browser, never sent to the server
+  name: string;                     // user's label; stays in the browser (sent only by an explicit "Estimate with AI" tap, not stored)
   balance: Estimate<Money>;         // BALANCE, always ≥ 0; the sign comes from the group
   apr?: Rate;                       // liabilities only
   minPayment?: Estimate<Money>;     // monthly, liabilities only
   debtKind?: Debt['kind'];          // loan only: auto | student | personal | bnpl
   growth?: Rate;                    // per year; override of the group default (home appreciation, car depreciation < 0)
+  growthNote?: AiGrowthNote;        // set only while `growth` is the AI estimate the person accepted; dropped when they type their own
   excluded?: boolean;               // left out of net worth and the plan
   history: { month: YearMonth; balance: Money }[]; // one point per month with an edit (last edit wins), for the balance chart
 };
+
+/**
+ * Marks a growth rate an AI proposed ("Estimate with AI") and keeps its one-line reason, so the UI can
+ * label it "AI estimate" wherever it shows. The rate itself is the plain `growth` value next to it; the
+ * engine reads only that and does every projection itself. Spec: docs/ENGINEERING.md → AI growth estimate.
+ */
+export type AiGrowthNote = { source: 'ai'; reason: string };
+
+/** Asset groups whose accounts have a yearly-change field (cash has none: it earns the cash yield). */
+export const GROWTH_ESTIMATE_ACCOUNT_GROUPS = ['investments', 'retirement', 'realEstate', 'vehicle', 'otherAsset'] as const;
+export type GrowthEstimateAccountGroup = (typeof GROWTH_ESTIMATE_ACCOUNT_GROUPS)[number];
+
+/**
+ * POST /api/ai/growth. 'account': one account's type, the name the person typed and its value (nothing
+ * else about them). 'plan': the area (metro and state, no ZIP), account totals by group (no names) and the
+ * engine's current default per group, for a suggestion per group. Nothing is stored on the server.
+ */
+export type GrowthEstimateRequest =
+  | { mode: 'account'; account: { group: GrowthEstimateAccountGroup; name: string; value: Money } }   // value: a BALANCE
+  | {
+      mode: 'plan';
+      area?: { metro: string; state: string };
+      groups: { group: AssetGroup; total: Money; count: number }[];   // total: a BALANCE
+      defaults: Record<AssetGroup, Rate>;                              // per year: what plan() uses today
+    };
+/** One AI-proposed rate (per year, a decimal) that passed the envelope (aiGrowthEnvelope), with its reason. */
+export type GrowthEstimate = { group: AssetGroup; rate: Rate; reason: string };
+/** 200 from /api/ai/growth. `rejected`: groups whose proposal failed the checks (their default stays). */
+export type GrowthEstimateResponse = { ok: true; source: 'ai'; estimates: GrowthEstimate[]; rejected: AssetGroup[] };
 
 /** netWorthSummary(accounts) (MP8). Excluded accounts are left out. All values are balances. */
 export type NetWorthSummary = {
@@ -92,6 +123,7 @@ export type PlanAssumptions = {
   display: 'today' | 'future';       // today's dollars (default) or future dollars
   expenses: { mode: 'budget' } | { mode: 'manual'; monthly: Money };
   growth: Partial<Record<AccountGroup, Rate>>;            // overrides of engine defaults
+  growthNotes?: Partial<Record<AssetGroup, AiGrowthNote>>; // which overrides are an accepted AI estimate (and why)
   withdrawalOrder: AccountGroup[];                        // default cash → investments → retirement
   savingsSplit: { group: AccountGroup; share: Rate }[];   // shares sum to 1; default from profile.retirementShare
 };
