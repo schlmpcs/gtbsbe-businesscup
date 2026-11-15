@@ -81,10 +81,59 @@ describe('PlanScreen', () => {
 
     expect(screen.getByRole('figure', { name: t.chart.title })).toBeTruthy();
     // Markers for the demo scenario's events (Retire, Social Security, Buy a home).
-    expect(screen.getByRole('button', { name: new RegExp(`^${copy.events.buyHome.title}, 2032`) })).toBeTruthy();
+    expect(screen.getByRole('slider', { name: new RegExp(`^${copy.events.buyHome.title}, 2032`) })).toBeTruthy();
     // The AI line is a separate, labeled series.
     expect(screen.getByText(copy.aiLine.label)).toBeTruthy();
     expect(screen.getByText(t.chart.aiNote)).toBeTruthy();
+  });
+
+  it('moves an event badge with the keyboard: arrows a year, Home / End to the ends of the plan', () => {
+    const { container } = render(<Harness />);
+    const retire = () => screen.getByRole('slider', { name: new RegExp(`^${copy.events.retire.title},`) });
+    // The demo retires at 67.
+    const year0 = Number(retire().getAttribute('aria-valuenow'));
+    expect(retire().getAttribute('aria-valuetext')).toBe(t.chart.markerValue(year0, 67));
+    fireEvent.keyDown(retire(), { key: 'ArrowRight' });
+    expect(retire().getAttribute('aria-valuenow')).toBe(String(year0 + 1));
+    expect(within(container.querySelector('[data-kpi="retireAge"]') as HTMLElement).getByText(t.kpis.retireAgeValue(68))).toBeTruthy();
+    fireEvent.keyDown(retire(), { key: 'ArrowLeft' });
+    expect(retire().getAttribute('aria-valuenow')).toBe(String(year0));
+    fireEvent.keyDown(retire(), { key: 'End' });
+    expect(retire().getAttribute('aria-valuenow')).toBe(retire().getAttribute('aria-valuemax'));
+    fireEvent.keyDown(retire(), { key: 'Home' });
+    expect(retire().getAttribute('aria-valuenow')).toBe(retire().getAttribute('aria-valuemin'));
+  });
+
+  it('drags an event badge along the years with the pointer, with a live label', async () => {
+    // jsdom has no layout: a 1000-unit chart drawn 500px wide from x = 100 (2 units per pixel).
+    const proto = SVGElement.prototype as unknown as { getScreenCTM?: () => unknown };
+    const saved = proto.getScreenCTM;
+    proto.getScreenCTM = () => ({ a: 0.5, e: 100 });
+    const el = HTMLElement.prototype as unknown as { setPointerCapture?: (id: number) => void };
+    const savedCapture = el.setPointerCapture;
+    el.setPointerCapture = () => {};
+    try {
+      const { container } = render(<Harness />);
+      const retire = () => screen.getByRole('slider', { name: new RegExp(`^${copy.events.retire.title},`) });
+      const min = Number(retire().getAttribute('aria-valuemin'));
+      const max = Number(retire().getAttribute('aria-valuemax'));
+      const pxPerYear = 500 / (max - min);
+      const year0 = Number(retire().getAttribute('aria-valuenow'));
+      const startX = 100 + (year0 - min) * pxPerYear;
+      fireEvent.pointerDown(retire(), { pointerId: 1, button: 0, clientX: startX });
+      fireEvent.pointerMove(retire(), { pointerId: 1, clientX: startX + 2 * pxPerYear });
+      expect(container.querySelector('[data-drag-label]')?.textContent).toBe(t.chart.dragLabel(copy.events.retire.title, year0 + 2, 69));
+      fireEvent.pointerUp(retire(), { pointerId: 1, clientX: startX + 2 * pxPerYear });
+      expect(container.querySelector('[data-drag-label]')).toBeNull();
+      expect(retire().getAttribute('aria-valuenow')).toBe(String(year0 + 2));
+      expect(within(container.querySelector('[data-kpi="retireAge"]') as HTMLElement).getByText(t.kpis.retireAgeValue(69))).toBeTruthy();
+      // The click that ends a drag does not open the editor.
+      fireEvent.click(retire());
+      expect(screen.queryByRole('dialog')).toBeNull();
+    } finally {
+      proto.getScreenCTM = saved;
+      el.setPointerCapture = savedCapture;
+    }
   });
 
   it('hides the AI line when the view-model rejects it', () => {

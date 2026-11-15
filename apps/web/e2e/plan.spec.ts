@@ -36,7 +36,9 @@ test.describe('/plan', () => {
 
   test('event badges on the chart open the editor; the year table scrolls inside its card', async ({ page }) => {
     await page.goto('/plan');
-    await page.getByRole('button', { name: /^Buy a home, 2032/ }).click();
+    const home = page.getByRole('slider', { name: /^Buy a home, 2032/ });
+    await expect(home).toHaveAttribute('aria-valuenow', '2032');
+    await home.click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
     await expect(page.getByRole('region', { name: 'Accounts' }).getByRole('columnheader', { name: /2040/ })).toBeAttached();
