@@ -80,7 +80,8 @@ describe('profileOps', () => {
     ];
     const next = mergeStatementTotals(p, months);
     expect(next.spending.groceries).toEqual({ value: 550, isEstimate: false });
-    expect(next.takeHomePay).toEqual({ value: 4800, isEstimate: false });
+    // JF7: pay in the totals no longer enters the profile by itself; the "We found" review owns it.
+    expect(next.takeHomePay).toEqual(p.takeHomePay);
     // A statement with no rent at all says it is paid from elsewhere, not that it is $0.
     expect(next.spending.rentUtilities).toEqual(p.spending.rentUtilities);
     expect(next.spending.childcare).toEqual({ value: 0, isEstimate: false });

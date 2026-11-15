@@ -127,9 +127,10 @@ describe('accountsToProfile: minimum payment default', () => {
     // P·r / (1 − (1 + r)^−72) = 18,000 × 0.0066667 / (1 − 1.0066667^−72) ≈ 315.60.
     expect(byId.auto.minPayment.value).toBeCloseTo(315.5983, 3);
     expect(byId.auto.minPayment.isEstimate).toBe(true);
-    // Mortgage with no APR: 6.5% default over 30 years (360 months): 300,000 × r / (1 − (1 + r)^−360) ≈ 1,896.20.
-    expect(byId.mtg.apr).toBe(0.065);
-    expect(byId.mtg.minPayment.value).toBeCloseTo(1_896.2041, 3);
+    // Mortgage with no APR: the kind's typical 7.11% (Freddie Mac PMMS, assumptions) over 30 years
+    // (360 months): 300,000 × r / (1 − (1 + r)^−360) ≈ 2,018.12.
+    expect(byId.mtg.apr).toBe(0.0711);
+    expect(byId.mtg.minPayment.value).toBeCloseTo(2_018.1192, 3);
     expect(byId.mtg.minPayment.isEstimate).toBe(true);
     // A minimum the user typed keeps its value and its flag.
     expect(byId.set.minPayment).toEqual({ value: 250, isEstimate: false });
