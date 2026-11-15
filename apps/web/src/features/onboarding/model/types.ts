@@ -49,6 +49,8 @@ export type LandingVM = {
   mode: 'loading' | 'redirect' | 'continue' | 'fresh';
   redirectTo: string;
   startHref: string;
+  /** Chapter 1 again ("Start over", for a story in progress). */
+  restartHref: string;
   resumeChapter: ChapterId | null;
   sampleHref: string;
   /** Load the sample household before following `sampleHref` (the store refuses over a profile of one's own). */

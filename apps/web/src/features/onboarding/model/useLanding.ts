@@ -38,6 +38,7 @@ export function useLanding(): LandingVM {
     mode,
     redirectTo: DASHBOARD_ROUTE,
     startHref: resumeChapter ? chapterHref(resumeChapter) : START_ROUTE,
+    restartHref: START_ROUTE,
     resumeChapter,
     sampleHref: SAMPLE_PLAN_ROUTE,
     seeSample,

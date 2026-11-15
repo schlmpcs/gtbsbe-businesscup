@@ -41,9 +41,18 @@ describe('RecurringScreen', () => {
     expect(within(screen.getByTestId('recurring-section-expenses')).queryByText(t.labels.rent)).toBeNull();
   });
 
+  it('leads with what is still due this month and lists it', () => {
+    render(<Recurring />);
+    const kpis = screen.getByTestId('recurring-kpis');
+    expect(within(kpis).getByText(t.kpis.remaining)).toBeInTheDocument();
+    const upcoming = within(screen.getByTestId('recurring-upcoming')).getByRole('list', { name: t.upcomingLabel });
+    // The card minimum and the auto loan fall on the 20th; rent (the 1st) is already past on the 15th.
+    expect(within(upcoming).getByText(t.labels.card)).toBeInTheDocument();
+    expect(within(upcoming).queryByText(t.labels.rent)).toBeNull();
+  });
+
   it('shows the month calendar with today marked', () => {
     render(<Recurring />);
-    fireEvent.click(screen.getByRole('tab', { name: t.views.calendar }));
     const table = screen.getByRole('table', { name: t.calendarLabel('November 2026') });
     expect(within(table).getAllByRole('row')).toHaveLength(1 + 5); // header + five weeks
     expect(screen.getByTestId('recurring-today')).toHaveTextContent('15');

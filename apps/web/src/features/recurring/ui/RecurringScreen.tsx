@@ -269,14 +269,14 @@ function Cell({ cell, index }: { cell: RecurringCalendarCellVM; index: number })
             {shown.map((i) => (
               <span
                 key={i.id}
-                className={cx('block truncate rounded-sm px-0.5 text-[0.625rem] font-semibold leading-4 tabular-nums sm:px-xs sm:text-xs sm:leading-5', CHIP[i.section], MOTION.fade)}
+                className={cx('block truncate rounded-sm px-0.5 text-xs font-semibold leading-4 tabular-nums sm:px-xs sm:leading-5', CHIP[i.section], MOTION.fade)}
                 style={{ transitionDelay: `${index * 12}ms` }}
               >
                 <span className="sm:hidden">{formatMoney(i.amount, { compact: true })}</span>
                 <span className="hidden sm:inline">{formatMoney(i.amount)}</span>
               </span>
             ))}
-            {cell.items.length > shown.length && <span className="px-0.5 text-[0.625rem] text-text-muted sm:text-xs">{t.more(cell.items.length - shown.length)}</span>}
+            {cell.items.length > shown.length && <span className="px-0.5 text-xs text-text-muted">{t.more(cell.items.length - shown.length)}</span>}
           </span>
         </>
       )}
