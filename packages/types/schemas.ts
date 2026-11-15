@@ -154,6 +154,14 @@ export const HouseholdFactsSchema = z.object({
   hasCar: z.boolean(),
 });
 
+/** JF4: Profile.home. Absent = renting. */
+export const HomeSchema = z.object({
+  tenure: z.enum(['mortgage', 'outright']),
+  value: estimate(NonNegativeMoneySchema),            // balance
+  appreciation: estimate(ChangeRateSchema),            // per year, decimal
+  hoaMonthly: NonNegativeMoneySchema,                 // monthly
+});
+
 export const ProfileSchema = z.object({
   household: AvatarFactsSchema.optional(),
   householdFacts: HouseholdFactsSchema.optional(),
@@ -165,6 +173,7 @@ export const ProfileSchema = z.object({
   retirementShare: estimate(ShareSchema),
   debts: z.array(DebtSchema),
   zip: ZipSchema.optional(),
+  home: HomeSchema.optional(),
   committedMoveId: z.string().min(1).optional(),
   doneMoveIds: z.array(z.string().min(1)),
   events: z.array(LifeEventSchema).max(MAX_LIFE_EVENTS).optional(),

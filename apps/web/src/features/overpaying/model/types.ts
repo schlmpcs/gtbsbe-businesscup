@@ -179,6 +179,8 @@ export type OverpayingVM = {
   playHref: string;
   /** Where to build a profile (balance sheet), for the 10-year effect. */
   profileHref: string;
+  /** JF4: the profile says the person owns their home: no rent box, and rent is not compared. */
+  ownsHome: boolean;
 };
 
 // ----- what the model is given ------------------------------------------------------------------

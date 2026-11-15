@@ -33,7 +33,7 @@ export function DebtForm({ title, kinds, bounds, initial, aprDefaults, estimateM
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
   const aprIsEstimate = draft.apr === null;
   const apr = draft.apr ?? aprDefaults[draft.kind];
-  const minEstimate = draft.balance !== null ? estimateMinPayment(draft.balance, apr) : null;
+  const minEstimate = draft.balance !== null ? estimateMinPayment(draft.balance, apr, draft.kind) : null;
 
   return (
     <form

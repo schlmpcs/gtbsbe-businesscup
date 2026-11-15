@@ -3,17 +3,19 @@
 // type (JF17): debt payments found in the statement come up as a card to confirm; a new debt needs
 // only its balance (APR and minimum prefilled from engine defaults, tagged estimate). Every value is
 // clamped to what the profile contract accepts, so a half-typed number never breaks the profile.
-import { cardMinPaymentFor, debtAprDefaults } from '@lifeguessr/engine';
-import { DEBT_KINDS, type Debt, type Money } from '@lifeguessr/types';
+import { debtAprDefaults, tenureOf } from '@lifeguessr/engine';
+import { DEBT_KINDS, type Debt, type HomeTenure, type Money } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { parseImage } from '@/lib/api/aiParseImage';
 import { track } from '@/lib/events';
 import { toVMError } from '@/lib/model/errors';
-import { getAnonId } from '@/state/anonId';
+import { homeArea, homeSummary } from '@/lib/model/home';
 import { debtLoadGauge, netWorthToday, thisMonth } from '@/lib/model/profile';
+import { getAnonId } from '@/state/anonId';
 import { useAppReady, useAppStore, useProfile, type DebtInput } from '@/state';
-import { BALANCE_FIELD_BOUNDS, DEBT_BOUNDS, DEBT_LOAD_GAUGE_MAX } from './constants';
-import type { BalanceFieldKey, BalanceSheetVM, DebtRowVM, InputBounds, ScanDebtOutcome } from './types';
+import { estimatedMinPayment } from '@/state/profileOps';
+import { BALANCE_FIELD_BOUNDS, DEBT_BOUNDS, DEBT_LOAD_GAUGE_MAX, HOME_BOUNDS, HOME_TENURES } from './constants';
+import type { BalanceFieldKey, BalanceSheetVM, DebtRowVM, HomeSectionVM, InputBounds, ScanDebtOutcome } from './types';
 
 /** JF9: statement photo → debt values to confirm (swappable in tests). */
 export async function scanStatement(file: File): Promise<ScanDebtOutcome> {
@@ -67,6 +69,7 @@ export function useBalanceSheet(): BalanceSheetVM {
   const addDebtAction = useAppStore((s) => s.addDebt);
   const updateDebtAction = useAppStore((s) => s.updateDebt);
   const removeDebt = useAppStore((s) => s.removeDebt);
+  const setHomeAction = useAppStore((s) => s.setHome);
   const statementMonths = useAppStore((s) => s.statementMonths);
   const [dismissed, setDismissed] = useState(false);
 
@@ -121,6 +124,34 @@ export function useBalanceSheet(): BalanceSheetVM {
     [updateDebtAction],
   );
 
+  // JF4 "Your home": the area the profile's ZIP uses prices the defaults and the owner costs.
+  const area = useMemo(() => homeArea(profile.zip), [profile.zip]);
+  const tenure = tenureOf(profile);
+  const summary = useMemo(() => homeSummary(profile), [profile]);
+  const hasMortgage = profile.debts.some((d) => d.kind === 'mortgage');
+  const home: HomeSectionVM = useMemo(() => {
+    const setHome = (next: HomeTenure, input?: { value?: Money; hoaMonthly?: Money }) => {
+      setHomeAction(next, area, input);
+      edited();
+    };
+    const owned = (): Exclude<HomeTenure, 'rent'> => (tenure === 'rent' ? 'mortgage' : tenure);
+    return {
+      tenure,
+      tenures: HOME_TENURES,
+      summary,
+      bounds: HOME_BOUNDS,
+      needsMortgage: tenure === 'mortgage' && !hasMortgage,
+      mortgageWhileOutright: tenure === 'outright' && hasMortgage,
+      setTenure: (next) => setHome(next),
+      setValue: (value) => {
+        if (Number.isFinite(value)) setHome(owned(), { value: within(value, HOME_BOUNDS.value) });
+      },
+      setHoaMonthly: (value) => {
+        if (Number.isFinite(value)) setHome(owned(), { hoaMonthly: within(value, HOME_BOUNDS.hoaMonthly) });
+      },
+    };
+  }, [tenure, summary, hasMortgage, area, setHomeAction]);
+
   const detected = useMemo(() => detectedDebtPayments(statementMonths), [statementMonths]);
   const detectedDebt = detected && !dismissed && profile.debts.length === 0 ? detected : null;
 
@@ -142,7 +173,8 @@ export function useBalanceSheet(): BalanceSheetVM {
     debtKinds: DEBT_KINDS,
     debtBounds: DEBT_BOUNDS,
     debtAprDefaults: debtAprDefaults.value,
-    estimateMinPayment: cardMinPaymentFor,
+    estimateMinPayment: estimatedMinPayment,
+    home,
     detectedDebt,
     confirmDetected,
     dismissDetected: () => setDismissed(true),

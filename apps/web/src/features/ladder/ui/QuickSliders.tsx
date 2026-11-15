@@ -89,7 +89,7 @@ export function QuickSliders({ vm, progress }: QuickSlidersProps) {
                 label={
                   <span className="inline-flex items-center gap-sm text-base font-semibold">
                     <span aria-hidden="true" className={cx('size-sm shrink-0 rounded-full', COLORS[i % COLORS.length])} />
-                    {common.categories[s.category]}
+                    {s.category === 'rentUtilities' && vm.ownsHome ? common.ownerHousing : common.categories[s.category]}
                   </span>
                 }
                 value={s.value}

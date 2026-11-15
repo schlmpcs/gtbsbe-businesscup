@@ -87,7 +87,8 @@ export function InputsForm({ vm }: { vm: OverpayingVM }) {
         <Stack gap="lg" as="fieldset" className="min-w-0 border-0 p-0">
           <legend className="text-sm font-semibold">{t.form.amountsTitle}</legend>
           <p className="text-xs text-text-muted">{t.form.amountsHint}</p>
-          {LINES.map((line) => (
+          {vm.ownsHome && <p className="text-xs text-text-muted">{t.form.ownerHousing}</p>}
+          {LINES.filter((line) => !(vm.ownsHome && line === 'rent')).map((line) => (
             <Field
               key={line}
               label={t.lines[line]}

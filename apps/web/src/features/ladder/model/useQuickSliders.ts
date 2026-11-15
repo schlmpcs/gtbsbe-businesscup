@@ -138,6 +138,7 @@ export function useQuickSliders(opts: { parse?: ParseFn } = {}): QuickSlidersVM 
     guessGap: selfGuess === null ? null : monthlyCost - selfGuess,
     in10y,
     in10ySource: 'rules',
+    ownsHome: profile.home !== undefined,
     setSpending,
     setSavingsShare,
     parse,
