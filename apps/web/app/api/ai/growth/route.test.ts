@@ -198,13 +198,14 @@ describe('POST /api/ai/growth mode plan', () => {
     });
   });
 
-  it('sends the area, totals by group and the current defaults, nothing else', async () => {
+  it('sends the area and totals by group, but not the defaults (so the model does not just echo them)', async () => {
     create.mockResolvedValueOnce(replyJson(planAnswer()));
     await post(PLAN);
     const content = sentContent(0);
     expect(content).toContain('Dallas-Fort Worth-Arlington, TX');
     expect(content).toContain('$48,000');
-    expect(content).toContain('4.87%');
+    expect(content).not.toContain('4.87%');
+    expect(content).not.toMatch(/default/i);
   });
 
   it('retries when a group is out of range; a second failure drops only that group (its default stays)', async () => {
