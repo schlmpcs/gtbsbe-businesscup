@@ -61,6 +61,7 @@ export function PlanField({ field: f, onChange, className }: PlanFieldProps) {
             maxFractionDigits={f.kind === 'rate' ? 3 : f.kind === 'money' ? 2 : 0}
             {...(f.kind === 'money' ? { prefix: '$' } : {})}
             {...(f.kind === 'rate' ? { suffix: '%' } : {})}
+            grouping={f.kind !== 'year'}
           />
         )}
       </Field>

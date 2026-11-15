@@ -612,7 +612,7 @@ export { AvatarPublicSchema,AvatarPreviewSchema,AvatarStatusSchema,AvatarStampSc
 // Accounts, scenarios and transactions stay in the browser (names are personal, rule 6); these
 // schemas check what is read back from local storage and the fixtures. Plan and Monte Carlo results
 // are engine output: their schemas pin the shape of the fixtures and of anything cached.
-import { ACCOUNT_GROUPS, ASSET_GROUPS, LIABILITY_GROUPS, PLAN_EVENT_TYPES } from './plan';
+import { ACCOUNT_GROUPS, ASSET_GROUPS, GROWTH_ESTIMATE_ACCOUNT_GROUPS, LIABILITY_GROUPS, PLAN_EVENT_TYPES } from './plan';
 
 /** A calendar year a plan can reach (a 16-year-old to age 120 is well inside). */
 const PlanYearNumberSchema = z.number().int().min(1900).max(2200);
@@ -626,6 +626,13 @@ export const AccountGroupSchema = z.enum(ACCOUNT_GROUPS);
 export const AssetGroupSchema = z.enum(ASSET_GROUPS);
 export const LiabilityGroupSchema = z.enum(LIABILITY_GROUPS);
 
+/** Longest reason an AI growth estimate may carry (one plain sentence). */
+export const AI_GROWTH_REASON_MAX = 200;
+export const AiGrowthNoteSchema = z.object({
+  source: z.literal('ai'),
+  reason: z.string().trim().min(1).max(AI_GROWTH_REASON_MAX),
+});
+
 export const AccountSchema = z.object({
   id: z.string().min(1).max(64),
   group: AccountGroupSchema,
@@ -635,6 +642,7 @@ export const AccountSchema = z.object({
   minPayment: estimate(NonNegativeMoneySchema).optional(),   // monthly, liabilities only
   debtKind: DebtKindSchema.optional(),               // loan only
   growth: GrowthRateSchema.optional(),               // per year
+  growthNote: AiGrowthNoteSchema.optional(),         // the growth above is an accepted AI estimate
   excluded: z.boolean().optional(),
   history: z.array(z.object({ month: YearMonthSchema, balance: NonNegativeMoneySchema })),
 }).superRefine((a, ctx) => {
@@ -644,6 +652,9 @@ export const AccountSchema = z.object({
   }
   if (a.debtKind !== undefined && a.group !== 'loan') {
     ctx.addIssue({ code: 'custom', path: ['debtKind'], message: 'debtKind is for loan accounts only' });
+  }
+  if (a.growthNote !== undefined && a.growth === undefined) {
+    ctx.addIssue({ code: 'custom', path: ['growthNote'], message: 'growthNote marks a growth rate; there is none' });
   }
 });
 
@@ -705,6 +716,7 @@ export const PlanAssumptionsSchema = z.object({
     z.object({ mode: z.literal('manual'), monthly: NonNegativeMoneySchema }),
   ]),
   growth: z.partialRecord(AccountGroupSchema, GrowthRateSchema),
+  growthNotes: z.partialRecord(AssetGroupSchema, AiGrowthNoteSchema).optional(),
   withdrawalOrder: z.array(AccountGroupSchema),
   savingsSplit: z.array(z.object({ group: AccountGroupSchema, share: ShareSchema })).min(1)
     .refine((s) => Math.abs(s.reduce((sum, x) => sum + x.share, 0) - 1) < 1e-9, { message: 'shares must sum to 1' }),
@@ -716,6 +728,50 @@ export const ScenarioSchema = z.object({
   icon: z.string().min(1).max(32).optional(),
   assumptions: PlanAssumptionsSchema,
   events: z.array(PlanEventSchema),
+});
+
+// ----- /api/ai/growth: "Estimate with AI" for growth rates ------------------------------------
+/** Largest balance a growth estimate request may carry ($1 billion, like the forecast route). */
+const GrowthEstimateMoneySchema = z.number().min(0).max(1e9);
+/** Free text that is written into the model's prompt: one line, no control characters. */
+const PromptTextSchema = (max: number) =>
+  z.string().trim().min(1).max(max)
+    .refine((s) => ![...s].some((c) => c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f), { message: 'must be one line of plain text' });
+
+export const GrowthEstimateRequestSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('account'),
+    account: z.object({
+      group: z.enum(GROWTH_ESTIMATE_ACCOUNT_GROUPS),
+      name: PromptTextSchema(120),                   // the same limit as Account.name
+      value: GrowthEstimateMoneySchema,
+    }).strict(),
+  }).strict(),
+  z.object({
+    mode: z.literal('plan'),
+    area: z.object({ metro: PromptTextSchema(80), state: PromptTextSchema(40) }).strict().optional(),
+    groups: z.array(z.object({
+      group: AssetGroupSchema,
+      total: GrowthEstimateMoneySchema,
+      count: z.number().int().min(0).max(100),
+    }).strict()).max(ASSET_GROUPS.length)
+      .refine((g) => new Set(g.map((x) => x.group)).size === g.length, { message: 'each group at most once' }),
+    defaults: z.object(
+      Object.fromEntries(ASSET_GROUPS.map((g) => [g, GrowthRateSchema])) as Record<(typeof ASSET_GROUPS)[number], typeof GrowthRateSchema>,
+    ).strict(),
+  }).strict(),
+]);
+
+export const GrowthEstimateSchema = z.object({
+  group: AssetGroupSchema,
+  rate: GrowthRateSchema,
+  reason: z.string().min(1).max(AI_GROWTH_REASON_MAX),
+});
+export const GrowthEstimateResponseSchema = z.object({
+  ok: z.literal(true),
+  source: z.literal('ai'),
+  estimates: z.array(GrowthEstimateSchema),
+  rejected: z.array(AssetGroupSchema),
 });
 
 export const PlanAccountRowSchema = z.object({

@@ -196,7 +196,8 @@ export function lifeLineData(args: {
     }
   }
 
-  const breakdown = moved ? retirementBreakdown(base, sel, decision.eventId, retireAge) : null;
+  // No "why" about retirement for a line that runs out of cash: the headline already says what matters.
+  const breakdown = moved && selShort === null ? retirementBreakdown(base, sel, decision.eventId, retireAge) : null;
   const why = breakdown
     ? decisionWhy(breakdown, { years: Math.abs(selectedYear - baseYear), later: selectedYear > baseYear, renting: decision.event.replaceHousing, age: retireAge })
     : null;

@@ -21,6 +21,8 @@ concurrency:
 # .github/scripts/ci-postgres.sh (not `services:`): a fixed port per runner (E2E_PORT + 2000) on
 # 127.0.0.1 only, handed to the steps as PG_URL.
 # GitHub-hosted minutes are only spent by `deploy-smoke`, and only when deploy files change.
+# Pull requests run `check` and `e2e` (fixture build) only; the production and rollback e2e builds
+# run on pushes to main and by hand, so main's CI (which Deploy waits for) still covers every build.
 
 jobs:
   check:
@@ -124,6 +126,8 @@ jobs:
   # card, and the HTTP duel client present.
   e2e-production:
     name: e2e on the production build (Playwright) + bundle check
+    # Pull requests skip it to keep the three runners free; pushes to main (which gate Deploy) run it.
+    if: github.event_name != 'pull_request'
     runs-on: [self-hosted, linux, lifeguessr-ci]
     timeout-minutes: 25
     env:
@@ -166,6 +170,8 @@ jobs:
   # Then the bundle check, for this build's flags.
   e2e-rollback:
     name: e2e on the rollback build, GAME_MODE=slider (Playwright) + bundle check
+    # Pull requests skip it to keep the three runners free; pushes to main (which gate Deploy) run it.
+    if: github.event_name != 'pull_request'
     runs-on: [self-hosted, linux, lifeguessr-ci]
     timeout-minutes: 25
     env:

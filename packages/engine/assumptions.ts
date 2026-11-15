@@ -1,7 +1,7 @@
 // Every constant the engine uses, in one place (docs/ENGINEERING.md → Default assumptions).
 // Each carries a `source` or `assumption: true`; the UI lists them in a "How we calculate" panel.
 // Rates are decimals per year. `note` is developer documentation, not user-facing copy.
-import type { CostCategory, Money, Rate, ServiceCategory, Source, StatementClass } from '@lifeguessr/types';
+import type { AssetGroup, CostCategory, Money, Rate, ServiceCategory, Source, StatementClass } from '@lifeguessr/types';
 
 export type Assumption<T> =
   | { value: T; source: Source; assumption?: false; note?: string }
@@ -503,6 +503,43 @@ export const aiForecastSanity = {
 } satisfies Assumption<AiForecastSanity>;
 
 // ----- end Y15 --------------------------------------------------------------------------------
+
+// ----- AI growth estimate (per account and the plan's growth defaults) -------------------------
+
+/** The lowest and highest yearly rate (decimals) an AI growth estimate may propose for one asset group. */
+export type GrowthRange = { min: Rate; max: Rate };
+
+/**
+ * Sanity envelope for "Estimate with AI" growth rates (apps/web/src/server/ai/growth.ts). The model only
+ * PROPOSES a long-run average yearly change in value for an asset; plan() and monteCarlo() still do every
+ * projection with it. A proposal outside its group's range never fills a field: the engine default stays.
+ *
+ * The ranges are guards against wrong-unit and runaway answers (6 for 6%, a flipped sign, a one-year
+ * spike sold as a yearly average), not a claim about accuracy inside them:
+ * - cash 0%…+6%: a savings or money market yield; never negative, above 6% is not a cash yield.
+ * - investments, retirement −5%…+15%: a long-run nominal average for a diversified mix (US stocks have
+ *   averaged about 10% nominal over the long run); a single year's return can sit far outside this, an
+ *   average for planning should not.
+ * - realEstate −5%…+12%: FHFA metro averages over 30 years sit roughly between 2% and 7% nominal; the
+ *   range leaves room for a falling market and a hot metro.
+ * - vehicle −35%…+5%: a new car loses 20–30% in its first year and about 15% a year after; a collector
+ *   car can gain a little.
+ * - otherAsset −50%…+50%: anything else (collectibles, a stake in a business, equipment); wide on purpose.
+ * Deliberately NOT in `assumptions` below: a developer guard, not a number the "How we calculate" list
+ * should show a user.
+ */
+export const aiGrowthEnvelope = {
+  value: {
+    cash: { min: 0, max: 0.06 },
+    investments: { min: -0.05, max: 0.15 },
+    retirement: { min: -0.05, max: 0.15 },
+    realEstate: { min: -0.05, max: 0.12 },
+    vehicle: { min: -0.35, max: 0.05 },
+    otherAsset: { min: -0.5, max: 0.5 },
+  },
+  assumption: true,
+  note: 'Guard values for AI-proposed growth rates, by asset group. They reject wrong-unit and runaway answers; they do not grade accuracy within the range.',
+} satisfies Assumption<Record<AssetGroup, GrowthRange>>;
 
 // ----- M3: subscription audit (detectSubscriptions) --------------------------------------------
 // What counts as a recurring charge. The detector prefers to miss a subscription over calling rent

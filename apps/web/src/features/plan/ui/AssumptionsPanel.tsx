@@ -7,7 +7,7 @@
 // `errorMessage`.
 import type { ReactNode } from 'react';
 import { plan as copy } from '@/copy';
-import { Button, Field, NumberInput, Slider, SourceNote, formatRate } from '@/ui-kit';
+import { Button, Field, NumberInput, Slider, SourceNote, Tag, formatRate } from '@/ui-kit';
 import type { AccountGroup, AssumptionFieldVM, AssumptionKey, AssumptionsVM } from '../model/types';
 import { PlanField } from './PlanField';
 
@@ -66,17 +66,36 @@ export function AssumptionsPanel({ vm }: { vm: AssumptionsVM }) {
       )}
 
       <PanelSection title={t.growthTitle}>
+        <GrowthAiControls vm={vm} />
         {vm.growth.map((g) => (
           <div key={g.group} className="flex flex-col gap-xs">
             <Field label={g.label} hint={g.hint}>
               <NumberInput value={g.rate} onValueChange={(v) => vm.updateGrowth(g.group, v)} percent min={-1} max={1} maxFractionDigits={2} suffix="%" />
             </Field>
+            {g.aiNote && (
+              <p className="flex flex-wrap items-center gap-xs text-xs text-text-muted">
+                <Tag>{t.growthAiLabel}</Tag>
+                <span>{g.aiNote.reason}</span>
+              </p>
+            )}
             {g.override !== null && (
               <Button variant="ghost" size="sm" className="self-start" onClick={() => vm.updateGrowth(g.group, null)}>
                 {t.growthReset}
               </Button>
             )}
             {g.source && <SourceNote source={g.source} />}
+            {g.suggestion && !g.suggestion.applied && (
+              <div className="flex flex-col gap-xs rounded-md border border-dashed border-border p-sm text-sm">
+                <span className="flex flex-wrap items-center gap-xs">
+                  <Tag>{t.growthAiLabel}</Tag>
+                  <span className="font-semibold tabular-nums">{t.growthAiSuggestion(g.suggestion.rateLabel)}</span>
+                </span>
+                <span className="text-xs text-text-muted">{g.suggestion.reason}</span>
+                <Button variant="secondary" size="sm" className="self-start" aria-label={t.growthAiApplyFor(g.label)} onClick={() => vm.applyGrowthSuggestion(g.group)}>
+                  {t.growthAiApply}
+                </Button>
+              </div>
+            )}
           </div>
         ))}
       </PanelSection>
@@ -138,6 +157,37 @@ export function AssumptionsPanel({ vm }: { vm: AssumptionsVM }) {
       {vm.errorMessage && (
         <p role="alert" className="text-sm font-medium text-negative">
           {vm.errorMessage}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * "Estimate with AI" for the growth defaults: the button, what is sent, the scope line, "Apply all" and
+ * any message. Each row then shows its suggestion next to the default (above).
+ */
+function GrowthAiControls({ vm }: { vm: AssumptionsVM }) {
+  const t = copy.screen.assumptions;
+  const ai = vm.growthAi;
+  const loading = ai.status === 'loading';
+  return (
+    <div className="flex flex-col gap-xs">
+      <div className="flex flex-wrap gap-sm">
+        <Button variant="secondary" size="sm" onClick={ai.ask} disabled={loading} aria-busy={loading}>
+          {loading ? t.growthAiLoading : t.growthAiButton}
+        </Button>
+        {ai.canApplyAll && (
+          <Button variant="ghost" size="sm" onClick={ai.applyAll}>
+            {t.growthAiApplyAll}
+          </Button>
+        )}
+      </div>
+      <p className="text-xs text-text-muted">{t.growthAiPrivacy}</p>
+      {ai.status === 'ready' && <p className="text-xs text-text-muted">{t.growthAiScope}</p>}
+      {ai.message && (
+        <p role="status" className="text-xs font-medium text-text-muted">
+          {ai.message}
         </p>
       )}
     </div>

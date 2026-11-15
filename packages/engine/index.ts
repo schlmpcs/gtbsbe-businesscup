@@ -21,6 +21,7 @@ export {
 export {
   anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, pointAt, scenarioEffectIssues,
 } from './anchors';
+export { growthEstimateIssues } from './growthEstimate';
 export { forecastFacts, rulesBundle, type ForecastFacts, type ForecastFactsEvent, type ForecastFactsHome } from './bundle';
 export { eventStartMonth, addMonths, withoutEvents } from './events';
 export {

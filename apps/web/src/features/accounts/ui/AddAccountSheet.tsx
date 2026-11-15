@@ -4,7 +4,7 @@
 // screens. Presentational: the fields, their errors and the estimate tags come from useAddAccount.
 import { accounts as t, bankDemo, planner } from '@/copy';
 import { Button, buttonClassName, cx, Field, Sheet, Stack, Tag, useFieldControl } from '@/ui-kit';
-import type { AddAccountFieldVM, AddAccountVM } from '../model/types';
+import type { AddAccountFieldVM, AddAccountVM, GrowthAiFieldVM } from '../model/types';
 import type { LinkComponent } from './AccountsScreen';
 
 export type AddAccountSheetProps = {
@@ -138,6 +138,8 @@ function FieldRow({ field, vm }: { field: AddAccountFieldVM; vm: AddAccountVM })
           <TextControl field={field} onChange={(v) => vm.setField(field.id, v)} />
         )}
       </Field>
+      {field.id === 'growth' && <AiReason reason={field.aiReason} />}
+      {field.id === 'growth' && vm.growthAi && <GrowthAiControls ai={vm.growthAi} />}
       {field.canBeEstimate && !field.defaulted && (
         <label className="flex min-h-11 items-center gap-sm text-sm">
           <input
@@ -148,6 +150,45 @@ function FieldRow({ field, vm }: { field: AddAccountFieldVM; vm: AddAccountVM })
           />
           {t.form.notSure}
         </label>
+      )}
+    </div>
+  );
+}
+
+/** The "AI estimate" tag and its one-line reason, while the field holds the AI's proposal. */
+export function AiReason({ reason }: { reason: string | null }) {
+  if (reason === null) return null;
+  return (
+    <p className="flex flex-wrap items-center gap-xs text-xs text-text-muted" data-testid="growth-ai-reason">
+      <Tag>{t.growthAi.label}</Tag>
+      <span>{reason}</span>
+    </p>
+  );
+}
+
+/** "Estimate with AI": the button, what is sent and why nothing was filled (when it wasn't). */
+export function GrowthAiControls({ ai }: { ai: GrowthAiFieldVM }) {
+  const loading = ai.status === 'loading';
+  return (
+    <div className="flex flex-col gap-xs">
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="self-start"
+        onClick={ai.ask}
+        disabled={!ai.canAsk || loading}
+        aria-busy={loading}
+        data-testid="growth-ai-ask"
+      >
+        {loading ? t.growthAi.loading : t.growthAi.button}
+      </Button>
+      <p className="text-xs text-text-muted">{ai.canAsk ? t.growthAi.privacy : t.growthAi.needsInput}</p>
+      {ai.status === 'filled' && <p className="text-xs text-text-muted">{t.growthAi.scope}</p>}
+      {ai.message && (
+        <p role="status" className="text-xs font-medium text-text-muted" data-testid="growth-ai-message">
+          {ai.message}
+        </p>
       )}
     </div>
   );

@@ -218,6 +218,7 @@ describe('useLifeLine', { timeout: 30_000 }, () => {
     expect(vm.headline.payoff).toBe('you run out of cash at 35');
     expect(vm.chart.retireCallout).toBeNull();
     expect(vm.chart.beforeCallout).toBeNull();
+    expect(vm.headline.why).toBeNull(); // no retirement breakdown for a line that runs out of cash
     expect(vm.kpis[0]!.tone).not.toBe('good');
     expect(vm.kpis[2]).toMatchObject({ id: 'runsOut', value: 'at 35', was: 'Never', delta: 'new', tone: 'bad' });
     expect(vm.chart.runsOut).toMatchObject({ age: 35, line: 'selected' });

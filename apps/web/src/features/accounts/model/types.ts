@@ -4,7 +4,8 @@
 // for (asset) or against (liability) net worth. Rates are decimals per year (0.2436 = 24.36%), except
 // the add-account form's text inputs, which hold what the person typed (see `AddAccountFieldVM`).
 // Names: copy.planner.accountGroups[group] for groups, copy.accounts for the screens' own words.
-// Privacy (CLAUDE.md rule 6): account names and balances stay in this browser.
+// Privacy (CLAUDE.md rule 6): account names and balances stay in this browser, except one account's
+// type, name and value when the person taps "Estimate with AI" (/api/ai/growth; not stored).
 import type { Account, AccountGroup, Debt, Estimate, Money, Rate, YearMonth } from '@lifeguessr/types';
 import type { DownloadOutcome } from '@/lib/download';
 import type { TransactionRowVM, NewTransactionInput } from '@/features/transactions/model/types';
@@ -100,6 +101,42 @@ export type AccountSummaryVM = {
   lastUpdated: YearMonth | null;
   /** The month of the first balance. */
   created: YearMonth | null;
+  /**
+   * The yearly change of an asset with that field (investments, retirement, real estate, vehicle, other);
+   * null for other types. `rate` null = the plan's default applies. `aiReason`: the rate is an accepted
+   * AI estimate: label it "AI estimate" with this reason.
+   */
+  growth: { rate: Rate | null; aiReason: string | null } | null;
+};
+
+/**
+ * "Estimate with AI" next to a yearly change field. The AI only proposes the rate (checked against the
+ * envelope); it fills the field, the person can edit it, and the engine projects with whatever is saved.
+ */
+export type GrowthAiFieldVM = {
+  status: 'idle' | 'loading' | 'filled' | 'error';
+  /** A name and a valid value are there to send. */
+  canAsk: boolean;
+  /** Why nothing was filled (status 'error'); null otherwise. */
+  message: string | null;
+  ask: () => void;
+};
+
+/** The yearly change edit on Account detail (assets with the field). */
+export type AccountGrowthVM = {
+  /** The rate as typed, in percent ("-12" = −0.12 per year); blank = the plan's default. */
+  text: string;
+  setText: (text: string) => void;
+  /** The plan's default as it would be typed (e.g. "−15"), or null when it depends on the area. */
+  placeholder: string | null;
+  hint: string | null;
+  /** True after a save with text that is not a percent. */
+  error: boolean;
+  /** The field holds the AI's proposal (untouched): label it "AI estimate" with this reason. */
+  aiReason: string | null;
+  /** Stores the rate (with its AI note when the field still holds the AI's proposal); false for invalid text. */
+  save: () => boolean;
+  ai: GrowthAiFieldVM;
 };
 
 export type AccountDetailVM = AccountRowVM & {
@@ -124,6 +161,8 @@ export type AccountVM = {
   exclude: (excluded?: boolean) => void;
   /** Removes the account; its lines stay in the ledger without an account. */
   delete: () => void;
+  /** The yearly change edit with "Estimate with AI"; null for types without that field (or no account). */
+  growth: AccountGrowthVM | null;
   /** Adds a line on this account; returns its id, or null when the input is invalid. */
   addTransaction: (input: Omit<NewTransactionInput, 'accountId'>) => string | null;
 };
@@ -161,6 +200,8 @@ export type AddAccountFieldVM = {
   placeholder: string | null;
   /** The line under the field, already worded (from copy.accounts.form); null for none. */
   hint: string | null;
+  /** 'growth' only: the field holds the AI's proposal (untouched): label it "AI estimate" with this reason. */
+  aiReason: string | null;
 };
 
 export type AddAccountVM = {
@@ -172,6 +213,8 @@ export type AddAccountVM = {
   /** The form's title (e.g. "Add asset: Vehicle"); null on 'pick-type'. */
   title: string | null;
   fields: AddAccountFieldVM[];
+  /** "Estimate with AI" for the yearly change field; null for types without that field. */
+  growthAi: GrowthAiFieldVM | null;
   pickType: (group: AccountGroup) => void;
   setField: (id: AddAccountFieldId, value: string) => void;
   setEstimate: (id: AddAccountFieldId, isEstimate: boolean) => void;
