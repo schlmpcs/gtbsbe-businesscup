@@ -2,6 +2,7 @@
 // desktop.
 import { expect, test, type Page } from '@playwright/test';
 import { mocks } from '../src/copy/mocks';
+import { toolPlan } from '../src/copy/toolPlan';
 
 let pageErrors: string[] = [];
 
@@ -53,10 +54,10 @@ test.describe('S13 Decision: keep your car or switch', () => {
     await page.goto('/decide');
     const plan = page.getByTestId('decide-plan');
     await plan.getByText(d.kindsShort.lease, { exact: true }).click();
-    await expect(plan.getByTestId('decide-plan-impact')).toBeVisible();
-    await plan.getByRole('button', { name: d.plan.add }).click();
-    await expect(plan.getByText(d.plan.added)).toBeVisible();
-    await plan.getByRole('link', { name: new RegExp(d.plan.open) }).click();
+    await expect(plan.getByTestId('tool-plan-impact')).toBeVisible();
+    await plan.getByTestId('tool-plan-add').click();
+    await expect(plan.getByTestId('tool-plan-added')).toBeVisible();
+    await plan.getByRole('link', { name: new RegExp(toolPlan.open) }).click();
     await expect(page).toHaveURL(/\/plan/);
     await expect(page.getByText(d.plan.eventName.lease).first()).toBeVisible();
   });

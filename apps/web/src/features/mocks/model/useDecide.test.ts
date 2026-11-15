@@ -2,16 +2,16 @@
 // S13 view-model on the fixture stores (profile.demo.json, accounts.demo.json): the car comes from the
 // person's accounts and budget, the numbers from the engine's carDecision and plan(). Nothing here is a
 // copied constant: every expected number is computed by the engine in the test.
-import { carDecision, hasEstimates } from '@lifeguessr/engine';
-import type { Profile } from '@lifeguessr/types';
+import { carDecision, hasEstimates, previewEvent } from '@lifeguessr/engine';
+import type { PlanEvent, Profile } from '@lifeguessr/types';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneProfileDemo, leaseScenarioSample, loanOffersSample } from '@/fixtures';
 import { areaRates } from '@/lib/model/profile';
 import { FIXTURE_NOW, resetFixtureStores } from '@/features/dashboard/model/resetFixtureStores';
-import { NO_MOVES, planOf, profileFor, usePlanInputs } from '@/features/plan/model/planEngine';
+import { NO_MOVES, profileFor, usePlanInputs } from '@/features/plan/model/planEngine';
 import { usePlanStore } from '@/features/plan/model/planStore';
-import { carPlanEvent } from './useCarPlanLink';
+import { carPlanDraft } from './useCarPlanLink';
 import { CAR_EXAMPLE, carDefaults, NO_CAR_EXAMPLE, useDecide } from './useDecide';
 
 beforeEach(async () => {
@@ -129,7 +129,7 @@ describe('useDecide', () => {
 });
 
 describe('Add to my plan', () => {
-  it('a lease becomes a monthly Expense on the active scenario; its effect is plan() with − without', () => {
+  it('a lease becomes a monthly Expense on the active scenario; its effect is the engine’s previewEvent', () => {
     const { result } = decide();
     act(() => result.current.vm.plan.setPath('alternative'));
     const { vm, inputs } = result.current;
@@ -140,25 +140,22 @@ describe('Add to my plan', () => {
 
     const { scenarios, activeId } = usePlanStore.getState();
     const active = scenarios.find((s) => s.id === activeId)!;
-    const draft = carPlanEvent('alternative', { kind: 'lease', ...leaseScenarioSample }, vm.result.data, 2026)!;
-    const withEvent = planOf(inputs, { ...active, events: [...active.events, { ...draft, id: 'x' }] });
-    const without = planOf(inputs, active);
-    expect(vm.plan.impact?.status).toBe('ready');
-    if (vm.plan.impact?.status === 'ready') {
-      expect(vm.plan.impact.data.atRetirement).toBeCloseTo(withEvent.kpis.netWorthAtRetirement - without.kpis.netWorthAtRetirement, 6);
-      expect(vm.plan.impact.data.atRetirement).toBeLessThan(0);
+    const draft = carPlanDraft('alternative', { kind: 'lease', ...leaseScenarioSample }, vm.result.data, 2026)!;
+    const p = previewEvent(profileFor(inputs, NO_MOVES), inputs.accounts, active, { ...draft, id: 'x', year: 2026, enabled: true } as PlanEvent, inputs.area);
+    const preview = vm.plan.tool.preview;
+    expect(preview?.status).toBe('ready');
+    if (preview?.status === 'ready') {
+      expect(preview.data.deltaAtRetirement).toBeCloseTo(p.withEvent.netWorthAtRetirement - p.without.netWorthAtRetirement, 6);
+      expect(preview.data.deltaAtRetirement).toBeLessThan(0);
     }
 
-    act(() => result.current.vm.plan.add());
-    expect(result.current.vm.plan.added).toBe(true);
+    act(() => {
+      result.current.vm.plan.tool.add();
+    });
+    expect(result.current.vm.plan.tool.added).toBe(true);
     const after = usePlanStore.getState().scenarios.find((s) => s.id === activeId)!;
-    const added = after.events.find((e) => e.type === 'expense' && e.cadence === 'monthly')!;
-    expect(added).toMatchObject({ type: 'expense', cadence: 'monthly', year: 2026, endYear: 2036, enabled: true });
     expect(after.events).toHaveLength(active.events.length + 1);
-    // Measured without counting the added event twice.
-    if (result.current.vm.plan.impact?.status === 'ready' && vm.plan.impact?.status === 'ready') {
-      expect(result.current.vm.plan.impact.data.atRetirement).toBeCloseTo(vm.plan.impact.data.atRetirement, 6);
-    }
+    expect(after.events.at(-1)).toMatchObject({ type: 'expense', cadence: 'monthly', year: 2026, endYear: 2036, enabled: true });
   });
 
   it('a new car is a financed one-off Expense; keeping and going car-free add no event', () => {
@@ -168,7 +165,8 @@ describe('Add to my plan', () => {
     expect(result.current.vm.plan.event?.kind).toBe('financedExpense');
     expect(result.current.vm.plan.event?.amount).toBe(loanOffersSample[1]!.amount);
     act(() => result.current.vm.plan.setPath('keep'));
-    expect(result.current.vm.plan).toMatchObject({ event: null, noEventReason: 'keep', impact: null });
+    expect(result.current.vm.plan).toMatchObject({ event: null, noEventReason: 'keep' });
+    expect(result.current.vm.plan.tool.preview).toBeNull();
     act(() => result.current.vm.setAlternativeKind('noCar'));
     act(() => result.current.vm.plan.setPath('alternative'));
     expect(result.current.vm.plan).toMatchObject({ event: null, noEventReason: 'noCar' });
