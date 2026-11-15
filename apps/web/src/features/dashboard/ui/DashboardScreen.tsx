@@ -3,6 +3,7 @@
 // the "What if?" row (three decision tools as illustrated tiles, then all tools), spending, budget,
 // recurring bills, recent transactions, goals and today's game. Presentational: every number comes from
 // useDashboard(); the route passes its Link.
+import type { ReactNode } from 'react';
 import { dashboard as t, planner } from '@/copy';
 import { formatMonthYear } from '@/ui-kit';
 import type { DashboardVM } from '../model/types';
@@ -11,9 +12,10 @@ import type { DashLink } from './Widget';
 
 export type { DashLink } from './Widget';
 
-export type DashboardScreenProps = { vm: DashboardVM; Link: DashLink };
+/** `hero`: the Life line (features/lifeline), above the cards once the page has loaded. */
+export type DashboardScreenProps = { vm: DashboardVM; Link: DashLink; hero?: ReactNode };
 
-export function DashboardScreen({ vm, Link }: DashboardScreenProps) {
+export function DashboardScreen({ vm, Link, hero }: DashboardScreenProps) {
   const base = { Link, links: vm.links };
   return (
     <main className="page flex flex-col gap-xl" data-testid="dashboard">
@@ -32,6 +34,7 @@ export function DashboardScreen({ vm, Link }: DashboardScreenProps) {
         </div>
       ) : (
         <>
+          {hero}
           {vm.checklist.visible && <ChecklistCard checklist={vm.checklist} onDismiss={vm.dismissChecklist} Link={Link} />}
           <div className="grid grid-cols-1 gap-lg lg:grid-cols-2">
             <PlanCard {...base} index={0} plan={vm.plan} topMove={vm.topMove} />

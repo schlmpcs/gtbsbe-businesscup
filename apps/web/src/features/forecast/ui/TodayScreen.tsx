@@ -64,6 +64,8 @@ export type TodayScreenProps = {
   Link: LinkComponent;
   /** The daily log's quick-add (features/spend), rendered in the "This month so far" card. */
   quickAdd?: ReactNode;
+  /** The home hero (features/lifeline): when given, it leads the page and the house card turns compact. */
+  hero?: ReactNode;
 };
 
 const CARD = 'rounded-xl bg-surface p-xl shadow-md';
@@ -81,12 +83,13 @@ function Chevron() {
   );
 }
 
-export function TodayScreen({ vm, links, Link, quickAdd }: TodayScreenProps) {
+export function TodayScreen({ vm, links, Link, quickAdd, hero }: TodayScreenProps) {
   if (vm.firstVisit) return <FirstVisit links={links} Link={Link} />;
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl sm:py-3xl">
       <Stack gap="3xl">
-        <HouseHero vm={vm} planHref={links.plan} futureHref={links.future} Link={Link} />
+        {hero}
+        <HouseHero vm={vm} planHref={links.plan} futureHref={links.future} Link={Link} compact={Boolean(hero)} />
 
         <Nudge vm={vm} links={links} Link={Link} />
 
@@ -121,19 +124,22 @@ export function TodayScreen({ vm, links, Link, quickAdd }: TodayScreenProps) {
  * The house: net worth in N years (AI estimate or rules, as the VM says), its range and the goal
  * verdict; then the way into the Plan (primary) and You in N years.
  */
-function HouseHero({ vm, planHref, futureHref, Link }: { vm: TodayVM; planHref: string; futureHref: string; Link: LinkComponent }) {
+function HouseHero({
+  vm, planHref, futureHref, Link, compact = false,
+}: { vm: TodayVM; planHref: string; futureHref: string; Link: LinkComponent; compact?: boolean }) {
   const ready = vm.status === 'ready';
+  const Heading = compact ? 'h2' : 'h1';
   return (
     <section
       aria-labelledby="house-heading"
-      className="grid items-center gap-2xl lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+      className={compact ? cx(CARD, 'flex flex-col') : 'grid items-center gap-2xl lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'}
     >
       <div className="flex min-w-0 flex-col items-start gap-lg">
-        <h1 id="house-heading">
+        <Heading id="house-heading" className={compact ? 'sr-only' : undefined}>
           <Sticker tone="ink" tilt={-3} className="text-sm">
             {t.today.home.title}
           </Sticker>
-        </h1>
+        </Heading>
         <div data-testid="at-horizon" className="flex w-full flex-col gap-sm">
           <h2 className="font-display text-2xl font-extrabold tracking-tight">
             {ready && vm.horizonReady ? t.today.future.title(vm.horizonYears) : t.today.future.titleNeutral}
@@ -148,7 +154,7 @@ function HouseHero({ vm, planHref, futureHref, Link }: { vm: TodayVM; planHref: 
                 <span className={EYEBROW}>{vm.horizonReady ? t.netWorthAt(vm.horizonYears) : t.today.future.titleNeutral}</span>
                 {!vm.bandIsZero && <EstimateTag />}
               </div>
-              <p className="font-display text-7xl font-extrabold leading-display tracking-tight tabular-nums break-words sm:text-8xl lg:text-9xl">
+              <p className={cx('font-display font-extrabold leading-display tracking-tight tabular-nums break-words', compact ? 'text-5xl' : 'text-7xl sm:text-8xl lg:text-9xl')}>
                 <Money value={vm.atHorizon.mid} />
               </p>
               <div className="flex flex-wrap items-baseline gap-x-sm text-sm text-text-muted">
@@ -190,7 +196,7 @@ function HouseHero({ vm, planHref, futureHref, Link }: { vm: TodayVM; planHref: 
         </div>
       </div>
       {/* Decoration only: the art carries no number. */}
-      <Art name="house-build" className="mx-auto w-full max-w-60 sm:max-w-(--container-md)" />
+      {!compact && <Art name="house-build" className="mx-auto w-full max-w-60 sm:max-w-(--container-md)" />}
     </section>
   );
 }

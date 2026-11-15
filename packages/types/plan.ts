@@ -148,6 +148,17 @@ export type EventPreview = {
   leftOverMonthly: Money;            // monthly: average take-home − spending − debt payments in the event's first plan year, with it
 };
 
+/**
+ * decisionSweep (home "Life line" hero): one event of a scenario moved to one candidate year. `plan` is
+ * plan() of that scenario; `chance` is monteCarlo() of it with the sweep's fixed seed (the same draws at
+ * every year, so a change in successRate is the move's, not noise), absent when no settings were given.
+ */
+export type DecisionSweepPoint = {
+  year: number; age: number;
+  plan: PlanResult;
+  chance?: { successRate: Rate; bands: { year: number; p10: Money; p90: Money }[] };
+};
+
 // ----- Monte Carlo (P10, MP5) ----------------------------------------------------------------
 
 export type MonteCarloSettings = {

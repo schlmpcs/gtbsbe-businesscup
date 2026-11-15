@@ -63,3 +63,4 @@ export { plan } from './plan';
 export { onboarding } from './onboarding';
 export { bankDemo } from './bankDemo';
 export { toolPlan } from './toolPlan';
+export { lifeline } from './lifeline';

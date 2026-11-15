@@ -69,6 +69,7 @@ export { monteCarlo } from './monteCarlo';                                      
 export {
   defaultEvent, defaultEventSources, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown, type DefaultEventSources,
 } from './planEvents'; // MP4
+export { decisionSweep, eventAtYear, DECISION_SWEEP_MAX_YEARS } from './decision';            // home Life line
 export { accountsToProfile, profileToAccounts, netWorthSummary, HOME_ACCOUNT_ID } from './accounts';            // MP8
 export { budgetRows, budgetRowsForYear } from './budget';                                      // MP9
 export { cashFlowSummary } from './cashFlow';                                                  // MP9
