@@ -69,6 +69,8 @@ export const common = {
     debtPayments: 'Debt payments',
     other: 'Everything else',
   } satisfies Record<CostCategory, string>,
+  /** JF4: the rentUtilities label when the person owns their home (owner costs, not rent). */
+  ownerHousing: 'Home costs + utilities',
 
   /** Strings the UI kit (src/ui-kit) shows on its own. Everything else comes in through props. */
   kit: {

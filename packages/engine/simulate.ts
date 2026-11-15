@@ -26,6 +26,12 @@
 //   `purchasesCash`), a one-off income is added to cash; both × (1 + inflation)^(t/12). The latest
 //   start wins on a field, a tie goes to the later event in the list.
 // - Purchases are consumption, not assets: nothing is added to net worth for the thing bought.
+// - The home (JF4, #136): a profile with `p.home` (an owner) opens the realEstate group at
+//   `home.value` growing at `home.appreciation` (`withHomeAsset`), so its net worth follows the plan
+//   options rule below: cash + retirement + home − debts (a 'mortgage' debt's payments build equity).
+//   An explicit `balances.realEstate` / `growth.realEstate` wins (plan() passes the accounts', which
+//   accountsToProfile keeps in step with `home.value`), so the home is never counted twice. The home
+//   value is not shifted by `scenario`. A renter (no `p.home`) gets exactly the rules above.
 //
 // Plan options (MP3, #163; used by plan() and monteCarlo()). All optional; without any of them the
 // simulation is exactly the one above and `SimulationMonth.groups` / `.shortfall` are absent.
@@ -191,7 +197,7 @@ export type SimulationMonth = {
   debtBalance: Money;           // Σ all debt balances
   cardBalance: Money;           // Σ balances of kind 'card' (the synthetic card included)
   debts: Record<string, Money>; // balance by debt id
-  netWorth: Money;              // cash + retirement − debtBalance (plan options: Σ groups − debtBalance − shortfall)
+  netWorth: Money;              // cash + retirement − debtBalance (a home or plan options: Σ groups − debtBalance − shortfall)
   debtLoad: Rate;               // requiredDebtPayments / income (∞ when income is 0 and payments > 0)
   // Present only with a plan option (MP3):
   groups?: Record<AssetGroup, GroupMonth>; // cash and retirement included (same balances as above)
@@ -266,6 +272,22 @@ export function cardMinPaymentFor(balance: Money, apr: Rate): Money {
  */
 export function usesCardFormula(d: Pick<Debt, 'kind' | 'minPayment'>): boolean {
   return d.kind === 'card' && d.minPayment.isEstimate;
+}
+
+/**
+ * `opts` with the profile's home as the realEstate group (JF4): opening balance `home.value`, yearly
+ * growth `home.appreciation`, unless `opts` already sets them. A profile without a home gets `opts` back
+ * unchanged (the same object). simulate() applies it to every run; plan() / monteCarlo() use it to read
+ * the realEstate growth the run will use.
+ */
+export function withHomeAsset<T extends Pick<SimulateOptions, 'balances' | 'growth'>>(p: Pick<Profile, 'home'>, opts: T): T {
+  const home = p.home;
+  if (!home) return opts;
+  return {
+    ...opts,
+    balances: { ...opts.balances, realEstate: opts.balances?.realEstate ?? home.value.value },
+    growth: { ...opts.growth, realEstate: opts.growth?.realEstate ?? home.appreciation.value },
+  };
 }
 
 /** True when any input the simulation reads is an estimate (so the range band is not zero). */
@@ -366,7 +388,8 @@ function occursAt(x: ScheduledPurchase, t: number): boolean {
  * debt's APR beats the cash yield), event values included. RangeError when the profile has events
  * but no `asOf`, or a plan option is invalid.
  */
-export function simulate(p: Profile, months: number, opts: SimulateOptions = {}): Simulation {
+export function simulate(p: Profile, months: number, options: SimulateOptions = {}): Simulation {
+  const opts = withHomeAsset(p, options);
   if (!Number.isInteger(months) || months < 0 || months > MAX_SIMULATION_MONTHS) {
     throw new RangeError(`Invalid simulation length: ${months} months`);
   }

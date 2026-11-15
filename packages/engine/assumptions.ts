@@ -963,3 +963,60 @@ export const vehicleDepreciationAnnual = {
   assumption: true,
   note: 'Rule-of-thumb depreciation for a typical car, not a valuation. Not yet listed in `assumptions` (the "How we calculate" map).',
 } satisfies Assumption<Rate>;
+
+// MP5: Monte Carlo (#165) -------------------------------------------------------------------------
+
+/**
+ * Yearly standard deviation of each asset group's growth in monteCarlo() when
+ * `MonteCarloSettings.growth` leaves the group out (the mean is then the rate plan() uses).
+ * Investments and retirement 15%, real estate 5%, the rest 0 (cash yield, car depreciation and other
+ * assets do not vary by path).
+ */
+export const monteCarloGrowthSd = {
+  value: { cash: 0, investments: 0.15, retirement: 0.15, realEstate: 0.05, vehicle: 0, otherAsset: 0 },
+  assumption: true,
+  note:
+    'Round numbers for the spread of yearly returns: about 15% for a stock-heavy portfolio, about 5% for ' +
+    'home prices. Not a measured volatility. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<Record<'cash' | 'investments' | 'retirement' | 'realEstate' | 'vehicle' | 'otherAsset', Rate>>;
+
+/**
+ * Lowest yearly rate a Monte Carlo draw can take (inflation or growth): a normal draw has no floor, but
+ * a rate of −100% or less has no meaning (simulate() rejects it). −99% = nearly everything lost in a year.
+ */
+export const monteCarloRateFloor = {
+  value: -0.99 as Rate,
+  assumption: true,
+  note: 'A technical floor, reached only by extreme draws. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<Rate>;
+// ----- end MP5 --------------------------------------------------------------------------------
+
+// MP6: the Baseline scenario's default assumptions (scenarios.ts: baselineScenario, #166) -----------
+
+/**
+ * Default retirement age of a new plan (`PlanAssumptions.retireAge`): the full retirement age for
+ * anyone born in 1960 or later, the same age the default Social Security event starts at.
+ */
+export const planRetireAgeDefault = {
+  value: 67,
+  source: socialSecurityClaimAge.source,
+  note: 'Editable per scenario. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<number>;
+
+/** Default end of the plan (`PlanAssumptions.endAge`): the age the yearly plan runs to. */
+export const planEndAgeDefault = {
+  value: 90,
+  assumption: true,
+  note:
+    'A planning horizon past the average US life expectancy at 65, so the money is planned to last. ' +
+    'Editable per scenario. Not yet listed in `assumptions` (the "How we calculate" map).',
+} satisfies Assumption<number>;
+
+/** Default withdrawal order (`PlanAssumptions.withdrawalOrder`): what a shortfall draws from first. */
+export const planWithdrawalOrderDefault = {
+  value: ['cash', 'investments', 'retirement'] as const,
+  assumption: true,
+  note:
+    'Cash first, then taxable investments, retirement accounts last (they are the costliest to draw early). ' +
+    'A common rule of thumb, not tax advice. Editable per scenario.',
+} satisfies Assumption<readonly ['cash', 'investments', 'retirement']>;

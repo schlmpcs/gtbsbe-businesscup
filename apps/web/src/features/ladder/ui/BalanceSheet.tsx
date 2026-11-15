@@ -1,15 +1,22 @@
-// S8 Balance sheet (Design v3, Figma 202:2117): savings and debts only. Age and take-home pay are asked
-// once, on About you (S6): here one read-only line shows them, with a link back. Savings is a white card
-// with each value on a cream row (label left, number right; a skipped value is grey, with one estimate
-// tag for the card rather than one per row; a typed one can be skipped back to our estimate). Debts,
-// confirm not type (JF17): payments found in the statement come up as a card to confirm; "+ kind" chips
-// open a form where only the balance is typed (APR and minimum prefilled, tagged estimate, editable);
-// edit / remove; the debt-load gauge. Right: an ink card with today's net worth, the S5 guess against
-// the month, then the house being built.
+// S8 Balance sheet (Design v3, Figma 202:2117): savings and debts. Age and take-home pay are asked once,
+// on About you (S6): here one read-only line shows them, with a link back. Savings is a white card with
+// each value on a cream row (label left, number right; a skipped value is grey, with one estimate tag
+// for the card rather than one per row; a typed one can be skipped back to our estimate). Debts, confirm
+// not type (JF17): payments found in the statement come up as a card to confirm; "+ kind" chips open a
+// form where only the balance is typed (APR and minimum prefilled, tagged estimate, editable); edit /
+// remove; the debt-load gauge. JF4 "Your home": rent / own with a mortgage / own outright; when owning,
+// the home value and HOA on cream rows, the appreciation and the monthly owner costs with their estimate
+// tags and sources, and "Add your mortgage" (the debt form preset to a mortgage) when none is listed.
+// Right: an ink card with today's net worth, the S5 guess against the month, then the house being built.
 import { useId, useState, type ReactNode } from 'react';
 import { ladder } from '@/copy';
-import { Art, Button, Choice, cx, EstimateTag, formatMoney, formatRate, Gauge, NumberInput, Sticker } from '@/ui-kit';
-import type { BalanceFieldKey, BalanceSheetVM, DebtInput, DebtRowVM, GuessPayoffVM, LadderProgressVM } from '../model/types';
+import {
+  Art, Button, Choice, cx, EstimateTag, formatMoney, formatRate, Gauge, NumberInput, SourceNote, Sticker, type Source,
+} from '@/ui-kit';
+import type {
+  BalanceFieldKey, BalanceSheetVM, DebtInput, DebtRowVM, GuessPayoffVM, HomeSectionVM, HomeSummary, LadderProgressVM,
+  ScannedDebt, VMError,
+} from '../model/types';
 import { DebtForm } from './DebtForm';
 import { GuessPayoff } from './GuessPayoff';
 import { LadderShell } from './LadderShell';
@@ -68,6 +75,23 @@ export function BalanceSheet({ vm, progress, payoff = null }: BalanceSheetProps)
   // Which debt row is being edited, or 'new:<kind>' for the quick add form.
   const [editing, setEditing] = useState<string | null>(null);
   const newKind = vm.debtKinds.find((k) => editing === `new:${k}`);
+  // JF9: a scanned statement opens the add form prefilled ('scan' in `editing`).
+  const [scanned, setScanned] = useState<ScannedDebt | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<VMError | null>(null);
+  const scanId = useId();
+  const onScan = async (file: File) => {
+    setScanning(true);
+    setScanError(null);
+    const outcome = await vm.scanStatement(file);
+    setScanning(false);
+    if (outcome.ok) {
+      setScanned(outcome.value);
+      setEditing('scan');
+    } else {
+      setScanError(outcome.error);
+    }
+  };
 
   return (
     <LadderShell
@@ -93,6 +117,16 @@ export function BalanceSheet({ vm, progress, payoff = null }: BalanceSheetProps)
       <SheetCard title={t.savingsTitle} estimate={vm.fields.cash.isEstimate || vm.fields.retirement.isEstimate}>
         <BalanceField field="cash" vm={vm} />
         <BalanceField field="retirement" vm={vm} />
+      </SheetCard>
+
+      <SheetCard title={t.home.title}>
+        <HomeSection
+          vm={vm}
+          home={vm.home}
+          addingMortgage={editing === 'home:mortgage'}
+          onAddMortgage={() => setEditing('home:mortgage')}
+          onDoneMortgage={() => setEditing(null)}
+        />
       </SheetCard>
 
       <SheetCard title={t.debtsTitle}>
@@ -138,7 +172,27 @@ export function BalanceSheet({ vm, progress, payoff = null }: BalanceSheetProps)
               </ul>
             )}
             {vm.detectedDebt && editing === null && <DetectedDebt vm={vm} detected={vm.detectedDebt} />}
-            {newKind ? (
+            {editing === 'scan' && scanned ? (
+              <DebtForm
+                key="scan"
+                title={t.formTitleAdd}
+                note={t.scan.note}
+                kinds={vm.debtKinds}
+                bounds={vm.debtBounds}
+                aprDefaults={vm.debtAprDefaults}
+                estimateMinPayment={vm.estimateMinPayment}
+                initial={{ kind: scanned.kind ?? 'card', balance: scanned.balance, apr: scanned.apr, minPayment: scanned.minPayment }}
+                onSave={(input) => {
+                  vm.addDebt(input);
+                  setScanned(null);
+                  setEditing(null);
+                }}
+                onCancel={() => {
+                  setScanned(null);
+                  setEditing(null);
+                }}
+              />
+            ) : newKind ? (
               <DebtForm
                 key={newKind}
                 title={t.formTitleAdd}
@@ -154,6 +208,7 @@ export function BalanceSheet({ vm, progress, payoff = null }: BalanceSheetProps)
                 onCancel={() => setEditing(null)}
               />
             ) : (
+              <>
               <div role="group" aria-label={t.addDebt} className="flex flex-wrap gap-sm">
                 {vm.debtKinds.map((k) => (
                   <Button
@@ -169,6 +224,8 @@ export function BalanceSheet({ vm, progress, payoff = null }: BalanceSheetProps)
                   </Button>
                 ))}
               </div>
+              <ScanStatement id={scanId} scanning={scanning} error={scanError} onFile={onScan} />
+              </>
             )}
           </div>
           <Gauge
@@ -329,5 +386,246 @@ function DetectedDebt({
         </Button>
       </div>
     </section>
+  );
+}
+
+const h = t.home;
+
+/** The value and estimate tag / source of one number, as a cream row (label left, value right). */
+function HomeInputRow({
+  label,
+  hint,
+  isEstimate,
+  source,
+  value,
+  bounds,
+  suffix,
+  onChange,
+  field,
+}: {
+  label: string;
+  hint: string;
+  isEstimate: boolean;
+  source: Source | null;
+  value: number;
+  bounds: { min: number; max: number };
+  suffix?: string;
+  onChange: (v: number) => void;
+  field: string;
+}) {
+  const inputId = useId();
+  const hintId = useId();
+  return (
+    <div
+      data-field={field}
+      data-estimate={isEstimate ? 'true' : 'false'}
+      className="flex flex-wrap items-center justify-between gap-md rounded-lg bg-bg px-lg py-md"
+    >
+      <div className="flex min-w-0 flex-col gap-xs">
+        <span className="flex flex-wrap items-center gap-sm">
+          <label htmlFor={inputId} className="text-base text-text-muted">
+            {label}
+          </label>
+          {isEstimate && <EstimateTag className="bg-surface" />}
+        </span>
+        <span id={hintId} className="text-xs text-text-muted">
+          {hint}
+        </span>
+        {source && <SourceNote source={source} variant="toggle" />}
+      </div>
+      <NumberInput
+        id={inputId}
+        aria-describedby={hintId}
+        value={value}
+        min={bounds.min}
+        max={bounds.max}
+        maxFractionDigits={0}
+        prefix="$"
+        suffix={suffix}
+        onValueChange={(v) => {
+          if (v !== null) onChange(v);
+        }}
+        className={cx(
+          'min-w-0 flex-1 font-display sm:w-(--container-3xs) sm:flex-none text-2xl font-extrabold [&_input]:py-xs [&_input]:text-right [&_input]:text-2xl',
+          isEstimate && '[&_input]:text-text-muted',
+        )}
+      />
+    </div>
+  );
+}
+
+/** The monthly owner costs (engine ownerCosts), one line each with its tag and source, and the total. */
+function OwnerCosts({ costs }: { costs: HomeSummary['costs'] }) {
+  return (
+    <section aria-label={h.costsTitle} data-testid="owner-costs" className="flex flex-col gap-sm rounded-lg bg-bg px-lg py-md">
+      <h3 className="text-base font-semibold">{h.costsTitle}</h3>
+      <ul className="flex flex-col gap-xs">
+        {costs.lines.map((l) => (
+          <li key={l.key} data-cost={l.key} className="flex flex-wrap items-start justify-between gap-sm text-sm">
+            <span className="flex min-w-0 flex-col gap-xs">
+              <span className="flex flex-wrap items-center gap-sm text-text-muted">
+                {h.costLines[l.key]}
+                {l.isEstimate && <EstimateTag className="bg-surface" />}
+              </span>
+              {l.source && <SourceNote source={l.source} variant="toggle" />}
+            </span>
+            <span className="font-semibold tabular-nums">{h.perMonth(formatMoney(l.monthly))}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="flex flex-wrap items-baseline justify-between gap-sm border-t-2 border-border pt-sm">
+        <span className="flex items-center gap-sm font-bold">
+          {h.costsTotal}
+          {costs.isEstimate && <EstimateTag className="bg-surface" />}
+        </span>
+        <span className="font-display text-2xl font-extrabold tabular-nums" data-testid="owner-costs-total">
+          {h.perMonth(formatMoney(costs.total))}
+        </span>
+      </p>
+      <p className="text-xs text-text-muted">{h.costsNote}</p>
+    </section>
+  );
+}
+
+/** JF4 "Your home": rent or own; when owning, the home's numbers and its monthly costs. */
+function HomeSection({
+  vm,
+  home,
+  addingMortgage,
+  onAddMortgage,
+  onDoneMortgage,
+}: {
+  vm: BalanceSheetVM;
+  home: HomeSectionVM;
+  addingMortgage: boolean;
+  onAddMortgage: () => void;
+  onDoneMortgage: () => void;
+}) {
+  const s = home.summary;
+  return (
+    <div className="flex flex-col gap-md" data-testid="home-section" data-tenure={home.tenure}>
+      <Choice
+        legend={h.tenureLegend}
+        name="home-tenure"
+        value={home.tenure}
+        options={home.tenures.map((k) => ({ value: k, label: h.tenures[k] }))}
+        onChange={home.setTenure}
+      />
+      {!s ? (
+        <p className="text-sm text-text-muted">{h.rentNote}</p>
+      ) : (
+        <>
+          <HomeInputRow
+            field="homeValue"
+            label={h.value}
+            hint={s.value.isEstimate ? h.valueEstimated : h.valueHint}
+            isEstimate={s.value.isEstimate}
+            source={s.value.source}
+            value={s.value.value}
+            bounds={home.bounds.value}
+            onChange={home.setValue}
+          />
+          <HomeInputRow
+            field="hoaMonthly"
+            label={h.hoa}
+            hint={h.hoaHint}
+            isEstimate={false}
+            source={null}
+            value={s.hoaMonthly}
+            bounds={home.bounds.hoaMonthly}
+            suffix={t.perMonthSuffix}
+            onChange={home.setHoaMonthly}
+          />
+          <div className="flex flex-col gap-xs px-lg text-sm text-text-muted" data-testid="home-appreciation">
+            <span className="flex flex-wrap items-center gap-sm">
+              {h.appreciation(formatRate(s.appreciation.value, 1))}
+              {s.appreciation.isEstimate && <EstimateTag className="bg-surface" />}
+            </span>
+            {s.appreciation.source && <SourceNote source={s.appreciation.source} variant="toggle" />}
+          </div>
+          <OwnerCosts costs={s.costs} />
+          {home.mortgageWhileOutright && <p className="text-sm text-text-muted">{h.mortgageWhileOutright}</p>}
+          {home.needsMortgage &&
+            (addingMortgage ? (
+              <DebtForm
+                title={h.addMortgage}
+                kinds={['mortgage']}
+                bounds={vm.debtBounds}
+                aprDefaults={vm.debtAprDefaults}
+                estimateMinPayment={vm.estimateMinPayment}
+                initial={{ kind: 'mortgage', balance: null, apr: null, minPayment: null }}
+                onSave={(input) => {
+                  vm.addDebt(input);
+                  onDoneMortgage();
+                }}
+                onCancel={onDoneMortgage}
+              />
+            ) : (
+              <div className="flex flex-col items-start gap-xs">
+                <Button variant="dark" size="sm" onClick={onAddMortgage}>
+                  <span aria-hidden="true">+</span>
+                  {h.addMortgage}
+                </Button>
+                <p className="text-xs text-text-muted">{h.addMortgageNote}</p>
+              </div>
+            ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+function scanErrorText(error: VMError): string {
+  switch (error.kind) {
+    case 'unavailable':
+    case 'notImplemented':
+      return t.scan.errors.unavailable;
+    case 'nothingFound':
+      return t.scan.errors.nothingFound;
+    case 'incomplete':
+      return t.scan.errors.incomplete;
+    case 'rateLimited':
+      return t.scan.errors.rateLimited;
+    case 'badInput':
+      return t.scan.errors.badInput;
+    default:
+      return t.scan.errors.other;
+  }
+}
+
+/** JF9: pick a photo, screenshot or PDF of a statement; the parsed values open the add form to confirm. */
+function ScanStatement({ id, scanning, error, onFile }: { id: string; scanning: boolean; error: VMError | null; onFile: (file: File) => void }) {
+  return (
+    <div className="flex flex-col gap-xs">
+      <label
+        htmlFor={id}
+        aria-busy={scanning || undefined}
+        className={cx(
+          'inline-flex cursor-pointer items-center gap-xs self-start rounded-full border-2 border-dashed border-border px-md py-xs text-sm font-semibold',
+          scanning && 'cursor-wait opacity-60',
+        )}
+      >
+        <span aria-hidden="true">📷</span>
+        {scanning ? t.scan.scanning : t.scan.button}
+      </label>
+      <input
+        id={id}
+        type="file"
+        accept="image/*,application/pdf"
+        className="sr-only"
+        disabled={scanning}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (file) onFile(file);
+        }}
+      />
+      <p className="text-xs text-text-muted">{t.scan.privacy}</p>
+      {error && (
+        <p role="alert" className="text-sm text-negative">
+          {scanErrorText(error)}
+        </p>
+      )}
+    </div>
   );
 }

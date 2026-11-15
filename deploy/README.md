@@ -61,8 +61,9 @@ The runner executes jobs on the server itself, so only `deploy.yml` may use it:
 
 - `deploy.yml` is triggered by `workflow_run` (loaded from `main`, so a PR cannot edit it) and only
   for a CI run that came from a push to `main` in this repository.
-- Never add a `pull_request` or `pull_request_target` trigger to a workflow that uses
-  `runs-on: self-hosted`. CI and e2e stay on GitHub-hosted runners.
+- Never add a `pull_request` or `pull_request_target` trigger to a workflow that uses the
+  `lifeguessr-deploy` label, and never give that label to another job. CI runs on separate runners
+  (`lifeguessr-ci`, "CI runners" below) that cannot reach this one's Docker.
 - Once the repo is public, set Settings, Actions, General, "Fork pull request workflows from
   outside collaborators" to "Require approval for all outside collaborators".
 - Docker access is root-equivalent on the server. Run the runner as a user that owns nothing else
@@ -80,6 +81,61 @@ Setting it up, as that dedicated user (the team server uses `lgrunner`):
 5. The server's clock must be right. The runner's login token is time-limited, and a clock that is
    hours off makes GitHub refuse it with a misleading "registration has been deleted" error.
    Check `timedatectl` (System clock synchronized) and `date -u`.
+
+## CI runners
+
+CI (`.github/workflows/ci.yml`) runs on the same server, on three runners with the label
+`lifeguessr-ci`, so it spends no GitHub-hosted minutes and gets more cores than a hosted runner
+(2 vCPUs for a private repo). Only the deploy dry run (`deploy-smoke`) stays on a GitHub-hosted
+runner, because it brings up a stack on `127.0.0.1:3000`, the live app's port. It runs only when
+deploy-relevant files change (the `changes` job decides) or on a manual run of CI.
+
+These runners execute pull-request code, so they are kept away from production:
+
+- They run as their own user (`lgci` on the team server), which is not in the `docker` group. Its
+  jobs use that user's rootless Docker (`docker.service`, a user unit), which cannot see or touch
+  the live app's containers, its volumes or `lgrunner`'s `.env`. Its default bind address is
+  `127.0.0.1` (`~/.config/docker/daemon.json`), and CI's own containers bind there explicitly.
+- All of that user's processes, its Docker and the jobs' containers share one cgroup capped at
+  12 CPU threads and 16 GB of memory, so a busy CI run cannot starve the live app.
+- Each runner exports its own `E2E_PORT` (runner `n` uses `3100+n`), and each job's Postgres
+  (`.github/scripts/ci-postgres.sh`) listens on `127.0.0.1:5100+n`, so parallel jobs never collide.
+  CI does not use `services:` containers: under rootless Docker their "random" host port can clash
+  with a port the host already uses, and on the per-job network GitHub creates they were published
+  on `0.0.0.0`. Playwright runs 4 workers per job.
+- Once the repo is public, the "Require approval for all outside collaborators" setting above
+  matters for these runners too: without it a fork's pull request runs on the server.
+
+Setting it up:
+
+1. As root, once (Ubuntu 26.04 names; `<uid>` is `id -u lgci`):
+
+   ```sh
+   apt-get install -y uidmap rootlesskit slirp4netns
+   useradd -m -s /bin/bash -c "LifeGuessr CI runners" lgci   # also adds its subuid/subgid range
+   loginctl enable-linger lgci
+   mkdir -p /etc/systemd/system/user-<uid>.slice.d
+   printf '[Slice]\nCPUQuota=1200%%\nMemoryHigh=14G\nMemoryMax=16G\n' \
+     > /etc/systemd/system/user-<uid>.slice.d/50-ci-limits.conf
+   systemctl daemon-reload
+   ```
+
+   Ubuntu's `rootlesskit` AppArmor profile (shipped in `/etc/apparmor.d`) lets it create user
+   namespaces despite `kernel.apparmor_restrict_unprivileged_userns=1`.
+2. As `lgci`, with a repository registration token:
+   `REPO_URL=<repo url> RUNNER_TOKEN=<token> deploy/ci-runner/install.sh 3`. It sets up rootless
+   Docker, checks the runner release's SHA-256, registers `lifeguessr-ci-1..3`, writes each runner's
+   `.env` (`DOCKER_HOST`, `E2E_PORT`) and enables `lifeguessr-ci@<n>.service`. Re-running it is
+   safe.
+3. Chromium's system libraries must be on the server (CI does not run `playwright install
+   --with-deps`, which needs sudo). `apt-get install` the list `npx playwright install-deps
+   --dry-run chromium` prints if a job reports missing libraries.
+4. The clock rule above applies to these runners too.
+
+To go back to GitHub-hosted runners, set `runs-on: ubuntu-latest` on the jobs in `ci.yml` (and put
+back `--with-deps`). To remove the runners: `systemctl --user disable --now 'lifeguessr-ci@*'` as
+`lgci`, then remove each one in Settings, Actions, Runners (or `./config.sh remove --token <removal
+token>` in `~/ci-runners/<n>`).
 
 ## The game flags
 

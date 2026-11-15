@@ -3,14 +3,17 @@
 // Hooks: useGuessYourself (S5), useClosestLife (S6), useQuickSliders (S7), useBalanceSheet (S8),
 // useStatementUpload (S9), and useLadderProgress (the rung indicator and range band on every rung).
 import type {
-  CategoryTotals, CostCategory, Debt, ForecastPoint, KidAge, Money, ProfilePatch, Rate, Source,
+  CategoryTotals, CostCategory, Debt, ForecastPoint, HomeTenure, KidAge, Money, ProfilePatch, Rate, Source,
 } from '@lifeguessr/types';
+import type { HomeSummary } from '@/lib/model/home';
 import type { DebtLoadGaugeVM } from '@/lib/model/profile';
 import type { EstimatedMoney, ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
 import type { DebtInput } from '@/state';
 
 export type { DebtLoadGaugeVM, DebtLoadZone } from '@/lib/model/profile';
 export type { EstimatedMoney, ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
+export type { HomeSummary, OwnerCostLineVM, SourcedValue } from '@/lib/model/home';
+export type { HomeTenure } from '@lifeguessr/types';
 export type { ProfileField, DebtInput, ProfileOrigin } from '@/state';
 
 type Status = 'loading' | 'ready';
@@ -237,6 +240,8 @@ export type QuickSlidersVM = {
   guessGap: Money | null;
   /** Net worth in 10 years, today's dollars, with the range band. */
   in10y: ForecastPoint;
+  /** JF4: the person owns their home, so the rentUtilities slider holds owner costs (labelled as such). */
+  ownsHome: boolean;
   /** Who made `in10y`: always the rules engine (a drag needs instant feedback). Not shown on this screen. */
   in10ySource: 'rules';
   setSpending: (category: CostCategory, value: Money) => void;
@@ -261,6 +266,28 @@ export type DebtRowVM = {
 /** Input bounds (the values the profile contract accepts). Setters clamp to them as well. */
 export type InputBounds = { min: number; max: number; step: number };
 
+/**
+ * JF4 S8 "Your home": rent, own with a mortgage, or own outright. When owning: the home's value
+ * (prefilled with the area median, an estimate), the HOA, the appreciation and the monthly owner costs
+ * (engine ownerCosts), each with its source or estimate flag. The mortgage itself is a debt.
+ */
+export type HomeSectionVM = {
+  tenure: HomeTenure;
+  /** The choices, in display order. */
+  tenures: readonly HomeTenure[];
+  /** Null while renting. */
+  summary: HomeSummary | null;
+  /** Bounds for the typed home value (balance) and HOA (monthly). */
+  bounds: { value: InputBounds; hoaMonthly: InputBounds };
+  /** Owns with a mortgage but no mortgage debt is listed: offer "Add your mortgage". */
+  needsMortgage: boolean;
+  /** Owns outright but a mortgage debt is still listed (a note; the debt is left to the person). */
+  mortgageWhileOutright: boolean;
+  setTenure: (tenure: HomeTenure) => void;
+  setValue: (value: Money) => void;
+  setHoaMonthly: (value: Money) => void;
+};
+
 /** S8 Balance sheet: six taps; a skipped field stays an estimate. */
 export type BalanceSheetVM = {
   status: Status;
@@ -277,8 +304,13 @@ export type BalanceSheetVM = {
    * (engine debtAprDefaults; the card one is Fed G.19). Always shown as an estimate, editable.
    */
   debtAprDefaults: Record<Debt['kind'], Rate>;
-  /** The engine's estimate of a skipped minimum payment (card formula: interest + 1%, floor $25). */
-  estimateMinPayment: (balance: Money, apr: Rate) => Money;
+  /**
+   * The estimate of a skipped minimum payment: the card formula (interest + 1%, floor $25) for every
+   * kind but a mortgage, which is amortized over 30 years.
+   */
+  estimateMinPayment: (balance: Money, apr: Rate, kind?: Debt['kind']) => Money;
+  /** JF4: rent or own, and the home's numbers. */
+  home: HomeSectionVM;
   /**
    * Debt payments found in the uploaded statement (mean per month over the months that have them),
    * offered as a card to confirm or dismiss. The statement only tells us the payment, not the kind
@@ -293,7 +325,7 @@ export type BalanceSheetVM = {
   debtLoad: DebtLoadGaugeVM;
   /** End of the debt-load gauge's dial (a display scale, not a threshold). */
   debtLoadMax: Rate;
-  /** Cash + retirement − debts today. */
+  /** Cash + retirement + home value − debts today. */
   netWorth: Money;
   setField: (field: BalanceFieldKey, value: number) => void;
   skipField: (field: BalanceFieldKey) => void;
@@ -301,7 +333,17 @@ export type BalanceSheetVM = {
   addDebt: (input: DebtInput) => string;
   updateDebt: (id: string, input: DebtInput) => void;
   removeDebt: (id: string) => void;
+  /**
+   * JF9: read a photo, screenshot or PDF of a card or loan statement (LLM transcription via
+   * /api/ai/parse-image, validated in code). The values only prefill the debt form: the user checks
+   * them and saves. Never rejects; failures come back as a VMError. The file is not stored.
+   */
+  scanStatement: (file: File) => Promise<ScanDebtOutcome>;
 };
+
+/** A debt read off a statement; null = the document didn't show it (kind: the user picks; APR/min: estimated). */
+export type ScannedDebt = { kind: Debt['kind'] | null; balance: Money; apr: Rate | null; minPayment: Money | null };
+export type ScanDebtOutcome = { ok: true; value: ScannedDebt } | { ok: false; error: VMError };
 
 /** One statement month as shown for review. */
 export type StatementMonthVM = {

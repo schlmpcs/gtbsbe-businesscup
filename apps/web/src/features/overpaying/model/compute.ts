@@ -30,7 +30,9 @@ export type Computed = {
 
 const usable = (n: number | null): n is number => n !== null && Number.isFinite(n) && n > 0;
 
-export function computeOverpaying({ inputs, metro, profile, deps }: ComputeArgs): Computed {
+export function computeOverpaying({ inputs: typed, metro, profile, deps }: ComputeArgs): Computed {
+  // JF4: a person who owns their home has no rent to compare; a rent amount (saved earlier) is ignored.
+  const inputs = profile?.home ? { ...typed, amounts: { ...typed.amounts, rent: null } } : typed;
   const zip = parseZip(inputs.zip);
 
   const invalidFields: OverpayingField[] = [];
@@ -89,9 +91,12 @@ export function computeOverpaying({ inputs, metro, profile, deps }: ComputeArgs)
     // Numbers the contract does not allow (a range that is not low ≤ mid ≤ high, a negative gap) are not shown.
     const valid = OverpayingResultSchema.safeParse(ran.data);
     const kidCount = KID_AGES.reduce((sum, age) => sum + inputs.kids[age], 0);
-    result = valid.success
-      ? { status: 'ready', data: toResultVM(ran.data, { profileUsed: profile !== null, kidCount }) }
-      : { status: 'error', error: { kind: 'invalidResponse' } };
+    if (valid.success) {
+      const data = toResultVM(ran.data, { profileUsed: profile !== null, kidCount });
+      // An owner was never asked for rent: not listed as a line left out.
+      if (profile?.home) data.skipped = data.skipped.filter((l) => l.line !== 'rent');
+      result = { status: 'ready', data };
+    } else result = { status: 'error', error: { kind: 'invalidResponse' } };
   }
   return { coverage, invalidFields, needs, result, signature };
 }

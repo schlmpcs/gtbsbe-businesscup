@@ -7,6 +7,7 @@ import type { ForecastPoint, HorizonYears } from '@lifeguessr/types';
 import { useMemo, useState } from 'react';
 import { useTrackOnce } from '@/lib/events';
 import { runEngine } from '@/lib/model/errors';
+import { homeSummary } from '@/lib/model/home';
 import { areaRates, estimatedFields } from '@/lib/model/profile';
 import { useAppStore, useProfile } from '@/state';
 import { answerDollars, committedScenario, shownForecast } from './forecastAnswer';
@@ -75,6 +76,12 @@ export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}):
 
   const assumptionsVM = useMemo(() => howWeCalculate(profile), [profile]);
 
+  // JF4: the home in net worth, for the "Includes your home" line.
+  const home = useMemo(() => {
+    const s = homeSummary(profile);
+    return s ? { value: s.value, appreciation: s.appreciation } : null;
+  }, [profile]);
+
   // Which inputs were estimates in the profile the numbers were made for, not in the live one: during a
   // refresh the user may have just made one exact, and the band on screen still has it in it.
   const bandProfile = forecast.status === 'ready' ? forecast.answer.profile : profile;
@@ -109,5 +116,6 @@ export function useFuture(opts: { explain?: ExplainFn; sample?: boolean } = {}):
     explain,
     howWeCalculate: assumptionsVM,
     why,
+    home,
   };
 }

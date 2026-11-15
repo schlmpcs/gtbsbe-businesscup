@@ -14,7 +14,9 @@
 //    scenario's inflation, withdrawalOrder, savingsSplit (empty = profile.retirementShare), expenses
 //    and growth. Growth per group: Account.growth, then assumptions.growth, then the engine default
 //    (real estate: AreaData.homeAppreciationAnnual when there is one). Several accounts of one group
-//    with their own growth make the group grow at their balance-weighted average.
+//    with their own growth make the group grow at their balance-weighted average. The profile's home
+//    (JF4) is real estate: accountsToProfile sets its value from the real estate accounts, and with
+//    none it enters through simulate()'s withHomeAsset at its own appreciation (`homeGrowth`).
 // 4. One PlanYear per calendar year: balances at the year's last month, flows summed over its months
 //    (the first year starts at asOf). Account rows: an asset group's values are split across its
 //    accounts by today's balance shares (equal shares when the group is 0 today); a group with a
@@ -117,7 +119,7 @@ export function preparePlan(
     const sum = live.filter((x) => x.group === g).reduce((s, x) => s + x.balance.value, 0);
     if (sum !== 0) balances[g] = sum;
   }
-  const growth = groupGrowth(live, a.growth, a.inflation, area);
+  const growth = homeGrowth(groupGrowth(live, a.growth, a.inflation, area), base, live);
 
   // 2. Events, in date order, each expanded on the profile with the ones before it.
   const enabled = scenario.events.filter((e) => e.enabled);
@@ -338,6 +340,20 @@ export function plan(
     display: a.display,
     source: 'rules',
   };
+}
+
+/**
+ * JF4: a profile home with no real estate account (no accounts at all, or none of that group) is in
+ * the run through simulate()'s `withHomeAsset`; its growth is the home's own appreciation, which ranks
+ * like an Account.growth (above assumptions.growth and the area's rate), so the plan is the same with
+ * or without the Home account profileToAccounts makes. With real estate accounts, theirs decide.
+ * Shared with monteCarlo(). Mutates and returns `growth`.
+ */
+export function homeGrowth(
+  growth: Partial<Record<AssetGroup, Rate>>, base: Profile, live: readonly Account[],
+): Partial<Record<AssetGroup, Rate>> {
+  if (base.home && !live.some((x) => x.group === 'realEstate')) growth.realEstate = base.home.appreciation.value;
+  return growth;
 }
 
 /**

@@ -264,8 +264,11 @@ describe('useChanceOfSuccess', () => {
   it('a run that fails shows an error and no numbers', () => {
     const { result } = renderHook(() => useChanceOfSuccess());
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    // An inflation mean that plan() refuses (≤ −100%) makes monteCarlo() throw.
-    act(() => usePlanStore.getState().edit('baseline', (s) => ({ ...s, assumptions: { ...s.assumptions, inflation: -2 } })));
+    // A settings value monteCarlo() refuses (a non-finite end threshold) makes it throw.
+    act(() => {
+      const st = usePlanStore.getState();
+      st.setChance({ chanceSettings: { ...st.chanceSettings, endThreshold: Number.NaN } });
+    });
     act(() => result.current.run());
     act(() => void vi.advanceTimersByTime(0));
     expect(result.current.status).toBe('error');

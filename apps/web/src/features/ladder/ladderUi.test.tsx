@@ -203,11 +203,17 @@ describe('BalanceSheet (S8)', () => {
     debtLoad: { value: 0.1, zone: 'green', thresholds: { yellow: 0.2, red: 0.36 } },
     debtLoadMax: 0.6,
     netWorth: 18300,
+    home: {
+      tenure: 'rent', tenures: ['rent', 'mortgage', 'outright'], summary: null,
+      bounds: { value: fb, hoaMonthly: fb }, needsMortgage: false, mortgageWhileOutright: false,
+      setTenure: vi.fn(), setValue: vi.fn(), setHoaMonthly: vi.fn(),
+    },
     setField: vi.fn(),
     skipField: vi.fn(),
     addDebt: vi.fn(() => ''),
     updateDebt: vi.fn(),
     removeDebt: vi.fn(),
+    scanStatement: vi.fn(async () => ({ status: 'none' }) as never),
     ...over,
   });
 

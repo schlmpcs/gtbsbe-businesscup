@@ -220,6 +220,8 @@ export const forecast = {
     /** The picker's visible label (a legend); its options are `yearsPhrase(years)`. */
     horizonLabel: 'Look ahead',
     headline: netWorthAt,
+    /** JF4: the home the forecast counts in net worth. Values formatted by the UI. */
+    includesHome: (value: string, rate: string) => `Includes your home: ${value} today, growing ${rate} a year`,
     todayLabel: 'Today',
     chartTitle: (years: number) => `Your net worth over the next ${years === 1 ? 'year' : `${years} years`}`,
     seriesLabel: 'Your plan',

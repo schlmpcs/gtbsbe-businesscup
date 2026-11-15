@@ -296,6 +296,38 @@ describe('useQuickSliders (S7)', () => {
 });
 
 describe('useBalanceSheet (S8)', () => {
+  it('JF4 your home: own fills the home from the area and sets owner costs; mortgage nudge; back to rent', async () => {
+    const { result } = renderHook(() => useBalanceSheet());
+    await waitForReady(result);
+    expect(result.current.home.tenure).toBe('rent');
+    expect(result.current.home.summary).toBeNull();
+    expect(result.current.home.tenures).toEqual(['rent', 'mortgage', 'outright']);
+
+    act(() => result.current.home.setTenure('mortgage'));
+    const s = result.current.home.summary!;
+    expect(s.value).toMatchObject({ value: 615_400, isEstimate: true });
+    expect(s.value.source?.name).toContain('B25077');
+    expect(s.appreciation.source).not.toBeNull();
+    expect(s.costs.lines.map((l) => l.key)).toEqual(['propertyTax', 'insurance', 'upkeep', 'hoa', 'utilities']);
+    expect(s.costs.total).toBeCloseTo(2049.924, 2); // see profileOps.test (setHome)
+    expect(useAppStore.getState().profile.spending.rentUtilities.value).toBeCloseTo(2049.924, 2);
+    expect(result.current.home.needsMortgage).toBe(true);
+
+    act(() => result.current.home.setHoaMonthly(150));
+    expect(result.current.home.summary!.costs.total).toBeCloseTo(2199.924, 2);
+
+    act(() => {
+      result.current.addDebt({ kind: 'mortgage', balance: 300_000, apr: 0.065, minPayment: null });
+    });
+    expect(result.current.home.needsMortgage).toBe(false);
+    expect(result.current.debts.find((d) => d.kind === 'mortgage')?.minPayment).toBeCloseTo(1896.2, 1);
+
+    act(() => result.current.home.setTenure('rent'));
+    expect(result.current.home.summary).toBeNull();
+    expect(useAppStore.getState().profile.home).toBeUndefined();
+    expect(useAppStore.getState().profile.spending.rentUtilities).toEqual({ value: 1950, isEstimate: false });
+  });
+
   it('typed fields are measured, skipped ones estimates; debts and debt load from the engine', async () => {
     const { result } = renderHook(() => useBalanceSheet());
     await waitForReady(result);

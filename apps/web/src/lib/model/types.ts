@@ -62,6 +62,10 @@ export type ParseConfirmVM<T> = {
   confirm: () => void;
   /** Drop `parsed` (or the error) and return to idle, keeping the text. */
   cancel: () => void;
+  /** JF9: read a photo, screenshot or PDF instead of text (only kinds the image route supports). */
+  submitFile?: (file: File) => void;
+  /** True when `parsed` came from a file: every value was read off it, so the UI asks to check them all. */
+  fromImage?: boolean;
 };
 
 /** An input the forecast reads that is an estimate (drives the range band and "make it exact"). */

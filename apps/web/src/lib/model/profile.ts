@@ -26,7 +26,7 @@ export function thisMonth(p: Profile): SimulationMonth {
   return simulate(p, 1, { rates: areaRates(p) }).path[1]!;
 }
 
-/** Today's net worth (cash + retirement − debts): the simulation's month-0 entry. */
+/** Today's net worth (cash + retirement + home value − debts): the simulation's month-0 entry. */
 export function netWorthToday(p: Profile): number {
   return simulate(p, 0).path[0]!.netWorth;
 }
