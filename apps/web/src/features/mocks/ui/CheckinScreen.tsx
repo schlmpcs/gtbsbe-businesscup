@@ -1,16 +1,19 @@
 'use client';
 
-// S14 Monthly check-in (Figma Design v3, nodes 193:1567 / 203:2067). Presentational: every number
-// comes from useCheckin() (engine monthEnd on the user's statements or the labelled sample statement;
-// simulate / rankMoves for the move; the ranked suggestions say who made their numbers, at the year
-// picked on S10).
-import { useId, type ReactNode } from 'react';
+// S14 Monthly check-in. Presentational: every number comes from useCheckin() (engine monthEndDetail on
+// the person's transactions or statements, or on the labelled sample statement; simulate / rankMoves
+// for the move). Layout: the month as a title and one sentence, where the months come from, a KPI
+// strip (projection, usual month, difference, spent so far), the month-end pace, the category bars
+// (usual vs this month, drift flags), one move to commit, and "How we calculate".
+import type { ReactNode } from 'react';
 import { common, forecast, mocks } from '@/copy';
-import { Art, Button, buttonClassName, Card, Choice, cx, formatMoney, formatRate, Money, Sticker, Tag } from '@/ui-kit';
-import type { CheckinCompareVM, CheckinMoveVM, CheckinVM, MoveProgressVM, MoveVM } from '../model/types';
+import { Art, Button, buttonClassName, cx, formatMoney, formatRate, PageHeader, Sticker, Tag } from '@/ui-kit';
+import { CountUp, KpiStrip, Meter, MOTION, Panel, Segmented, TONE_BG, type ChartTone, type KpiItem } from '@/ui-kit/reports';
+import type { CategoryBarVM, CheckinCompareVM, CheckinMonthVM, CheckinMoveVM, CheckinVM, MoveProgressVM, MoveVM } from '../model/types';
 import { ErrorNote, Loading, type LinkComponent } from './shared';
 
 const t = mocks.checkin;
+const money = (v: number) => formatMoney(v);
 
 /** Title of a move from its kind (and category). */
 function moveTitle(move: Pick<MoveVM, 'kind' | 'category'>): string {
@@ -18,139 +21,184 @@ function moveTitle(move: Pick<MoveVM, 'kind' | 'category'>): string {
 }
 
 /** The sentence under the title: how the month compares with the usual one. */
-function headline(vm: CheckinVM): string {
-  const { month, compare } = vm;
-  if (month.month === null) return t.titleNoData;
-  const name = mocks.monthName(month.month);
-  if (!compare) return month.inProgress ? t.titleNoAverage(name) : t.titleNoAverageDone(name);
-  if (compare.direction === 'even') return t.titleEven;
-  const amount = formatMoney(Math.abs(compare.difference));
-  if (month.inProgress) return compare.direction === 'over' ? t.titleOver(amount) : t.titleUnder(amount);
-  return compare.direction === 'over' ? t.titleWasOver(amount) : t.titleWasUnder(amount);
+function lead(month: CheckinMonthVM, c: CheckinCompareVM | null): string | null {
+  if (!c) return null;
+  if (month.month === null) return t.lead.noData;
+  const usual = c.usualFromHistory ? t.usualName.history : t.usualName.profile;
+  const amount = formatMoney(Math.abs(c.difference));
+  if (month.inProgress) {
+    return c.direction === 'even' ? t.lead.even(usual) : c.direction === 'over' ? t.lead.over(amount, usual) : t.lead.under(amount, usual);
+  }
+  return c.direction === 'even' ? t.lead.wasEven(usual) : c.direction === 'over' ? t.lead.wasOver(amount, usual) : t.lead.wasUnder(amount, usual);
 }
 
-/** The ink "value check" card: the month's totals from the engine (monthEnd), as big numbers. */
-function ValueCheck({ vm }: { vm: CheckinVM }) {
-  const { month, compare, move } = vm;
-  if (month.result.status !== 'ready') return month.result.status === 'error' ? <ErrorNote error={month.result.error} /> : null;
-  const items: { id: string; value: ReactNode; label: string; positive?: boolean }[] = [
-    { id: 'projected', value: <Money value={month.result.data.projectedSpend} />, label: month.inProgress || !month.month ? t.projected : t.spent },
-  ];
-  // The difference is the headline, so the card shows only the two totals behind it.
-  if (compare) items.push({ id: 'average', value: <Money value={compare.average} />, label: t.average });
-  const p = move.progress?.status === 'ready' ? move.progress.data : null;
-  if (p?.kind === 'cardPayoff') items.push({ id: 'progress', value: formatRate(p.share, 0), label: t.progress, positive: true });
+// ----- where the months come from --------------------------------------------------------------------
+
+function SourceBar({ vm, Link }: { vm: CheckinVM; Link: LinkComponent }) {
+  const { month } = vm;
+  if (month.hasOwn) {
+    return (
+      <div data-testid="checkin-month" className="flex flex-wrap items-end justify-between gap-md">
+        <Segmented
+          legend={t.sourceLabel}
+          showLegend
+          name="checkin-source"
+          value={month.source}
+          options={[
+            { value: 'mine', label: month.ownKind === 'uploads' ? t.sources.mineUploads : t.sources.mine },
+            { value: 'sample', label: t.sources.sample },
+          ]}
+          onChange={vm.setSource}
+        />
+        {month.source === 'sample' && <SampleTag />}
+      </div>
+    );
+  }
   return (
-    <section className="flex flex-col gap-lg rounded-xl bg-ink p-xl text-on-primary shadow-md">
-      <span className="text-xs font-bold uppercase tracking-wide text-primary">{month.inProgress ? t.valueCheckSoFar : t.valueCheck}</span>
-      <dl aria-label={month.inProgress ? t.scoreLabel : t.scoreLabelDone} className="flex flex-col gap-lg">
-        {items.map((it) => (
-          <div key={it.id} className="flex min-w-0 flex-col-reverse gap-xs">
-            <dt className="text-sm text-on-primary/60">{it.label}</dt>
-            <dd
+    <div role="note" data-testid="preview-note" className="card flex flex-wrap items-center justify-between gap-md px-lg py-md">
+      <p className="flex min-w-0 flex-1 flex-wrap items-center gap-sm text-sm text-text-muted">
+        <SampleTag />
+        <span>{t.sampleNote}</span>
+      </p>
+      <Link href={vm.uploadHref} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
+        {t.importCta}
+      </Link>
+    </div>
+  );
+}
+
+function SampleTag() {
+  return <span className="rounded-full bg-primary-soft px-sm py-xs text-xs font-bold uppercase tracking-wide text-primary">{t.samplePreview}</span>;
+}
+
+// ----- numbers ---------------------------------------------------------------------------------------
+
+function Kpis({ month, c }: { month: CheckinMonthVM; c: CheckinCompareVM }) {
+  const live = month.inProgress;
+  const items: KpiItem[] = [
+    {
+      id: 'projected',
+      label: live || month.month === null ? t.kpi.projected : t.kpi.spent,
+      value: <CountUp value={c.projected} format={money} />,
+      hint: live ? t.kpiHint.projected : undefined,
+      dot: 'c1',
+    },
+    {
+      id: 'usual',
+      label: c.usualFromHistory ? t.kpi.usual : t.kpi.planned,
+      value: <CountUp value={c.usual} format={money} />,
+      hint: c.usualFromHistory ? t.kpiHint.usualHistory(month.historyNeeded) : t.kpiHint.usualProfile,
+      dot: 'c6',
+    },
+    {
+      id: 'difference',
+      label: t.kpi.difference,
+      value: <CountUp value={c.difference} format={(v) => formatMoney(v, { signed: true })} />,
+      tone: c.direction === 'over' ? 'negative' : c.direction === 'under' ? 'positive' : 'default',
+    },
+  ];
+  if (live && month.day !== null && month.daysInMonth !== null) {
+    items.push({ id: 'soFar', label: t.kpi.soFar, value: <CountUp value={c.spentSoFar} format={money} />, hint: t.kpiHint.soFar(month.day, month.daysInMonth) });
+  }
+  return <KpiStrip items={items} aria-label={t.kpiLabel} data-testid="checkin-kpis" />;
+}
+
+/** One category: two bars on one scale (usual, this month), a drift chip when monthEnd flagged it. */
+function BarRow({ row, max, inProgress }: { row: CategoryBarVM; max: number; inProgress: boolean }) {
+  const name = t.categories[row.category] ?? row.category;
+  const over = (row.delta ?? 0) > 0;
+  const thisTone: ChartTone = row.drift ? (over ? 'primary' : 'positive') : 'c1';
+  const w = (v: number) => `${max > 0 ? Math.min(100, (v / max) * 100) : 0}%`;
+  return (
+    <li className="flex flex-col gap-xs" data-category={row.category} data-drift={row.drift || undefined}>
+      <div className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs">
+        <span className="flex items-center gap-sm font-semibold">
+          {name}
+          {row.drift && row.delta !== null && (
+            <span
               className={cx(
-                'font-display text-4xl font-extrabold leading-tight tabular-nums sm:text-5xl',
-                it.positive ? 'text-positive' : 'text-on-primary',
+                'rounded-full px-sm text-xs font-bold leading-normal tabular-nums',
+                over ? 'bg-primary-soft text-primary' : 'bg-positive-soft text-positive',
               )}
             >
-              {it.value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <p className="text-xs text-on-primary/60">
-        {compare ? t.valueNote[month.source] : month.month === null ? t.noDataHint : t.needHistory(month.historyMonths)}
-      </p>
-    </section>
-  );
-}
-
-/** Two labelled bars (the 3-month average and this month) and the difference as a pill. */
-function CompareCard({ compare, inProgress }: { compare: CheckinCompareVM; inProgress: boolean }) {
-  const max = Math.max(compare.average, compare.projected, 1);
-  const bars = [
-    { id: 'usual', label: t.compareUsual, value: compare.average, fill: 'bg-border' },
-    { id: 'this', label: inProgress ? t.compareThisSoFar : t.compareThis, value: compare.projected, fill: 'bg-primary' },
-  ];
-  const amount = formatMoney(Math.abs(compare.difference));
-  const pill =
-    compare.direction === 'even' ? t.comparePill.even : compare.direction === 'over' ? t.comparePill.over(amount) : t.comparePill.under(amount);
-  return (
-    <Card title={t.compareTitle} data-testid="checkin-compare">
-      <div className="flex flex-col gap-md">
-        {bars.map((b) => (
-          <div key={b.id} className="flex flex-col gap-xs">
-            <div className="flex items-baseline justify-between gap-md">
-              <span className="text-sm text-text-muted">{b.label}</span>
-              <Money value={b.value} className="text-xl font-extrabold" />
-            </div>
-            <div aria-hidden="true" className="h-sm overflow-hidden rounded-full bg-surface-strong">
-              <div className={cx('h-full rounded-full', b.fill)} style={{ width: `${Math.max(0, (b.value / max) * 100)}%` }} />
-            </div>
-          </div>
-        ))}
-        <span
-          className={cx(
-            'w-fit rounded-full px-md py-xs text-xs font-bold',
-            compare.direction === 'over' ? 'bg-primary-soft text-primary' : 'bg-positive-soft text-positive',
+              <span className="sr-only">{t.driftLabel}: </span>
+              {over ? t.driftOver(money(row.delta)) : t.driftUnder(money(-row.delta))}
+            </span>
           )}
-        >
-          {pill}
+        </span>
+        <span className="text-sm tabular-nums">
+          <span className="text-text-muted">{money(row.usual)}</span>
+          <span aria-hidden="true" className="px-xs text-text-muted">→</span>
+          <span className="font-bold">{money(row.projected)}</span>
         </span>
       </div>
-    </Card>
+      <div aria-hidden="true" className="flex flex-col gap-0.5">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-surface-strong/50">
+          <div className="h-full" style={{ width: w(row.usual) }}>
+            <div className={cx('h-full rounded-full', TONE_BG.c6, MOTION.growX)} />
+          </div>
+        </div>
+        <div className="h-3 w-full overflow-hidden rounded-full bg-surface-strong/50">
+          <div className="relative h-full" style={{ width: w(row.projected) }}>
+            <div className={cx('h-full rounded-full', TONE_BG[thisTone], MOTION.growX, inProgress && 'opacity-60')} />
+            {inProgress && row.projected > 0 && (
+              <div
+                className={cx('absolute inset-y-0 left-0 rounded-full', TONE_BG[thisTone], MOTION.growX)}
+                style={{ width: `${Math.min(100, (row.soFar / row.projected) * 100)}%` }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+      <span className="sr-only">{t.barRow(name, money(row.usual), money(row.projected))}</span>
+    </li>
   );
 }
 
-function Drifts({ compare }: { compare: CheckinCompareVM }) {
-  const driftId = useId();
-  const tiles = [
-    ...compare.drifts.map((d) => ({ category: d.category, delta: d.delta as number | null })),
-    ...compare.onTrack.map((category) => ({ category, delta: null })),
-  ];
+function Bars({ month, c }: { month: CheckinMonthVM; c: CheckinCompareVM }) {
+  const max = Math.max(1, ...c.rows.map((r) => Math.max(r.usual, r.projected)));
   return (
-    <section aria-labelledby={driftId} className="flex flex-col gap-lg">
-      <h2 id={driftId} className="font-display text-3xl font-extrabold sm:text-4xl">
-        {t.driftTitle}
-      </h2>
-      <ul className="grid grid-cols-1 gap-lg sm:grid-cols-2 lg:grid-cols-4" data-testid="checkin-drifts">
-        {tiles.map((d) => (
-          <li key={d.category}>
-            <Card className="flex h-full flex-col gap-xs">
-              <span className="text-lg font-semibold">{t.categories[d.category] ?? d.category}</span>
-              {d.delta === null ? (
-                <span className="font-display text-2xl font-extrabold leading-tight text-text-muted">{t.onTrack}</span>
-              ) : (
-                <>
-                  <span
-                    className={cx(
-                      'font-display text-4xl font-extrabold leading-tight tabular-nums',
-                      d.delta > 0 ? 'text-primary' : 'text-positive',
-                    )}
-                  >
-                    <Money value={d.delta} signed />
-                  </span>
-                  <span className="text-sm text-text-muted">{t.vsAverage}</span>
-                </>
-              )}
-            </Card>
-          </li>
+    <Panel
+      title={t.barsTitle}
+      subtitle={t.barsSubtitle(month.inProgress)}
+      data-testid="checkin-bars"
+      action={
+        <span className={cx('rounded-full px-md py-xs text-xs font-bold', c.driftCount > 0 ? 'bg-primary-soft text-primary' : 'bg-positive-soft text-positive')}>
+          {t.driftCount(c.driftCount)}
+        </span>
+      }
+    >
+      <ul aria-hidden="true" className="mb-md flex flex-wrap gap-x-lg gap-y-xs text-xs text-text-muted">
+        <li className="inline-flex items-center gap-xs">
+          <span className={cx('h-2 w-4 rounded-full', TONE_BG.c6)} />
+          {t.legendUsual}
+        </li>
+        <li className="inline-flex items-center gap-xs">
+          <span className={cx('h-2 w-4 rounded-full', TONE_BG.c1)} />
+          {t.legendThis(month.inProgress)}
+        </li>
+      </ul>
+      <ul className="flex flex-col gap-lg" data-testid="checkin-drifts">
+        {c.rows.map((r) => (
+          <BarRow key={r.category} row={r} max={max} inProgress={month.inProgress} />
         ))}
       </ul>
-    </section>
+      {!c.usualFromHistory && month.month !== null && <p className="mt-lg text-sm text-text-muted">{t.needHistory(month.historyMonths)}</p>}
+    </Panel>
   );
 }
+
+// ----- the move --------------------------------------------------------------------------------------
 
 function Progress({ progress }: { progress: MoveProgressVM }) {
   const m = t.move;
   if (progress.kind === 'cardPayoff') {
-    const pct = Math.min(100, Math.max(0, progress.share * 100));
     const months = (n: number | null) => (n === null ? m.notWithin10y : t.months(n));
     return (
       <>
         <p className="flex flex-wrap items-baseline gap-x-sm">
           <span className="sr-only">{m.ofTotal(formatMoney(progress.paidThisMonth), formatMoney(progress.balance))}</span>
-          <span aria-hidden="true" className="font-display text-5xl font-extrabold leading-display text-primary tabular-nums">
+          <span aria-hidden="true" className="font-display text-4xl font-extrabold leading-display text-primary tabular-nums">
             {formatMoney(progress.paidThisMonth)}
           </span>
           <span aria-hidden="true" className="text-sm text-text-muted tabular-nums">
@@ -162,11 +210,10 @@ function Progress({ progress }: { progress: MoveProgressVM }) {
           aria-label={m.progressLabel}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={Math.round(pct)}
+          aria-valuenow={Math.round(Math.min(1, Math.max(0, progress.share)) * 100)}
           aria-valuetext={formatRate(progress.share, 0)}
-          className="h-sm overflow-hidden rounded-full bg-surface-strong"
         >
-          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+          <Meter value={progress.share} tone="primary" size="md" />
         </div>
         <p className="text-sm text-text-muted">{m.pace(months(progress.payoffMonthWith), months(progress.payoffMonthWithout))}</p>
       </>
@@ -174,7 +221,6 @@ function Progress({ progress }: { progress: MoveProgressVM }) {
   }
   return (
     <>
-      <Money value={progress.target} className="font-display text-5xl font-extrabold leading-display text-primary" />
       <p className="text-sm">
         {m.spendingTarget(common.categories[progress.category], formatMoney(progress.target), formatMoney(progress.planned))}
       </p>
@@ -195,50 +241,43 @@ function Progress({ progress }: { progress: MoveProgressVM }) {
   );
 }
 
+function Effect({ move }: { move: MoveVM }) {
+  return (
+    <span className="flex flex-wrap items-center gap-sm">
+      <span className="rounded-full bg-positive-soft px-md py-xs text-xs font-bold text-positive tabular-nums">
+        {forecast.moves.effect(formatMoney(move.effect, { signed: true }), move.horizonYears)}
+      </span>
+      {move.source && (
+        <Tag data-testid="forecast-source" data-source={move.source}>
+          {forecast.source[move.source]}
+        </Tag>
+      )}
+    </span>
+  );
+}
+
 function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: string; Link: LinkComponent }) {
   const m = t.move;
   const seeAll = (
-    <Link href={movesHref} className={cx(buttonClassName({ variant: 'ghost', size: 'sm' }), 'self-start')}>
-      {m.seeAll}
+    <Link href={movesHref} className="self-start text-sm font-semibold text-primary underline-offset-2 hover:underline">
+      {m.seeAll} <span aria-hidden="true">→</span>
     </Link>
   );
-
+  let body: ReactNode;
   if (move.answer === 'done' && move.doneMove) {
-    return (
-      <Card
-        as="section"
-        aria-label={m.doneTitle}
-        data-testid="checkin-move"
-        className="flex flex-col gap-sm inset-ring-3 inset-ring-positive"
-      >
+    body = (
+      <>
         <Sticker tone="positive">{m.doneTitle}</Sticker>
-        <p className="text-xl font-bold">{m.doneBody(moveTitle(move.doneMove))}</p>
+        <p className="text-lg font-bold">{m.doneBody(moveTitle(move.doneMove))}</p>
         {move.level === 2 && <p className="text-sm text-text-muted">{m.level2}</p>}
-      </Card>
+      </>
     );
-  }
-
-  if (move.committed) {
+  } else if (move.committed) {
     const c = move.committed;
-    const title = moveTitle(c);
-    return (
-      <Card as="section" aria-label={title} data-testid="checkin-move" className="flex flex-col gap-md">
-        <div className="flex flex-wrap items-start justify-between gap-md">
-          <div className="flex flex-col gap-xs">
-            <span className="text-xl font-bold">{m.sticker}</span>
-            <span className="text-text-muted">{title}</span>
-          </div>
-          <div className="flex flex-col items-end gap-xs">
-            <span className="rounded-full bg-positive-soft px-md py-xs text-xs font-bold text-positive tabular-nums">
-              {forecast.moves.effect(formatMoney(c.effect, { signed: true }), c.horizonYears)}
-            </span>
-            {c.source && (
-              <Tag data-testid="forecast-source" data-source={c.source}>
-                {forecast.source[c.source]}
-              </Tag>
-            )}
-          </div>
-        </div>
+    body = (
+      <>
+        <p className="text-lg font-bold">{moveTitle(c)}</p>
+        <Effect move={c} />
         {move.progress?.status === 'ready' && move.progress.data && <Progress progress={move.progress.data} />}
         {move.progress?.status === 'error' && <ErrorNote error={move.progress.error} />}
         {move.answer === 'keepGoing' ? (
@@ -259,139 +298,109 @@ function MoveCard({ move, movesHref, Link }: { move: CheckinMoveVM; movesHref: s
           </div>
         )}
         {move.level === 2 && <p className="text-xs text-text-muted">{m.level2}</p>}
-        {seeAll}
-      </Card>
+      </>
     );
+  } else if (move.suggestions.status === 'ready') {
+    const top = move.suggestions.data[0];
+    body = top ? (
+      <>
+        <p className="text-sm text-text-muted">{m.noneTitle}</p>
+        <p className="text-lg font-bold">{moveTitle(top)}</p>
+        <Effect move={top} />
+        <Button className="self-start" onClick={() => move.commit(top.id)} disabled={move.actionsDisabled} aria-label={`${m.commit}: ${moveTitle(top)}`}>
+          {m.commit}
+        </Button>
+      </>
+    ) : (
+      <p className="text-sm text-text-muted">{m.noMoves}</p>
+    );
+  } else {
+    body = move.suggestions.status === 'error' ? <ErrorNote error={move.suggestions.error} /> : <div className="h-24 animate-pulse rounded-lg bg-surface-strong" />;
   }
-
   return (
-    <Card as="section" aria-label={m.noneTitle} data-testid="checkin-move" className="flex flex-col gap-md">
-      <div className="flex flex-col gap-xs">
-        <span className="text-xl font-bold">{m.sticker}</span>
-        <span className="text-text-muted">{m.noneTitle}</span>
-      </div>
-      {move.suggestions.status === 'ready' ? (
-        move.suggestions.data.length === 0 ? (
-          <p className="text-sm text-text-muted">{m.noMoves}</p>
-        ) : (
-          <ul className="flex flex-col gap-sm">
-            {move.suggestions.data.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-sm rounded-lg bg-bg p-md">
-                <div className="flex min-w-0 flex-col">
-                  <span className="font-semibold">{moveTitle(s)}</span>
-                  <span className="text-sm font-semibold text-positive tabular-nums">
-                    {forecast.moves.effect(formatMoney(s.effect, { signed: true }), s.horizonYears)}
-                  </span>
-                  {s.source && (
-                    <Tag data-testid="forecast-source" data-source={s.source} className="mt-xs">
-                      {forecast.source[s.source]}
-                    </Tag>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => move.commit(s.id)}
-                  disabled={move.actionsDisabled}
-                  aria-label={`${m.commit}: ${moveTitle(s)}`}
-                >
-                  {m.commit}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )
-      ) : move.suggestions.status === 'error' ? (
-        <ErrorNote error={move.suggestions.error} />
-      ) : null}
+    <section
+      aria-label={m.sticker}
+      data-testid="checkin-move"
+      className={cx('card card-pad flex flex-col gap-md', MOTION.rise, move.answer === 'done' && 'inset-ring-3 inset-ring-positive')}
+    >
+      <h2 className="text-lg font-bold leading-tight">{m.sticker}</h2>
+      {body}
       {seeAll}
-    </Card>
+    </section>
   );
 }
 
-/**
- * The one muted line under the headline: it is a preview, where the month comes from (the sample
- * statement, when it is the sample) and, for a free user, a small link to Pro.
- */
-function PreviewLine({ vm, Link }: { vm: CheckinVM; Link: LinkComponent }) {
-  const sample = vm.status === 'ready' && vm.month.source === 'sample';
-  const note = vm.pro.isPro ? mocks.preview.proNote : sample ? t.notSaved : mocks.preview.note;
+function How() {
   return (
-    <p
-      role="note"
-      aria-label={mocks.preview.sticker}
-      data-testid="preview-note"
-      className="flex flex-wrap items-baseline gap-x-sm gap-y-xs text-sm text-text-muted"
-    >
-      <span className="text-xs font-bold uppercase tracking-wide text-primary">{mocks.preview.sticker}</span>
-      {sample && <span>{t.sampleNote}</span>}
-      <span>{note}</span>
-      {!vm.pro.isPro && (
-        <Link href={vm.pro.href} className="font-semibold text-primary underline-offset-2 hover:underline">
-          {mocks.preview.cta}
-        </Link>
-      )}
-    </p>
+    <details className="card card-pad group" data-testid="checkin-how">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-semibold">
+        {t.howTitle}
+        <span aria-hidden="true" className="text-text-muted transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <ul className="mt-md flex list-disc flex-col gap-sm pl-lg text-sm text-text-muted">
+        {t.how.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
 export function CheckinScreen({ vm, Link }: { vm: CheckinVM; Link: LinkComponent }) {
-  const { month } = vm;
+  const { month, compare } = vm;
   const ready = vm.status === 'ready';
   const title = !ready ? mocks.screens.S14 : month.month ? t.eyebrow(mocks.monthName(month.month)) : t.titleNoData;
-  const lead = ready && month.month ? headline(vm) : null;
   return (
-    <main className="mx-auto flex w-full max-w-(--container-7xl) flex-col gap-2xl px-lg py-xl">
-      <header className="flex flex-col gap-lg">
-        <div className="flex min-w-0 flex-col gap-sm">
-          <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">{t.kicker}</span>
-          <h1 className="font-display text-4xl font-extrabold leading-display sm:text-display lg:text-[length:calc(var(--text-display)*1.4)]">
-            {title}
-          </h1>
-          {lead && <p className="max-w-prose text-xl font-semibold">{lead}</p>}
-          <PreviewLine vm={vm} Link={Link} />
-        </div>
-      </header>
-
+    <main className="page flex flex-col gap-xl">
+      <PageHeader
+        eyebrow={t.kicker}
+        title={title}
+        intro={ready ? lead(month, compare) : null}
+        aside={<Art name="house-crane" className="hidden w-40 sm:block" />}
+      />
       {!ready ? (
         <Loading />
       ) : (
         <>
-          {month.hasUploads && (
-            <div className="flex flex-col gap-md" data-testid="checkin-month">
-              <Choice
-                legend={t.sourceLabel}
-                name="checkin-source"
-                value={month.source}
-                options={[
-                  { value: 'uploads', label: t.sources.uploads },
-                  { value: 'sample', label: t.sources.sample },
-                ]}
-                onChange={vm.setSource}
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
-            <div className="flex min-w-0 flex-col gap-xl">
-              {vm.compare && <CompareCard compare={vm.compare} inProgress={month.inProgress} />}
-              <MoveCard move={vm.move} movesHref={vm.movesHref} Link={Link} />
-            </div>
-            <ValueCheck vm={vm} />
-            <div className="flex flex-col items-center justify-center">
-              <Art name="house-crane" className="w-2/3 max-w-(--container-3xs) lg:w-full" />
-              {vm.move.answer === 'done' && (
-                <Sticker tone="positive" tilt={-6} className="-mt-lg text-sm">
-                  {t.floorSticker}
-                </Sticker>
+          <SourceBar vm={vm} Link={Link} />
+          {month.result.status === 'error' && <ErrorNote error={month.result.error} className="card card-pad" />}
+          {compare && (
+            <>
+              <Kpis month={month} c={compare} />
+              {month.inProgress && month.day !== null && month.daysInMonth !== null && (
+                <div className="card card-pad flex flex-col gap-sm" data-testid="checkin-pace">
+                  <div className="flex flex-wrap items-baseline justify-between gap-md text-sm">
+                    <span className="font-semibold">{t.paceTitle}</span>
+                    <span className="tabular-nums text-text-muted">
+                      {money(compare.spentSoFar)} / {money(compare.projected)}
+                    </span>
+                  </div>
+                  <Meter value={compare.projected > 0 ? compare.spentSoFar / compare.projected : 0} tone="c1" size="md" marker={month.day / month.daysInMonth} />
+                  <span className="text-xs text-text-muted">{t.paceNote(month.day, month.daysInMonth)}</span>
+                </div>
               )}
-            </div>
-          </div>
-
-          {vm.compare && <Drifts compare={vm.compare} />}
-
+              <div className="grid grid-cols-1 items-start gap-xl lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+                <Bars month={month} c={compare} />
+                <div className="flex min-w-0 flex-col gap-xl">
+                  <MoveCard move={vm.move} movesHref={vm.movesHref} Link={Link} />
+                  {vm.move.answer === 'done' && (
+                    <div className="flex flex-col items-center">
+                      <Art name="house-crane" className="w-2/3 max-w-(--container-3xs)" />
+                      <Sticker tone="positive" tilt={-6} className="-mt-lg text-sm">
+                        {t.floorSticker}
+                      </Sticker>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+          <How />
           <div className="flex flex-wrap items-center gap-md">
             <Link href={vm.uploadHref} className={buttonClassName({ size: 'lg' })}>
-              {t.addStatement(mocks.monthName(month.nextStatementMonth))}
+              {month.inProgress ? t.importCta : t.addStatement(mocks.monthName(month.nextStatementMonth))}
               <span aria-hidden="true">→</span>
             </Link>
           </div>

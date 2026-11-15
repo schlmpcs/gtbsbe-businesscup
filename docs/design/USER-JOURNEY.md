@@ -132,7 +132,7 @@ type PublicDuelCard = {
   household: string;                  // "2 adults · 1 kid · 3 bedrooms"
   metro: string;                      // "Columbus, OH"
   caption: string;                    // flavor line, no cost facts
-  facts: string[];                    // 4 chips: "1 car", "Daycare", "Cooks at home", "Rent"
+  facts: DuelFactGroup[];             // Home, Family, Car, Food; 2 word lines each ("3-bedroom rental", "Kids: toddler", "Financed, 5-year loan", "Eats out 2×/week"); never $ or the tier
   art: SpriteId;                      // house render id
   composite: true;                    // UI shows a "Composite" label
 };                                    // NO totals and NO hint on the client before pick/hint

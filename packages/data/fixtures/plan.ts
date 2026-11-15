@@ -5,10 +5,9 @@
 // Every fixture is validated with its contract's zod schema when this module loads, so a bad edit
 // fails loudly in tests and CI instead of producing wrong numbers later.
 //
-// plan.demo.json and monteCarlo.demo.json are PLACEHOLDERS: hand-made with the right shape and
-// plausible numbers (their "$comment" key says so; the schema drops it), not engine output. They are
-// regenerated from scenario.demo.json by `pnpm fixtures:plan` once plan() (MP3) and monteCarlo()
-// (MP5) land.
+// plan.demo.json is plan() output, regenerated from scenario.demo.json by `pnpm fixtures:plan` (its
+// "$comment" says so; the schema drops it). monteCarlo.demo.json is still a PLACEHOLDER: hand-made with
+// the right shape and plausible numbers, not engine output, until monteCarlo() (MP5) lands.
 import {
   AccountSchema, LedgerTransactionSchema, MonteCarloResultSchema, PlanResultSchema, ScenarioSchema,
   type Account, type LedgerTransaction, type MonteCarloResult, type PlanResult, type Scenario,
@@ -30,20 +29,20 @@ export const accountsDemo: readonly Account[] = deepFreeze(AccountSchema.array()
 
 /**
  * The Baseline scenario of the demo profile (age 32 in 2026, ZIP 75206): Retire at 67 (2061), Social
- * Security at 67 (placeholder estimate: 40% of take-home), and Buy a home in 2033 (age 39): a $375,000
- * starter home (below the ZIP's $615,400 ACS median value, which this household cannot save a down
- * payment for), 20% down ($75,000), 30 years at the current mortgage default (Freddie Mac PMMS 7.11%),
- * the ACS tax rate and NAIC insurance. Monthly savings split 30% cash / 40% investments / 30% retirement.
+ * Security at 67 (estimate: 40% of take-home), and Buy a home in 2032: a $350,000 home with 20% ($70,000)
+ * down, 30 years at the mortgage default (Freddie Mac PMMS), the ZIP's ACS tax rate and NAIC insurance.
+ * The price and year are the demo person's choice, below the ZIP's ACS median ($615,400): on $5,200 a
+ * month of take-home, plan() runs the median home's $123,080 down payment in 2029 short at 35 (about
+ * $41,500 of cash saved by then); this home in 2032 is paid from cash saved (about $71,500), leaves no
+ * shortfall, and works in about 86% of monteCarlo() paths (seed 42). In 2031 it would draw on the
+ * retirement account and work in only about half of them.
  */
 export const scenarioDemo: Readonly<Scenario> = deepFreeze(ScenarioSchema.parse(scenarioJson));
 
-/**
- * `scenarioDemo` plus Have a kid in 2030 (Dallas County infant childcare, 5 years): the Compare pair. The
- * kid's costs on top of the home do not fit this income, so this one runs short (from age 39).
- */
+/** `scenarioDemo` plus Have a kid in 2030 (Dallas County infant childcare, 5 years): the Compare pair (with the kid the plan runs short at 37). */
 export const scenarioAlt: Readonly<Scenario> = deepFreeze(ScenarioSchema.parse(scenarioAltJson));
 
-/** PLACEHOLDER plan of `scenarioDemo` (today's dollars), until MP3 regenerates it. */
+/** plan() of `scenarioDemo` on the demo profile (today's dollars), written by `pnpm fixtures:plan`. */
 export const planDemo: Readonly<PlanResult> = deepFreeze(PlanResultSchema.parse(planJson));
 
 /** PLACEHOLDER Monte Carlo result of `scenarioDemo` (1,000 paths, seed 42), until MP5 regenerates it. */

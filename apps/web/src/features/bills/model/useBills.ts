@@ -7,17 +7,27 @@ import { knownServices } from '@lifeguessr/data/subscriptions';
 import { useCallback, useMemo, useState } from 'react';
 import { bills as copy } from '@/copy';
 import { renewalsFromFindings, type RenewalItem } from '@/lib/ics';
-import { isSampleActive, useAppReady, useAppStore, useHydrated } from '@/state';
+import type { Money } from '@lifeguessr/types';
+import { useAppReady, useAppStore, useHydrated } from '@/state';
+import { useProfile } from '@/state/profile';
+import { usePersistedReady } from '@/features/dashboard/model/persisted';
+import { detectFindings, findingItem, planItems } from '@/features/recurring/model/items';
+import { useRecurringStore } from '@/features/recurring/model/recurringStore';
 import { displayNameOf } from '@/features/subscriptions/model/audit';
+import { useLedger } from '@/features/transactions/model/transactionsStore';
+import { useAccountsReady, useAccountsStore } from '@/lib/model/accounts';
+import { runEngine } from '@/lib/model/errors';
 import {
-  billsInMonth, daysBetween, dayIndex, dueBeforePayday, dueSoon, monthKey, monthWeeks, nextBill, shiftMonth, sumOf,
+  billsInMonth, daysBetween, dayIndex, dueBeforePayday, dueSoon, monthKey, monthWeeks, nextBill, shiftMonth, splitByToday, sumOf,
   weekday, type BillDef, type BillOccurrence, type CalDate,
 } from './calendar';
 import { downloadBillsCalendar } from './exportIcs';
-import { billsFromSources, paydaysFrom } from './sources';
-import type { BillsVM, BillVM, CalendarCellVM, ChargeVM, DayVM, ExportOutcomeVM, MonthVM, NextBillVM } from './types';
+import { billsFromRecurring, billsFromSources, paydaysFrom, type RecurringBillSource } from './sources';
+import type { BillKindVM, BillsVM, BillVM, CalendarCellVM, ChargeVM, DayVM, ExportOutcomeVM, MonthVM, NextBillVM } from './types';
 
 export const UPLOAD_HREF = '/me/upload';
+
+const KINDS: BillKindVM[] = ['rent', 'debt', 'subscription'];
 
 const labels = { rent: copy.labels.rent, debt: (kind: keyof typeof copy.labels.debt) => copy.labels.debt[kind] };
 
@@ -40,21 +50,53 @@ function useRenewals(): RenewalItem[] {
 }
 
 /**
- * Every bill we know of, or `empty` when nothing of the user's is known yet: the profile is still the
- * starting one (and the sample life is not on) and no statement found a subscription.
+ * Every bill we know of: the same items as Recurring (/recurring), so both screens agree. Rent and the
+ * accounts' payments from the profile and the Accounts store; the charges the engine's statement detector
+ * finds in the person's ledger (Transactions); items marked "not recurring" there are left out. With no
+ * statement charge in the ledger, the subscription audit kept by /tools/subscriptions fills the
+ * subscriptions instead. `empty` when there is nothing at all. On the sample profile these are the
+ * sample's (the sample banner says so).
  */
-function useBillDefs(ready: boolean): { ready: boolean; empty: boolean; defs: BillDef[]; userDays: Record<string, number> } {
-  const profile = useAppStore((s) => s.profile);
-  const profileOrigin = useAppStore((s) => s.profileOrigin);
-  const sample = useAppStore(isSampleActive);
+function useBillDefs(appReady: boolean): {
+  ready: boolean; empty: boolean; defs: BillDef[]; userDays: Record<string, number>; takeHome: { value: Money; isEstimate: boolean };
+} {
+  const profile = useProfile();
   const dueDays = useAppStore((s) => s.bills.dueDays);
   const renewals = useRenewals();
-  const ownProfile = profileOrigin !== 'demo' || sample;
-  const defs = useMemo(
-    () => billsFromSources({ profile, renewals, dueDays, labels }).filter((b) => ownProfile || b.kind === 'subscription'),
-    [profile, renewals, dueDays, ownProfile],
-  );
-  return { ready, empty: defs.length === 0, defs, userDays: dueDays };
+  const { lines, ready: ledgerReady } = useLedger();
+  const accountsReady = useAccountsReady();
+  const accounts = useAccountsStore((s) => s.accounts);
+  const hidden = useRecurringStore((s) => s.notRecurring);
+  const hiddenReady = usePersistedReady(useRecurringStore);
+  const findings = useMemo(() => {
+    const ran = runEngine(() => detectFindings(lines));
+    return ran.status === 'ready' ? ran.data : [];
+  }, [lines]);
+  const defs = useMemo(() => {
+    const items: RecurringBillSource[] = [
+      ...planItems(profile, accounts).map((item) => ({
+        ...item,
+        label: item.labelKey === 'rent' ? copy.labels.rent : copy.labels.payment(item.label),
+        anchor: null,
+      })),
+      ...findings.map((f) => {
+        const { item, anchor } = findingItem(f);
+        return { ...item, label: displayNameOf(f, knownServices), anchor };
+      }),
+    ].filter((i) => !hidden.includes(i.id));
+    const fromLedger = billsFromRecurring(items, dueDays);
+    if (findings.length > 0) return fromLedger;
+    // No statement charge in the ledger: the subscriptions the audit found (if any).
+    const audit = billsFromSources({ profile, renewals, dueDays, labels }).filter((b) => b.kind === 'subscription');
+    return [...fromLedger, ...audit];
+  }, [profile, accounts, findings, hidden, renewals, dueDays]);
+  return {
+    ready: appReady && ledgerReady && accountsReady && hiddenReady,
+    empty: defs.length === 0,
+    defs,
+    userDays: dueDays,
+    takeHome: profile.takeHomePay,
+  };
 }
 
 function toBillVM(b: BillDef, userDays: Record<string, number>): BillVM {
@@ -72,7 +114,7 @@ function toBillVM(b: BillDef, userDays: Record<string, number>): BillVM {
 }
 
 export function useBills(opts: { now?: Date } = {}): BillsVM {
-  const { ready, empty, defs, userDays } = useBillDefs(useAppReady());
+  const { ready, empty, defs, userDays, takeHome } = useBillDefs(useAppReady());
   const savedPaydays = useAppStore((s) => s.bills.paydays);
   const setBillDueDay = useAppStore((s) => s.setBillDueDay);
   const storePaydays = useAppStore((s) => s.setPaydays);
@@ -88,32 +130,48 @@ export function useBills(opts: { now?: Date } = {}): BillsVM {
       bill: vms.get(o.bill.id)!,
       date: dayVM(o.date),
       isToday: dayIndex(o.date) === dayIndex(today),
+      isPast: dayIndex(o.date) < dayIndex(today),
     });
     const ym = shiftMonth(today.year, today.month, offset);
     const inMonth = billsInMonth(defs, ym.year, ym.month);
     const charges = inMonth.map(charge);
     const weeks: CalendarCellVM[][] = monthWeeks(ym.year, ym.month).map((week) =>
       week.map((day) => {
-        if (day === null) return { day: null, iso: null, isToday: false, charges: [], total: 0 };
+        if (day === null) return { day: null, iso: null, isToday: false, isPast: false, charges: [], total: 0 };
         const date = { year: ym.year, month: ym.month, day };
         const onDay = charges.filter((c) => c.date.day === day);
         return {
           day,
           iso: isoOf(date),
           isToday: dayIndex(date) === dayIndex(today),
+          isPast: dayIndex(date) < dayIndex(today),
           charges: onDay,
           total: onDay.reduce((s, c) => s + c.bill.amount, 0),
         };
       }),
     );
+    const split = splitByToday(inMonth, today);
+    const total = sumOf(inMonth);
     const month: MonthVM = {
       month: monthKey(ym.year, ym.month),
       year: ym.year,
       isCurrent: offset === 0,
       weeks,
       charges,
-      total: sumOf(inMonth),
+      total,
       totalIsEstimate: inMonth.some((o) => o.bill.amountIsEstimate),
+      paid: { total: sumOf(split.paid), count: split.paid.length },
+      toPay: { total: sumOf(split.toPay), count: split.toPay.length },
+      byKind: KINDS.map((kind) => {
+        const of = inMonth.filter((o) => o.bill.kind === kind);
+        return { kind, total: sumOf(of), count: of.length, share: total > 0 ? sumOf(of) / total : 0 };
+      }).filter((k) => k.count > 0),
+      verdict:
+        inMonth.length === 0 ? 'nothing' : offset > 0 ? 'future' : offset < 0 ? 'past' : split.toPay.length > 0 ? 'toPay' : 'clear',
+      leftAfter:
+        Number.isFinite(takeHome.value) && takeHome.value > 0
+          ? { takeHome: takeHome.value, amount: takeHome.value - total, isEstimate: takeHome.isEstimate || inMonth.some((o) => o.bill.amountIsEstimate) }
+          : null,
     };
     const soonOcc = dueSoon(defs, today);
     const before = dueBeforePayday(defs, today, paydays.days);
@@ -128,7 +186,7 @@ export function useBills(opts: { now?: Date } = {}): BillsVM {
       },
       bills: [...vms.values()],
     };
-  }, [defs, userDays, today, offset, paydays]);
+  }, [defs, userDays, today, offset, paydays, takeHome]);
 
   const setDueDay = useCallback((id: string, day: number | null) => setBillDueDay(id, day), [setBillDueDay]);
   const setPaydays = useCallback((days: number[]) => storePaydays(days.length > 0 ? days : null), [storePaydays]);

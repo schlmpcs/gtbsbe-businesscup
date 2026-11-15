@@ -82,3 +82,45 @@ describe('the reveal’s crowd line', () => {
     expect(t.reveal.crowdHow).toContain('20 players');
   });
 });
+
+describe('the reveal’s side-by-side panel', () => {
+  const both: PickResult = {
+    ...result(null),
+    totals: { A: 3100, B: 4300 },
+    breakdown: {
+      A: [
+        { category: 'rentUtilities', amount: 2000, sources: [source], isEstimate: false },
+        { category: 'car', amount: 600, sources: [source], isEstimate: true },
+        { category: 'groceries', amount: 500, sources: [source], isEstimate: false },
+      ],
+      B: [
+        { category: 'rentUtilities', amount: 1800, sources: [source], isEstimate: false },
+        { category: 'childcare', amount: 2000, sources: [source], isEstimate: false },
+        { category: 'groceries', amount: 500, sources: [source], isEstimate: false },
+      ],
+    },
+    decidedBy: { category: 'childcare', A: 0, B: 2000 },
+  };
+
+  it('lists every category of either life, both amounts on one scale, largest first, the decider marked', () => {
+    const rows = buildDuelReveal(1, { choice: 'B', result: both }).categories;
+    expect(rows.map((r) => r.category)).toEqual(['rentUtilities', 'childcare', 'car', 'groceries']);
+    expect(rows[0]).toMatchObject({ A: 2000, B: 1800, scaleA: 1, scaleB: 0.9, decided: false });
+    expect(rows[1]).toMatchObject({ A: 0, B: 2000, scaleA: 0, scaleB: 1, decided: true });
+    expect(rows[2]).toMatchObject({ A: 600, B: 0, isEstimate: true });
+    expect(rows.filter((r) => r.decided)).toHaveLength(1);
+  });
+
+  it('renders both totals, a row per category with both amounts, the decider tag', () => {
+    render(<DuelReveal reveal={buildDuelReveal(1, { choice: 'B', result: both })} />);
+    const panel = screen.getByTestId('duel-compare');
+    expect(panel).toHaveTextContent('$3,100');
+    expect(panel).toHaveTextContent('$4,300');
+    const list = screen.getByRole('list', { name: t.reveal.compareLabel });
+    expect(list.querySelectorAll('li')).toHaveLength(4);
+    expect(list).toHaveTextContent(t.reveal.compareRow('$0', '$2,000'));
+    expect(screen.getByText(t.reveal.decidedTag)).toBeInTheDocument();
+    // The lesson shows once, in the ink band above, not again in the panel.
+    expect(panel).not.toHaveTextContent(both.lesson);
+  });
+});

@@ -1,5 +1,5 @@
 import { pro as copy } from '@/copy';
-import { cx, EstimateTag, Money, Sticker } from '@/ui-kit';
+import { cx, Money, Sticker } from '@/ui-kit';
 import type { PaywallPlanVM, ProPlan } from '../model/types';
 
 type Props = {
@@ -15,10 +15,8 @@ type Props = {
 export function PlanPicker({ plans, onSelect, disabled }: Props) {
   return (
     <fieldset disabled={disabled} className="flex w-full flex-col gap-md">
-      <legend className="mb-md flex flex-wrap items-center gap-sm text-sm font-semibold text-text-muted">
-        {copy.plans.legend}
-        {plans.some((p) => p.isEstimate) && <EstimateTag />}
-      </legend>
+      {/* Demo prices, said once in the fine print (priceNote); no "estimate" tag: a price is not an estimate. */}
+      <legend className="mb-md text-sm font-semibold text-text-muted">{copy.plans.legend}</legend>
       <div className="grid w-full gap-lg sm:grid-cols-2">
         {plans.map((plan) => (
           <label

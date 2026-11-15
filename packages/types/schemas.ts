@@ -12,7 +12,7 @@ export { GoalSchema } from './goal';
 // likely LLM/user mistake and it would silently break every forecast.
 import { z } from 'zod';
 import {
-  AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, DUEL_LETTERS, DUEL_ROUNDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
+  AREA_TIERS, CATEGORIZED_BY, CLUE_IDS, COST_CATEGORIES, DEBT_KINDS, DUEL_FACT_GROUPS, DUEL_LETTERS, DUEL_ROUNDS, EVENT_HOMES_MAX, EVENTS_BATCH_MAX, EVENTS_ERROR_CODES,
   FUNNEL_EVENT_NAMES, KID_AGES, LIFE_EVENT_ID_MAX_LENGTH, LIFE_EVENT_KINDS, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MAX_STATEMENT_ITEMS, MOVE_KINDS, PRO_ERROR_CODES, PRO_PLANS, PRO_SOURCES,
   SESSION_ERROR_CODES, SESSION_WISHLIST_MAX, STATEMENT_CLASSES, STATEMENT_FOLLOW_UP_KINDS, MAX_STATEMENT_FOLLOW_UPS,
   MAX_FOLLOW_UP_QUESTION_LENGTH,
@@ -446,12 +446,18 @@ export const DuelRoundSchema = z.literal(DUEL_ROUNDS);
 /** 'YYYY-MM-DD' (the America/New_York date of the set). */
 export const DateSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'expected YYYY-MM-DD');
 
+export const DuelFactGroupSchema = z.object({
+  group: z.enum(DUEL_FACT_GROUPS),
+  items: z.tuple([z.string().min(1), z.string().min(1)]),
+});
+
 export const PublicDuelCardSchema = z.object({
   letter: DuelLetterSchema,
   household: z.string().min(1),
   metro: z.string().min(1),
   caption: z.string(),
-  facts: z.array(z.string().min(1)).max(6),
+  facts: z.array(DuelFactGroupSchema).length(DUEL_FACT_GROUPS.length)
+    .refine((groups) => groups.every((g, i) => g.group === DUEL_FACT_GROUPS[i]), 'expected the fact groups in DUEL_FACT_GROUPS order'),
   art: z.string().min(1),
   composite: z.literal(true),
 });

@@ -1,14 +1,16 @@
-// S1 Today and S10 You in N years + Next Moves on the demo profile (phone + desktop projects).
+// The landing's first visit ("/") and S10 You in N years + Next Moves on the demo profile (phone + desktop
+// projects). Home's numbers moved to /dashboard (its own spec).
 import { expect, test, type Page } from '@playwright/test';
 import { yearsPhrase } from '../src/copy/ai';
 import { common } from '../src/copy/common';
 import { forecast as t } from '../src/copy/forecast';
 import { lifeEvents as le } from '../src/copy/lifeEvents';
+import { onboarding as ob } from '../src/copy/onboarding';
 
 let pageErrors: string[] = [];
 
 // Errors are collected only on this spec's screens; /play and /me/guess are other features' (only navigated to).
-const OWN_PATHS = new Set(['/', '/future']);
+const OWN_PATHS = new Set(['/', '/future', '/start']);
 const onOwnScreen = (page: Page) => OWN_PATHS.has(new URL(page.url()).pathname);
 
 test.beforeEach(({ page }) => {
@@ -33,65 +35,34 @@ async function noSideScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-test('first visit: Today explains the app; Try with sample data opens the forecast with the sample banner', async ({ page }) => {
-  const f = t.today.firstVisit;
+test('first visit: the landing has no numbers; See a sample plan opens /plan with the sample banner', async ({ page }) => {
+  const l = ob.landing;
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(f.title);
-  await expect(page.getByText(f.body)).toBeVisible();
-  await expect(page.getByText(f.note)).toBeVisible();
-  const hero = page.getByTestId('today-first-visit');
-  await expect(hero.getByRole('link', { name: f.start })).toHaveAttribute('href', '/me/guess');
-  await expect(hero.getByTestId('play').getByRole('link', { name: f.play, exact: true })).toHaveAttribute('href', '/play');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(l.title);
+  await expect(page.getByText(l.note)).toBeVisible();
+  const hero = page.getByTestId('landing');
+  await expect(hero.getByRole('link', { name: l.start, exact: true })).toHaveAttribute('href', '/start');
   await expect(page.getByTestId('at-horizon')).toHaveCount(0); // no numbers on a first visit
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
   await noSideScroll(page);
 
-  await hero.getByRole('link', { name: f.sample }).click();
-  await expect(page).toHaveURL(/\/future$/); // ?sample=1 is dropped once the sample is loaded
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title(10));
-  await expect(page.getByTestId('at-horizon')).toContainText(/\$\d/);
+  await hero.getByRole('link', { name: l.sample }).click();
+  await expect(page).toHaveURL(/\/plan$/);
   const banner = page.getByTestId('sample-banner');
   await expect(banner).toContainText(common.sampleBanner.text);
   await noSideScroll(page);
 
-  // The sample stays on across screens and reloads, until "Use mine".
+  // The sample stays on across reloads; the landing stays bare (no banner, no numbers) and still offers Start.
   await page.reload();
   await expect(banner).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.home.title);
-  await expect(banner).toBeVisible();
-  await expect(page.getByTestId('nudge')).toHaveCount(0); // the banner already says it is the sample
-  await banner.getByRole('link', { name: common.sampleBanner.cta }).click();
-  await expect(page).toHaveURL(/\/me\/guess$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(l.title);
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
-});
-
-test('Home shows the house (10-year number with its range) and links to /play, /future and What if?', async ({ page }) => {
-  // Past the first visit (the sample life is on), Home shows the numbers.
-  await page.goto('/future?sample=1');
-  await expect(page.getByTestId('sample-banner')).toBeVisible();
-  await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.home.title);
-
-  const atHorizon = page.getByTestId('at-horizon');
-  await expect(atHorizon.getByRole('heading', { name: t.today.future.title(10) })).toBeVisible();
-  await expect(atHorizon.getByText(t.netWorthAt(10))).toBeVisible();
-  await expect(atHorizon.getByText(/^\$[\d,]+$/)).toBeVisible();
-  await expect(atHorizon.getByText(/^Likely between \$[\d,]+ and \$[\d,]+$/)).toBeVisible();
-
-  // No statements yet: the month-end card shows the projection only, and says why.
-  await expect(page.getByTestId('month-end-no-history')).toContainText(t.today.monthEnd.needHistory(0));
-  await noSideScroll(page);
-
-  await expect(page.getByRole('region', { name: t.today.home.whatIf.title }).getByRole('link', { name: t.today.home.whatIf.all })).toHaveAttribute('href', '/tools');
-
-  await page.getByTestId('play').getByRole('link', { name: t.today.playDuel.cta }).click();
-  await expect(page).toHaveURL(/\/play$/);
-
-  await page.goto('/');
-  await page.getByRole('link', { name: t.today.home.openFuture }).click();
-  await expect(page).toHaveURL(/\/future$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.future.title(10));
+  // "Use my numbers" starts the story at your own month.
+  await page.goto('/plan');
+  await banner.getByRole('link', { name: common.sampleBanner.cta }).click();
+  await expect(page).toHaveURL(/\/start\?ch=2$/);
+  await expect(page.getByTestId('sample-banner')).toHaveCount(0);
 });
 
 test('You in 10 years (the default) shows the chart with the labelled range band and 1–3 moves', async ({ page }) => {
@@ -141,9 +112,6 @@ test('committing a move flags it and survives a reload', async ({ page }) => {
   await expect(page.locator(`[data-move-id="${id}"]`)).toHaveAttribute('data-committed', 'true');
   await expect(page.locator(`[data-move-id="${id}"]`).getByTestId('committed-badge')).toBeVisible();
 
-  // Today shows it as your move.
-  await page.goto('/');
-  await expect(page.getByTestId('today-move')).toContainText(t.today.move.committedTitle);
 });
 
 test('picking 3 years re-reads the same forecast: the headline and the moves change, and nothing is asked of the forecast route', async ({ page }) => {
@@ -190,9 +158,7 @@ test('picking 3 years re-reads the same forecast: the headline and the moves cha
   expect(forecastRequests).toHaveLength(asked); // reading another year of the same answer is not a request
 });
 
-test('Today follows the year picked on You in N years, and the pick is remembered', async ({ page }) => {
-  // Past the first visit (the sample life is on), so Today shows the forecast card; a fresh context
-  // would otherwise open on the first-visit screen, which has no numbers.
+test('the year picked on You in N years is remembered', async ({ page }) => {
   await page.goto('/future?sample=1');
   await expect(page.getByTestId('sample-banner')).toBeVisible();
   await expect(page.getByTestId('at-horizon').getByTestId('forecast-source')).toBeVisible({ timeout: 30_000 });
@@ -201,11 +167,6 @@ test('Today follows the year picked on You in N years, and the pick is remembere
 
   await page.reload();
   await expect(page.getByRole('radio', { name: yearsPhrase(5) })).toBeChecked();
-
-  await page.goto('/');
-  const card = page.getByTestId('at-horizon');
-  await expect(card.getByRole('heading', { name: t.today.future.title(5) })).toBeVisible();
-  await expect(card.getByText(t.netWorthAt(5))).toBeVisible();
 });
 
 test('Coming up: adding a kid from the shortcut moves the headline, and the event survives a reload', async ({ page }) => {

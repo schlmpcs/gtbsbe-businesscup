@@ -15,7 +15,8 @@ export type PlanEventIconId =
 
 export type PlanTone = 'good' | 'bad';
 export type PlanDisplay = 'today' | 'future';
-export type SaveState = 'saving' | 'saved';
+/** 'error': this browser refused the write (private window, storage full or blocked); the plan stays in memory. */
+export type SaveState = 'saving' | 'saved' | 'error';
 
 /** A value the person can edit: raw for the control, formatted for display, with where it came from. */
 export type PlanFieldValue = number | boolean | string | null;
@@ -60,11 +61,22 @@ export type PlanChartVM = {
 
 export type PlanAccountsTableVM = {
   columns: { accountId: string; name: string; group: AccountGroup; groupLabel: string }[];
+  /** Assets, then liabilities: the groups that have rows in the plan, in group order, with their account ids. */
+  sections: {
+    id: 'assets' | 'liabilities';
+    label: string;
+    groups: { group: AccountGroup; label: string; accountIds: string[] }[];
+  }[];
   rows: {
     year: number;
     age: number;
     isRetirementYear: boolean;
     netWorthLabel: string;
+    /** Year-end totals from the plan (liabilities as a positive balance). */
+    assetsLabel: string;
+    liabilitiesLabel: string;
+    /** Year-end balance per group: the sum of its accounts' `end`. */
+    groupEnds: Partial<Record<AccountGroup, string>>;
     cells: Record<string, { start: string; growth: string; deposits: string; withdrawals: string; end: string }>;
   }[];
 };
@@ -95,12 +107,9 @@ export type PlanEventRowVM = {
 };
 
 export type PlanVM =
-  | {
-      status: 'notFound';
-      disclaimer: string;
-      /** MP7b: true while the saved scenarios are still loading (not a missing scenario yet). */
-      loading?: boolean;
-    }
+  /** The saved plan is not loaded yet (server render and the first client render). */
+  | { status: 'loading'; disclaimer: string }
+  | { status: 'notFound'; disclaimer: string }
   | {
       status: 'ready';
       scenarioId: string;
@@ -110,7 +119,7 @@ export type PlanVM =
       tables: { accounts: PlanAccountsTableVM; cashFlow: PlanCashFlowTableVM; events: PlanEventRowVM[] };
       display: { value: PlanDisplay; label: string; options: { value: PlanDisplay; label: string }[] };
       saveState: SaveState;
-      /** "Saving…" or "Saved just now". */
+      /** "Saving…", "Saved just now" or the could-not-save message. */
       saveLabel: string;
       disclaimer: string;
       setDisplay: (display: PlanDisplay) => void;
@@ -133,10 +142,6 @@ export type ScenariosVM = {
   /** The last scenario cannot be removed. */
   remove: (id: string) => void;
   canRemove: boolean;
-  /** MP7b: fewer than the most scenarios a person keeps (4); `add` does nothing otherwise. */
-  canAdd?: boolean;
-  /** MP7b: replaces the scenarios with the sample (scenario.demo.json and its Compare pair). */
-  loadSample?: () => void;
 };
 
 export type EventCatalogEntryVM = {
@@ -188,14 +193,6 @@ export type EventPreviewVM = {
   /** With the event on vs the same plan without it. */
   rows: { id: 'netWorthAtRetirement' | 'netWorthAtEnd' | 'shortfall'; label: string; withLabel: string; withoutLabel: string; deltaLabel: string; tone: PlanTone }[];
   series: { year: number; age: number; withEvent: Money; withoutEvent: Money }[];
-  /** MP7b: monthly money left once the event starts (previewEvent), in the display unit; may be negative. */
-  leftOverMonthly?: Money;
-  /** MP7b: "$1,240 left each month" or "−$310 left each month". */
-  leftOverMonthlyLabel?: string;
-};
-/** MP7b: the loan behind a financed one-time expense (expenseFinancingBreakdown). */
-export type EventFinancingVM = {
-  lines: { key: 'downPayment' | 'financed' | 'monthlyPayment' | 'totalInterest'; label: string; amountLabel: string; amount: Money }[];
 };
 export type EventEditorVM =
   | { status: 'notFound'; message: string }
@@ -211,8 +208,6 @@ export type EventEditorVM =
       fields: EventFieldVM[];
       /** buyHome only. */
       breakdown: EventBreakdownVM | null;
-      /** MP7b: a financed one-time expense only; null otherwise. */
-      financing?: EventFinancingVM | null;
       /** buyHome only: down payment as a decimal share of the price (0.2 = 20%), always = downPayment / homeValue. */
       downPaymentPct: Rate | null;
       downPaymentPctLabel: string | null;
@@ -287,8 +282,17 @@ export type CompareVM =
 
 // ----- useChanceOfSuccess ---------------------------------------------------------------------
 
-export type ChanceStatus = 'idle' | 'running' | 'done';
-export type HistogramVM = { id: 'atRetirement' | 'atEnd' | 'shortfallAge'; title: string; xLabel: string; bins: { from: number; to: number; count: number; label: string }[] };
+export type ChanceStatus = 'idle' | 'running' | 'done' | 'error';
+export type HistogramVM = {
+  id: 'atRetirement' | 'atEnd' | 'shortfallAge';
+  title: string;
+  xLabel: string;
+  bins: { from: number; to: number; count: number; label: string }[];
+  /** The rules-based plan's own value on this axis (same display unit), for a marker; null when it has none (money never runs short). */
+  planValue: number | null;
+  /** "Plan $371K", "Plan: age 84" or "Plan: lasts past 90". */
+  planLabel: string;
+};
 export type ChanceResultVM = {
   /** Whole percent for the gauge, 0–100. */
   gaugePct: number;
@@ -326,7 +330,9 @@ export type ChanceOfSuccessVM = {
   result: ChanceResultVM | null;
   settings: ChanceSettingsVM;
   idleMessage: string;
-  /** Starts a run in the Web Worker. */
+  /** Only when status is 'error'. */
+  errorMessage: string | null;
+  /** Starts a run of the engine's monteCarlo() on the active scenario. */
   run: () => void;
   updateSettings: (patch: ChanceSettingsPatch) => void;
   /** On: a fixed seed (same result every run). Off: a new seed each run. */
@@ -341,21 +347,16 @@ export type PlanMoveVM = {
   /** Net worth change at retirement from adding the move, signed: "+$41,000". */
   effectAtRetirement: string;
   effectAtRetirementRaw: Money;
-  /** Change in the chance of success, in percentage points, signed: "+4 pts". */
-  successRateDelta: string;
-  successRateDeltaRaw: Rate;
-  /**
-   * MP7b: the delta takes four Monte Carlo runs in the worker, so it arrives after the move: 'measuring'
-   * until then (`successRateDelta` says so, raw 0), 'unavailable' when the run failed.
-   */
-  successRateStatus?: 'measuring' | 'done' | 'unavailable';
+  /** Change in the chance of success, in percentage points, signed: "+4 pts". Null until it is measured (same-seed Monte Carlo). */
+  successRateDelta: string | null;
+  successRateDeltaRaw: Rate | null;
   explanation: string;
   added: boolean;
   tone: PlanTone;
 };
 export type PlanMovesVM = {
   moves: PlanMoveVM[];
-  /** Adds the move's event to the active scenario. */
+  /** Adds the move to the active scenario's plan. */
   addToPlan: (moveId: string) => void;
 };
 

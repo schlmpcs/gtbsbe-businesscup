@@ -27,6 +27,27 @@ export type LoanOfferVM = {
   isLowestMonthly: boolean;
   /** Debt load before → with this loan. */
   debtLoadAfter: DebtLoadGaugeVM | null;
+  /**
+   * What the total cost is made of (null without a result): the price (down payment included), the interest
+   * and the fees; price + interest + fees = result.totalCost.
+   */
+  cost: { price: Money; interest: Money; fees: Money } | null;
+};
+
+/** The cheapest offer against the next cheapest, when two or more offers are valid. */
+export type LoanBestVM = {
+  id: string;
+  /** 1-based position on screen ("Offer A" = 1). */
+  index: number;
+  totalCost: Money;
+  /** The next cheapest offer and how much more it costs in total (0 = a tie). */
+  runnerUp: { id: string; index: number; totalCost: Money; costsMore: Money } | null;
+};
+
+/** Balance of the selected offer by month: on its schedule, and with the extra payment (null at $0 extra). */
+export type LoanBalanceChartVM = {
+  base: { month: number; balance: Money }[];
+  withExtra: { month: number; balance: Money }[] | null;
 };
 
 /** The extra-payment slider on the selected offer. */
@@ -87,7 +108,15 @@ export type LoanLabVM = {
    * today, and with the selected offer's payment added (null without a valid selected offer). Negative = short.
    */
   leftOver: { before: Money; after: Money | null } | null;
+  /** The longest total cost among the valid offers: the scale of the cost bars. 0 when none is valid. */
+  costScale: Money;
+  /** Null with fewer than two valid offers. */
+  best: LoanBestVM | null;
+  /** Null without a valid selected offer. */
+  balanceChart: LoanBalanceChartVM | null;
 };
+
+export type { ToolPlanEventVM, ToolPlanPreview } from '@/features/plan/model/useToolPlanEvent';
 
 // ----- Debt payoff planner (M13): usePayoffPlanner() in ./usePayoffPlanner.ts ----------------------
 // A section of Loan Lab beside the payoff order. All numbers come from the engine (comparePayoff and

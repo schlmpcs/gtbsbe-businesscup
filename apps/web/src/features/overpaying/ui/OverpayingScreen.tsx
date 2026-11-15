@@ -1,10 +1,14 @@
 'use client';
 
-// S23 Overpaying check (placeholder UI; the designer's frames replace it). All data and actions come
-// from useOverpaying(); nothing is computed here.
+// S23 "Are you paying more than typical?": the inputs on the left, the answer on the right (verdict pill,
+// one sentence, gap per year, where the biggest gap is), then each line as a range chart with what paying
+// the typical middle does to your plan. All data and actions come from useOverpaying() and
+// useOverpayingImpacts(); nothing is computed here.
+import type { ComponentType, ReactNode } from 'react';
 import { overpaying as t } from '@/copy';
-import { Card, Money, PageHeader, Stack, Stat, Tag, buttonClassName, cx } from '@/ui-kit';
-import type { OverpayingResultVM, OverpayingVM, VMError } from '../model/types';
+import { Art, Card, PageHeader, Stack, Tag, buttonClassName, cx, formatMoney } from '@/ui-kit';
+import { CountUp, KpiStrip, MOTION } from '@/ui-kit/reports';
+import type { BenchmarkLine, OverpayingResultVM, OverpayingVM, PlanImpactVM, VMError } from '../model/types';
 import { BenchmarkRow } from './BenchmarkRow';
 import { CoverageNotice } from './CoverageNotice';
 import { InputsForm } from './InputsForm';
@@ -26,59 +30,48 @@ function errorText(error: VMError): string {
   return t.errors.unknown;
 }
 
-/** The note under the 10-year figure when there is no total. */
-function EffectNote({ data, profileHref }: { data: OverpayingResultVM; profileHref: string }) {
-  switch (data.summary.effectStatus) {
-    case 'partial':
-      return <>{t.result.effectPartial}</>;
-    case 'none':
-      return <>{t.result.effectNoneAbove}</>;
-    default:
-      return (
-        <>
-          {t.result.effectNeedsProfile}{' '}
-          <a href={profileHref} className="underline underline-offset-2">
-            {t.result.effectNeedsProfileLink}
-          </a>
-        </>
-      );
-  }
-}
+const PILL: Record<OverpayingResultVM['summary']['verdict'], string> = {
+  above: 'bg-negative/15 text-negative',
+  typical: 'bg-positive/15 text-positive',
+  below: 'bg-surface-strong text-text',
+};
 
-function Summary({ data, profileHref }: { data: OverpayingResultVM; profileHref: string }) {
+/** The answer first: a status pill, one plain sentence, the key numbers and where the biggest gap is. */
+function Summary({ data }: { data: OverpayingResultVM }) {
   const { summary } = data;
+  const headline =
+    summary.verdict === 'above' ? t.result.verdict.above(formatMoney(summary.gapPerYear)) : t.result.verdict[summary.verdict];
   return (
-    <Card tone="muted" data-testid="overpaying-summary" aria-label={t.result.summaryLabel}>
-      <Stack gap="lg">
-        <p className="text-lg font-semibold">{t.result.summaryLine(summary.compared, summary.above)}</p>
-        {summary.above > 0 && (
-          <div className="grid grid-cols-1 gap-lg sm:grid-cols-2">
-            <Stat
-              label={t.result.gapPerYear}
-              value={<Money value={summary.gapPerYear} />}
-              hint={t.result.gapPerYearHint}
-            />
-            {summary.effect10y !== null ? (
-              <Stat
-                label={
-                  <>
-                    {t.result.effect10y}{' '}
-                    <Tag variant="dashed" title={t.result.effectEstimateWhy}>
-                      {t.result.estimate}
-                      <span className="sr-only">: {t.result.effectEstimateWhy}</span>
-                    </Tag>
-                  </>
-                }
-                value={<Money value={summary.effect10y} />}
-                hint={t.result.effectHint}
-              />
-            ) : (
-              <Stat label={t.result.effect10y} value={t.result.effectNone} hint={<EffectNote data={data} profileHref={profileHref} />} />
-            )}
-          </div>
-        )}
-      </Stack>
-    </Card>
+    <section data-testid="overpaying-summary" aria-label={t.result.summaryLabel} data-verdict={summary.verdict} className={cx('card card-pad flex flex-col gap-lg', MOTION.rise)}>
+      <div className="flex flex-col gap-sm">
+        <span className={cx('w-fit rounded-full px-md py-xs text-sm font-bold', PILL[summary.verdict])}>{t.result.verdict.pill[summary.verdict]}</span>
+        <p className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">{headline}</p>
+        <p className="text-sm text-text-muted">{t.result.summaryLine(summary.compared, summary.above)}</p>
+      </div>
+      {summary.above > 0 && (
+        <KpiStrip
+          items={[
+            { id: 'gap', label: t.result.gapPerYear, value: <CountUp value={summary.gapPerYear} format={(n) => formatMoney(n)} />, hint: t.result.gapPerYearHint, tone: 'negative' },
+            { id: 'above', label: t.result.above, value: t.result.aboveOf(summary.above, summary.compared), hint: t.result.compared },
+          ]}
+        />
+      )}
+      {summary.nextSteps.length > 0 && (
+        <div className="flex flex-col gap-sm" data-testid="next-steps">
+          <h3 className="text-base font-bold">{t.result.nextTitle}</h3>
+          <ol className="flex flex-col gap-sm">
+            {summary.nextSteps.map((step, i) => (
+              <li key={step.line} className="flex gap-sm text-sm">
+                <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+                  {i + 1}
+                </span>
+                <span>{t.result.next[step.line](formatMoney(step.mid))}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -118,7 +111,7 @@ function Skipped({ data }: { data: OverpayingResultVM }) {
   );
 }
 
-function Results({ vm }: { vm: OverpayingVM }) {
+function Results({ vm, impacts, Link }: { vm: OverpayingVM; impacts: Partial<Record<BenchmarkLine, PlanImpactVM>>; Link?: LinkLike }) {
   const { result } = vm;
   if (result === null) {
     // A bad ZIP or amount already says so beside its box; a ZIP we do not cover is said by the coverage notice.
@@ -143,11 +136,11 @@ function Results({ vm }: { vm: OverpayingVM }) {
         {t.result.title}
       </h2>
       <HouseholdNote household={vm.household} />
-      <Summary data={data} profileHref={vm.profileHref} />
+      <Summary data={data} />
       {data.rows.length > 0 && (
         <ul className="flex flex-col gap-lg">
           {data.rows.map((row) => (
-            <BenchmarkRow key={row.line} row={row} effectAvailable={data.effectAvailable} profileHref={vm.profileHref} />
+            <BenchmarkRow key={row.line} row={row} impact={impacts[row.line]} Link={Link} />
           ))}
         </ul>
       )}
@@ -157,11 +150,27 @@ function Results({ vm }: { vm: OverpayingVM }) {
   );
 }
 
-export function OverpayingScreen({ vm }: { vm: OverpayingVM }) {
+type LinkLike = ComponentType<{ href: string; className?: string; children?: ReactNode }>;
+
+export type OverpayingScreenProps = {
+  vm: OverpayingVM;
+  /** Each line above its range measured on the plan (useOverpayingImpacts). */
+  impacts?: Partial<Record<BenchmarkLine, PlanImpactVM>>;
+  Link?: LinkLike;
+};
+
+const NO_IMPACTS: Partial<Record<BenchmarkLine, PlanImpactVM>> = {};
+
+export function OverpayingScreen({ vm, impacts = NO_IMPACTS, Link }: OverpayingScreenProps) {
   return (
-    <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl">
+    <main className="mx-auto w-full max-w-(--container-7xl) px-lg pb-3xl pt-md">
       <Stack gap="2xl">
-        <PageHeader title={t.screens.S23} intro={vm.hidden ? undefined : t.intro} />
+        <PageHeader
+          eyebrow={vm.hidden ? undefined : t.eyebrow}
+          title={t.screens.S23}
+          intro={vm.hidden ? undefined : t.intro}
+          aside={vm.hidden ? undefined : <Art name="coins" className="hidden h-28 w-28 items-center sm:flex" />}
+        />
         {vm.hidden ? (
           <Card title={t.streamer.title} headingLevel={2} data-testid="streamer-notice">
             <Stack gap="md" align="start">
@@ -181,7 +190,7 @@ export function OverpayingScreen({ vm }: { vm: OverpayingVM }) {
               {vm.metroPicker && <MetroPicker picker={vm.metroPicker} />}
             </Stack>
             <div className="min-w-0">
-              <Results vm={vm} />
+              <Results vm={vm} impacts={impacts} Link={Link} />
             </div>
           </div>
         )}

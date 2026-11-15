@@ -2,28 +2,33 @@
 // The subscription audit's view-model on fakes: the catalogue, the tool's slice of the local store, the
 // statement categorizer and the event sender are all injected (apps/web/src/test/subscriptions.ts).
 import { subscriptionsExpected } from '@lifeguessr/data/fixtures/tools';
-import { applyPatch, forecast, rankCandidates } from '@lifeguessr/engine';
 import { statementItemsSample } from '@lifeguessr/data/fixtures/tools';
 import { ClientEventEnvelopeSchema, type ClientFunnelEvent, type StatementCategorizeResponse } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api/http';
-import { areaRates } from '@/lib/model/profile';
 import { useAppStore } from '@/state';
 import { resetClientState } from '@/test/clientState';
-import { aiAnswer, mockForecastRoute } from '@/test/forecastApi';
+import { mockForecastRoute } from '@/test/forecastApi';
+import { resetPlanStore, usePlanStore } from '@/features/plan/model/planStore';
+import { usePlanInputs } from '@/features/plan/model/planEngine';
+import { planImpactOf } from './planImpact';
 import { csvFile, fakeCategorize, realisticCatalogue, ruleClasses, sampleStatementFile, testCatalogue, useMemoryStore } from '@/test/subscriptions';
-import { CANCEL_MOVE_ID, cancelCandidate } from './audit';
+import { CANCEL_MOVE_ID } from './audit';
 import { type SubscriptionsToolState } from './state';
 import { SubscriptionToolStateSchema } from '@lifeguessr/types';
-import { useCancelResult } from './useCancelResult';
+import { usePlanImpact } from './usePlanImpact';
+import { ledgerForAudit } from './wiring';
+import { detectFindings } from '@/features/recurring/model/items';
+import type { StoredTransaction } from '@/lib/model/transactions';
+import { transactionsDemo } from '@/fixtures';
 import { useSubscriptions, type SubscriptionsDeps } from './useSubscriptions';
 
 const track = vi.fn<NonNullable<SubscriptionsDeps['track']>>();
 const downloadRenewals = vi.fn<NonNullable<SubscriptionsDeps['downloadRenewals']>>(() => 'downloaded');
 const trackTool = vi.fn<NonNullable<SubscriptionsDeps['trackTool']>>();
 
-type Options = Partial<Pick<SubscriptionsDeps, 'catalogue' | 'categorize' | 'importedStatement'>> & { initial?: SubscriptionsToolState };
+type Options = Partial<Pick<SubscriptionsDeps, 'catalogue' | 'categorize' | 'importedStatement' | 'ledger'>> & { initial?: SubscriptionsToolState };
 
 function renderTool(opts: Options = {}) {
   const view = renderHook(() => {
@@ -33,9 +38,10 @@ function renderTool(opts: Options = {}) {
       catalogue: opts.catalogue ?? testCatalogue, store, track, trackTool, downloadRenewals,
       categorize: opts.categorize ?? fakeCategorize(),
       importedStatement: opts.importedStatement,
+      ledger: opts.ledger,
     });
-    // The screen mounts this only while something is marked (SubscriptionsTool); here it is always there.
-    const cancel = useCancelResult(profile, vm.plan.candidate, { track });
+    // What the screen shows under the cancel plan (SubscriptionsTool): measured on the active /plan scenario.
+    const cancel = usePlanImpact(vm.plan.candidate, { onAdded: (m) => track({ name: 'move_committed', props: { kind: m.kind } }) });
     return { vm, store, cancel };
   });
   return view;
@@ -52,6 +58,7 @@ async function uploaded(tool: Tool, file: File = sampleStatementFile()) {
 
 beforeEach(() => {
   resetClientState();
+  resetPlanStore();
   track.mockClear();
   trackTool.mockClear();
   downloadRenewals.mockClear();
@@ -897,6 +904,29 @@ describe('apply to the profile ("Use this in my plan")', () => {
   });
 });
 
+describe('the ledger (Transactions)', () => {
+  const lines = transactionsDemo as unknown as StoredTransaction[];
+
+  it('audits the person’s transactions on open, with the same recurring charges Recurring finds', async () => {
+    const tool = renderTool({ ledger: ledgerForAudit(lines, true), catalogue: realisticCatalogue });
+    await ready(tool);
+    await waitFor(() => expect(tool.result.current.vm.statement.status).toBe('done'));
+    const { vm } = tool.result.current;
+    expect(vm.step).toBe('findings');
+    expect(vm.statement.fromLedger).toBe(true);
+    const recurring = detectFindings(lines).map((f) => f.amount).sort((a, b) => a - b);
+    const monthly = vm.findings.active.filter((f) => f.cadence === 'monthly').map((f) => f.amount).sort((a, b) => a - b);
+    expect(monthly).toEqual(recurring);
+  });
+
+  it('waits for the ledger to load, and keeps findings that are as new as the ledger', async () => {
+    const tool = renderTool({ ledger: ledgerForAudit(lines, false) });
+    await ready(tool);
+    expect(tool.result.current.vm.statement.status).toBe('idle');
+    expect(ledgerForAudit([], true)).toEqual({ ready: true, read: null, latest: null });
+  });
+});
+
 describe('cancel plan', () => {
   const markTwo = async (tool: Tool) => {
     act(() => tool.result.current.vm.ticks.toggle('netflix', 'standard'));
@@ -904,18 +934,11 @@ describe('cancel plan', () => {
     act(() => tool.result.current.vm.plan.markCancel('tick:netflix'));
     act(() => tool.result.current.vm.plan.markCancel('tick:spotify'));
   };
-  /** What S10 does for one candidate: the forecast with the patch minus the forecast without, 10 years, today's dollars. */
-  const rulesEffectOf = (profile = useAppStore.getState().profile) => {
-    const opts = { todaysDollars: true, rates: areaRates(profile) };
-    const base = forecast(profile, 10, opts).in10y.mid;
-    return rankCandidates(profile, [cancelCandidate(profile, 29.98)], (c) => forecast(applyPatch(profile, c.patch), 10, opts).in10y.mid - base)[0]!.effect10y;
-  };
-
   it('nothing marked: no saving, no effect', async () => {
     const tool = renderTool();
     await ready(tool);
-    expect(tool.result.current.vm.plan).toMatchObject({ options: [], markedCount: 0, saving: null, candidate: null, moveAdded: false });
-    expect(tool.result.current.cancel).toMatchObject({ effect: null, canAddAsMove: false });
+    expect(tool.result.current.vm.plan).toMatchObject({ options: [], markedCount: 0, saving: null, candidate: null });
+    expect(tool.result.current.cancel).toEqual({ status: 'none' });
   });
 
   it('marking sums what is marked: $17.99 + $11.99 = $29.98 a month, $359.76 a year', async () => {
@@ -981,116 +1004,111 @@ describe('cancel plan', () => {
     expect(tool.result.current.vm.plan).toMatchObject({ markedCount: 0, saving: null });
   });
 
-  it('the 10-year effect is the same measurement as Next Moves: the rules forecast for the candidate, today’s dollars', async () => {
+  /** The cancel plan on the plan: what usePlanImpact measures and adds. */
+  const onPlan = () => {
+    const st = usePlanStore.getState();
+    return (st.movesApplied[st.activeId] ?? []).filter((m) => m.id === CANCEL_MOVE_ID);
+  };
+
+  it('what it does to the plan is engine plan() with and without the move, on the active scenario', async () => {
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    await waitFor(() => expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready' }));
-    const effect = tool.result.current.cancel.effect;
-    if (effect?.status !== 'ready') throw new Error('not ready');
-    expect(effect.data.source).toBe('rules');
-    expect(effect.data.effect10y).toBeCloseTo(rulesEffectOf(), 6);
-    // $29.98 a month for 120 months is $3,598 before growth; with growth, in today's dollars, it is a few thousand more or less.
-    expect(effect.data.effect10y).toBeGreaterThan(3_000);
-    expect(effect.data.effect10y).toBeLessThan(6_000);
+    const impact = tool.result.current.cancel;
+    if (impact.status !== 'ready') throw new Error('not ready');
+    const st = usePlanStore.getState();
+    const scenario = st.scenarios.find((x) => x.id === st.activeId)!;
+    const inputs = renderHook(() => usePlanInputs()).result.current;
+    const expected = planImpactOf(inputs, scenario, [], tool.result.current.vm.plan.candidate!);
+    expect(impact.in10y).toBeCloseTo(expected.in10y, 6);
+    expect(impact.atRetirement).toBeCloseTo(expected.atRetirement, 6);
+    // $29.98 a month kept for 10 years is $3,598 before growth.
+    expect(impact.in10y).toBeGreaterThan(3_000);
+    expect(impact.in10y).toBeLessThan(6_000);
+    expect(impact.atRetirement).toBeGreaterThan(impact.in10y);
+    expect(impact).toMatchObject({ state: 'new', isSample: true, planHref: '/plan' });
   });
 
-  it('with the AI forecast it is the model’s scenario, deflated like S10: 20,000 nominal ÷ (1 + inflation)^10', async () => {
-    mockForecastRoute((body) => aiAnswer(body, { effects: { [CANCEL_MOVE_ID]: 20_000 } }));
-    const tool = renderTool();
-    await ready(tool);
-    await markTwo(tool);
-    await waitFor(() => expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready', data: { source: 'ai' } }));
-    const effect = tool.result.current.cancel.effect;
-    if (effect?.status !== 'ready') throw new Error('not ready');
-    const inflation = areaRates(useAppStore.getState().profile).inflationAnnual!;
-    expect(effect.data.effect10y).toBeCloseTo(20_000 / (1 + inflation) ** 10, 4);
-  });
-
-  it('asks the forecast for one scenario, the candidate, with its patch: subscriptions $85 − $29.98 = $55.02', async () => {
+  it('never asks the forecast route: the plan is measured on this device', async () => {
     const route = mockForecastRoute();
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    // The number shows at once (rules first); the request follows, after the debounce of a profile or plan change.
-    const asking = () => (route.calls as { scenarios: { id: string; patch: unknown }[] }[]).filter((c) => c.scenarios.length > 0);
-    await waitFor(() => expect(asking().length).toBeGreaterThan(0), { timeout: 3000 });
-    expect(asking().at(-1)!.scenarios).toEqual([{ id: CANCEL_MOVE_ID, patch: { spending: { subscriptions: 55.02 } } }]);
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+    expect(tool.result.current.cancel.status).toBe('ready');
+    expect(route.calls).toEqual([]);
   });
 
-  it('addAsMove commits the measured move through the store, once the number is in', async () => {
+  it('add puts the move on the active scenario: subscriptions $85 − $29.98 = $55.02', async () => {
     const tool = renderTool();
     await ready(tool);
     await markTwo(tool);
-    await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
-    const effect = tool.result.current.cancel.effect;
-    if (effect?.status !== 'ready') throw new Error('not ready');
-    act(() => tool.result.current.cancel.addAsMove());
-    const s = useAppStore.getState();
-    expect(s.committedMove).toEqual({
+    const impact = tool.result.current.cancel;
+    if (impact.status !== 'ready') throw new Error('not ready');
+    act(() => impact.add());
+    expect(onPlan()).toEqual([{
       id: CANCEL_MOVE_ID, kind: 'cancelSubscriptions', level: 1, category: 'subscriptions',
-      effect10y: effect.data.effect10y, patch: { spending: { subscriptions: 55.02 } },
-    });
-    expect(s.profile.committedMoveId).toBe(CANCEL_MOVE_ID);
-    expect(tool.result.current.vm.plan.moveAdded).toBe(true);
+      effect10y: impact.in10y, patch: { spending: { subscriptions: 55.02 } },
+    }]);
+    expect(tool.result.current.cancel).toMatchObject({ status: 'ready', state: 'added' });
     expect(track).toHaveBeenCalledWith({ name: 'move_committed', props: { kind: 'cancelSubscriptions' } });
   });
 
-  describe('the committed move follows the plan', () => {
-    /** The sample statement read, Netflix and Spotify marked ($17.99 + $11.99 = $29.98), the move added: patch $85 − $29.98 = $55.02. */
-    async function committed() {
+  describe('the move on the plan follows the cancel plan', () => {
+    /** Netflix and Spotify marked ($17.99 + $11.99 = $29.98), the move added: patch $85 − $29.98 = $55.02. */
+    async function added() {
       const tool = renderTool();
       await ready(tool);
       await uploaded(tool);
       act(() => tool.result.current.vm.plan.markCancel('netflix-com-ca'));
       act(() => tool.result.current.vm.plan.markCancel('spotify-usa-ny'));
-      await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
-      act(() => tool.result.current.cancel.addAsMove());
-      expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 55.02 } });
-      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
+      const impact = tool.result.current.cancel;
+      if (impact.status !== 'ready') throw new Error('not ready');
+      act(() => impact.add());
+      expect(onPlan()[0]!.patch).toEqual({ spending: { subscriptions: 55.02 } });
+      expect(tool.result.current.cancel).toMatchObject({ state: 'added' });
       return tool;
     }
+    const addAgain = (tool: Tool) => {
+      const impact = tool.result.current.cancel;
+      if (impact.status !== 'ready') throw new Error('not ready');
+      act(() => impact.add());
+    };
 
-    it('putting the total in the plan changes the line the move lowers, so the committed move is out of date until it is added again', async () => {
-      const tool = await committed();
+    it('putting the total in the plan changes the line the move lowers, so the move is out of date until it is added again', async () => {
+      const tool = await added();
       act(() => tool.result.current.vm.apply.applyToProfile()); // the line goes $85 → $69.54
-      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: false, moveOutdated: true });
-      await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
-      act(() => tool.result.current.cancel.addAsMove());
-      // 69.54 − 29.98 = 39.56
-      expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 39.56 } });
-      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
+      expect(tool.result.current.cancel).toMatchObject({ state: 'outdated' });
+      addAgain(tool);
+      expect(onPlan()).toHaveLength(1);
+      expect(onPlan()[0]!.patch).toEqual({ spending: { subscriptions: 39.56 } }); // 69.54 − 29.98
+      expect(tool.result.current.cancel).toMatchObject({ state: 'added' });
     });
 
-    it('marking another service after adding the move makes it out of date: $54.97 now, not $29.98', async () => {
-      const tool = await committed();
+    it('marking another service after adding makes it out of date: $54.97 now, not $29.98', async () => {
+      const tool = await added();
       act(() => tool.result.current.vm.plan.markCancel('planet-fitness-club-fees')); // + $24.99
       expect(tool.result.current.vm.plan.saving).toMatchObject({ monthly: 54.97 });
-      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: false, moveOutdated: true });
-      expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 55.02 } }); // still the old one
-      await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
-      act(() => tool.result.current.cancel.addAsMove());
-      expect(useAppStore.getState().committedMove!.patch).toEqual({ spending: { subscriptions: 30.03 } }); // 85 − 54.97
-      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
+      expect(tool.result.current.cancel).toMatchObject({ state: 'outdated' });
+      expect(onPlan()[0]!.patch).toEqual({ spending: { subscriptions: 55.02 } }); // still the old one
+      addAgain(tool);
+      expect(onPlan()[0]!.patch).toEqual({ spending: { subscriptions: 30.03 } }); // 85 − 54.97
     });
 
-    it('unmarking back to what was committed makes it current again', async () => {
-      const tool = await committed();
+    it('unmarking back to what was added makes it current again; remove takes it off', async () => {
+      const tool = await added();
       act(() => tool.result.current.vm.plan.markCancel('planet-fitness-club-fees'));
       act(() => tool.result.current.vm.plan.unmarkCancel('planet-fitness-club-fees'));
-      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: true, moveOutdated: false });
-    });
-
-    it('another move committed (not this plan) is neither added nor out of date', async () => {
-      useAppStore.getState().commitMove({ id: 'cutCategory:eatingOut', kind: 'cutCategory', level: 1, category: 'eatingOut', effect10y: 5000, patch: { spending: { eatingOut: 272 } } });
-      const tool = renderTool();
-      await ready(tool);
-      await markTwo(tool);
-      expect(tool.result.current.vm.plan).toMatchObject({ moveAdded: false, moveOutdated: false });
+      expect(tool.result.current.cancel).toMatchObject({ state: 'added' });
+      const impact = tool.result.current.cancel;
+      if (impact.status !== 'ready') throw new Error('not ready');
+      act(() => impact.remove());
+      expect(onPlan()).toEqual([]);
+      expect(tool.result.current.cancel).toMatchObject({ state: 'new' });
     });
   });
 
-  it('the view-model alone never asks the forecast route, marks and all (the screen mounts the measurement)', async () => {
+  it('the view-model alone never asks the forecast route, marks and all', async () => {
     const route = mockForecastRoute();
     const view = renderHook(() => {
       const store = useMemoryStore();
@@ -1102,22 +1120,6 @@ describe('cancel plan', () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     expect(view.result.current.vm.plan.candidate).toMatchObject({ id: CANCEL_MOVE_ID, patch: { spending: { subscriptions: 67.01 } } }); // 85 − 17.99
     expect(route.calls).toEqual([]);
-  });
-
-  it('rules first, as on S10: while the model is still answering the plan shows the rules number at once, and the model’s replaces it', async () => {
-    let release!: () => void;
-    const held = new Promise<void>((resolve) => (release = resolve));
-    mockForecastRoute(async (body) => {
-      await held;
-      return aiAnswer(body, { effects: { [CANCEL_MOVE_ID]: 20_000 } });
-    });
-    const tool = renderTool();
-    await ready(tool);
-    await markTwo(tool);
-    expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready', data: { source: 'rules' } });
-    expect(tool.result.current.cancel.canAddAsMove).toBe(true);
-    await act(async () => release());
-    await waitFor(() => expect(tool.result.current.cancel.effect).toMatchObject({ status: 'ready', data: { source: 'ai' } }));
   });
 
   it('says when the profile holds less for subscriptions than is marked; using the audit in the plan fixes it', async () => {
@@ -1197,8 +1199,9 @@ describe('events carry enums and counts only', () => {
       '2026-10-07,NETFLIX.COM # CA,-17.99', '2026-11-07,NETFLIX.COM # CA,-17.99',
     ]));
     act(() => tool.result.current.vm.plan.markCancel('netflix-com-ca'));
-    await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
-    act(() => tool.result.current.cancel.addAsMove());
+    const impact = tool.result.current.cancel;
+    if (impact.status !== 'ready') throw new Error('not ready');
+    act(() => impact.add());
 
     const events = track.mock.calls.map(([e]) => e as ClientFunnelEvent);
     expect(events.map((e) => e.name)).toEqual([
@@ -1245,13 +1248,15 @@ describe('what stays in this browser', () => {
     await ready(tool);
     await uploaded(tool);
     act(() => tool.result.current.vm.plan.markCancel('netflix-com-ca'));
-    await waitFor(() => expect(tool.result.current.cancel.canAddAsMove).toBe(true));
-    act(() => tool.result.current.cancel.addAsMove());
+    const impact = tool.result.current.cancel;
+    if (impact.status !== 'ready') throw new Error('not ready');
+    act(() => impact.add());
     act(() => tool.result.current.vm.apply.applyToProfile());
     act(() => tool.result.current.vm.clearLocalData());
     expect(tool.result.current.store.state).toBeUndefined();
     expect(useAppStore.getState().profile.spending.subscriptions).toEqual({ value: 69.54, isEstimate: false });
-    expect(useAppStore.getState().committedMove?.id).toBe(CANCEL_MOVE_ID);
+    const st = usePlanStore.getState();
+    expect(st.movesApplied[st.activeId]?.map((m) => m.id)).toEqual([CANCEL_MOVE_ID]);
   });
 
   it('sends the categorizer only the masked label, amount, month and day of each line, so the privacy copy cannot drift from the code', async () => {

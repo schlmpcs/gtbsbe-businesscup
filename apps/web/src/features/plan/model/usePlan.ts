@@ -1,19 +1,15 @@
 // /plan page: the KPI cards, the net worth chart with event markers, the three tables, the display unit
-// and the autosave indicator. Every number is plan() (MP3) of the scenario on the person's inputs.
-import type { PlanEvent, Scenario } from '@lifeguessr/types';
-import { useCallback, useEffect, useMemo } from 'react';
+// and the autosave indicator. Every number is the engine's plan() of the active scenario on the person's
+// profile, accounts and area (planEngine.ts); this hook only picks values out and formats them.
+import { ASSET_GROUPS, LIABILITY_GROUPS, type AccountGroup, type PlanEvent } from '@lifeguessr/types';
+import { useCallback, useMemo } from 'react';
 import { plan as copy } from '@/copy';
-import { track } from '@/lib/events';
-import { accountLabel, cashFlowLineLabel, EVENT_ICONS, eventSummary, iconOf, kpiVMs, money } from './planFormat';
-import { ageAtYear, calendarOf, planFor, usePlanInputs, yearAtAge, yearRangeOf, type PlanCalendar } from './planInputs';
-import { usePlanStore } from './planStore';
+import { accountLabel, ageAt, calendarOf, clampYearTo, EVENT_ICONS, NO_MOVES, planOf, usePlanInputs, yearAt } from './planEngine';
+import { eventSummary, iconOf, kpiVMs, money } from './planFormat';
+import { usePlanReady, usePlanStore } from './planStore';
 import type {
   PlanAccountsTableVM, PlanCashFlowTableVM, PlanChartVM, PlanDisplay, PlanEventRowVM, PlanVM,
 } from './types';
-
-/** Round to a whole year and clamp to `range` (the plan's years). */
-export const clampYear = (year: number, range: { min: number; max: number }): number =>
-  Math.min(range.max, Math.max(range.min, Math.round(year)));
 
 /** `e` moved to `year`; an end year that would come before the start moves with it. */
 export function movedEvent(e: PlanEvent, year: number): PlanEvent {
@@ -24,68 +20,87 @@ export function movedEvent(e: PlanEvent, year: number): PlanEvent {
   return moved;
 }
 
-/** The scenario with event `id` at `year` (clamped); moving Retire moves the retirement age with it. */
-export function withEventYear(s: Scenario, id: string, year: number, cal: PlanCalendar): Scenario {
-  const y = clampYear(year, yearRangeOf(cal, s.assumptions.endAge));
-  return {
-    ...s,
-    assumptions: s.events.some((e) => e.id === id && e.type === 'retire') ? { ...s.assumptions, retireAge: ageAtYear(cal, y) } : s.assumptions,
-    events: s.events.map((e) => (e.id === id ? movedEvent(e, y) : e)),
-  };
-}
-
 export function usePlan(scenarioId: string): PlanVM {
-  const inputs = usePlanInputs();
+  const ready = usePlanReady();
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === scenarioId));
-  const ready = usePlanStore((s) => s.ready);
   const saveState = usePlanStore((s) => s.saveState);
+  const moves = usePlanStore((s) => s.movesApplied[scenarioId] ?? NO_MOVES);
   const edit = usePlanStore((s) => s.edit);
-  const cal = useMemo(() => calendarOf(inputs.profile), [inputs.profile]);
-
-  useEffect(() => {
-    if (scenario) track({ name: 'plan_viewed' }, { once: 'plan_viewed' });
-  }, [scenario]);
+  const inputs = usePlanInputs();
+  const endAge = scenario?.assumptions.endAge ?? 0;
+  const cal = useMemo(() => calendarOf(inputs.profile, endAge), [inputs.profile, endAge]);
 
   const setDisplay = useCallback(
     (display: PlanDisplay) => edit(scenarioId, (s) => ({ ...s, assumptions: { ...s.assumptions, display } })),
     [edit, scenarioId],
   );
   const moveEvent = useCallback(
-    (id: string, year: number) => edit(scenarioId, (s) => withEventYear(s, id, year, cal)),
+    (id: string, year: number) => {
+      const y = clampYearTo(cal, year);
+      edit(scenarioId, (s) => ({
+        ...s,
+        assumptions: s.events.some((e) => e.id === id && e.type === 'retire')
+          ? { ...s.assumptions, retireAge: ageAt(cal, y) }
+          : s.assumptions,
+        events: s.events.map((e) => (e.id === id ? movedEvent(e, y) : e)),
+      }));
+    },
     [edit, scenarioId, cal],
   );
 
   return useMemo((): PlanVM => {
-    if (!scenario) return { status: 'notFound', disclaimer: copy.disclaimer, loading: !ready };
-    const result = planFor(inputs, scenario);
+    // Until the saved plan is loaded, show nothing rather than the demo pair it is about to replace.
+    if (!ready) return { status: 'loading', disclaimer: copy.disclaimer };
+    if (!scenario) return { status: 'notFound', disclaimer: copy.disclaimer };
+    const result = planOf(inputs, scenario, moves);
     const { years } = result;
-    const retireYear = yearAtAge(cal, result.kpis.retireAge);
+    const retireYear = yearAt(cal, result.kpis.retireAge);
+    const ageAtYear = (year: number) => ageAt(cal, year);
 
     const chart: PlanChartVM = {
       points: years.map((y) => ({ year: y.year, age: y.age, netWorth: y.netWorth, netWorthLabel: money(y.netWorth), belowZero: y.netWorth < 0 })),
       markers: scenario.events.map((e) => ({
-        id: e.id, year: e.year, age: ageAtYear(cal, e.year), icon: EVENT_ICONS[e.type], label: copy.events[e.type].title, enabled: e.enabled,
+        id: e.id, year: e.year, age: ageAtYear(e.year), icon: EVENT_ICONS[e.type], label: copy.events[e.type].title, enabled: e.enabled,
       })),
       xTicks: years.filter((y, i) => i === 0 || y.age % 5 === 0).map((y) => ({ year: y.year, age: y.age, label: String(y.year) })),
       yDomain: [Math.min(...years.map((y) => y.netWorth)), Math.max(...years.map((y) => y.netWorth))],
       retireYear,
-      yearRange: yearRangeOf(cal, scenario.assumptions.endAge),
+      yearRange: { min: cal.firstYear, max: cal.lastYear },
     };
 
     const columnIds: string[] = [];
     for (const y of years) for (const a of y.accounts) if (!columnIds.includes(a.accountId)) columnIds.push(a.accountId);
     const columns: PlanAccountsTableVM['columns'] = columnIds.map((accountId) => {
-      const label = accountLabel(accountId, inputs.accounts, scenario.events);
-      const group = label?.group ?? 'otherAsset';
-      return { accountId, name: label?.name ?? accountId, group, groupLabel: copy.groups[group] };
+      const { name, group } = accountLabel(accountId, inputs, scenario);
+      return { accountId, name, group, groupLabel: copy.groups[group] };
     });
+    const section = (id: 'assets' | 'liabilities', groups: readonly AccountGroup[]): PlanAccountsTableVM['sections'][number] => ({
+      id,
+      label: copy.tables.accounts[id],
+      groups: groups
+        .map((group) => ({ group, label: copy.groups[group], accountIds: columns.filter((c) => c.group === group).map((c) => c.accountId) }))
+        .filter((g) => g.accountIds.length > 0),
+    });
+    const groupOf = new Map(columns.map((c) => [c.accountId, c.group]));
+    const groupEnds = (rows: readonly { accountId: string; end: number }[]) => {
+      const sums: Partial<Record<AccountGroup, number>> = {};
+      for (const a of rows) {
+        const g = groupOf.get(a.accountId);
+        if (g) sums[g] = (sums[g] ?? 0) + a.end;
+      }
+      return Object.fromEntries(Object.entries(sums).map(([g, v]) => [g, money(v)])) as Partial<Record<AccountGroup, string>>;
+    };
     const accounts: PlanAccountsTableVM = {
       columns,
+      sections: [section('assets', ASSET_GROUPS), section('liabilities', LIABILITY_GROUPS)],
       rows: years.map((y) => ({
         year: y.year,
         age: y.age,
         isRetirementYear: y.year === retireYear,
         netWorthLabel: money(y.netWorth),
+        assetsLabel: money(y.assets),
+        liabilitiesLabel: money(y.liabilities),
+        groupEnds: groupEnds(y.accounts),
         cells: Object.fromEntries(
           y.accounts.map((a) => [a.accountId, {
             start: money(a.start), growth: money(a.growth), deposits: money(a.deposits), withdrawals: money(a.withdrawals), end: money(a.end),
@@ -94,7 +109,7 @@ export function usePlan(scenarioId: string): PlanVM {
       })),
     };
 
-    const line = (l: { key: string; amount: number }) => ({ key: l.key, label: cashFlowLineLabel(l.key), amountLabel: money(l.amount) });
+    const line = (l: { key: string; amount: number }) => ({ key: l.key, label: copy.tables.cashFlow.lines[l.key] ?? l.key, amountLabel: money(l.amount) });
     const cashFlow: PlanCashFlowTableVM = {
       rows: years.map((y) => {
         const income = y.cashFlow.income.reduce((s, l) => s + l.amount, 0);
@@ -117,7 +132,7 @@ export function usePlan(scenarioId: string): PlanVM {
       .sort((a, b) => a.year - b.year)
       .map((e) => ({
         id: e.id, type: e.type, icon: iconOf(e), title: copy.events[e.type].title, ...(e.name ? { name: e.name } : {}),
-        year: e.year, age: ageAtYear(cal, e.year), summary: eventSummary(e), enabled: e.enabled,
+        year: e.year, age: ageAtYear(e.year), summary: eventSummary(e), enabled: e.enabled,
       }));
 
     const display = scenario.assumptions.display;
@@ -139,5 +154,5 @@ export function usePlan(scenarioId: string): PlanVM {
       setDisplay,
       moveEvent,
     };
-  }, [scenario, ready, inputs, cal, saveState, setDisplay, moveEvent]);
+  }, [ready, scenario, moves, inputs, cal, saveState, setDisplay, moveEvent]);
 }

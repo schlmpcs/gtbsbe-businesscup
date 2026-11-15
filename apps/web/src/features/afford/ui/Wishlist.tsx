@@ -42,7 +42,7 @@ export function WishlistActions({
       <div className="flex flex-wrap items-center gap-lg">
         {wishlistLocked ? null : (
           <>
-            <Button size="lg" disabled={!canAdd} onClick={() => onAdded(addToWishlist() !== null)}>
+            <Button variant="secondary" disabled={!canAdd} onClick={() => onAdded(addToWishlist() !== null)}>
               {t.wishlist.add}
             </Button>
             <Sticker tone="ink" className="normal-case">
@@ -82,16 +82,16 @@ export function Wishlist({ wishlist, removeFromWishlist, loadFromWishlist, onLoa
   return (
     <section aria-label={t.wishlist.title} className="flex flex-col gap-lg">
       <div className="flex flex-wrap items-baseline gap-x-lg gap-y-xs">
-        <h2 className="font-display text-4xl font-extrabold leading-tight">{t.wishlist.title}</h2>
-        <p className="text-lg text-text-muted">{t.wishlist.count(wishlist.length)}</p>
+        <h2 className="text-lg font-bold leading-tight">{t.wishlist.title}</h2>
+        <p className="text-sm text-text-muted">{t.wishlist.count(wishlist.length)}</p>
       </div>
       {wishlist.length > 0 && (
         <ul className="grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-4">
           {wishlist.map((item) => (
-            <li key={item.id} className="flex min-w-0 flex-col justify-between gap-md rounded-xl bg-surface p-xl shadow-md">
+            <li key={item.id} className="card card-pad flex min-w-0 flex-col justify-between gap-md">
               <div className="flex min-w-0 flex-col items-start gap-xs">
                 <span className="w-full truncate text-lg font-bold">{item.purchase.label}</span>
-                <Money value={item.purchase.amount} className="font-display text-4xl font-extrabold leading-tight" />
+                <Money value={item.purchase.amount} className="font-display text-3xl font-extrabold leading-tight" />
                 <span className="rounded-full bg-primary-soft px-md py-xs text-sm font-semibold text-primary">
                   {howOften(item.purchase)} · {payWithText(item.purchase)}
                 </span>

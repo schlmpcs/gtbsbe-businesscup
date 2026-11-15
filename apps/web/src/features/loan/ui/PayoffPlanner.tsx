@@ -3,7 +3,8 @@
 // S12 Loan Lab, the debt payoff planner section (M13). Replaces the single-method payoff order card once the
 // planner is supplied. All numbers come from usePayoffPlanner(); nothing is computed here.
 import { loan as t } from '@/copy';
-import { Card, formatMoney } from '@/ui-kit';
+import { formatMoney } from '@/ui-kit';
+import { PayoffTimeline } from './PayoffTimeline';
 import type { LinkComponent, PayoffPlannerVM } from '../model/types';
 import { BalanceChart } from './BalanceChart';
 import { ExtraControl } from './ExtraControl';
@@ -54,8 +55,13 @@ function NeverNotice({ fix }: { fix: NonNullable<PayoffPlannerVM['fix']> | null 
 export function PayoffPlanner({ vm, selectedName, Link = PlainLink }: { vm: PayoffPlannerVM; selectedName: string | null; Link?: LinkComponent }) {
   const failed = vm.comparison?.status === 'error' ? vm.comparison.error : null;
   return (
-    <Card title={t.planner.title} headingLevel={2} data-testid="payoff-planner" className="flex flex-col gap-xl">
-      <p className="max-w-prose text-sm text-text-muted">{t.planner.intro}</p>
+    <section aria-labelledby="payoff-planner-title" data-testid="payoff-planner" className="flex min-w-0 flex-col gap-xl">
+      <div className="flex flex-col gap-xs">
+        <h2 id="payoff-planner-title" className="text-lg font-bold leading-tight">
+          {t.planner.title}
+        </h2>
+        <p className="max-w-prose text-sm text-text-muted">{t.planner.intro}</p>
+      </div>
       {vm.hidden ? (
         <p className="text-base font-semibold">{t.planner.hidden}</p>
       ) : vm.status === 'loading' || vm.comparison?.status === 'loading' ? (
@@ -85,12 +91,13 @@ export function PayoffPlanner({ vm, selectedName, Link = PlainLink }: { vm: Payo
           {vm.selected?.monthsToDebtFree === null && <NeverNotice fix={vm.fix} />}
           {vm.isEstimate && <p className="text-xs text-text-muted">{t.planner.estimate}</p>}
           <p className="text-xs text-text-muted">{t.planner.assumptions}</p>
+          <PayoffTimeline vm={vm} selectedName={selectedName} />
           {vm.chart && <BalanceChart chart={vm.chart} method={vm.method} />}
           <PayoffOrderList vm={vm} selectedName={selectedName} />
           <TargetDate vm={vm} />
           <EditDebts href={vm.balanceSheetHref} Link={Link} />
         </>
       )}
-    </Card>
+    </section>
   );
 }

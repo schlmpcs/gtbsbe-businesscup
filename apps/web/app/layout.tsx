@@ -6,7 +6,7 @@ import '@fontsource/bricolage-grotesque/700.css';
 import '@fontsource/bricolage-grotesque/800.css';
 import './globals.css';
 import { SampleBanner } from './_components/SampleBanner';
-import { SiteHeader } from './_components/SiteHeader';
+import { Shell } from './_components/Shell';
 
 export const metadata: Metadata = {
   title: common.appName,
@@ -16,16 +16,22 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // The phone's bottom tabs pad themselves by env(safe-area-inset-bottom), which needs `cover`.
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <body className="min-h-dvh bg-bg text-text antialiased">
-        <SiteHeader />
-        <SampleBanner />
-        {children}
-        <footer className="mx-auto w-full max-w-(--container-2xl) px-lg pb-xl text-xs text-text-muted">{common.disclaimer}</footer>
+        <Shell
+          banner={<SampleBanner />}
+          footer={
+            <footer className="mx-auto w-full max-w-(--container-2xl) px-lg pb-xl text-xs text-text-muted">{common.disclaimer}</footer>
+          }
+        >
+          {children}
+        </Shell>
       </body>
     </html>
   );

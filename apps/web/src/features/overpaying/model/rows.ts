@@ -58,7 +58,11 @@ function summaryOf(rows: BenchmarkRowVM[], profileUsed: boolean): OverpayingSumm
           : withEffect.length === 0
             ? 'none'
             : 'partial';
+  const verdict: OverpayingSummaryVM['verdict'] =
+    above.length > 0 ? 'above' : rows.length > 0 && rows.every((r) => r.position === 'below') ? 'below' : 'typical';
   return {
+    verdict,
+    nextSteps: [...above].sort((a, b) => b.gapPerYear - a.gapPerYear).map((r) => ({ line: r.line, mid: r.typical.mid })),
     compared: rows.length,
     above: above.length,
     gapPerYear: rows.reduce((sum, r) => sum + r.gapPerYear, 0),

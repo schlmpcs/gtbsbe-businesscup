@@ -9,10 +9,11 @@ const plural = (n: number, one: string, many: string) => `${n.toLocaleString('en
 
 export const subscriptions = {
   screens: {
-    S21: 'Subscription audit',
+    S21: 'What am I still paying for?',
   },
+  eyebrow: 'Subscription audit',
   intro:
-    'Add a bank statement and we find your recurring charges for you; you confirm or hide each one. No statement? Tick what you pay for by hand instead. It works without an account or a profile.',
+    'We find the charges that repeat in your transactions or a statement; you confirm or hide each one, and tick what you would stop to see what it does to your plan. No statement? Tick them by hand.',
   loading: 'Loading…',
   /** `/tools/subscriptions?stream=1`: streamer mode never shows anyone's own money. */
   streamer: {
@@ -126,6 +127,25 @@ export const subscriptions = {
 
   findings: {
     title: 'What we found',
+    fromLedger: 'From your transactions',
+    fromStatement: 'From your statement',
+    kpi: {
+      label: 'Your subscriptions at a glance',
+      monthly: 'Per month',
+      yearly: 'Per year',
+      found: 'Found',
+      foundHint: (n: number) => (n === 1 ? '1 recurring charge' : `${n} recurring charges`),
+      flagged: 'Worth a look',
+      flaggedHint: 'price up, overlap or seen once',
+    },
+    chartTitle: 'What each one costs a year',
+    chartLabel: (parts: string) => `Yearly cost of each subscription: ${parts}`,
+    chartPart: (name: string, amount: string) => `${name} ${amount}`,
+    reviewTitle: 'Tick what you would stop',
+    reviewLead: 'Nothing is cancelled for you. Tick a charge to see what stopping it would do to your plan.',
+    perYearShort: (amount: string) => `${amount}/yr`,
+    saveLine: (n: number, yearly: string, monthly: string) =>
+      `Stopping ${plural(n, 'subscription', 'subscriptions')} saves ${yearly} a year (${monthly} a month).`,
     /** "Found 11 · you ticked 7". */
     headline: (found: number, ticked: number) =>
       `Found ${found}${ticked > 0 ? ` · you ticked ${ticked}` : ''}`,
@@ -187,7 +207,7 @@ export const subscriptions = {
     sampleProfile: 'Based on the sample profile until you add your own numbers.',
     /** `held` is what the profile holds for subscriptions per month. */
     notCovered: (held: string) =>
-      `Your plan holds ${held} a month for subscriptions, so the 10-year number counts at most that. Use this in my plan to include all of it.`,
+      `Your plan holds ${held} a month for subscriptions, so the plan counts at most that. Use this in my plan to include all of it.`,
     addAsMove: 'Add as my next move',
     moveAdded: 'Added as your next move.',
     updateMove: 'Update my next move',
@@ -253,7 +273,7 @@ export const subscriptions = {
     sentTitle: 'What leaves your browser to find them:',
     sent: 'only each line’s merchant label (account numbers masked, and personal names on payment-app and transfer lines), amount, month and day of month, to sort it into categories. We don’t store the labels or the lines. Only the labels, without amounts or dates, may go on to our AI provider, Anthropic, just to sort them; it doesn’t use API data to train its models.',
     forecastSent:
-      'When you use the cancel plan, the numbers in your profile and the change you marked (no names or account numbers) go to our AI provider, Anthropic, to work out the 10-year number. It doesn’t use API data to train its models.',
+      'What a cancel plan does to your plan is worked out on this device, from your plan’s own numbers. Nothing is sent for it.',
     kept: '✓',
     notKeptMark: '✕',
     clear: 'Clear the guess, ticks, choices and findings saved here',

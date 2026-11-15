@@ -542,7 +542,13 @@ describe('Duel contracts', () => {
   const anonId = '0f8e2b4c-1d2e-4f5a-9b8c-7d6e5f4a3b2c';
   const card = (letter: 'A' | 'B') => ({
     letter, household: '2 adults · 1 kid · 3 bedrooms', metro: 'Columbus, OH', caption: 'Plays bass on Sundays.',
-    facts: ['1 car', 'Daycare', 'Cooks at home', 'Rents'], art: 'layout/3bed', composite: true as const,
+    facts: [
+      { group: 'home' as const, items: ['3-bedroom rental', 'In the Midwest'] as [string, string] },
+      { group: 'family' as const, items: ['Kids: toddler', '1 kid under school age'] as [string, string] },
+      { group: 'car' as const, items: ['Midsize car', 'Financed, 5-year loan'] as [string, string] },
+      { group: 'food' as const, items: ['Eats out ~1×/week', 'Cooks for 3'] as [string, string] },
+    ],
+    art: 'layout/3bed', composite: true as const,
   });
   const source = { name: 'HUD Fair Market Rents', year: 2025 };
   const result: PickResult = {
@@ -571,10 +577,21 @@ describe('Duel contracts', () => {
     expect(PickResultSchema.safeParse({ ...result, crowd: { pickedA: 131, total: 214 } }).success).toBe(true);
   });
 
-  it('refuse a sixth round, a third card, a missing composite flag and loose requests', () => {
+  it('refuse a sixth round, a third card and a missing composite flag', () => {
     expect(PublicDuelSchema.safeParse({ date: '2026-11-14', round: 6, kind: 'life', cards: [card('A'), card('B')] }).success).toBe(false);
     expect(PublicDuelSchema.safeParse({ date: '2026-11-14', round: 1, kind: 'life', cards: [card('A'), card('B'), card('A')] }).success).toBe(false);
     expect(PublicDuelSchema.safeParse({ date: '2026-11-14', round: 1, kind: 'life', cards: [{ ...card('A'), composite: false }, card('B')] }).success).toBe(false);
+  });
+
+  it('refuse loose fact strings, a missing group and groups out of order', () => {
+    const duel = (a: unknown) => ({ date: '2026-11-14', round: 1, kind: 'life', cards: [a, card('B')] });
+    expect(PublicDuelSchema.safeParse(duel({ ...card('A'), facts: ['1 car', 'Daycare', 'Cooks at home', 'Rents'] })).success).toBe(false);
+    expect(PublicDuelSchema.safeParse(duel({ ...card('A'), facts: card('A').facts.slice(1) })).success).toBe(false);
+    expect(PublicDuelSchema.safeParse(duel({ ...card('A'), facts: [...card('A').facts].reverse() })).success).toBe(false);
+    expect(PublicDuelSchema.safeParse(duel({ ...card('A'), facts: card('A').facts.map((g) => ({ ...g, items: [g.items[0]] })) })).success).toBe(false);
+  });
+
+  it('refuse loose requests', () => {
     expect(DuelPickRequestSchema.safeParse({ anonId, date: '2026-11-14', round: 2, choice: 'B' }).success).toBe(true);
     expect(DuelPickRequestSchema.safeParse({ anonId, date: '2026-11-14', round: 2, choice: 'C' }).success).toBe(false);
     expect(DuelPickRequestSchema.safeParse({ anonId, date: '2026-11-14', round: 2, choice: 'A', guess: 1 }).success).toBe(false);

@@ -30,7 +30,7 @@ function vm(overrides: Partial<PaywallVM> = {}): PaywallVM {
     error: null,
     retry: null,
     pro: null,
-    continueHref: '/afford',
+    continueHref: '/plan',
     ...overrides,
   };
 }
@@ -39,7 +39,7 @@ const checkoutButton = () => screen.getByRole('button', { name: copy.checkout.bu
 const statusRegion = () => screen.getByRole('status');
 
 describe('Paywall', () => {
-  it('offer: demo label, tagged prices (yearly first and preselected), only what Pro unlocks, test card and promo', () => {
+  it('offer: demo label, demo prices (yearly first and preselected), only what Pro unlocks, test card and promo', () => {
     render(<Paywall {...vm()} />);
     // The headline is the page's only h1 (no screen ID).
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(copy.headline);
@@ -47,12 +47,15 @@ describe('Paywall', () => {
     const plans = screen.getByRole('group', { name: new RegExp(copy.plans.legend) });
     expect(within(plans).getByRole('radio', { name: /Yearly.*\$39\.99/ })).toBeChecked();
     expect(within(plans).getByRole('radio', { name: /Monthly.*\$6\.99/ })).not.toBeChecked();
-    expect(within(plans).getByText(common.estimateTag)).toBeInTheDocument();
+    // Prices are demo prices (said once in the fine print), not estimates: no estimate tag.
+    expect(within(plans).queryByText(common.estimateTag)).not.toBeInTheDocument();
+    expect(screen.getByText(copy.plans.priceNote)).toBeInTheDocument();
 
     const includes = screen.getByRole('region', { name: copy.includes.title });
     expect(within(includes).getByText(copy.includes.now[0])).toBeInTheDocument();
     expect(within(includes).getAllByRole('listitem')).toHaveLength(copy.includes.now.length);
     expect(within(includes).queryByText(/coming/i)).not.toBeInTheDocument();
+    expect(within(includes).getByText(copy.includes.demoNote)).toBeInTheDocument();
     expect(within(plans).getAllByRole('radio').map((r) => (r as HTMLInputElement).value)).toEqual(['yearly', 'monthly']);
 
     expect(checkoutButton()).toBeEnabled();
@@ -145,7 +148,7 @@ describe('Paywall', () => {
     expect(screen.getByText('Nov 14, 2026')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: copy.checkout.button })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: copy.promo.label })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: copy.active.continue })).toHaveAttribute('href', '/afford');
+    expect(screen.getByRole('link', { name: copy.active.continue })).toHaveAttribute('href', '/plan');
   });
 
   describe('simulated checkout', () => {

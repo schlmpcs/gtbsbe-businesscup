@@ -94,6 +94,27 @@ function benchmark(
       )
     : null;
 }
+/** The profile spending line each benchmark line belongs to (car insurance is part of `car`). */
+export const OVERPAYING_CATEGORIES: Readonly<Record<BenchmarkLine, CostCategory>> = CATEGORIES;
+
+/**
+ * "Pay the typical middle" on one line as a profile patch: the line's category lowered by what you pay
+ * above the middle of the range (yours − mid). Only for a line above the range, and only when the
+ * profile's category holds at least that much (car insurance is one part of `car`, so the category
+ * keeps fuel and upkeep); null otherwise. The same patch the 10-year effect of overpayingCheck measures.
+ */
+export function overpayingPatch(
+  b: { line: BenchmarkLine; yours: Money; typical: { mid: Money }; position: 'below' | 'inRange' | 'above' },
+  profile: Pick<Profile, 'spending'>,
+): { spending: Partial<Record<CostCategory, Money>> } | null {
+  if (b.position !== 'above') return null;
+  const category = CATEGORIES[b.line];
+  const spending = profile.spending[category];
+  const delta = b.yours - b.typical.mid;
+  if (!spending || !(delta > 0) || spending.value < delta) return null;
+  return { spending: { [category]: spending.value - delta } };
+}
+
 /** Compare entered monthly costs with sourced area ranges; no coverage is substituted silently.
  * Assumed range spreads mark the entire benchmark estimated, even with a sourced midpoint. */
 export function overpayingCheck(
@@ -153,16 +174,11 @@ export function overpayingCheck(
       spending = profile?.spending[category];
     // Insurance is only one component of `car`. Preserve fuel and upkeep by subtracting the
     // insurance delta rather than replacing the whole car category with an insurance premium.
-    if (
-      profile &&
-      spending &&
-      position === 'above' &&
-      spending.value >= yours - typical.mid
-    ) {
+    const patch = profile
+      ? overpayingPatch({ line, yours, typical, position }, profile)
+      : null;
+    if (profile && spending && patch) {
       base ??= forecast(profile, 10, forecastOpts).in10y.mid;
-      const patch = {
-        spending: { [category]: spending.value - (yours - typical.mid) },
-      };
       effect10y =
         forecast(applyPatch(profile, patch), 10, forecastOpts).in10y.mid - base;
     }

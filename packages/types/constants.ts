@@ -1,7 +1,7 @@
 // Value lists for the unions in ./index.ts (runtime iteration, zod enums). Each `satisfies` line
 // fails to compile if a member is misspelled; schemas.test.ts checks that none is missing.
 import type {
-  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, HorizonYears,
+  AreaData, ClientFunnelEvent, ClueId, CostCategory, Debt, DuelFactGroupId, DuelLetter, DuelRound, EventsErrorCode, FunnelEventName, HorizonYears,
   KidAge, LifeEventKind, LifeEventPreset, MoveKind,
   ProErrorCode, ProPlan, ProSource, ServerFunnelEvent, SessionErrorCode, StatementCategorizeResponse, StatementClass, StatementFollowUpKind,
   MissBucket, SubscriptionFinding, SubscriptionFlag,
@@ -39,6 +39,8 @@ export const FORECAST_HORIZONS = [1, 3, 5, 10] as const satisfies readonly Horiz
 
 export const DUEL_LETTERS = ['A', 'B'] as const satisfies readonly DuelLetter[];
 export const DUEL_ROUNDS = [1, 2, 3, 4, 5] as const satisfies readonly DuelRound[];
+/** The fact groups of a public duel card, in the order every card lists them (Home, Family, Car, Food). */
+export const DUEL_FACT_GROUPS = ['home', 'family', 'car', 'food'] as const satisfies readonly DuelFactGroupId[];
 
 /**
  * Fewest stored picks a duel round needs before the reveal says how other players picked

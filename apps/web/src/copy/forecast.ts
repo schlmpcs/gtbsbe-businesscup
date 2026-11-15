@@ -68,7 +68,18 @@ export const forecast = {
     },
     makeExact: 'Make it exact',
   },
-  range: (low: string, high: string) => `Likely between ${low} and ${high}`,
+  /**
+   * The range line under a headline number. It is not a probability band (the engine has no outcome
+   * percentiles yet: the rules band moves only the numbers we estimated, the AI band is the model's own),
+   * so it never says "likely". `range` is the neutral form; `rangeByKind` names where the band comes from.
+   */
+  range: (low: string, high: string) => `Range ${low} to ${high}`,
+  rangeByKind: {
+    inputs: (low: string, high: string) => `If our estimates are off: ${low} to ${high}`,
+    model: (low: string, high: string) => `AI model’s range: ${low} to ${high}`,
+  },
+  /** Next to the range on /future while some inputs are estimates: what narrows it. */
+  narrowRange: 'Type your real numbers to narrow it',
   netWorthAt,
   errors: {
     notImplemented: 'This part of the forecast is still being built.',
@@ -98,12 +109,12 @@ export const forecast = {
       body: 'Count your real month. See you in 10 years. Get your next best money move, ranked in dollars.',
       start: 'Start with your month',
       play: 'Play',
-      sample: 'or try with sample data',
-      note: 'No sign-up. About a minute. Have a bank statement?',
-      upload: 'Import a CSV',
+      sample: 'See a sample plan',
+      note: 'No sign-up, no bank login. About 2 minutes.',
       heroSticker: 'You in 10 years',
       stepsLabel: 'How it works',
-      steps: ['Count your real month', 'See where you’re heading', 'Your next best move'],
+      /** What the flow really does: a guess, then sliders or a CSV; the forecast; Next Moves in dollars. */
+      steps: ['Guess your month, then fix it with sliders or a CSV', 'See where your money is heading', 'Get your next move, ranked in dollars'],
       game: {
         label: 'Daily game',
         title: 'Which life costs more?',
@@ -172,6 +183,10 @@ export const forecast = {
       /** Under the goal verdict sticker (`target` is formatted). */
       goalLine: (target: string, years: number) => `Goal ${target} in ${years} ${years === 1 ? 'year' : 'years'}`,
       openFuture: 'Open my future',
+      /** The primary link under the number: the Plan (/plan, to age 90). */
+      openPlan: 'Open your plan',
+      /** Disclosure over the cushion card (lower on Home, collapsed). */
+      cushionSummary: 'Emergency cushion: how long your cash lasts',
       move: {
         title: 'Your next move',
         allMoves: 'All moves',

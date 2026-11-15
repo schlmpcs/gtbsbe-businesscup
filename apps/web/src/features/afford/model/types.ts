@@ -1,7 +1,7 @@
 // View-model types for the afford feature (S11). Tasks: Y7 (model) / Y11 (ui).
 // ui/ may import only this file, @/ui-kit/** and @/copy (lint-enforced).
 // Hook: useAfford() in ./useAfford.ts.
-import type { WorkTimeUnit } from '@lifeguessr/engine';
+import type { AffordTier, WorkTimeUnit } from '@lifeguessr/engine';
 import type { AffordResult, ForecastPoint, Money, Purchase, Rate, Source } from '@lifeguessr/types';
 import type { Loadable, ParseConfirmVM } from '@/lib/model/types';
 import type { WishlistItem } from '@/state';
@@ -43,8 +43,24 @@ export type LoanEstimateVM = {
 /** Net worth with vs without the purchase at one horizon (nominal dollars, from canAfford). */
 export type AffordHorizonVM = { month: 1 | 12 | 60 | 120; with: ForecastPoint; without: ForecastPoint; deltaMid: Money };
 
+/** One year of the with / without chart: net worth (mid, nominal) at the end of year `year` (0 = today). */
+export type AffordChartPointVM = { year: number; with: Money; without: Money };
+
 export type AffordResultVM = {
   verdict: AffordResult['verdict'];
+  /**
+   * The answer in three words (engine affordComfort on top of the verdict): 'comfortable' = it fits with
+   * a deep cushion and a calm debt load; 'stretched' = it fits, but thin (`stretchedBy` says why);
+   * 'notYet' = the verdict is wait or no.
+   */
+  tier: AffordTier;
+  stretchedBy: 'cushion' | 'debtLoad' | null;
+  /** Lowest months of costs held in cash over the next 12 months, without / with it (null = no costs to measure). */
+  cushion: { before: number | null; after: number | null };
+  /** Highest debt load over the next 12 months, without / with it (null = payments with no pay). */
+  debtLoad: { before: Rate | null; after: Rate | null };
+  /** Yearly points of the with / without chart, today to year 10. */
+  chart: AffordChartPointVM[];
   waitMonths: number | null;
   /** First rule buying now breaks (set for 'wait' and 'no'). */
   failsOn: AffordResult['failsOn'] | null;
@@ -99,6 +115,10 @@ export type AffordRulesVM = {
   cushionMonths: number;
   /** Debt payments / take-home pay must stay at or below this (red threshold). */
   debtLoadRed: Rate;
+  /** Yellow threshold of the debt load: above it (and raised by the purchase) is "stretched". */
+  debtLoadYellow: Rate;
+  /** Months of cushion "comfortably" needs. */
+  comfortableCushionMonths: number;
 };
 
 export type AffordVM = {
@@ -132,3 +152,6 @@ export type AffordVM = {
   /** Put a saved purchase back in the form. */
   loadFromWishlist: (id: string) => void;
 };
+
+export type { ToolPlanEventVM, ToolPlanPreview } from '@/features/plan/model/useToolPlanEvent';
+export type { AffordTier } from '@lifeguessr/engine';

@@ -29,7 +29,7 @@ export function TickList({ ticks, canReveal, onNext }: TickListProps) {
         <div
           role="status"
           aria-live="polite"
-          className="sticky bottom-0 flex flex-wrap items-center justify-between gap-md rounded-lg bg-surface-strong p-lg"
+          className="sticky bottom-(--shell-tabbar-h) flex flex-wrap items-center justify-between gap-md rounded-lg bg-surface-strong p-lg"
         >
           <div className="flex flex-col gap-xs">
             <p className="text-sm font-semibold">{t.ticks.totalTitle}</p>

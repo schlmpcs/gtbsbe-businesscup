@@ -1,16 +1,12 @@
-// The month as a 7-column calendar (Sunday first). Each day with a charge shows a dot per bill and the
-// day's total; tapping is not needed: the list under the grid names every charge.
+// The month as a 7-column calendar (Sunday first). A day with bills shows an amount chip per bill in its
+// kind's color (two at most, then "+n") on a wide screen, and one chip with the day's total on a phone.
+// Days before today are dimmed: those bills have gone out. The lists beside the grid name every charge.
 import { bills as t } from '@/copy';
 import { Button, cx, formatMoney, formatMonth } from '@/ui-kit';
-import type { BillKindVM, MonthVM } from '../model/types';
+import type { MonthVM } from '../model/types';
+import { KIND_CHIP } from './kind';
 
-export const KIND_DOT: Record<BillKindVM, string> = {
-  rent: 'bg-primary',
-  debt: 'bg-ink',
-  subscription: 'bg-positive',
-};
-
-const MAX_DOTS = 3;
+const MAX_CHIPS = 2;
 
 export type MonthGridProps = {
   month: MonthVM;
@@ -19,30 +15,32 @@ export type MonthGridProps = {
   onToday: () => void;
 };
 
+const chipMoney = (n: number) => formatMoney(n, { compact: n >= 1000 });
+
 export function MonthGrid({ month, onPrev, onNext, onToday }: MonthGridProps) {
   const title = t.month.title(formatMonth(month.month), month.year);
   return (
     <section aria-labelledby="bills-month-heading" className="flex flex-col gap-md">
       <div className="flex items-center justify-between gap-sm">
-        <Button variant="ghost" size="sm" onClick={onPrev} aria-label={t.month.prev} className="min-h-11 min-w-11">
-          <span aria-hidden="true">{t.month.prevGlyph}</span>
-        </Button>
-        <div className="flex flex-col items-center">
-          <h2 id="bills-month-heading" className="font-display text-2xl font-extrabold leading-tight">
-            {title}
-          </h2>
+        <h2 id="bills-month-heading" className="font-display text-xl font-extrabold leading-tight sm:text-2xl">
+          {title}
+        </h2>
+        <div className="flex items-center gap-xs">
           {!month.isCurrent && (
-            <button type="button" onClick={onToday} className="min-h-11 text-sm font-semibold text-primary hover:underline">
+            <Button variant="ghost" size="sm" onClick={onToday} className="min-h-11">
               {t.month.today}
-            </button>
+            </Button>
           )}
+          <Button variant="secondary" size="sm" onClick={onPrev} aria-label={t.month.prev} className="min-h-11 min-w-11">
+            <span aria-hidden="true">{t.month.prevGlyph}</span>
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onNext} aria-label={t.month.next} className="min-h-11 min-w-11">
+            <span aria-hidden="true">{t.month.nextGlyph}</span>
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={onNext} aria-label={t.month.next} className="min-h-11 min-w-11">
-          <span aria-hidden="true">{t.month.nextGlyph}</span>
-        </Button>
       </div>
 
-      <table className="w-full table-fixed border-separate border-spacing-xs" aria-label={t.month.gridLabel(title)} data-testid="bills-grid">
+      <table className="w-full table-fixed border-separate border-spacing-[3px] sm:border-spacing-xs" aria-label={t.month.gridLabel(title)} data-testid="bills-grid">
         <thead>
           <tr>
             {t.weekdaysShort.map((name, i) => (
@@ -62,6 +60,7 @@ export function MonthGrid({ month, onPrev, onNext, onToday }: MonthGridProps) {
                 if (cell.day === null) return <td key={d} aria-hidden="true" />;
                 const n = cell.charges.length;
                 const amount = formatMoney(cell.total);
+                const first = cell.charges[0];
                 return (
                   <td
                     key={d}
@@ -69,25 +68,30 @@ export function MonthGrid({ month, onPrev, onNext, onToday }: MonthGridProps) {
                     data-day={cell.day}
                     aria-label={t.month.dayLabel(formatMonth(month.month, cell.day), n, amount)}
                     className={cx(
-                      'h-16 rounded-md p-xs align-top sm:h-20',
-                      n > 0 ? 'bg-surface shadow-sm' : 'bg-surface-strong/40',
+                      'h-14 rounded-md p-[3px] align-top sm:h-24 sm:p-xs',
+                      n > 0 ? 'bg-surface ring-1 ring-border' : 'bg-surface-strong/40',
+                      cell.isPast && 'opacity-60',
                       cell.isToday && 'ring-2 ring-primary',
                     )}
                   >
-                    <div aria-hidden="true" className="flex h-full flex-col gap-xs">
-                      <span className={cx('text-xs font-bold tabular-nums', cell.isToday ? 'text-primary' : 'text-text-muted')}>
-                        {cell.day}
-                      </span>
-                      {n > 0 && (
+                    <div aria-hidden="true" className="flex h-full min-w-0 flex-col gap-[2px] sm:gap-xs">
+                      <span className={cx('text-xs font-bold tabular-nums', cell.isToday ? 'text-primary' : 'text-text-muted')}>{cell.day}</span>
+                      {n > 0 && first && (
                         <>
-                          <span className="flex flex-wrap items-center gap-xs">
-                            {cell.charges.slice(0, MAX_DOTS).map((c) => (
-                              <span key={c.bill.id} className={cx('size-2 rounded-full', KIND_DOT[c.bill.kind])} />
-                            ))}
-                            {n > MAX_DOTS && <span className="text-xs leading-none text-text-muted">{t.month.more(n - MAX_DOTS)}</span>}
+                          {/* Phone: one chip, the day's total, in the first bill's color. */}
+                          <span className={cx('mt-auto truncate rounded-sm px-[2px] text-center text-[10px] font-bold leading-4 tabular-nums sm:hidden', KIND_CHIP[first.bill.kind])}>
+                            {chipMoney(cell.total)}
                           </span>
-                          <span className="mt-auto truncate text-xs font-semibold tabular-nums">
-                            {formatMoney(cell.total, { compact: cell.total >= 1000 })}
+                          <span className="hidden min-w-0 flex-col gap-[2px] sm:flex">
+                            {cell.charges.slice(0, MAX_CHIPS).map((c) => (
+                              <span
+                                key={c.bill.id}
+                                className={cx('truncate rounded-sm px-xs text-xs font-semibold leading-5 tabular-nums', KIND_CHIP[c.bill.kind])}
+                              >
+                                {chipMoney(c.bill.amount)}
+                              </span>
+                            ))}
+                            {n > MAX_CHIPS && <span className="text-xs leading-none text-text-muted">{t.month.more(n - MAX_CHIPS)}</span>}
                           </span>
                         </>
                       )}

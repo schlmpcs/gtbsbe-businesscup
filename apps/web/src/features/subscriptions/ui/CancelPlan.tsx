@@ -1,23 +1,27 @@
 'use client';
 
 // Step 6: mark what would stop, see the saving per month and per year (an estimate wherever a marked line
-// is one), then, from `results`, the 10-year number (the same forecast as Next Moves, with its source label)
-// and "add as my next move". Put the total in the plan, and take the renewals to a calendar. The tool never
-// tells anyone to cancel a particular service.
-//
-// `results` is a slot: the measured part asks the forecast route, so the screen that owns this one mounts it
-// only while something is marked. It is shown here only then.
-import { useState, type ReactNode } from 'react';
+// is one), then what it does to the plan (engine plan(), with and without) and "Add to my plan". Put the
+// total in the plan, and take the renewals to a calendar. The tool never tells anyone to cancel a
+// particular service.
+import { useState, type ComponentType, type ReactNode } from 'react';
 import { subscriptions as t } from '@/copy';
 import { Button, Card, EstimateTag, formatMoney, Money, Row, Stack, Stat, Tag } from '@/ui-kit';
-import type { ApplyVM, PlanVM, RenewalsVM } from '../model/types';
+import type { ApplyVM, PlanImpactVM, PlanVM, RenewalsVM } from '../model/types';
+import { CancelEffect } from './CancelEffect';
 import { UseInPlanSheet } from './UseInPlanSheet';
 
-export type CancelPlanProps = { plan: PlanVM; apply: ApplyVM; renewals: RenewalsVM; results?: ReactNode };
+export type CancelPlanProps = {
+  plan: PlanVM;
+  apply: ApplyVM;
+  renewals: RenewalsVM;
+  impact: PlanImpactVM;
+  Link?: ComponentType<{ href: string; className?: string; children?: ReactNode }>;
+};
 
-export function CancelPlan({ plan, apply, renewals, results }: CancelPlanProps) {
+export function CancelPlan({ plan, apply, renewals, impact, Link }: CancelPlanProps) {
   const [confirming, setConfirming] = useState(false);
-  const money = (n: number) => formatMoney(n, { cents: true });
+  const money = (n: number) => formatMoney(n);
   return (
     <Stack gap="xl">
       <Card title={t.plan.title}>
@@ -42,7 +46,7 @@ export function CancelPlan({ plan, apply, renewals, results }: CancelPlanProps) 
                   <span className="min-w-0 break-words text-base">{option.name}</span>
                   {option.isEstimate && <EstimateTag />}
                 </span>
-                <span className="shrink-0 text-sm tabular-nums">{t.plan.perMonth(money(option.monthly))}</span>
+                <span className="shrink-0 text-sm tabular-nums">{t.plan.perMonth(formatMoney(option.monthly, { cents: true }))}</span>
               </label>
             ))}
           </fieldset>
@@ -54,18 +58,18 @@ export function CancelPlan({ plan, apply, renewals, results }: CancelPlanProps) 
               <div className="grid grid-cols-1 gap-lg sm:grid-cols-2" aria-live="polite">
                 <Stat
                   label={t.plan.marked(plan.markedCount)}
-                  value={<Money value={plan.saving.monthly} cents />}
+                  value={<Money value={plan.saving.monthly} />}
                   hint={t.plan.perMonth(money(plan.saving.monthly))}
                   isEstimate={plan.saving.isEstimate}
                 />
                 <Stat
                   label={t.plan.yearLabel}
-                  value={<Money value={plan.saving.yearly} cents />}
+                  value={<Money value={plan.saving.yearly} />}
                   hint={t.plan.perYear(money(plan.saving.yearly))}
                   isEstimate={plan.saving.isEstimate}
                 />
               </div>
-              {results}
+              <CancelEffect plan={plan} impact={impact} Link={Link} />
             </>
           )}
 

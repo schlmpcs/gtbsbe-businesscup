@@ -52,6 +52,9 @@ test.describe('S12 Loan Lab: debt payoff planner', () => {
     await expect(comparison(page)).toBeVisible();
     // The old single-method card is gone: the planner took its place.
     await expect(page.getByRole('heading', { name: loan.payoffOrder.title })).toHaveCount(0);
+    // The payoff timeline: one bar per debt (card, car loan, the new offer), and the balance chart.
+    await expect(planner(page).getByTestId('payoff-timeline').getByRole('listitem')).toHaveCount(3);
+    await expect(planner(page).getByRole('figure', { name: loan.planner.chart.title })).toBeVisible();
 
     const heads = comparison(page).getByRole('columnheader');
     await expect(heads.nth(1)).toContainText(loan.planner.method.names.avalanche);

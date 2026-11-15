@@ -11,13 +11,20 @@ import { resetClientState } from '@/test/clientState';
 import { UNCOVERED_ZIP, fakeDeps, onlyLines, sampleOverpayingResult } from './model/testUtils';
 import type { OverpayingDeps } from './model/types';
 import { useOverpaying } from './model/useOverpaying';
+import { overpayingMoveId, useOverpayingImpacts } from './model/planMoves';
 import { OverpayingScreen } from './ui/OverpayingScreen';
+import { planImpact as pi } from '@/copy';
+import { resetPlanStore, usePlanStore } from '@/features/plan/model/planStore';
 
-beforeEach(resetClientState);
+beforeEach(() => {
+  resetClientState();
+  resetPlanStore();
+});
 afterEach(() => vi.unstubAllEnvs());
 
 function Harness({ profile, deps, streamer }: { profile: Profile | null; deps: OverpayingDeps; streamer?: boolean }) {
-  return <OverpayingScreen vm={useOverpaying(profile, { deps, streamer })} />;
+  const vm = useOverpaying(profile, { deps, streamer });
+  return <OverpayingScreen vm={vm} impacts={useOverpayingImpacts(vm.result)} />;
 }
 
 async function open(opts: { profile?: Profile | null; deps?: OverpayingDeps; streamer?: boolean } = {}) {
@@ -81,15 +88,20 @@ describe('the cold path', () => {
     expect(shape(rows[3]!)).toBe(shape(rows[0]!)); // both above
   });
 
-  it('the summary counts the lines and adds the gaps; without a profile the 10-year effect asks for one', async () => {
+  it('answers first: a pill, the gap per year in one sentence, and the biggest gap first as the next step', async () => {
     const user = await open();
     await cold(user);
     const summary = await screen.findByTestId('overpaying-summary');
+    expect(summary).toHaveAttribute('data-verdict', 'above');
+    expect(within(summary).getByText(t.result.verdict.pill.above)).toBeInTheDocument();
+    expect(within(summary).getByText(t.result.verdict.above('$9,782'))).toBeInTheDocument(); // 3 888 + 5 894.352 a year
     expect(within(summary).getByText(t.result.summaryLine(4, 2))).toBeInTheDocument();
-    expect(within(summary).getByText('$9,782')).toBeInTheDocument(); // 3 888 + 5 894.352 a year
-    expect(within(summary).getByText(t.result.effectNone)).toBeInTheDocument();
-    expect(within(summary).getByRole('link', { name: t.result.effectNeedsProfileLink })).toHaveAttribute('href', '/me/balance');
-    expect(screen.queryByTestId('effect10y')).toBeNull();
+    expect(within(summary).getByText('$9,782')).toBeInTheDocument();
+    const steps = within(within(summary).getByTestId('next-steps')).getAllByRole('listitem');
+    expect(steps.map((li) => li.textContent)).toEqual([
+      expect.stringContaining('Childcare'), // $5,894 a year above, the biggest gap
+      expect.stringContaining(t.result.next.rent('$2,230').slice(0, 20)),
+    ]);
   });
 
   it('only some amounts entered: the blank lines are listed as left blank', async () => {
@@ -133,14 +145,8 @@ describe('with a profile of the person\'s own', () => {
     expect(amountBox('groceries')).toHaveValue('520');
     expect(amountBox('carInsurance')).toHaveValue(''); // car insurance is always asked
     const rows = await screen.findAllByTestId('benchmark-row');
-    // The gap is yours minus the top of the range ($3,000 − $2,676 = $324); the effect is for the middle ($3,000 − $2,230 = $770).
+    // The gap is yours minus the top of the range ($3,000 − $2,676 = $324); the plan change is to the middle ($3,000 − $2,230 = $770).
     expect(within(rows[0]!).getByTestId('gap')).toHaveTextContent(t.result.gap('$324', '$3,888'));
-    expect(within(rows[0]!).getByTestId('effect10y')).toHaveTextContent(t.result.effect('$770', '$40,000'));
-    expect(within(rows[0]!).getByTestId('effect10y')).toHaveTextContent('$770'); // the monthly figure the effect is for is on screen
-    expect(within(within(rows[0]!).getByTestId('effect10y')).getByText(t.result.estimate)).toBeInTheDocument(); // a projection carries the estimate tag
-    const summary = await screen.findByTestId('overpaying-summary');
-    expect(within(summary).getByText('$49,000')).toBeInTheDocument(); // both lines above the range have an effect: the total is of both
-    expect(within(summary).getByText(t.result.estimate)).toBeInTheDocument(); // and the total carries the tag too
 
     await user.clear(amountBox('rent'));
     await user.type(amountBox('rent'), '2400');
@@ -182,31 +188,22 @@ describe('which household the result is about', () => {
   });
 });
 
-describe('a 10-year total that is not of every line above the range', () => {
-  it('is not shown: no partial sum, and each line keeps its own effect', async () => {
-    const result = sampleOverpayingResult();
-    result.lines[3]!.effect10y = 0; // childcare is above the range, but the profile cannot take the change
-    await open({ profile: cloneProfileDemo(), deps: fakeDeps({ result }) });
-    const summary = await screen.findByTestId('overpaying-summary');
-    expect(within(summary).queryByText('$40,000')).toBeNull();
-    expect(within(summary).queryByText('$49,000')).toBeNull();
-    expect(within(summary).getByText(t.result.effectNone)).toBeInTheDocument();
-    expect(within(summary).getByText(t.result.effectPartial)).toBeInTheDocument();
+describe('what paying the typical middle does to the plan', () => {
+  it('measures each line above the range on the plan and adds it from the row', async () => {
+    const user = await open();
+    await cold(user);
     const rows = await screen.findAllByTestId('benchmark-row');
-    expect(within(rows[0]!).getByTestId('effect10y')).toHaveTextContent('$40,000');
-    expect(within(rows[3]!).queryByTestId('effect10y')).toBeNull();
-  });
-});
-
-describe('a 10-year figure nobody could work out', () => {
-  it('says so for the lines above the range instead of showing $0', async () => {
-    const result = sampleOverpayingResult();
-    result.lines[0]!.effect10y = 0;
-    result.lines[3]!.effect10y = 0;
-    await open({ profile: cloneProfileDemo(), deps: fakeDeps({ result }) });
-    const summary = await screen.findByTestId('overpaying-summary');
-    expect(within(summary).getByText(t.result.effectNoneAbove)).toBeInTheDocument();
-    expect(screen.queryByTestId('effect10y')).toBeNull();
+    const rent = within(rows[0]!).getByTestId('row-impact');
+    expect(rent).toHaveTextContent(t.result.planLead('$770'));
+    expect(within(rent).getByText(pi.source)).toBeInTheDocument();
+    expect(within(rent).getByTestId('impact-10y')).toHaveTextContent(/^\+\$/);
+    await user.click(within(rent).getByRole('button', { name: pi.add }));
+    expect(within(rent).getByText(pi.added)).toBeInTheDocument();
+    const st = usePlanStore.getState();
+    expect(st.movesApplied[st.activeId]?.map((m) => m.id)).toEqual([overpayingMoveId('rent')]);
+    // Childcare is above the range, but the sample plan holds no childcare to lower: not measured, said so.
+    expect(within(rows[3]!).queryByTestId('row-impact')).toBeNull();
+    expect(within(rows[3]!).getByText(t.result.planNotMeasured)).toBeInTheDocument();
   });
 });
 

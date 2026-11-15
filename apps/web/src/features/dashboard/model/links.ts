@@ -6,13 +6,18 @@ export const PLANNER_ROUTES = {
   addAccount: '/accounts?add=1',
   transactions: '/transactions',
   importCsv: '/transactions?import=1',
-  cashFlow: '/cash-flow',
+  cashFlow: '/cashflow',
   budget: '/budget',
   recurring: '/recurring',
   goals: '/goals',
   plan: '/plan',
   duel: '/play',
-  guessOwnMonth: '/me/guess',
+  /** The "What if?" hub and the three decision tools on the dashboard's row. */
+  tools: '/tools',
+  afford: '/afford',
+  loan: '/loan',
+  decide: '/decide',
+  guessOwnMonth: '/start?ch=2',
 } as const;
 
 export type PlannerLinks = typeof PLANNER_ROUTES;

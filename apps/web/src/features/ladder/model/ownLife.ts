@@ -41,7 +41,7 @@ export function startingProfile(closestCardId: string | null): Profile | null {
 }
 
 /** A value the person gave: measured, and not just the starting profile's own measured value. */
-const typed = (e: Estimate<number>, base: Estimate<number> | undefined): boolean =>
+export const typed = (e: Estimate<number>, base: Estimate<number> | undefined): boolean =>
   !e.isEstimate && (!base || base.isEstimate || e.value !== base.value);
 
 /** The spending is the person's own: a statement was imported, or at least one category was typed. */

@@ -1,8 +1,20 @@
 // "Together" (/together, /together/<id>): a couple's shared plan via a link, no login.
 export const together = {
   eyebrow: 'Together',
-  title: 'Plan your money together',
-  lead: 'Add your numbers, send your partner a link, and see your household month, a fair split of shared bills and where you are headed in 10 years. No sign-up.',
+  title: 'How do we split it?',
+  lead: 'Add your numbers, send your partner a link, and see a fair split of shared bills and where the two of you are headed in 10 years. No sign-up.',
+
+  steps: {
+    label: 'How it works',
+    /** "Step 2 of 3" for screen readers. */
+    current: (n: number) => `Step ${n} of 3`,
+    done: 'done',
+    items: [
+      { title: 'Your numbers', body: 'Two minutes. No sign-up.' },
+      { title: 'Send the link', body: 'Text it to your partner.' },
+      { title: 'They add theirs', body: 'Then you both see the split.' },
+    ],
+  },
   privacy:
     'The plan holds only the numbers the math needs: pay, spending by category, cash, retirement savings and debt balances, rates and payments. No names, no statements.',
   storage: {
@@ -44,6 +56,13 @@ export const together = {
     goalTarget: 'Net worth target, in today’s dollars',
     goalYears: 'In how many years',
     goalKeepHint: 'Leave blank to keep the plan’s goal.',
+    moreTitle: 'More details (optional)',
+    /** `filled` = how many of the optional fields have a value. */
+    moreHint: (filled: number) =>
+      filled === 0
+        ? 'Childcare, other spending, savings and debt. Blank counts as $0.'
+        : `${filled} filled. Blank counts as $0.`,
+    essentialsHint: 'Three numbers are enough for the split. Add more for a sharper 10-year view.',
     problems: {
       takeHomePay: 'Enter your take-home pay.',
       nickname: 'A nickname can hold letters, numbers, spaces and . \' - (up to 24).',
@@ -65,7 +84,16 @@ export const together = {
     shareLead: 'They open it, add their numbers, and you both see the plan. No sign-up.',
     shareFixturesBack: 'Demo mode: once your partner adds their numbers, the plan is in their link. Ask them to send it back.',
     copy: 'Copy link',
-    copied: 'Copied',
+    copied: 'Copied ✓',
+    copiedLive: 'Link copied. Paste it in a message to your partner.',
+    copyFailed: 'Couldn’t copy here. Press and hold the link above to copy it.',
+    waitingTitle: 'Waiting for your partner',
+    nextTitle: 'What happens next',
+    next: [
+      'Your partner opens the link on their phone.',
+      'They add their own numbers. They never see your categories or debts one by one, only totals.',
+      'You both see the split and “Us in 10 years”.',
+    ],
     share: 'Share…',
     linkLabel: 'Plan link',
     waiting: (name: string) => `Waiting for ${name} to add their numbers.`,
@@ -89,8 +117,15 @@ export const together = {
     surplus: 'Left over each month',
     shortfall: 'Short each month',
     perPartner: 'Each of you',
-    splitTitle: 'A fair split of shared bills',
+    kpis: 'Your household month',
+    splitTitle: 'How do we split shared bills?',
     splitLead: 'Rent + utilities, groceries and childcare, split by take-home pay.',
+    splitLeadEven: 'Rent + utilities, groceries and childcare, split down the middle.',
+    splitModes: { legend: 'Split shared bills', income: 'By income', even: '50/50' },
+    /** The split bar's label for one side: "Jo · 60%". */
+    splitSide: (name: string, share: string) => `${name} · ${share}`,
+    byIncomeTitle: 'By income instead',
+    byIncomeLine: (a: string, aPays: string, b: string, bPays: string) => `${a} ${aPays}, ${b} ${bPays}`,
     splitLine: (a: string, aPays: string, b: string, bPays: string) => `${a} pays ${aPays}, ${b} pays ${bPays}`,
     splitShare: (a: string, share: string) => `${a} earns ${share} of what you bring home together.`,
     splitEvenBasis: 'Neither of you has take-home pay entered, so this is 50/50.',
@@ -103,6 +138,9 @@ export const together = {
     futureToday: 'Today',
     futureMid: 'In 10 years',
     futureRange: (low: string, high: string) => `Range ${low} to ${high}, from the numbers that are estimates.`,
+    futureChart: 'Combined net worth, next 10 years',
+    futureLine: 'Us together',
+    futureFootnote: 'In today’s dollars. Rules-based forecast of your combined numbers.',
     rulesTag: 'Rules-based estimate',
     rulesWhy: 'Computed by our forecast rules from your combined numbers with fixed assumptions (pay growth, returns, inflation).',
     goalTitle: 'Our shared goal',

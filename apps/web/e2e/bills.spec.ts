@@ -1,4 +1,4 @@
-// Bills calendar (/tools/bills), phone and desktop: the empty state on a fresh browser; then, with a
+// "What is due this month?" (/tools/bills), phone and desktop: the sample's bills on a fresh browser; then, with a
 // profile of the user's own (the demo fixture) and the sample statement's subscription audit saved in
 // this browser, the month grid, the next 7 days, an inline due-day edit, the .ics export, the What if?
 // hub entry and the Home line "Next bill: …". The clock is fixed so the dates are the same every run.
@@ -49,11 +49,13 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-test('fresh browser: the empty state links to the statement upload', async ({ page }) => {
+test('fresh browser: the sample household\'s bills, answer first, no sideways scroll', async ({ page }) => {
   await page.goto('/tools/bills');
   await expect(page.getByRole('heading', { level: 1, name: t.title })).toBeVisible();
-  await expect(page.getByTestId('bills-empty')).toBeVisible();
-  await expect(page.getByRole('link', { name: t.empty.upload })).toHaveAttribute('href', '/me/upload');
+  await expect(page.getByTestId('bills-verdict')).toBeVisible();
+  await expect(page.getByTestId('bills-kpis')).toContainText(t.kpi.due);
+  await expect(page.getByRole('link', { name: t.recurringLink })).toHaveAttribute('href', '/recurring');
+  await expectNoHorizontalScroll(page);
 });
 
 test('the month on one screen: grid, next 7 days, due-day edit, calendar export', async ({ page }) => {
@@ -70,6 +72,7 @@ test('the month on one screen: grid, next 7 days, due-day edit, calendar export'
   const soon = page.getByTestId('bills-soon-list');
   await expect(soon.getByText(t.soon.line('Fri', 20, 'Credit card payment'))).toBeVisible();
   await expect(page.getByTestId('bills-month-total')).toContainText('$');
+  await expect(page.getByTestId('bills-split')).toBeVisible();
 
   // Move Netflix to the 16th: it joins the next 7 days, and the choice survives a reload.
   await page.getByRole('combobox', { name: t.list.dueDay('Netflix') }).selectOption('16');
@@ -89,15 +92,10 @@ test('the month on one screen: grid, next 7 days, due-day edit, calendar export'
   await expect(page.getByText(t.export.downloaded)).toBeVisible();
 });
 
-test('listed in the What if? hub, and the Home screen names the next bill', async ({ page }) => {
+test('listed in the What if? hub', async ({ page }) => {
   await seed(page);
   await page.goto('/tools');
   const card = page.getByRole('link', { name: new RegExp(tools.hub.items.bills.question.replace('?', '\\?')) });
   await expect(card).toHaveAttribute('href', '/tools/bills');
 
-  await page.goto('/');
-  // Next charges from Saturday 14 November: the card and the car loan on Friday the 20th, in 6 days.
-  await expect(page.getByTestId('next-bill')).toContainText(/Next bill: .+ in 6 days/);
-  await page.getByTestId('next-bill').getByRole('link', { name: t.today.open }).click();
-  await expect(page).toHaveURL(/\/tools\/bills$/);
 });

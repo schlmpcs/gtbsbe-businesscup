@@ -91,3 +91,50 @@ export function paydaysFrom(saved: readonly number[] | null | undefined): { days
   const days = [...new Set((saved ?? []).filter((d) => validDueDay(d) !== null))].sort((a, b) => a - b);
   return days.length > 0 ? { days, isEstimate: false } : { days: [...DEFAULT_PAYDAYS], isEstimate: true };
 }
+
+// ----- the same items as Recurring (/recurring) -------------------------------------------------------
+
+/** One item of Recurring (features/recurring/model/items) the calendar can place, with the name to show. */
+export type RecurringBillSource = {
+  /** Recurring's item id: 'rent', 'account:<id>' or a subscription finding id. */
+  id: string;
+  origin: 'statement' | 'profile' | 'account';
+  section: 'income' | 'expenses' | 'creditCards';
+  label: string;
+  amount: number;
+  cadence: BillDef['cadence'];
+  /** The month of the last charge (anchors a quarterly or yearly one); null for monthly ones. */
+  anchor: string | null;
+  dayOfMonth: number | null;
+  dayIsEstimate: boolean;
+  amountIsEstimate: boolean;
+};
+
+/** The calendar's id of a Recurring item: rent stays 'rent', an account payment 'account:<id>', a finding 'sub:<id>'. */
+export const billIdOfRecurring = (item: Pick<RecurringBillSource, 'id' | 'origin'>): string =>
+  item.origin === 'statement' ? subscriptionBillId(item.id) : item.id;
+
+/**
+ * Recurring's bills (not income) as calendar bills, so /tools/bills and /recurring show the same items
+ * and amounts: rent and the accounts' payments (assumed days), the charges the statement detector found
+ * (their own day). The user's due days win, as in billsFromSources.
+ */
+export function billsFromRecurring(items: readonly RecurringBillSource[], dueDays: BillSources['dueDays']): BillDef[] {
+  const bills: BillDef[] = [];
+  for (const item of items) {
+    if (item.section === 'income' || !Number.isFinite(item.amount) || item.amount <= 0) continue;
+    const kind: BillDef['kind'] = item.origin === 'statement' ? 'subscription' : item.origin === 'account' ? 'debt' : 'rent';
+    const fallback = validDueDay(item.dayOfMonth) ?? (kind === 'debt' ? DEFAULT_DEBT_DUE_DAY : DEFAULT_RENT_DUE_DAY);
+    const def: Omit<BillDef, 'dueDay' | 'dueDayIsEstimate'> = {
+      id: billIdOfRecurring(item),
+      kind,
+      label: item.label,
+      amount: item.amount,
+      amountIsEstimate: item.amountIsEstimate,
+      cadence: item.cadence,
+      ...(item.anchor ? { anchorMonth: item.anchor } : {}),
+    };
+    bills.push(withDay(def, dueDays, fallback, item.dayOfMonth === null || item.dayIsEstimate));
+  }
+  return bills;
+}

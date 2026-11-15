@@ -1,12 +1,16 @@
 'use client';
 
-// S12 Loan Lab (Figma Design v3, S12). All numbers come from useLoanLab(), which calls the engine's loan /
-// compareLoans / payoffOrder (and, for the planner section, comparePayoff). Nothing is computed here.
-// JF14/JF16: one message (offers + what is left over each month), secondary tools behind disclosures.
+// S12 Loan Lab, "Which loan costs less?". The offers (inputs, editable on their cards), the answer card (the
+// cheapest offer in dollars and the stacked total-cost bars), then for the selected offer: paying it off
+// faster (balance line + extra slider), whether the month can carry it (left over + debt load), what it does
+// to the plan ("Add to my plan"), and, behind disclosures, the debt payoff planner and the sentence box.
+// All numbers come from useLoanLab(), usePayoffPlanner() and useLoanPlan() (engine); nothing is computed here.
 import { loan as t } from '@/copy';
-import { Art, cx, formatMoney, Money, Stack } from '@/ui-kit';
+import { cx, formatMoney, Money } from '@/ui-kit';
+import { MOTION } from '@/ui-kit/reports';
+import { ToolPlanImpact } from '@/ui-kit/ToolPlanImpact';
 import type { ReactNode } from 'react';
-import type { LinkComponent, LoanLabVM, PayoffPlannerVM } from '../model/types';
+import type { LinkComponent, LoanLabVM, PayoffPlannerVM, ToolPlanEventVM } from '../model/types';
 import { DebtLoadGauges } from './DebtLoadGauges';
 import { ExtraPayment } from './ExtraPayment';
 import { LoanParse } from './LoanParse';
@@ -26,12 +30,18 @@ function Loading() {
   );
 }
 
+const PlainLink: LinkComponent = ({ href, className, children }) => (
+  <a href={href} className={className}>
+    {children}
+  </a>
+);
+
 /** A secondary section, closed by default (JF16). */
 function Disclosure({ title, testId, children }: { title: string; testId?: string; children: ReactNode }) {
   return (
-    <details className="group rounded-xl bg-surface p-lg shadow-md" data-testid={testId}>
+    <details className="group card card-pad" data-testid={testId}>
       <summary
-        className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md font-display text-xl font-extrabold"
+        className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-md text-lg font-bold"
         data-testid={testId && `${testId}-summary`}
       >
         <span>{title}</span>
@@ -39,21 +49,21 @@ function Disclosure({ title, testId, children }: { title: string; testId?: strin
           ▾
         </span>
       </summary>
-      <div className="mt-md">{children}</div>
+      <div className="mt-lg">{children}</div>
     </details>
   );
 }
 
-/** JF14: "left over each month after this loan", next to the debt load (engine numbers, formatted here). */
+/** JF14: "left over each month after this loan" (engine numbers, formatted here). */
 function LeftOver({ leftOver, selectedName }: { leftOver: LoanLabVM['leftOver']; selectedName: string | null }) {
   if (!leftOver) return null;
   const l = t.leftOver;
-  const shown = leftOver.after !== null && selectedName !== null ? leftOver.after : leftOver.before;
   const withLoan = leftOver.after !== null && selectedName !== null;
+  const shown = withLoan ? leftOver.after! : leftOver.before;
   return (
-    <section aria-label={l.title} data-testid="loan-left-over" className="flex flex-col gap-xs rounded-xl bg-surface p-xl shadow-md">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">{l.title}</h2>
-      <p className={cx('font-display text-5xl font-extrabold leading-display tabular-nums', shown < 0 ? 'text-primary' : 'text-positive')}>
+    <section aria-label={l.title} data-testid="loan-left-over" className="flex flex-col gap-xs">
+      <h3 className="text-sm font-medium text-text-muted">{l.title}</h3>
+      <p className={cx('font-display text-3xl font-extrabold leading-tight tabular-nums', shown < 0 ? 'text-negative' : 'text-positive')}>
         {shown < 0 ? l.short(formatMoney(-shown)) : <Money value={shown} />}
       </p>
       <p className="text-sm text-text-muted">
@@ -73,51 +83,71 @@ function LeftOver({ leftOver, selectedName }: { leftOver: LoanLabVM['leftOver'];
 /**
  * `payoff` is the debt payoff planner (usePayoffPlanner). While it is null (planner off) the screen has the
  * single-method payoff order card; once supplied, the planner takes that card's place.
- * `Link` (next/link in the app) is what the planner uses to point at the balance sheet.
+ * `plan` is the selected offer measured on /plan (useLoanPlan); null hides that card.
+ * `Link` (next/link in the app) points at the balance sheet and at /plan.
  */
-export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payoff?: PayoffPlannerVM | null; Link?: LinkComponent }) {
+export function LoanLabScreen({
+  vm,
+  payoff = null,
+  plan = null,
+  Link = PlainLink,
+}: {
+  vm: LoanLabVM;
+  payoff?: PayoffPlannerVM | null;
+  plan?: ToolPlanEventVM | null;
+  Link?: LinkComponent;
+}) {
   const selectedIndex = vm.offers.findIndex((o) => o.id === vm.selectedOfferId);
   const selectedName = selectedIndex >= 0 ? t.offerName(selectedIndex + 1) : null;
+  const selectedValid = selectedIndex >= 0 && vm.offers[selectedIndex]!.result !== null;
 
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl">
-      <header className="grid grid-cols-1 items-center gap-xl sm:grid-cols-[1fr_auto]">
-        <div className="flex min-w-0 flex-col gap-lg">
-          <h1 className="font-display text-4xl font-extrabold leading-display tracking-tight sm:text-display lg:text-[length:calc(var(--text-display)*1.6)]">
-            {t.screens.S12}
-          </h1>
-          <p className="max-w-prose text-lg text-text-muted sm:text-xl">{t.intro}</p>
-        </div>
-        <Art name="coins" className="mx-auto w-1/2 max-w-(--container-3xs) sm:w-(--container-3xs)" />
+      <header className="flex flex-col gap-xs">
+        <p className="text-sm font-semibold uppercase tracking-wide text-primary">{t.eyebrow}</p>
+        <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{t.screens.S12}</h1>
+        <p className="max-w-prose text-base text-text-muted sm:text-lg">{t.intro}</p>
       </header>
 
-      <div className="mt-2xl">
+      <div className="mt-xl">
         {vm.status === 'loading' ? (
           <Loading />
         ) : (
-          <Stack gap="2xl">
-            <Stack gap="xl">
-              <OfferCompare
-                offers={vm.offers}
-                selectedOfferId={vm.selectedOfferId}
-                selectOffer={vm.selectOffer}
-                edit={{
-                  updateOffer: vm.updateOffer,
-                  removeOffer: vm.removeOffer,
-                  addOffer: vm.addOffer,
-                  canAddOffer: vm.canAddOffer,
-                }}
-              />
-              {vm.offers.length > 0 && <LoanVerdict offers={vm.offers} />}
-            </Stack>
-            <div className="grid grid-cols-1 items-stretch gap-xl lg:grid-cols-[2fr_3fr]">
-              <LeftOver leftOver={vm.leftOver} selectedName={selectedName} />
-              <DebtLoadGauges gauge={vm.gauge} selectedName={selectedName} />
+          <div className="flex flex-col gap-xl">
+            <OfferCompare
+              offers={vm.offers}
+              selectedOfferId={vm.selectedOfferId}
+              selectOffer={vm.selectOffer}
+              edit={{
+                updateOffer: vm.updateOffer,
+                removeOffer: vm.removeOffer,
+                addOffer: vm.addOffer,
+                canAddOffer: vm.canAddOffer,
+              }}
+            />
+            {vm.offers.length > 0 && <LoanVerdict offers={vm.offers} best={vm.best} costScale={vm.costScale} />}
+            <div className={cx('grid grid-cols-1 items-start gap-xl lg:grid-cols-2', MOTION.rise)}>
+              <ExtraPayment extra={vm.extra} setExtraPayment={vm.setExtraPayment} selectedName={selectedName} balanceChart={vm.balanceChart} />
+              <section aria-labelledby="loan-load-title" className="card card-pad flex min-w-0 flex-col gap-xl">
+                <h2 id="loan-load-title" className="text-lg font-bold leading-tight">
+                  {t.sections.load}
+                </h2>
+                <LeftOver leftOver={vm.leftOver} selectedName={selectedName} />
+                <DebtLoadGauges gauge={vm.gauge} selectedName={selectedName} />
+              </section>
             </div>
-            <Stack gap="md">
-              <Disclosure title={t.disclosures.extra} testId="extra-disclosure">
-                <ExtraPayment extra={vm.extra} setExtraPayment={vm.setExtraPayment} selectedName={selectedName} />
-              </Disclosure>
+            {plan && selectedValid && selectedName && (
+              <ToolPlanImpact
+                scenarioName={plan.scenarioName}
+                preview={plan.preview}
+                add={plan.add}
+                added={plan.added}
+                planHref={plan.planHref}
+                what={t.plan.what(selectedName)}
+                Link={Link}
+              />
+            )}
+            <div className="flex flex-col gap-md">
               <Disclosure title={t.disclosures.payoff} testId="payoff-disclosure">
                 {payoff ? (
                   <PayoffPlanner vm={payoff} selectedName={selectedName} Link={Link} />
@@ -128,9 +158,9 @@ export function LoanLabScreen({ vm, payoff = null, Link }: { vm: LoanLabVM; payo
               <Disclosure title={t.disclosures.parse} testId="parse-disclosure">
                 <LoanParse parse={vm.parse} canAddOffer={vm.canAddOffer} />
               </Disclosure>
-            </Stack>
+            </div>
             <p className="text-xs text-text-muted">{t.footnote}</p>
-          </Stack>
+          </div>
         )}
       </div>
     </main>

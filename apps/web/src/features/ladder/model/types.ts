@@ -5,10 +5,14 @@
 import type {
   CategoryTotals, CostCategory, Debt, ForecastPoint, HomeTenure, KidAge, Money, ProfilePatch, Rate, Source,
 } from '@lifeguessr/types';
+import type { readStatementFile } from '@/features/upload/model/readStatementFile';
 import type { HomeSummary } from '@/lib/model/home';
 import type { DebtLoadGaugeVM } from '@/lib/model/profile';
 import type { EstimatedMoney, ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
 import type { DebtInput } from '@/state';
+
+/** The CSV pipeline's reader; `readFile` takes another one (the demo bank's, which also fills every screen). */
+export type StatementReader = typeof readStatementFile;
 
 export type { DebtLoadGaugeVM, DebtLoadZone } from '@/lib/model/profile';
 export type { EstimatedMoney, ParseConfirmVM, SliderVM, VMError } from '@/lib/model/types';
@@ -53,7 +57,7 @@ export type LadderProgressVM = {
   bandNarrowed: Rate;
   /** Inputs the forecast reads that are still estimates, out of all of them. */
   estimates: { left: number; total: number };
-  /** "See your future →" (S10). */
+  /** "See your future →": the onboarding story's chapter 4 (/start?ch=4, the plan to 90). */
   futureHref: string;
   /** S7: set your spending by hand, the alternative to importing a statement on S9. */
   byHandHref: string;
@@ -70,6 +74,13 @@ export type SelfGuessRevealVM = {
   /** actual − guess (positive: the month costs more than guessed). */
   difference: Money;
 };
+
+/**
+ * The S5 guess paid off on a later step (S9 after a statement, S8): the guess against what the month
+ * costs (spending + minimum debt payments, from the profile). `isEstimate`: the spending is still the
+ * typical month built for the person's household (not yet theirs), so the comparison says so.
+ */
+export type GuessPayoffVM = SelfGuessRevealVM & { isEstimate: boolean };
 
 /** S5 Guess yourself: one log-scale slider for your own monthly cost. */
 export type GuessYourselfVM = {
@@ -123,10 +134,19 @@ export type LifeCandidateVM = {
   available: boolean;
 };
 
-/** S6 "About you": what the person typed. Age and pay are saved as measured values as they type. */
+/**
+ * An age or pay box on S6. `value` is what the person gave (typed, or their statement's pay); null while
+ * the profile still holds our typical value, which is `estimate` (shown as a placeholder, never as typed).
+ */
+export type AboutYouNumberVM = { value: number | null; estimate: number; isEstimate: boolean; bounds: InputBounds };
+
+/**
+ * S6 "About you": age and take-home pay are asked here only (S8 just shows them). They are saved as
+ * measured values as they are typed.
+ */
 export type AboutYouVM = {
-  age: { value: number; isEstimate: boolean; bounds: InputBounds };
-  takeHomePay: { value: Money; isEstimate: boolean; bounds: InputBounds };
+  age: AboutYouNumberVM;
+  takeHomePay: AboutYouNumberVM;
   adults: 1 | 2;
   /** Children per age band. */
   kids: Record<KidAge, number>;
@@ -398,6 +418,11 @@ export type StatementUploadVM = {
   lastRead: StatementReadVM | null;
   /** Months waiting for the user to confirm, with the answers to the follow-ups applied. */
   pending: StatementMonthVM[];
+  /**
+   * The confirm line on top of the review: the average month of the pending statement (Σ of every
+   * category, over the months it covers in full; all months if none is full). null outside review.
+   */
+  summary: { averageMonth: Money; fullMonths: number } | null;
   /** A few questions about what the statement can't settle, during review. Each can be skipped. */
   questions: StatementQuestionVM[];
   /** merchant/cash: that money is mostly this category (its lines are re-sorted, the months summed again). */
@@ -421,7 +446,7 @@ export type StatementUploadVM = {
    * Read a CSV statement in the browser and categorize it (T6/T7), ending in `submitTotals`.
    * null when no reader is available: the screen then shows the file picker as unavailable.
    */
-  readFile: ((file: File) => void) | null;
+  readFile: ((file: File, reader?: StatementReader) => void) | null;
   /**
    * "Try with sample statement": the sample statement fixture, read through the same pipeline as
    * `readFile` (parsed and masked in the browser, then categorized). Ends in review like a file.

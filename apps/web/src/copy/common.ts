@@ -7,22 +7,55 @@ export const common = {
   appName: 'LifeGuessr',
   tagline: 'Money apps forecast your accounts. We forecast your decisions, and rank which one to make next.',
   disclaimer: 'Educational simulation, not financial advice.',
-  /** The site header (Figma: logo, five links, Go Pro). */
-  siteNav: {
-    label: 'Main',
-    home: 'LifeGuessr home',
-    links: [
-      { href: '/', label: 'Home' },
-      { href: '/play', label: 'Play' },
-      { href: '/future', label: 'My future' },
-      { href: '/tools', label: 'What if?', match: ['/afford', '/loan', '/decide', '/checkin'] },
-    ],
-    pro: 'Go Pro',
+  /**
+   * The app shell (MP14): a sidebar on desktop, bottom tabs and a "More" sheet on a phone.
+   * Routes live in features/shell/model; these are the labels.
+   */
+  shell: {
+    home: 'LifeGuessr dashboard',
+    skipToContent: 'Skip to content',
+    /** Accessible names of the nav landmarks. */
+    sidebarLabel: 'Main',
+    tabsLabel: 'Main tabs',
+    moreLabel: 'More pages',
+    /** Group headings in the sidebar (null: the group has no heading). */
+    groups: {
+      main: null,
+      money: 'Money',
+      game: null,
+    },
+    links: {
+      dashboard: 'Dashboard',
+      plan: 'Plan',
+      whatif: 'What if?',
+      accounts: 'Accounts',
+      transactions: 'Transactions',
+      cashflow: 'Cash flow',
+      budget: 'Budget',
+      recurring: 'Recurring',
+      goals: 'Goals',
+      play: 'Play',
+      pro: 'Go Pro',
+    },
+    badges: {
+      daily: 'Daily',
+    },
+    more: 'More',
+    moreTitle: 'More',
+    moreDescription: 'The rest of your money planner.',
+    proLine: 'Plan to 90, Compare, Chance of success',
   },
-  /** Shown on every screen while the sample life is on (Try with sample data). */
+  /**
+   * The slim strip at the top of the content while the numbers on screen are the sample household's,
+   * not yours (the demo profile): `text` after "See a sample plan", `textDefault` when nothing was
+   * entered yet, `textLedger` when the person imported their own transactions but the plan (profile)
+   * is still the sample's.
+   */
   sampleBanner: {
-    text: 'You’re looking at a sample life.',
-    cta: 'Use mine',
+    text: 'Sample life — make it yours',
+    textDefault: 'Sample numbers — make it yours',
+    textLedger: 'Your transactions are in; the plan still uses sample numbers — make it yours',
+    cta: 'Use my numbers',
   },
   nav: {
     title: 'Screens',

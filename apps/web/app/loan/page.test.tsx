@@ -4,7 +4,8 @@ import type { LoanInput, LoanResult } from '@lifeguessr/types';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { loan as t } from '@/copy';
+import { loan as t, toolPlan } from '@/copy';
+import { resetPlanStore, usePlanStore } from '@/features/plan/model/planStore';
 import type { LoanOfferVM } from '@/features/loan/model/types';
 import { OfferCompare } from '@/features/loan/ui/OfferCompare';
 import type * as AiParse from '@/lib/api/aiParse';
@@ -19,6 +20,7 @@ vi.mock('@/lib/api/aiParse', async (importOriginal) => ({
 
 beforeEach(() => {
   resetClientState();
+  resetPlanStore();
   parseText.mockReset();
 });
 
@@ -38,6 +40,36 @@ describe('/loan (S12)', () => {
     expect(within(table).getByText('$863')).toBeTruthy(); // $28,000 at 6.9% for 36 months (ENGINEERING.md)
     expect(within(table).getByText(t.compare.lowestCost)).toBeTruthy();
     expect(screen.getAllByRole('meter')).toHaveLength(2);
+  });
+
+  it('the answer names the cheapest offer in dollars and draws what each total is made of', async () => {
+    await renderReady();
+    // Sample offers: A $31,078, B $32,212, C $36,329 in total (engine loan math).
+    expect(screen.getByTestId('loan-verdict-headline').textContent).toBe(t.verdict.saves(t.offerName(1), t.offerName(2), '$1,134'));
+    const race = screen.getByTestId('loan-cost-race');
+    expect(within(race).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(race).getByText(t.cost.row(t.offerName(1), '$31,078', '$28,000', '$3,078', '$0'))).toBeTruthy();
+    expect(screen.getByRole('figure', { name: t.balance.title(t.offerName(1)) })).toBeTruthy();
+  });
+
+  it('"Add to my plan" puts the selected offer on the active plan scenario as a financed Expense', async () => {
+    const user = await renderReady();
+    const card = screen.getByTestId('tool-plan-impact');
+    expect(within(card).getByRole('heading', { name: toolPlan.title })).toBeTruthy();
+    const before = usePlanStore.getState().scenarios.find((s) => s.id === usePlanStore.getState().activeId)!.events.length;
+    await user.click(within(card).getByRole('button', { name: toolPlan.add }));
+    const active = usePlanStore.getState().scenarios.find((s) => s.id === usePlanStore.getState().activeId)!;
+    expect(active.events).toHaveLength(before + 1);
+    expect(active.events.at(-1)).toMatchObject({
+      type: 'expense',
+      name: t.plan.eventName(t.offerName(1)),
+      amount: 28_000,
+      cadence: 'once',
+      financing: { downPayment: 0, apr: 0.069, termMonths: 36 },
+      enabled: true,
+    });
+    expect(within(card).getByText(toolPlan.added)).toBeTruthy();
+    expect(within(card).getByRole('link', { name: new RegExp(toolPlan.open) }).getAttribute('href')).toBe('/plan');
   });
 
   it('the extra-payment slider shortens the payoff', async () => {
@@ -128,6 +160,7 @@ describe('OfferCompare', () => {
     isLowestCost: false,
     isLowestMonthly: false,
     debtLoadAfter: null,
+    cost: null,
   });
 
   it('warns clearly when an offer never pays off', () => {

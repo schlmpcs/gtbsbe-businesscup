@@ -4,7 +4,7 @@
 // Selectors come from the copy file and roles. Runs on the phone and desktop projects.
 import { expect, test, type Page } from '@playwright/test';
 import { duel as t } from '../src/copy/duel';
-import { forecast } from '../src/copy/forecast';
+import { dashboard as d } from '../src/copy/dashboard';
 
 test.skip(process.env.NEXT_PUBLIC_DUEL_SOURCE === 'api', 'the build plays the duel against the server: duel-api.spec.ts');
 
@@ -38,6 +38,16 @@ test('tap card A → the reveal shows both monthly totals → next round', async
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.title);
   await expect(page.getByText(t.round(1, 5))).toBeVisible();
   await expect(page.getByRole('button', { name: /^Life B costs more/ })).toBeVisible();
+  // Each life's face: four fact groups (Home, Family, Car, Food), two lines each, and no dollar amount.
+  const factLists = page.getByRole('list', { name: t.card.factsLabel });
+  await expect(factLists).toHaveCount(2);
+  for (const list of await factLists.all()) {
+    await expect(list.getByRole('listitem')).toHaveCount(4);
+    for (const group of Object.values(t.facts.groups)) await expect(list.getByText(group, { exact: true })).toBeVisible();
+    await expect(list).not.toContainText('$');
+  }
+  // The hint says what it opens before you pay for it.
+  await expect(page.getByText(t.hint.explain)).toBeVisible();
   await expectNoSideScroll(page);
 
   await pickA(page).click();
@@ -54,6 +64,11 @@ test('tap card A → the reveal shows both monthly totals → next round', async
   }
   await expect(page.getByText(t.reveal.decidedHeading)).toBeVisible();
   await expect(page.getByText(t.reveal.crowdNone)).toBeVisible();
+  // Side by side: both totals and every category for A and B, the deciding one tagged.
+  const compare = page.getByTestId('duel-compare');
+  await expect(compare.getByRole('heading', { name: t.reveal.compareHeading })).toBeVisible();
+  await expect(compare.getByRole('list', { name: t.reveal.compareLabel }).getByRole('listitem').first()).toBeVisible();
+  await expect(compare.getByText(t.reveal.decidedTag, { exact: true })).toBeVisible();
   await expectNoSideScroll(page);
 
   await page.getByRole('button', { name: t.reveal.next }).click();
@@ -65,6 +80,11 @@ test('a hint, then the rest of the day, ends on the day result with the bridge t
   await page.goto('/duel');
   await page.getByRole('button', { name: t.hint.offer('10%') }).click();
   await expect(page.getByText(t.hint.used('900'))).toBeVisible();
+  // The hint adds one row to each card: the neighborhood's price level.
+  for (const list of await page.getByRole('list', { name: t.card.factsLabel }).all()) {
+    await expect(list.getByRole('listitem')).toHaveCount(5);
+    await expect(list.getByText(new RegExp(`${t.card.hintFact} · ${t.card.hintGroup}`))).toBeVisible();
+  }
 
   for (let round = 1; round <= 5; round++) {
     await expect(page.getByText(t.round(round, 5))).toBeVisible();
@@ -76,7 +96,7 @@ test('a hint, then the rest of the day, ends on the day result with the bridge t
   await expect(page.getByRole('list', { name: t.summary.gridLabel }).getByRole('listitem')).toHaveCount(5);
   await expect(page.getByText(t.summary.blindSpotHeading)).toBeVisible();
   await expect(page.getByText(/^Next five in \d+h \d+m$/)).toBeVisible();
-  await expect(page.getByRole('link', { name: t.summary.cta })).toHaveAttribute('href', '/me/guess');
+  await expect(page.getByRole('link', { name: t.summary.cta })).toHaveAttribute('href', '/start?ch=2');
   await expectNoSideScroll(page);
 
   // A reload keeps today's result.
@@ -92,12 +112,10 @@ test('/play is the duel: one pick shows on S1 Today as rounds, not homes, with n
   await pickA(page).click();
   await expect(page.getByRole('button', { name: t.reveal.next })).toBeVisible();
 
-  await page.goto('/');
-  const p = forecast.today.playDuel;
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(forecast.today.home.title);
-  const game = page.getByTestId('play');
-  await expect(game).toContainText(forecast.today.duel.title);
-  await expect(game.getByRole('link', { name: p.continue(1, 5) })).toHaveAttribute('href', '/play');
+  await page.goto('/dashboard');
+  const game = page.getByTestId('dashboard-game');
+  await expect(game).toContainText(d.duelProgress(1, 5));
+  await expect(game.getByRole('link', { name: d.duelContinue })).toHaveAttribute('href', '/play');
   await expect(page.getByText(/today’s homes/i)).toHaveCount(0);
   await expect(page.locator('a[href*="stream=1"]')).toHaveCount(0);
 });

@@ -1,15 +1,23 @@
-// "Chance of success": the Monte Carlo gauge, bands, sample paths, histograms and settings. run()
-// sends monteCarlo() (MP5) of the active scenario to a Web Worker (monteCarlo.worker.ts) with the
-// settings' seed, or a new one when the fixed seed is off; a settings or plan change cancels the run in
-// progress and drops the result (planStore.ts).
-import { ASSET_GROUPS, type MonteCarloResult, type MonteCarloSettings } from '@lifeguessr/types';
+// "Chance of success": the Monte Carlo gauge, bands, sample paths, histograms and settings. run() runs
+// the engine's seeded monteCarlo() (packages/engine/monteCarlo.ts) on the active scenario, with the
+// person's profile, accounts and area and the scenario's applied moves, on demand: the 'running' state
+// paints first, then the run (~0.3 s for 1,000 paths) happens on the next task. A change to the plan or
+// the settings while it runs drops its result (planStore.finishChanceRun). An error shows as 'error'.
+// TODO(MP7): move the run into a Web Worker so the page stays responsive during it.
+//
+// Growth draws: unless the person set them, investments and retirement draw around the plan's own
+// return (the scenario's override, else returnAnnualNominal) and real estate around the area's home
+// appreciation, so the median path tracks plan(). The spreads are the spec's assumptions
+// (docs/ENGINEERING.md → Monte Carlo: sd 0.15 for investments and retirement, 0.05 for real estate).
+import { monteCarlo } from '@lifeguessr/engine';
+import { ASSET_GROUPS, type AccountGroup, type PlanKpis, type AreaData, type MonteCarloResult, type MonteCarloSettings, type Scenario } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { plan as copy } from '@/copy';
-import { track } from '@/lib/events';
 import { formatMoney } from '@/lib/format';
+import { NO_MOVES, planOf, profileFor, usePlanInputs } from './planEngine';
 import { pct } from './planFormat';
-import { usePlanInputs } from './planInputs';
 import { usePlanStore } from './planStore';
+import { growthDefaults } from './useAssumptions';
 import type { ChanceOfSuccessVM, ChanceResultVM, ChanceSettingsPatch, ChanceSettingsVM, HistogramVM } from './types';
 
 export const PATHS_LIMITS = { min: 1, max: 5000 } as const;
@@ -18,13 +26,44 @@ export const GOOD_SUCCESS_RATE = 0.8;
 
 const compact = (v: number) => formatMoney(v, { compact: true });
 
-export function resultVM(r: MonteCarloResult): ChanceResultVM {
+/** Spread of the yearly growth draws per group (docs/ENGINEERING.md → Monte Carlo; assumptions). */
+export const GROWTH_SD: Partial<Record<AccountGroup, number>> = { investments: 0.15, retirement: 0.15, realEstate: 0.05 };
+
+/** The settings a run uses: the person's, with growth draws around the plan's own rates for groups they left alone. */
+export function effectiveSettings(settings: MonteCarloSettings, scenario: Scenario | undefined, area: AreaData | undefined): MonteCarloSettings {
+  if (!scenario) return settings;
+  const defaults = growthDefaults(area, scenario.assumptions.inflation);
+  const growth: MonteCarloSettings['growth'] = {};
+  for (const g of ASSET_GROUPS) {
+    const sd = GROWTH_SD[g];
+    if (sd !== undefined) growth[g] = { mean: scenario.assumptions.growth[g] ?? defaults[g], sd };
+  }
+  return { ...settings, growth: { ...growth, ...settings.growth } };
+}
+
+/**
+ * The result for the screen. `kpis` and `endAge` are the rules-based plan of the same scenario (same
+ * display unit as the run), so each histogram can mark where the plan itself lands.
+ */
+export function resultVM(r: MonteCarloResult, kpis?: PlanKpis, endAge?: number): ChanceResultVM {
   const successfulPaths = Math.round(r.successRate * r.paths);
+  const planValues: Record<HistogramVM['id'], number | null> = {
+    atRetirement: kpis?.netWorthAtRetirement ?? null,
+    atEnd: kpis?.netWorthAtEnd ?? null,
+    shortfallAge: kpis?.shortfallAge ?? null,
+  };
+  const planLabel = (id: HistogramVM['id'], label: (n: number) => string): string => {
+    const v = planValues[id];
+    if (v !== null) return copy.chance.planMarker(label(v));
+    return kpis && id === 'shortfallAge' ? copy.chance.planNeverShort(endAge ?? 0) : '';
+  };
   const bins = (id: HistogramVM['id'], label: (n: number) => string): HistogramVM => ({
     id,
     title: copy.chance.histograms[id].title,
     xLabel: copy.chance.histograms[id].xLabel,
     bins: r.histograms[id].map((b) => ({ ...b, label: `${label(b.from)} to ${label(b.to)}` })),
+    planValue: planValues[id],
+    planLabel: planLabel(id, label),
   });
   return {
     gaugePct: Math.round(r.successRate * 100),
@@ -66,25 +105,32 @@ function settingsVM(s: MonteCarloSettings): ChanceSettingsVM {
 }
 
 export function useChanceOfSuccess(): ChanceOfSuccessVM {
-  const inputs = usePlanInputs();
-  const storedStatus = usePlanStore((s) => s.chanceStatus);
-  const runOf = usePlanStore((s) => s.chanceRunOf);
-  const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
-  // A run made from other inputs (the profile or the accounts changed since) or another version of the
-  // scenario is not this plan's: it shows as idle.
-  const status = runOf && runOf.inputs === inputs && runOf.scenario === scenario ? storedStatus : 'idle';
-  const settings = usePlanStore((s) => s.chanceSettings);
+  const status = usePlanStore((s) => s.chanceStatus);
+  const stored = usePlanStore((s) => s.chanceSettings);
   const result = usePlanStore((s) => s.chanceResult);
+  const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
+  const moves = usePlanStore((s) => s.movesApplied[s.activeId] ?? NO_MOVES);
   const setChance = usePlanStore((s) => s.setChance);
-  const runChance = usePlanStore((s) => s.runChance);
+  const inputs = usePlanInputs();
+  const settings = useMemo(() => effectiveSettings(stored, scenario, inputs.area), [stored, scenario, inputs.area]);
 
   const run = useCallback(() => {
-    const { scenarios, activeId, chanceSettings } = usePlanStore.getState();
-    const scenario = scenarios.find((s) => s.id === activeId);
     if (!scenario) return;
-    runChance(inputs, scenario);
-    track({ name: 'chance_run', props: { paths: chanceSettings.paths, fixedSeed: chanceSettings.seed !== null } });
-  }, [inputs, runChance]);
+    const { startChanceRun, finishChanceRun } = usePlanStore.getState();
+    const id = startChanceRun();
+    const profile = profileFor(inputs, moves);
+    setTimeout(() => {
+      // A change since the click makes this run stale: skip it (finishChanceRun would drop it anyway).
+      if (usePlanStore.getState().chanceRun !== id) return;
+      let r: MonteCarloResult | null = null;
+      try {
+        r = monteCarlo(profile, inputs.accounts, scenario, settings, inputs.area);
+      } catch (err) {
+        console.error('monteCarlo failed', err);
+      }
+      finishChanceRun(id, r);
+    }, 0);
+  }, [scenario, moves, inputs, settings]);
 
   const updateSettings = useCallback(
     (patch: ChanceSettingsPatch) => {
@@ -96,8 +142,8 @@ export function useChanceOfSuccess(): ChanceOfSuccessVM {
       if (patch.seed !== undefined) next.seed = patch.seed;
       if (patch.inflation) next.inflation = { mean: Math.max(0, patch.inflation.mean), sd: Math.max(0, patch.inflation.sd) };
       if (patch.endThreshold !== undefined && Number.isFinite(patch.endThreshold)) next.endThreshold = patch.endThreshold;
-      // A new setting makes the shown result stale: back to idle, and the running worker is cancelled.
-      setChance({ chanceSettings: next, chanceStatus: 'idle', ...(next.seed !== null ? { fixedSeed: next.seed } : {}) });
+      // A new setting makes the shown result stale: go back to idle (MP7b: cancel the running worker).
+      setChance({ chanceSettings: next, chanceStatus: 'idle', chanceResult: null, ...(next.seed !== null ? { fixedSeed: next.seed } : {}) });
     },
     [setChance],
   );
@@ -105,21 +151,25 @@ export function useChanceOfSuccess(): ChanceOfSuccessVM {
   const setFixedSeed = useCallback(
     (fixed: boolean) => {
       const { chanceSettings, fixedSeed } = usePlanStore.getState();
-      setChance({ chanceSettings: { ...chanceSettings, seed: fixed ? fixedSeed : null }, chanceStatus: 'idle' });
+      setChance({ chanceSettings: { ...chanceSettings, seed: fixed ? fixedSeed : null }, chanceStatus: 'idle', chanceResult: null });
     },
     [setChance],
   );
 
+  // The plan's own KPIs, for the histogram markers (a plan change drops the result, so they match the run).
+  const planKpis = useMemo(() => (scenario ? planOf(inputs, scenario, moves).kpis : undefined), [inputs, scenario, moves]);
+
   return useMemo(
     () => ({
       status,
-      result: status === 'done' && result ? resultVM(result) : null,
+      result: status === 'done' && result ? resultVM(result, planKpis, scenario?.assumptions.endAge) : null,
       settings: settingsVM(settings),
       idleMessage: copy.chance.idle,
+      errorMessage: status === 'error' ? copy.chance.error : null,
       run,
       updateSettings,
       setFixedSeed,
     }),
-    [status, settings, result, run, updateSettings, setFixedSeed],
+    [status, result, planKpis, scenario, settings, run, updateSettings, setFixedSeed],
   );
 }

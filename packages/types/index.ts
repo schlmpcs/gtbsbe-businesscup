@@ -75,12 +75,20 @@ export type GuessReveal = { resultId: string; cost: CostBreakdown; result: Guess
 // the source (the server, or the fixture client in fixture mode) holds the answers and scores.
 export type DuelLetter = 'A' | 'B';
 export type DuelRound = 1 | 2 | 3 | 4 | 5;
+/**
+ * The fact groups a public duel card shows, in this order. Every line is a word fact read off one
+ * LifeCard field (bedrooms, state, adults, kids' ages, car, eating out): never a dollar amount, a
+ * total, the ZIP or the neighborhood tier (the tier is what the paid hint reveals).
+ */
+export type DuelFactGroupId = 'home' | 'family' | 'car' | 'food';   // order: DUEL_FACT_GROUPS (constants.ts)
+/** One group of a card's facts: exactly two short lines, so both cards' rows line up side by side. */
+export type DuelFactGroup = { group: DuelFactGroupId; items: [string, string] };
 export type PublicDuelCard = {
   letter: DuelLetter;
   household: string;                  // "2 adults · 1 kid · 3 bedrooms"
   metro: string;                      // "Columbus, OH"
   caption: string;                    // flavor line, no cost facts
-  facts: string[];                    // 4 chips: "1 car", "Daycare", "Cooks at home", "Rents"
+  facts: DuelFactGroup[];             // always the 4 groups, in DUEL_FACT_GROUPS order, 2 lines each
   art: string;                        // house sprite id (engine SpriteId, e.g. "layout/2bed")
   composite: true;                    // the UI shows a "Composite" label
 };

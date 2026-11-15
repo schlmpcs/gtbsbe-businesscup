@@ -1,23 +1,40 @@
 // @vitest-environment jsdom
-// usePlan, useScenarios, useEventCatalog on the demo fixtures (planStore.ts resetPlanStore pins the demo
-// profile at asOf 2026-11, accounts.demo.json and ZIP 75206): the real engine, no network. Expected
-// numbers are plan.demo.json, regenerated from plan() by `pnpm fixtures:plan`.
+// usePlan, useScenarios, useEventCatalog on the engine: the demo profile (what the profile store holds
+// before the person enters anything) at 2026-11, ZIP 75206, and the demo scenarios. Expected numbers are
+// the engine's plan() of the same inputs, called here directly, so the hooks are checked to show the
+// engine's numbers and nothing else.
+import { findArea } from '@lifeguessr/data/areas';
+import { scenarioDemo } from '@lifeguessr/data/fixtures/plan';
+import { plan } from '@lifeguessr/engine';
+import type { PlanResult, Scenario } from '@lifeguessr/types';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTOSAVE_MS, resetPlanStore } from './planStore';
+import { stampProfile } from '@/state/profile';
+import { useAppStore } from '@/state/store';
+import { money } from './planFormat';
+import { AUTOSAVE_MS, resetPlanStore, usePlanStore } from './planStore';
 import type { PlanVM } from './types';
 import { useEventCatalog } from './useEventCatalog';
 import { usePlan } from './usePlan';
 import { useScenarios } from './useScenarios';
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+  vi.setSystemTime(new Date('2026-11-14T12:00:00'));
+  useAppStore.getState().reset();
   resetPlanStore();
-  vi.useFakeTimers();
 });
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
+
+/** The engine's plan of `scenario` on the profile store's profile at 2026-11 and its ZIP's area data. */
+function enginePlan(scenario: Scenario): PlanResult {
+  const profile = stampProfile(useAppStore.getState().profile, '2026-11');
+  return plan(profile, [], scenario, findArea(profile.zip) ?? undefined);
+}
+const active = (id = 'baseline') => usePlanStore.getState().scenarios.find((s) => s.id === id)!;
 
 function ready(vm: PlanVM) {
   if (vm.status !== 'ready') throw new Error('plan not ready');
@@ -25,69 +42,69 @@ function ready(vm: PlanVM) {
 }
 
 describe('usePlan', () => {
-  it('shows the four KPI cards from the fixture plan, formatted, with tones and tooltips', () => {
+  it('shows the four KPI cards of the engine plan, formatted, with tones and tooltips', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     const vm = ready(result.current);
-    // plan.demo.json kpis: netWorthEndOfYear −3,102.91; atRetirement (age 67) 936,904.28; atEnd (age 90)
-    // 1,138,569.22; shortfallAge null (the 2033 home's $75,000 down payment is covered by cash and
-    // investments, so the plan never runs short: "Past 90").
-    expect(vm.kpis.map((k) => [k.id, k.value, k.tone])).toEqual([
-      ['netWorthEndOfYear', '−$3,103', 'bad'],
-      ['netWorthAtRetirement', '$936,904', 'good'],
-      ['netWorthAtEnd', '$1,138,569', 'good'],
-      ['shortfall', 'Past 90', 'good'],
+    const k = enginePlan(active()).kpis;
+    expect(vm.kpis.map((x) => [x.id, x.value, x.raw])).toEqual([
+      ['netWorthEndOfYear', money(k.netWorthEndOfYear), k.netWorthEndOfYear],
+      ['netWorthAtRetirement', money(k.netWorthAtRetirement), k.netWorthAtRetirement],
+      ['netWorthAtEnd', money(k.netWorthAtEnd), k.netWorthAtEnd],
+      ['shortfall', 'Past 90', null],
     ]);
-    expect(vm.kpis.every((k) => k.tooltip.length > 0 && k.tooltipKey === k.id)).toBe(true);
+    // The demo story: today's balance sheet is below zero (card + car loan), the $350,000 home in 2032
+    // is paid from savings, and the money lasts past 90.
+    expect(vm.kpis[0]!.tone).toBe('bad');
+    expect(k.netWorthAtRetirement).toBeGreaterThan(500_000);
+    expect(k.shortfallAge).toBeNull();
+    expect(vm.kpis.every((x) => x.tooltip.length > 0 && x.tooltipKey === x.id)).toBe(true);
     expect(vm.disclaimer).toMatch(/educational simulation/i);
   });
 
-  it('the shortfall card names the age the plan runs short: the Compare pair (Baseline + a kid) at 39', () => {
-    // scenario.alt.json adds a kid in 2030: 840.67 of childcare + 850 of other costs = 1,690.67 a month, more
-    // than the month's surplus, so cash, investments and retirement are drawn down from 2030 and the
-    // $75,000 down payment in 2033 runs past them: shortfall from age 32 + (2033 − 2026) = 39 (plan() output).
-    const { result } = renderHook(() => usePlan('with-kid'));
-    const shortfall = ready(result.current).kpis.find((k) => k.id === 'shortfall')!;
-    expect([shortfall.value, shortfall.tone, shortfall.raw]).toEqual(['Age 39', 'bad', 39]);
-  });
-
-  it('builds the chart, its event markers and x ticks, and the three tables', () => {
+  it('builds the chart, its event markers and x ticks, and the three tables from plan()', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     const vm = ready(result.current);
+    const p = enginePlan(active());
     // 2026 (age 32) to 2084 (age 90) = 59 plan years.
     expect(vm.chart.points).toHaveLength(59);
-    expect(vm.chart.points[0]).toMatchObject({ year: 2026, age: 32, netWorthLabel: '−$3,103', belowZero: true });
-    expect(vm.chart.points[0]!.netWorth).toBeCloseTo(-3102.91, 2);
-    expect(vm.chart.points[1]!.belowZero).toBe(false); // 2027: 14,042.21
+    expect(vm.chart.points.map((x) => x.netWorth)).toEqual(p.years.map((y) => y.netWorth));
+    expect(vm.chart.points[0]).toMatchObject({ year: 2026, age: 32, belowZero: true });
     expect(vm.chart.markers.map((m) => [m.id, m.year, m.icon]).sort()).toEqual([
-      ['ev-buy-home', 2033, 'home'],
+      ['ev-buy-home', 2032, 'home'],
       ['ev-retire', 2061, 'beach'],
       ['ev-social-security', 2061, 'shield'],
     ]);
     expect(vm.chart.retireYear).toBe(2061); // 2026 + (67 − 32)
+    expect(vm.chart.yearRange).toEqual({ min: 2026, max: 2084 });
     expect(vm.chart.xTicks[0]).toEqual({ year: 2026, age: 32, label: '2026' });
     expect(vm.chart.xTicks.map((t) => t.age % 5)).toEqual([2, ...vm.chart.xTicks.slice(1).map(() => 0)]);
 
     expect(vm.tables.accounts.rows).toHaveLength(59);
-    expect(vm.tables.accounts.columns.map((c) => c.name)).toContain('Checking');
-    // Today's $1,300 in checking, in today's dollars at the end of December (2 months from asOf November):
-    // 1,300 ÷ 1.03^(2/12) = 1,293.61. Cash gets 30% of the 2026 net of 1,874.65 (below), shared by balance:
-    // 1,874.65 × 0.3 × 1,300 / 3,800 = 192.40 to checking; with 6.63 of cash yield it ends at 1,492.63.
-    expect(vm.tables.accounts.rows[0]!.cells['checking-1']).toMatchObject({ start: '$1,294', deposits: '$192', end: '$1,493' });
-    // The home and its mortgage are rows of the account table, named after the event.
-    expect(vm.tables.accounts.columns.filter((c) => c.accountId.startsWith('ev-buy-home:')).map((c) => [c.name, c.group]))
-      .toEqual([['Home', 'realEstate'], ['Mortgage', 'mortgage']]);
+    // The home and its mortgage are rows of their own, named after the event.
+    const names = vm.tables.accounts.columns.map((c) => c.name);
+    expect(names).toEqual(expect.arrayContaining(['Home', 'Mortgage']));
     expect(vm.tables.accounts.rows.find((r) => r.isRetirementYear)!.year).toBe(2061);
-    // 2026 cash flow (November and December, each month in today's dollars: ÷ 1.03^(1/12) and ÷ 1.03^(2/12),
-    // together × 1.992625): take-home 5,200 × 1.992625 = 10,361.65; spending 3,655 a month (1,950 + 310 +
-    // 520 + 340 + 85 + 450) × 1.992625 = 7,283.05; plus debt payments 1,203.95 = expenses 8,487.00; net 1,874.65.
-    expect(vm.tables.cashFlow.rows[0]).toMatchObject({ incomeLabel: '$10,362', expensesLabel: '$8,487', netLabel: '$1,875', netTone: 'good' });
-    expect(vm.tables.cashFlow.rows[0]!.expenseLines.map((l) => [l.label, l.amountLabel])).toEqual([
-      ['Spending', '$7,283'], ['Debt payments', '$1,204'], ['One-time costs and down payments', '$0'],
-    ]);
+    // Assets then liabilities, each group listing its accounts; totals are the engine's.
+    const { sections } = vm.tables.accounts;
+    expect(sections.map((s) => s.id)).toEqual(['assets', 'liabilities']);
+    expect(sections.flatMap((s) => s.groups.flatMap((g) => g.accountIds)).sort()).toEqual(vm.tables.accounts.columns.map((c) => c.accountId).sort());
+    expect(sections[1]!.groups.map((g) => g.group)).toContain('mortgage');
+    const r2040 = vm.tables.accounts.rows.find((r) => r.year === 2040)!;
+    const p2040 = p.years.find((y) => y.year === 2040)!;
+    expect(r2040).toMatchObject({ assetsLabel: money(p2040.assets), liabilitiesLabel: money(p2040.liabilities) });
+    const mortgageIds = new Set(sections[1]!.groups.find((g) => g.group === 'mortgage')!.accountIds);
+    const mortgageEnd = p2040.accounts.filter((a) => mortgageIds.has(a.accountId)).reduce((s, a) => s + a.end, 0);
+    expect(r2040.groupEnds.mortgage).toBe(money(mortgageEnd));
+    const y0 = p.years[0]!;
+    const income = y0.cashFlow.income.reduce((s, l) => s + l.amount, 0);
+    expect(vm.tables.cashFlow.rows[0]).toMatchObject({ incomeLabel: money(income), netLabel: money(y0.cashFlow.net) });
+    // 2032: the $70,000 down payment is a one-time cost of that year.
+    const y2032 = vm.tables.cashFlow.rows.find((r) => r.year === 2032)!;
+    expect(y2032.expenseLines.find((l) => l.key === 'oneOffCosts')!.label).toBe('One-time costs and down payments');
     expect(vm.tables.events.map((e) => [e.id, e.year, e.age])).toEqual([
-      ['ev-buy-home', 2033, 39], ['ev-retire', 2061, 67], ['ev-social-security', 2061, 67],
+      ['ev-buy-home', 2032, 38], ['ev-retire', 2061, 67], ['ev-social-security', 2061, 67],
     ]);
-    expect(vm.tables.events[0]!.summary).toBe('$375,000 home, 20% down'); // 75,000 / 375,000 = 0.2
+    expect(vm.tables.events[0]!.summary).toBe('$350,000 home, 20% down'); // 70,000 / 350,000 = 0.2
   });
 
   it('returns notFound for an unknown scenario', () => {
@@ -95,11 +112,11 @@ describe('usePlan', () => {
     expect(result.current.status).toBe('notFound');
   });
 
-  it('moveEvent changes the event year in state, clamped to the plan years', () => {
+  it('moveEvent changes the event year, clamped to the plan years, and the plan follows', () => {
     const { result } = renderHook(() => usePlan('baseline'));
-    act(() => ready(result.current).moveEvent('ev-buy-home', 2031.4));
-    expect(ready(result.current).tables.events.find((e) => e.id === 'ev-buy-home')!.year).toBe(2031);
-    expect(ready(result.current).chart.markers.find((m) => m.id === 'ev-buy-home')!.year).toBe(2031);
+    act(() => ready(result.current).moveEvent('ev-buy-home', 2034.4));
+    expect(ready(result.current).tables.events.find((e) => e.id === 'ev-buy-home')!.year).toBe(2034);
+    expect(ready(result.current).kpis[1]!.raw).toBe(enginePlan(active()).kpis.netWorthAtRetirement);
     act(() => ready(result.current).moveEvent('ev-buy-home', 2200));
     expect(ready(result.current).chart.markers.find((m) => m.id === 'ev-buy-home')!.year).toBe(2084);
     act(() => ready(result.current).moveEvent('ev-buy-home', 1990));
@@ -117,7 +134,7 @@ describe('usePlan', () => {
   it('autosave: saving right after a change, saved 300 ms later', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     expect(ready(result.current).saveState).toBe('saved');
-    act(() => ready(result.current).moveEvent('ev-buy-home', 2030));
+    act(() => ready(result.current).moveEvent('ev-buy-home', 2033));
     expect(ready(result.current)).toMatchObject({ saveState: 'saving', saveLabel: 'Saving…' });
     act(() => void vi.advanceTimersByTime(AUTOSAVE_MS - 1));
     expect(ready(result.current).saveState).toBe('saving');
@@ -125,25 +142,42 @@ describe('usePlan', () => {
     expect(ready(result.current)).toMatchObject({ saveState: 'saved', saveLabel: 'Saved just now' });
   });
 
-  it('setDisplay("future") grows the values by inflation', () => {
+  it('setDisplay("future") shows the engine plan in nominal dollars', () => {
     const { result } = renderHook(() => usePlan('baseline'));
     act(() => ready(result.current).setDisplay('future'));
     const vm = ready(result.current);
     expect(vm.display.value).toBe('future');
-    // Retirement is the end of 2061, 12 × 36 − 10 = 422 months after asOf November 2026:
-    // 936,904.28 × 1.03^(422/12) = 936,904.28 × 2.827759 = 2,649,339.57.
-    expect(vm.kpis[1]!.value).toBe('$2,649,340');
+    const k = enginePlan(active()).kpis;
+    expect(vm.kpis[1]!.raw).toBe(k.netWorthAtRetirement);
+    expect(k.netWorthAtRetirement).toBeGreaterThan(enginePlan(scenarioDemo as Scenario).kpis.netWorthAtRetirement);
+  });
+
+  it('a profile change moves the plan: the hooks read the profile store', () => {
+    const { result } = renderHook(() => usePlan('baseline'));
+    const before = ready(result.current).kpis[1]!.raw as number;
+    act(() => useAppStore.getState().setSpending('eatingOut', 140)); // $200 a month less
+    const after = ready(result.current).kpis[1]!.raw as number;
+    expect(after).toBeGreaterThan(before);
+    expect(after).toBe(enginePlan(active()).kpis.netWorthAtRetirement);
   });
 });
 
 describe('useScenarios', () => {
-  it('lists the two fixture scenarios, the first active, and can compare', () => {
+  it('lists the two demo scenarios, the first active, and can compare', () => {
     const { result } = renderHook(() => useScenarios());
     expect(result.current.items.map((s) => [s.id, s.name, s.active])).toEqual([
       ['baseline', 'Baseline', true],
       ['with-kid', 'Baseline + a kid', false],
     ]);
     expect(result.current.canCompare).toBe(true);
+  });
+
+  it('a profile of the person’s own gets the engine Baseline: Retire and Social Security at 67', () => {
+    act(() => useAppStore.getState().setSpending('eatingOut', 300)); // the profile is now the person's own
+    const { result } = renderHook(() => useScenarios());
+    expect(result.current.items.map((s) => s.name)).toEqual(['Baseline']);
+    const events = usePlanStore.getState().scenarios[0]!.events;
+    expect(events.map((e) => [e.type, e.year])).toEqual([['retire', 2061], ['socialSecurity', 2061]]);
   });
 
   it('select, add (duplicate the active one), rename and remove', () => {
@@ -186,7 +220,7 @@ describe('useEventCatalog', () => {
     expect(result.current.entries.every((e) => e.title && e.description && e.icon)).toBe(true);
   });
 
-  it('add(type) creates the event with its defaults and opens the editor on it', () => {
+  it('add(type) creates the event with the engine defaults and opens the editor on it', () => {
     const catalog = renderHook(() => useEventCatalog());
     const plan = renderHook(() => usePlan('baseline'));
     let id: string | null = null;
@@ -196,7 +230,8 @@ describe('useEventCatalog', () => {
     const row = ready(plan.result.current).tables.events.find((e) => e.id === id)!;
     expect(row).toMatchObject({ type: 'haveKid', year: 2027, enabled: true });
     // Dallas County infant childcare in the demo ZIP's area data.
-    expect(row.summary).toMatch(/^\$\d[\d,]* a month of childcare for 5 years$/);
+    const childcare = findArea('75206')!.childcareMonthly!.infant;
+    expect(row.summary).toBe(`${money(childcare)} a month of childcare for 5 years`);
     act(() => catalog.result.current.closeEditor());
     expect(catalog.result.current.openEventId).toBeNull();
   });

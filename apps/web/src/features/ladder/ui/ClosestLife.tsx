@@ -3,9 +3,11 @@
 // preselected (JF13): one white card with a house cutout that matches the household (studio, 1-bed
 // apartment, family house, with or without a car; decorative only), the household as the headline, the
 // metro, a big "$X / month", 1–2 chips that explain the price, and the cost lines with sources under
-// "Costs & sources". The orange CTA starts from it in one tap. When the spending came from a
-// statement, the starting month is skipped and only "About you" is asked.
-import type { InputHTMLAttributes } from 'react';
+// "Costs & sources". The orange CTA starts from it in one tap; until there is a ZIP we have data for it
+// waits, and says why next to it. When the spending came from a statement, the starting month is
+// skipped and only "About you" is asked. Age and pay are asked here only: an empty box shows our typical
+// value as a grey "e.g." placeholder, with one estimate tag for the block (never a value that looks typed).
+import { useId, type InputHTMLAttributes } from 'react';
 import { common, ladder } from '@/copy';
 import {
   Art, BarBreakdown, Button, buttonClassName, Card, Choice, cx, EstimateTag, Field, formatMoney, NumberInput, Stack, Sticker, Tag,
@@ -56,14 +58,21 @@ export function ClosestLife({ vm, progress }: ClosestLifeProps) {
   const nextHref = progress.rungs[step + 1]?.href ?? progress.futureHref;
   // The built month is preselected: the CTA starts from it (and saves it) in one tap. With a statement
   // there is nothing to start from, so the CTA just leads on.
+  const waitId = useId();
   const primary = vm.spendingFromStatement || chosen ? undefined : vm.selectedCardId ? (
     <a href={nextHref} onClick={vm.choose} className={buttonClassName({ size: 'lg' })}>
       {ladder.shell.cta.S6}
     </a>
   ) : (
-    <Button size="lg" disabled>
-      {ladder.shell.cta.S6}
-    </Button>
+    // Disabled until a ZIP we have data for: the reason sits right next to it.
+    <div className="flex flex-col items-stretch gap-xs sm:items-end">
+      <Button size="lg" disabled aria-describedby={waitId}>
+        {ladder.shell.cta.S6}
+      </Button>
+      <p id={waitId} data-testid="zip-needed" className="text-sm text-text-muted">
+        {vm.about.zipStatus === 'empty' || vm.about.zipStatus === 'invalid' ? t.about.zipNeeded : t.about.zipNeededData}
+      </p>
+    </div>
   );
   return (
     <LadderShell screen="S6" progress={progress} loading={vm.status === 'loading'} primary={primary}>
@@ -123,13 +132,22 @@ function AboutYou({ vm }: { vm: ClosestLifeVM }) {
   const ta = t.about;
   const zipError = a.zipStatus === 'invalid' ? ta.zipErrors.invalid : a.zipStatus === 'none' ? ta.zipErrors.none : undefined;
   const zipHint = a.zipStatus === 'nearby' && a.areaZip ? `${ta.zipHint} ${ta.zipNearby(a.areaZip)}` : ta.zipHint;
+  const anyEstimate = a.age.isEstimate || a.takeHomePay.isEstimate;
   return (
     <Card title={ta.title} headingLevel={2}>
       <Stack gap="xl">
+        {/* One estimate tag for the block (not one per box): its sr-only text explains it once. */}
+        {anyEstimate && (
+          <p className="flex flex-wrap items-center gap-sm text-sm text-text-muted" data-testid="about-estimates">
+            <EstimateTag />
+            {ta.estimateNote}
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-lg sm:grid-cols-2">
-          <Field label={ta.age} isEstimate={a.age.isEstimate} hint={a.age.isEstimate ? ta.estimateHint : undefined}>
+          <Field label={ta.age}>
             <NumberInput
               value={a.age.value}
+              placeholder={ta.estimatePlaceholder(String(a.age.estimate))}
               min={a.age.bounds.min}
               max={a.age.bounds.max}
               maxFractionDigits={0}
@@ -139,9 +157,10 @@ function AboutYou({ vm }: { vm: ClosestLifeVM }) {
               }}
             />
           </Field>
-          <Field label={ta.pay} isEstimate={a.takeHomePay.isEstimate} hint={a.takeHomePay.isEstimate ? `${ta.payHint} ${ta.estimateHint}` : ta.payHint}>
+          <Field label={ta.pay} hint={ta.payHint}>
             <NumberInput
               value={a.takeHomePay.value}
+              placeholder={ta.estimatePlaceholder(Math.round(a.takeHomePay.estimate).toLocaleString('en-US'))}
               min={a.takeHomePay.bounds.min}
               max={a.takeHomePay.bounds.max}
               maxFractionDigits={0}
@@ -289,11 +308,12 @@ function Candidate({
             </p>
             <BarBreakdown
               label={t.costsLabel(c.metro)}
+              // Every line of a built month is a typical value for the area: the one estimate tag under the
+              // card says so for all of them, so the lines carry their sources, not a tag each.
               items={c.items.map((i) => ({
                 id: i.id,
                 label: common.categories[i.category],
                 amount: i.amount,
-                isEstimate: i.isEstimate,
                 source: i.source,
               }))}
               total={c.monthly.mid}

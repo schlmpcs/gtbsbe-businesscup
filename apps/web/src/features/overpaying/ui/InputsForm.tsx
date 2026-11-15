@@ -92,7 +92,7 @@ export function InputsForm({ vm }: { vm: OverpayingVM }) {
             <Field
               key={line}
               label={t.lines[line]}
-              hint={prefill.amounts[line] ? t.form.fromProfile : undefined}
+              hint={prefill.amounts[line] === 'ledger' ? t.form.fromLedger : prefill.amounts[line] ? t.form.fromProfile : undefined}
               isEstimate={prefill.amounts[line] === 'profileEstimate'}
               error={invalid.has(line) ? t.form.errors.amount : undefined}
             >

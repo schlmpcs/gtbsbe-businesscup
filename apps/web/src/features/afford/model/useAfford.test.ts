@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { canAfford, debtLoadThresholds, inflationAnnualOf, safetyCushionMonths } from '@lifeguessr/engine';
+import { affordComfort, canAfford, comfortableCushionMonths, debtLoadThresholds, inflationAnnualOf, safetyCushionMonths } from '@lifeguessr/engine';
 import { COST_CATEGORIES, type CostCategory, type Profile, type Purchase } from '@lifeguessr/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -24,7 +24,12 @@ describe('useAfford (S11)', () => {
     await waitForReady(result);
     expect(result.current.result).toBeNull();
     expect(result.current.invalidFields).toEqual([]);
-    expect(result.current.rules).toEqual({ cushionMonths: safetyCushionMonths.value, debtLoadRed: debtLoadThresholds.value.red });
+    expect(result.current.rules).toEqual({
+      cushionMonths: safetyCushionMonths.value,
+      debtLoadRed: debtLoadThresholds.value.red,
+      debtLoadYellow: debtLoadThresholds.value.yellow,
+      comfortableCushionMonths: comfortableCushionMonths.value,
+    });
 
     act(() => {
       result.current.setLabel('Laptop');
@@ -37,6 +42,17 @@ describe('useAfford (S11)', () => {
     const r = result.current.result!;
     expect(r.status).toBe('ready');
     if (r.status !== 'ready') return;
+    // The comfort tier and its numbers are the engine's affordComfort on the same purchase and rates.
+    const comfort = affordComfort(cloneProfileDemo(), purchase, expected.verdict, { rates });
+    expect(r.data).toMatchObject({
+      tier: comfort.tier,
+      stretchedBy: comfort.stretchedBy,
+      cushion: { before: comfort.cushionMonthsBefore, after: comfort.cushionMonthsAfter },
+      debtLoad: { before: comfort.debtLoadBefore, after: comfort.debtLoadAfter },
+    });
+    // The chart: one point a year, today to year 10, read off the same with / without forecasts.
+    expect(r.data.chart.map((p) => p.year)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(r.data.chart[10]).toEqual({ year: 10, with: expected.with.points[120]!.mid, without: expected.without.points[120]!.mid });
     expect(r.data).toMatchObject({
       verdict: expected.verdict,
       baselineFails: expected.baselineFails,

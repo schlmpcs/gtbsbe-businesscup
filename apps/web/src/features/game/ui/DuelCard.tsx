@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { duel as t } from '@/copy';
 import { Art, Money, Sticker, cx, type ArtName } from '@/ui-kit';
-import type { DuelCardVM } from '../model/types';
+import type { DuelCardVM, DuelFactGroup, DuelFactGroupId } from '../model/types';
 import { CategoryBar } from './CategoryBar';
 import { DuelIcon, type DuelIconName } from './DuelIcons';
 
@@ -21,29 +21,35 @@ const FRAME: Record<DuelCardVM['state'], string> = {
 };
 
 /**
- * The house picture, from facts the card already shows (bedrooms in the layout id, kids in the fact
- * chips), never from the cost: a studio or one-bedroom is an apartment, a big home is the large house,
+ * The house picture, from facts the card already shows (bedrooms in the layout id, kids in the Family
+ * group), never from the cost: a studio or one-bedroom is an apartment, a big home is the large house,
  * a small home with kids is the family house, the rest the suburban house.
  */
 function homeArt(card: DuelCardVM): ArtName {
   const match = /(\d)bed/.exec(card.art);
   const bedrooms = match ? Number(match[1]) : 0;
-  const kids = !card.facts.includes(t.facts.noKids);
+  const kids = card.facts.find((g) => g.group === 'family')?.items[0] !== t.facts.noKids;
   if (bedrooms <= 1) return 'home-apartment';
   if (bedrooms >= 4) return 'home-large';
   if (kids && bedrooms <= 2) return 'home-family';
   return 'home-suburb';
 }
 
-const CAR_FACTS: readonly string[] = [t.facts.noCar, t.facts.economyCar, t.facts.midCar, t.facts.luxuryCar];
-const KID_FACTS: readonly string[] = [t.facts.daycare, t.facts.schoolKids, t.facts.noKids];
-const FOOD_FACTS: readonly string[] = [t.facts.cooksAtHome, t.facts.eatsOutSometimes, t.facts.eatsOutOften, t.facts.eatsOutMostDays];
+const GROUP_ICON: Record<DuelFactGroupId, DuelIconName> = { home: 'home', family: 'people', car: 'car', food: 'food' };
 
-function factIcon(fact: string): DuelIconName {
-  if (CAR_FACTS.includes(fact)) return 'car';
-  if (KID_FACTS.includes(fact)) return 'people';
-  if (FOOD_FACTS.includes(fact)) return 'food';
-  return 'home';
+/** One fact group tile: icon and group name, then its two lines (the first one bold). */
+function FactGroup({ group }: { group: DuelFactGroup }) {
+  const [main, detail] = group.items;
+  return (
+    <li className="flex min-w-0 flex-col gap-xs rounded-lg bg-surface-strong p-md">
+      <span className="inline-flex items-center gap-xs text-xs font-bold uppercase tracking-wide text-text-muted">
+        <DuelIcon name={GROUP_ICON[group.group]} className="size-md shrink-0 text-primary" />
+        {t.facts.groups[group.group]}
+      </span>
+      <span className="text-sm font-bold leading-snug text-text sm:text-base">{main}</span>
+      <span className="text-sm leading-snug text-text-muted">{detail}</span>
+    </li>
+  );
 }
 
 /**
@@ -60,7 +66,10 @@ export function DuelCard({ card, onPick, disabled = false }: DuelCardProps) {
     <article
       aria-labelledby={headingId}
       className={cx(
-        'relative flex h-full w-full min-w-0 flex-col gap-lg rounded-xl bg-surface p-lg text-text shadow-md transition sm:p-xl',
+        // On desktop the two cards share the screen's grid rows (subgrid), so the house, title, facts,
+        // quote and total line up across A and B whatever each one's text wraps to.
+        'relative flex h-full w-full min-w-0 flex-col gap-lg rounded-xl bg-surface p-lg text-text shadow-md transition sm:p-xl md:grid md:grid-rows-subgrid',
+        revealed ? 'md:row-span-6' : 'md:row-span-5',
         FRAME[card.state],
         pickable && 'hover:-translate-y-xs hover:shadow-lg has-[button:focus-visible]:ring-4 has-[button:focus-visible]:ring-inset has-[button:focus-visible]:ring-primary',
       )}
@@ -106,25 +115,34 @@ export function DuelCard({ card, onPick, disabled = false }: DuelCardProps) {
         >
           {card.household}
         </h3>
-        <p className="text-base text-text-muted">{card.metro}</p>
-        <p className="text-sm text-text-muted">{card.caption}</p>
+        <p className="inline-flex items-center gap-xs text-base text-text-muted">
+          <DuelIcon name="pin" className="size-md shrink-0" />
+          {card.metro}
+        </p>
       </div>
 
-      <ul aria-label={t.card.factsLabel} className="flex flex-wrap gap-sm">
-        {card.facts.map((f) => (
-          <li key={f} className="inline-flex items-center gap-sm rounded-full bg-surface-strong px-md py-sm text-sm font-semibold text-text">
-            <DuelIcon name={factIcon(f)} />
-            {f}
-          </li>
-        ))}
-        {card.hintFact && (
-          <li className="inline-flex items-center gap-sm rounded-full bg-primary-soft px-md py-sm text-sm font-bold text-primary">
-            <DuelIcon name="pin" />
-            <span className="sr-only">{t.card.hintFact}: </span>
-            {card.hintFact}
-          </li>
-        )}
-      </ul>
+      <div className="flex min-w-0 flex-col gap-sm">
+        <ul aria-label={t.card.factsLabel} className="grid grid-cols-2 gap-sm text-left">
+          {card.facts.map((g) => (
+            <FactGroup key={g.group} group={g} />
+          ))}
+          {card.hintFact && (
+            <li className="col-span-2 flex items-center gap-sm rounded-lg bg-primary-soft p-md text-primary">
+              <DuelIcon name="pin" className="size-lg shrink-0" />
+              <span className="flex min-w-0 flex-col">
+                <span className="text-xs font-bold uppercase tracking-wide">
+                  {t.card.hintFact} · {t.card.hintGroup}
+                </span>
+                <span className="text-sm font-bold sm:text-base">{card.hintFact}</span>
+              </span>
+            </li>
+          )}
+        </ul>
+      </div>
+
+      <blockquote className="border-l-4 border-primary-soft pl-md text-left text-sm italic text-text-muted">
+        {card.caption ? t.card.quote(card.caption) : null}
+      </blockquote>
 
       {revealed && card.total !== null && (
         <div className="mt-auto flex flex-col gap-md border-t border-border pt-lg">

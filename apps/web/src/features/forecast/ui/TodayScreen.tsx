@@ -1,7 +1,9 @@
 // S1 Today. First visit: the product above the fold (count your month → see where you're heading →
-// your next best move), one primary CTA (start with your month) and the daily game as the hook.
-// After that, the Home dashboard: your house (the 10-year number), this month, your next move,
-// today's game and What if?. The screen list for judges lives at /screens, not here.
+// your next best move), one primary CTA (start with your month), one secondary (a sample plan) and
+// the daily game as the hook. After that, the Home dashboard, most useful first: your house (the
+// N-year number, with the way into the Plan), your next move, this month and today's game; then the
+// daily log (quick-add collapsed), the cushion (collapsed) and What if?. The screen list for judges
+// lives at /screens, not here.
 // Presentational: everything comes from TodayVM; links come from the route page.
 import type { ReactNode } from 'react';
 import { bills, common, forecast as t, goal as g, spend, tools } from '@/copy';
@@ -38,6 +40,8 @@ export type TodayLinks = {
   /** "Try with sample data": S10 with the sample life loaded. */
   sample: string;
   future: string;
+  /** The Plan (/plan): the primary link under the Home number. */
+  plan: string;
   /** The "What if?" hub. */
   tools: string;
   afford: string;
@@ -46,6 +50,7 @@ export type TodayLinks = {
   checkin: string;
   /** Start of "build your profile" (S5 Guess yourself). */
   profile: string;
+  /** A statement upload (the month card's link and the "make it exact" nudge). */
   upload: string;
   /** The daily spending log (/spend). */
   spend?: string;
@@ -65,26 +70,46 @@ const CARD = 'rounded-xl bg-surface p-xl shadow-md';
 const TEXT_LINK = 'inline-flex min-h-11 items-center gap-xs text-sm font-semibold text-primary hover:underline';
 const CARD_TITLE = 'text-xs font-bold uppercase tracking-wide';
 const VERDICT_TONE = { onTrack: 'positive', withinRange: 'primary', behind: 'ink' } as const;
+const DISCLOSURE_SUMMARY =
+  'flex min-h-11 cursor-pointer list-none items-center justify-between gap-md rounded-xl px-xl py-sm text-sm font-semibold [&::-webkit-details-marker]:hidden';
+
+function Chevron() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 shrink-0 transition-transform group-open:rotate-180" fill="none" stroke="currentColor">
+      <path d="M6 9l6 6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function TodayScreen({ vm, links, Link, quickAdd }: TodayScreenProps) {
   if (vm.firstVisit) return <FirstVisit links={links} Link={Link} />;
   return (
     <main className="mx-auto w-full max-w-(--container-7xl) px-lg py-xl sm:py-3xl">
       <Stack gap="3xl">
-        <HouseHero vm={vm} futureHref={links.future} Link={Link} />
+        <HouseHero vm={vm} planHref={links.plan} futureHref={links.future} Link={Link} />
 
         <Nudge vm={vm} links={links} Link={Link} />
 
-        <NextBillLine vm={vm} href={links.bills} Link={Link} />
-
         <div className="grid items-stretch gap-xl md:grid-cols-2 lg:grid-cols-3">
-          <MonthCard vm={vm} uploadHref={links.upload} Link={Link} />
           <MoveCard vm={vm} futureHref={links.future} Link={Link} />
+          <MonthCard vm={vm} uploadHref={links.upload} Link={Link} />
           <GameCard vm={vm} playHref={links.play} Link={Link} />
-          <CushionCard vm={vm} />
         </div>
 
+        <NextBillLine vm={vm} href={links.bills} Link={Link} />
+
         {(vm.daily || quickAdd) && <DailyCard vm={vm} quickAdd={quickAdd} spendHref={links.spend} Link={Link} />}
+
+        {/* Lower-value on a daily visit: collapsed, one tap away. */}
+        <details data-testid="today-cushion-disclosure" className="group rounded-xl bg-surface shadow-md">
+          <summary className={DISCLOSURE_SUMMARY}>
+            {t.today.home.cushionSummary}
+            <Chevron />
+          </summary>
+          <div className="px-md pb-md">
+            <CushionCard vm={vm} />
+          </div>
+        </details>
 
         <WhatIfRow links={links} Link={Link} />
       </Stack>
@@ -92,8 +117,11 @@ export function TodayScreen({ vm, links, Link, quickAdd }: TodayScreenProps) {
   );
 }
 
-/** The house: net worth in 10 years (AI estimate or rules, as the VM says), its range and the goal verdict. */
-function HouseHero({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; Link: LinkComponent }) {
+/**
+ * The house: net worth in N years (AI estimate or rules, as the VM says), its range and the goal
+ * verdict; then the way into the Plan (primary) and You in N years.
+ */
+function HouseHero({ vm, planHref, futureHref, Link }: { vm: TodayVM; planHref: string; futureHref: string; Link: LinkComponent }) {
   const ready = vm.status === 'ready';
   return (
     <section
@@ -150,10 +178,16 @@ function HouseHero({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; 
             </Stack>
           )}
         </div>
-        <Link href={futureHref} className={buttonClassName({ variant: 'secondary', size: 'lg' })}>
-          {t.today.home.openFuture}
-          <span aria-hidden="true">→</span>
-        </Link>
+        <div className="flex w-full flex-wrap items-center gap-md">
+          <Link href={planHref} className={cx(buttonClassName({ variant: 'primary', size: 'lg' }), 'w-full sm:w-auto')}>
+            {t.today.home.openPlan}
+            <span aria-hidden="true">→</span>
+          </Link>
+          <Link href={futureHref} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}>
+            {t.today.home.openFuture}
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
       </div>
       {/* Decoration only: the art carries no number. */}
       <Art name="house-build" className="mx-auto w-full max-w-60 sm:max-w-(--container-md)" />
@@ -162,18 +196,13 @@ function HouseHero({ vm, futureHref, Link }: { vm: TodayVM; futureHref: string; 
 }
 
 /**
- * At most one nudge: none while the sample life is on (the site banner says it); the starting
- * profile asks you to build yours; estimated inputs ask for a statement.
+ * At most one nudge: none on the sample/starting profile (the sample banner over the page says those
+ * numbers are not yours and leads to onboarding); estimated inputs ask for a statement.
  */
 function Nudge({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: LinkComponent }) {
-  if (vm.status !== 'ready' || vm.isSample) return null;
+  if (vm.status !== 'ready' || vm.isSample || vm.isDemoProfile || !vm.hasEstimates) return null;
   const n = t.today.home.nudge;
-  const nudge = vm.isDemoProfile
-    ? { text: n.demo, cta: n.buildProfile, href: links.profile }
-    : vm.hasEstimates
-      ? { text: n.estimates, cta: n.makeExact, href: links.upload }
-      : null;
-  if (!nudge) return null;
+  const nudge = { text: n.estimates, cta: n.makeExact, href: links.upload };
   return (
     <div
       data-testid="nudge"
@@ -192,7 +221,7 @@ function Nudge({ vm, links, Link }: { vm: TodayVM; links: TodayLinks; Link: Link
 function NextBillLine({ vm, href, Link }: { vm: TodayVM; href?: string; Link: LinkComponent }) {
   const next = vm.status === 'ready' ? vm.nextBill : null;
   if (!next) return null;
-  const text = bills.today.nextBill(next.label, formatMoney(next.amount, { cents: true }), next.inDays);
+  const text = bills.today.nextBill(next.label, formatMoney(next.amount), next.inDays);
   return (
     <p data-testid="next-bill" className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs rounded-xl bg-surface px-xl py-sm text-sm font-semibold shadow-sm">
       <span>{text}</span>
@@ -427,7 +456,15 @@ function DailyCard({
             <DailyNumbers data={daily.data} />
           )}
         </div>
-        {quickAdd}
+        {quickAdd && (
+          <details data-testid="today-quick-add" className="group self-start rounded-xl bg-surface-strong">
+            <summary className={DISCLOSURE_SUMMARY}>
+              {spend.homeQuickAdd}
+              <Chevron />
+            </summary>
+            <div className="px-xl pb-lg">{quickAdd}</div>
+          </details>
+        )}
       </div>
     </section>
   );
@@ -528,7 +565,7 @@ function Steps({ items, label }: { items: readonly string[]; label: string }) {
             >
               {i + 1}
             </span>
-            <Art name={STEP_ART[i]!} className="flex h-24 w-24 items-center" />
+            <Art name={STEP_ART[i]!} loading="eager" className="flex size-24 shrink-0 items-center" />
           </div>
           <p className="text-xl font-bold">{title}</p>
         </li>
@@ -539,7 +576,8 @@ function Steps({ items, label }: { items: readonly string[]; label: string }) {
 
 /**
  * First visit (no profile, no game yet): the product above the fold (the three steps), one primary
- * CTA (start with your month), the statement shortcut, and the daily game as the hook. No user numbers.
+ * CTA (start with your month), one secondary (a sample plan), and the daily game as the hook. No
+ * user numbers. (A statement upload is one of the onboarding steps, so it has no third button here.)
  */
 function FirstVisit({ links, Link }: Omit<TodayScreenProps, 'vm' | 'quickAdd'>) {
   const f = t.today.firstVisit;
@@ -560,20 +598,15 @@ function FirstVisit({ links, Link }: Omit<TodayScreenProps, 'vm' | 'quickAdd'>) 
                 {f.start}
                 <span aria-hidden="true">→</span>
               </Link>
-              <Link href={links.sample} className={TEXT_LINK}>
+              <Link href={links.sample} className={cx(buttonClassName({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}>
                 {f.sample}
               </Link>
             </div>
-            <p className="text-sm text-text-muted">
-              <span>{f.note}</span>{' '}
-              <Link href={links.upload} className="font-semibold text-primary hover:underline">
-                {f.upload}
-              </Link>
-            </p>
+            <p className="text-sm text-text-muted">{f.note}</p>
           </div>
           {/* Decoration only: the art carries no number or cost fact. */}
           <div aria-hidden="true" className="relative mx-auto hidden w-full max-w-(--container-md) lg:block">
-            <Art name="step-future" />
+            <Art name="step-future" loading="eager" />
             <Sticker tone="primary" tilt={6} className="absolute top-lg right-lg">
               {f.heroSticker}
             </Sticker>
@@ -599,7 +632,8 @@ function FirstVisit({ links, Link }: Omit<TodayScreenProps, 'vm' | 'quickAdd'>) 
             </Link>
           </div>
           <div aria-hidden="true" className="relative mx-auto w-full max-w-(--container-xs)">
-            <Art name="duel-houses" />
+            {/* Eager, with its aspect ratio reserved, so the VS badge never floats over a blank on phones. */}
+            <Art name="duel-houses" loading="eager" imgClassName="aspect-[1200/549]" />
             <span className="absolute top-1/3 left-1/2 flex size-12 -translate-x-1/2 items-center justify-center rounded-full bg-ink font-display text-lg font-extrabold uppercase text-on-primary shadow-md">
               {f.vs}
             </span>

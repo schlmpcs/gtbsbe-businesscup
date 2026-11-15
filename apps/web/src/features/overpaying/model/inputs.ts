@@ -100,8 +100,9 @@ export function initialDraft(
   profile: Profile | null,
   stored: OverpayingToolState | undefined,
   household?: { facts: HouseholdFacts; zip: string | null } | null,
+  ledger?: LedgerAverages | null,
 ): { draft: Draft; prefill: PrefillVM } {
-  const result = initialDraftFromProfile(profile, stored);
+  const result = initialDraftFromProfile(profile, stored, ledger ?? null);
   if (!household) return result;
   const { draft, prefill } = result;
   if (draft.householdEntered) return result;
@@ -116,7 +117,14 @@ export function initialDraft(
   return { draft: { ...draft, inputs, householdEntered: true }, prefill: { ...prefill, zip: prefill.zip || fillZip } };
 }
 
-function initialDraftFromProfile(profile: Profile | null, stored: OverpayingToolState | undefined): { draft: Draft; prefill: PrefillVM } {
+/** Monthly averages of the person's transactions by category (engine statementAverages over the ledger). */
+export type LedgerAverages = Partial<Record<CostCategory, Money>>;
+
+function initialDraftFromProfile(
+  profile: Profile | null,
+  stored: OverpayingToolState | undefined,
+  ledger: LedgerAverages | null,
+): { draft: Draft; prefill: PrefillVM } {
   if (stored) {
     const amounts = noAmounts();
     for (const line of BENCHMARK_LINES) amounts[line] = stored[line] ?? null;
@@ -139,21 +147,25 @@ function initialDraftFromProfile(profile: Profile | null, stored: OverpayingTool
   }
   const inputs = emptyInputs();
   const prefill = noPrefill();
-  if (profile) {
-    if (profile.zip) {
-      inputs.zip = profile.zip;
-      prefill.zip = true;
-    }
-    for (const line of BENCHMARK_LINES) {
-      // JF4: an owner's housing line is owner costs, not rent: it is not compared with HUD rent.
-      if (line === 'rent' && profile.home) continue;
-      const category = PROFILE_CATEGORY[line];
-      const spending = category ? profile.spending[category] : undefined;
-      if (spending && spending.value > 0) {
-        inputs.amounts[line] = spending.value;
-        const from: PrefillSource = spending.isEstimate ? 'profileEstimate' : 'profile';
-        prefill.amounts[line] = from;
-      }
+  if (profile?.zip) {
+    inputs.zip = profile.zip;
+    prefill.zip = true;
+  }
+  for (const line of BENCHMARK_LINES) {
+    // JF4: an owner's housing line is owner costs, not rent: it is not compared with HUD rent.
+    if (line === 'rent' && profile?.home) continue;
+    const category = PROFILE_CATEGORY[line];
+    if (!category) continue;
+    // The person's own transactions first (measured monthly averages), then a profile of their own.
+    const measured = ledger?.[category];
+    const spending = profile?.spending[category];
+    if (measured !== undefined && Number.isFinite(measured) && measured > 0) {
+      inputs.amounts[line] = Math.round(measured);
+      prefill.amounts[line] = 'ledger';
+    } else if (spending && spending.value > 0) {
+      inputs.amounts[line] = spending.value;
+      const from: PrefillSource = spending.isEstimate ? 'profileEstimate' : 'profile';
+      prefill.amounts[line] = from;
     }
   }
   return { draft: { inputs, metro: null, tier: null, householdEntered: false }, prefill };

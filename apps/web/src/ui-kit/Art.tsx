@@ -33,10 +33,15 @@ export type ArtProps = {
   tilt?: number;
   className?: string;
   imgClassName?: string;
+  /**
+   * `eager` for art in the first screenful (or art a badge sits on): lazy art far down a long phone
+   * page can still be blank when it scrolls in or in a full-page screenshot. Default `lazy`.
+   */
+  loading?: 'lazy' | 'eager';
 };
 
 /** An illustration. Decorative by default: it never carries a number or a cost fact. */
-export function Art({ name, alt = '', framed = false, tilt = 0, className, imgClassName }: ArtProps) {
+export function Art({ name, alt = '', framed = false, tilt = 0, className, imgClassName, loading = 'lazy' }: ArtProps) {
   const style: CSSProperties | undefined = tilt ? { transform: `rotate(${tilt}deg)` } : undefined;
   return (
     <div style={style} className={cx(framed && 'rounded-xl bg-surface p-md shadow-md', className)}>
@@ -44,8 +49,8 @@ export function Art({ name, alt = '', framed = false, tilt = 0, className, imgCl
       <img
         src={`/art/${name}.webp`}
         alt={alt}
-        loading="lazy"
-        decoding="async"
+        loading={loading}
+        decoding={loading === 'eager' ? 'sync' : 'async'}
         className={cx(
           'block h-auto w-full',
           CUTOUTS.has(name) ? 'object-contain' : 'rounded-lg bg-surface-strong object-cover',

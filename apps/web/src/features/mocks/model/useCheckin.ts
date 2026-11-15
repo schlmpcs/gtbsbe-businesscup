@@ -1,31 +1,31 @@
 // S14 Monthly check-in, all from the engine:
-// - Your month: the latest statement month against the 3 full months before it (engine monthEnd:
-//   projection, vs 3-month average, drift flags). Reads the user's uploads, or the sample
-//   statement's months (fixture, labelled) when there are none.
+// - Your month: the latest month of the person's own money against the usual month (engine
+//   monthEndDetail = monthEnd with its per-category rows: month-end projection, the 3-month average,
+//   drift flags). Their own months are their transactions (the Transactions ledger, its monthly totals
+//   by the engine's statementTotals), else the statements they uploaded on S9; with neither, the
+//   sample statement's months (fixture, labelled as a preview).
 // - Your move: progress on the committed move (engine simulate / applyPatch), then "I did it" (its
-//   patch enters the profile, as on S1) or "not yet"; with no committed move, pick one of the ranked
-//   moves (engine rankMoves through useNextMoves).
-// Nothing is saved besides what the store's existing actions save (commit, done): it is a preview.
-import { applyPatch, forecastMonths, monthEnd, movesLevel, simulate, type CurrentMonth } from '@lifeguessr/engine';
-import type { CategoryTotals, CostCategory, MonthEnd, Move, Profile } from '@lifeguessr/types';
+//   patch enters the profile, as on S1) or "not yet"; with no committed move, the top ranked move to
+//   commit to (engine rankMoves through useNextMoves).
+import { applyPatch, forecastMonths, monthEndDetail, movesLevel, simulate, type CurrentMonth, type MonthEndDetail } from '@lifeguessr/engine';
+import type { CategoryTotals, Move, Profile } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { DRIFT_HISTORY_MONTHS } from '@/features/ladder/model/useStatementUpload';
 import { moveTarget, toMoveVM, useNextMoves } from '@/features/forecast/model/useNextMoves';
+import { PLANNER_ROUTES } from '@/features/dashboard/model/links';
+import { useLedger } from '@/features/transactions/model/transactionsStore';
 import { statementTotalsSample } from '@/fixtures';
 import { localMonthDay } from '@/lib/dates';
 import { runEngine } from '@/lib/model/errors';
 import { areaRates } from '@/lib/model/profile';
+import { transactionTotals } from '@/lib/model/transactions';
 import type { Loadable } from '@/lib/model/types';
-import { SCREEN_ROUTES } from '@/lib/screens';
-import { useAppReady, useAppStore, useProfile, usePro } from '@/state';
+import { useAppReady, useAppStore, useProfile } from '@/state';
 import type {
   CheckinCompareVM, CheckinDataSource, CheckinMonthVM, CheckinMoveAnswer, CheckinVM, MoveProgressVM, MoveVM,
 } from './types';
 
 const NO_MOVES: MoveVM[] = [];
-
-/** Categories that get a tile on the check-in (drifted ones first, the rest as "on track"). */
-export const TILE_CATEGORIES: readonly CostCategory[] = ['eatingOut', 'subscriptions', 'groceries', 'car'];
 
 /** Days in a 'YYYY-MM' month (calendar arithmetic, not money math). */
 export function daysInMonth(yyyyMm: string): number {
@@ -68,17 +68,20 @@ export function checkinMonthInputs(months: readonly CategoryTotals[], today: { m
   };
 }
 
-/** The headline numbers, once monthEnd has an average. */
-export function compareOf(m: MonthEnd): CheckinCompareVM | null {
-  if (m.vsAverage === null) return null;
-  const drifted = new Set(m.drifts.map((d) => d.category));
+/** The headline numbers and the category bars from monthEndDetail. */
+export function compareOf(d: MonthEndDetail): CheckinCompareVM {
+  const difference = d.projectedSpend - d.usualSpend;
   return {
-    projected: m.projectedSpend,
-    average: m.projectedSpend - m.vsAverage,
-    difference: m.vsAverage,
-    direction: Math.round(m.vsAverage) === 0 ? 'even' : m.vsAverage > 0 ? 'over' : 'under',
-    drifts: m.drifts.map((d) => ({ category: d.category, delta: d.delta })),
-    onTrack: TILE_CATEGORIES.filter((c) => !drifted.has(c)),
+    projected: d.projectedSpend,
+    usual: d.usualSpend,
+    usualFromHistory: d.usualFromHistory,
+    difference,
+    direction: Math.round(difference) === 0 ? 'even' : difference > 0 ? 'over' : 'under',
+    spentSoFar: d.spentSoFar,
+    rows: d.rows
+      .filter((r) => r.usual > 0 || r.projected > 0)
+      .map((r) => ({ category: r.category, usual: r.usual, projected: r.projected, soFar: r.soFar, delta: r.delta, drift: r.drift })),
+    driftCount: d.drifts.length,
   };
 }
 
@@ -109,7 +112,7 @@ export function moveProgress(
   }
   // Only the user's own finished month says what they actually spent (not the sample, not a partial month).
   const actual =
-    review.source === 'uploads' && review.latest && !review.inProgress ? (review.latest.totals[target.category] ?? 0) : null;
+    review.source === 'mine' && review.latest && !review.inProgress ? (review.latest.totals[target.category] ?? 0) : null;
   return {
     kind: 'spendingTarget',
     category: target.category,
@@ -120,44 +123,57 @@ export function moveProgress(
   };
 }
 
+const NO_MONTHS: readonly CategoryTotals[] = [];
+
 export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
-  const ready = useAppReady();
+  const appReady = useAppReady();
   const profile = useProfile();
   const statementMonths = useAppStore((s) => s.statementMonths);
+  const { lines, ready: ledgerReady } = useLedger();
   const committedMove = useAppStore((s) => s.committedMove);
   const markMoveDone = useAppStore((s) => s.markMoveDone);
   const nextMoves = useNextMoves(profile);
-  const isPro = usePro().isPro;
 
   const [chosenSource, setChosenSource] = useState<CheckinDataSource | null>(null);
   const [answer, setAnswer] = useState<CheckinMoveAnswer>('none');
   const [doneMove, setDoneMove] = useState<MoveVM | null>(null);
 
-  const hasUploads = statementMonths.length > 0;
-  // Uploads by default once there are any; the sample otherwise (and whenever the user picks it).
-  const source: CheckinDataSource = hasUploads ? (chosenSource ?? 'uploads') : 'sample';
+  // The person's own months: their transactions first (the app's ledger), else their uploaded statements.
+  const ledgerMonths = useMemo(() => (lines.length > 0 ? transactionTotals(lines) : NO_MONTHS), [lines]);
+  const ownKind = ledgerMonths.length > 0 ? 'ledger' : statementMonths.length > 0 ? 'uploads' : null;
+  const own = ownKind === 'ledger' ? ledgerMonths : ownKind === 'uploads' ? statementMonths : NO_MONTHS;
+  const hasOwn = ownKind !== null;
+  // Their own months by default once there are any; the sample otherwise (and whenever they pick it).
+  const source: CheckinDataSource = hasOwn ? (chosenSource ?? 'mine') : 'sample';
 
   const { month: todayMonth, day: todayDay } = localMonthDay(opts.now);
   const review = useMemo(
-    () => checkinMonthInputs(source === 'uploads' ? statementMonths : statementTotalsSample, { month: todayMonth, day: todayDay }),
-    [source, statementMonths, todayMonth, todayDay],
+    () => checkinMonthInputs(source === 'mine' ? own : statementTotalsSample, { month: todayMonth, day: todayDay }),
+    [source, own, todayMonth, todayDay],
+  );
+  const detail = useMemo(
+    () => runEngine(() => monthEndDetail(profile, review.history, review.thisMonth)),
+    [profile, review],
   );
 
   const month: CheckinMonthVM = useMemo(
     () => ({
       source,
-      hasUploads,
+      hasOwn,
+      ownKind,
       month: review.latest?.month ?? null,
       inProgress: review.inProgress,
+      day: detail.status === 'ready' ? detail.data.day : null,
+      daysInMonth: detail.status === 'ready' ? detail.data.daysInMonth : null,
       nextStatementMonth: review.latest ? nextMonth(review.latest.month) : todayMonth,
-      historyMonths: review.history.length,
+      historyMonths: Math.min(review.history.length, DRIFT_HISTORY_MONTHS),
       historyNeeded: DRIFT_HISTORY_MONTHS,
-      result: runEngine(() => monthEnd(profile, review.history, review.thisMonth)),
+      result: detail,
     }),
-    [profile, review, source, hasUploads, todayMonth],
+    [detail, review, source, hasOwn, ownKind, todayMonth],
   );
 
-  const compare = useMemo(() => (month.result.status === 'ready' ? compareOf(month.result.data) : null), [month]);
+  const compare = useMemo(() => (detail.status === 'ready' ? compareOf(detail.data) : null), [detail]);
 
   const committedMoveId = profile.committedMoveId;
   // The committed move as stored (its patch and target are what progress is measured against; its source is unknown).
@@ -194,7 +210,7 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
   );
 
   return {
-    status: ready ? 'ready' : 'loading',
+    status: appReady && ledgerReady ? 'ready' : 'loading',
     month,
     setSource: setChosenSource,
     compare,
@@ -210,8 +226,7 @@ export function useCheckin(opts: { now?: Date } = {}): CheckinVM {
       markDone,
       keepGoing: () => setAnswer('keepGoing'),
     },
-    uploadHref: SCREEN_ROUTES.S9,
-    movesHref: SCREEN_ROUTES.S10,
-    pro: { isPro, href: SCREEN_ROUTES.S15 },
+    uploadHref: PLANNER_ROUTES.importCsv,
+    movesHref: PLANNER_ROUTES.plan,
   };
 }

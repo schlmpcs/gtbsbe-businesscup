@@ -8,6 +8,7 @@ import { profileDemo } from '@/fixtures';
 import { cardsSample } from '@/fixtures/cards';
 import { areaForZip } from '@/lib/areas';
 import { displayForecast, estimatedFields } from '@/lib/model/profile';
+import { chapterHref } from '@/features/onboarding/model/onboardingStore';
 import { SCREEN_ROUTES } from '@/lib/screens';
 import { useAppReady, useAppStore, useProfile, useGameStore, type AppData } from '@/state';
 import { SPENDING_SLIDERS } from './constants';
@@ -24,7 +25,8 @@ export function rungFor(screen: LadderScreen): LadderScreen {
   return screen === 'S7' ? 'S9' : screen;
 }
 const SCALAR_INPUTS = ['age', 'takeHomePay', 'cash', 'retirement', 'retirementShare'] as const;
-const BALANCE_INPUTS = ['age', 'takeHomePay', 'cash', 'retirement'] as const;
+/** S8's own inputs: age and take-home pay are asked on S6 (About you), not here. */
+const BALANCE_INPUTS = ['cash', 'retirement'] as const;
 
 const measured = (e: Estimate<unknown>) => !e.isEstimate;
 
@@ -119,7 +121,8 @@ export function buildLadderProgress(s: ProgressData): Omit<LadderProgressVM, 'st
     bandWidthAllEstimated,
     bandNarrowed,
     estimates: { left, total: forecastInputCount(s.profile) },
-    futureHref: SCREEN_ROUTES.S10,
+    // The ladder's last step leads into the story's chapter 4 (the plan to 90), which ends onboarding.
+    futureHref: chapterHref(4),
     byHandHref: SCREEN_ROUTES.S7,
   };
 }

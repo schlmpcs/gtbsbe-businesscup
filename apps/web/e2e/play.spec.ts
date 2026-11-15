@@ -112,7 +112,7 @@ test('play 3 homes with clues, see each reveal, finish the day and share', async
   // Summary: emoji grid, total, share, and the bridge to S5.
   await expect(page.getByRole('heading', { name: t.summary.heading })).toBeVisible();
   await expect(page.getByRole('list', { name: t.summary.gridLabel }).getByRole('listitem')).toHaveCount(5);
-  await expect(page.getByRole('link', { name: t.summary.cta })).toHaveAttribute('href', '/me/guess');
+  await expect(page.getByRole('link', { name: t.summary.cta })).toHaveAttribute('href', '/start?ch=2');
   await page.getByRole('button', { name: t.summary.share }).click();
   await expect(page.getByRole('status')).toHaveText(t.summary.shareStatus.shared);
   const shared = await page.evaluate(() => (window as unknown as { __shared: string[] }).__shared);
