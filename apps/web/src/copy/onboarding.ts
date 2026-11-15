@@ -5,18 +5,18 @@ export const onboarding = {
   landing: {
     eyebrow: 'A money game that turns into your plan',
     title: 'You don’t know what life costs. Let’s find out.',
-    body: 'Guess what strangers spend, then your own month, then see where your money takes you, all the way to 90.',
+    body: 'Play one round of today’s game, guess what you’re worth, connect your bank and watch your whole life to 90 redraw with every decision.',
     start: 'Start',
     continue: (chapter: number) => `Continue: chapter ${chapter} of 4`,
     restart: 'Start over',
     sample: 'See a sample plan',
-    note: 'No sign-up, no bank login. About 2 minutes.',
+    note: 'No sign-up. About 2 minutes.',
     chaptersLabel: 'The story in 3 steps',
     /** A hint of the chapters (the 4th is where it takes you). */
     chapters: [
-      { title: 'Other people’s money', body: 'Which life costs more? 3 practice rounds.' },
-      { title: 'Your month', body: 'Guess it, then find out what it really is.' },
-      { title: 'Where it takes you', body: 'Your plan to 90, your chance of success and your next move.' },
+      { title: 'Other people’s money', body: 'Which life costs more? One round of today’s game.' },
+      { title: 'What you’re worth', body: 'Guess it, connect your bank, see the real number.' },
+      { title: 'Where it takes you', body: 'Your plan to 90 and one decision that moves all of it.' },
     ],
     heroSticker: 'Your house, built from your month',
     loading: 'Loading…',
