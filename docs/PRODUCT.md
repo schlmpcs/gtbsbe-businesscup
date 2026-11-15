@@ -139,7 +139,7 @@ Same as `docs/PIVOT.md`.
 
 1. Judges scan the QR code and play one home of the daily Duel (30 s); the reveal shows what decided it. Guess your own month.
 2. Three sliders → the Dashboard shows your net worth and this month.
-3. Plan: the line to age 90. Add "Buy a home" in 2029: the mortgage, tax and insurance come from data for your area, and the line drops.
+3. Plan: the line to age 90. Add "Buy a home" in 2033: the mortgage, tax and insurance come from data for your area, and the line drops.
 4. Next Moves: the top move and its dollar effect.
 5. Chance of success: 1,000 paths and the success %; change the seed and get the same result with "fixed seed" on. Compare: the two scenarios overlaid.
 6. Upload the sample CSV → Transactions, Cash Flow Sankey, Budget planned vs actual.

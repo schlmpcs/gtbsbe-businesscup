@@ -60,7 +60,7 @@ import {
 } from './assumptions';
 import { eventStartMonth } from './events';
 import { PAID_OFF_EPSILON } from './loan/amortize';
-import { plan } from './plan';
+import { homeGrowth, plan } from './plan';
 import { expandEvent, planEventMonth } from './planEvents';
 import { type ExtraAssetGroup, type SimulateOptions, type YearlyRates, monthlyRate, simulate } from './simulate';
 
@@ -179,7 +179,7 @@ function prepare(
     const sum = live.filter((x) => x.group === g).reduce((s, x) => s + x.balance.value, 0);
     if (sum !== 0) balances[g] = sum;
   }
-  const growth = groupGrowth(live, a.growth, a.inflation, area);
+  const growth = homeGrowth(groupGrowth(live, a.growth, a.inflation, area), base, live);
 
   // plan.ts step 2: events in date order, each expanded on the profile with the ones before it.
   const ordered = scenario.events.filter((e) => e.enabled)

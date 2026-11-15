@@ -3,7 +3,9 @@
 // "How we calculate" sit behind disclosures.
 import type { ReactNode } from 'react';
 import { forecast as t, yearsPhrase } from '@/copy';
-import { Art, buttonClassName, Choice, cx, EstimateTag, ForecastChart, formatMoney, Money, Stack, Sticker } from '@/ui-kit';
+import {
+  Art, buttonClassName, Choice, cx, EstimateTag, ForecastChart, formatMoney, formatRate, Money, SourceNote, Stack, Sticker,
+} from '@/ui-kit';
 import type { FutureVM } from '../model/types';
 import { HOW_WE_CALCULATE_ID, HowWeCalculate } from './HowWeCalculate';
 import { NextMoves } from './NextMoves';
@@ -150,6 +152,20 @@ function HorizonPicker({ vm }: { vm: FutureVM }) {
   );
 }
 
+/** JF4: the home the forecast counts in net worth, with its estimate tag and sources. */
+function HomeLine({ home }: { home: NonNullable<FutureVM['home']> }) {
+  return (
+    <div className="mt-sm flex flex-col gap-xs text-base text-text-muted" data-testid="future-home">
+      <p className="flex flex-wrap items-center gap-sm">
+        <span className="tabular-nums">{t.future.includesHome(formatMoney(home.value.value), formatRate(home.appreciation.value, 1))}</span>
+        {(home.value.isEstimate || home.appreciation.isEstimate) && <EstimateTag />}
+      </p>
+      {home.value.source && <SourceNote source={home.value.source} variant="toggle" />}
+      {home.appreciation.source && <SourceNote source={home.appreciation.source} variant="toggle" />}
+    </div>
+  );
+}
+
 function Headline({ vm }: { vm: FutureVM }) {
   const f = t.future;
   const dollarsNote = vm.todaysDollars ? t.todaysDollarsNote : t.futureDollarsNote;
@@ -173,6 +189,7 @@ function Headline({ vm }: { vm: FutureVM }) {
           {whyText(vm.why)}
         </p>
       )}
+      {vm.home && <HomeLine home={vm.home} />}
       <div className="mt-sm flex flex-wrap items-center gap-sm text-sm">
         <SourceTag source={vm.source} />
         <span className="text-text-muted">{dollarsNote}</span>
@@ -241,7 +258,7 @@ function ChartCard({ vm, links, Link }: { vm: FutureVM; links: FutureScreenProps
             <ul className="mt-xs flex flex-wrap gap-xs">
               {vm.band.estimatedFields.map((field, i) => (
                 <li key={i} className="rounded-full border border-dashed border-text-muted px-sm text-xs">
-                  {estimatedFieldLabel(field)}
+                  {estimatedFieldLabel(field, vm.home !== null)}
                 </li>
               ))}
             </ul>

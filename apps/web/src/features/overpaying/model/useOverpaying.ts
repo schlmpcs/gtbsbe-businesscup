@@ -176,5 +176,6 @@ export function useOverpaying(profile: Profile | null, opts: OverpayingOptions =
     result: computed?.result ?? null,
     playHref: streamerGameHref(),
     profileHref: SCREEN_ROUTES.S8,
+    ownsHome: profile?.home !== undefined,
   };
 }

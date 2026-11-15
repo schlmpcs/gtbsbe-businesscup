@@ -155,6 +155,14 @@ export const HouseholdFactsSchema = z.object({
   hasCar: z.boolean(),
 });
 
+/** JF4: Profile.home. Absent = renting. */
+export const HomeSchema = z.object({
+  tenure: z.enum(['mortgage', 'outright']),
+  value: estimate(NonNegativeMoneySchema),            // balance
+  appreciation: estimate(ChangeRateSchema),            // per year, decimal
+  hoaMonthly: NonNegativeMoneySchema,                 // monthly
+});
+
 export const ProfileSchema = z.object({
   household: AvatarFactsSchema.optional(),
   householdFacts: HouseholdFactsSchema.optional(),
@@ -166,6 +174,7 @@ export const ProfileSchema = z.object({
   retirementShare: estimate(ShareSchema),
   debts: z.array(DebtSchema),
   zip: ZipSchema.optional(),
+  home: HomeSchema.optional(),
   committedMoveId: z.string().min(1).optional(),
   doneMoveIds: z.array(z.string().min(1)),
   events: z.array(LifeEventSchema).max(MAX_LIFE_EVENTS).optional(),
@@ -529,6 +538,13 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   bare('renewals_exported'),
   withProps('overpaying_checked', { lines: z.number().int().min(0).max(4), above: z.number().int().min(0).max(4) }),
   withProps('payoff_planned', { method: z.enum(['avalanche','snowball']) }),
+  // /plan (MP7b): event types and counts only, never an amount or a name.
+  bare('plan_viewed'),
+  withProps('plan_event_added', { type: z.enum(PLAN_EVENT_TYPES) }),
+  withProps('plan_event_edited', { type: z.enum(PLAN_EVENT_TYPES) }),
+  withProps('scenario_added', { scenarios: z.number().int().min(2).max(4) }),          // MAX_SCENARIOS
+  withProps('chance_run', { paths: z.number().int().min(1).max(5000), fixedSeed: z.boolean() }), // MONTE_CARLO_MAX_PATHS
+  bare('compare_viewed'),
 ]);
 
 /** POST /api/events: 1–EVENTS_BATCH_MAX events for one anonymous id. */

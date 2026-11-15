@@ -81,9 +81,9 @@ export function RangeText({ point, isZero, className }: { point: ForecastPoint; 
   );
 }
 
-/** Label of an estimated input. */
-export function estimatedFieldLabel(f: EstimatedField): string {
-  if (f.field === 'spending') return common.categories[f.category];
+/** Label of an estimated input. `ownsHome`: the housing line holds owner costs (JF4), not rent. */
+export function estimatedFieldLabel(f: EstimatedField, ownsHome = false): string {
+  if (f.field === 'spending') return f.category === 'rentUtilities' && ownsHome ? common.ownerHousing : common.categories[f.category];
   return t.band.fields[f.field];
 }
 

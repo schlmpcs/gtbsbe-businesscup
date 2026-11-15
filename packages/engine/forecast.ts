@@ -23,7 +23,8 @@ export type ForecastOptions = {
 };
 
 /**
- * Month-by-month net worth (cash + retirement − debts) with a range band from estimated inputs;
+ * Month-by-month net worth (cash + retirement − debts, plus the home for an owner: `p.home.value`
+ * growing at `p.home.appreciation`, see simulate.ts) with a range band from estimated inputs;
  * simulates max(120, years × 12) months, `points[m]` = end of month m (points[0] = today).
  * mid uses the point inputs; low/high shift every `isEstimate` input by ±estimateSpread against /
  * in the user's favor. The band is then widened to include mid, so low ≤ mid ≤ high at every point;
@@ -70,6 +71,7 @@ export function cloneProfile(p: Profile): Profile {
     retirementShare: { ...p.retirementShare },
     debts: p.debts.map((d) => ({ ...d, minPayment: { ...d.minPayment } })),
     doneMoveIds: [...p.doneMoveIds],
+    ...(p.home && { home: { ...p.home, value: { ...p.home.value }, appreciation: { ...p.home.appreciation } } }),
     ...(p.events && { events: p.events.map(cloneEvent) }),
   };
 }

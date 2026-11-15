@@ -1,6 +1,6 @@
 // Y15: the rules side of the forecast bundle, and the profile facts the AI forecaster is given.
 // Spec: docs/ENGINEERING.md → AI forecast.
-import type { ForecastBundle, LifeEvent, Profile, ProfilePatch } from '@lifeguessr/types';
+import type { ForecastBundle, Home, LifeEvent, Profile, ProfilePatch } from '@lifeguessr/types';
 import { eventStartMonth } from './events';
 import { applyPatch, cloneProfile, forecast } from './forecast';
 import type { ForecastRates } from './simulate';
@@ -18,11 +18,18 @@ export type ForecastFactsEvent =
  * CLAUDE.md rule 6): no `zip`, no `committedMoveId`, no `doneMoveIds`. Life events, when there are
  * any, keep their kind and values but trade the calendar `month` for `startsInMonths` from `asOf`
  * (so the same events give a new cache key each month, as they should: they are a month closer);
- * `asOf`, event ids and presets are dropped.
+ * `asOf`, event ids and presets are dropped. An owner's `home` (JF4) keeps its tenure, value and
+ * appreciation, the inputs of the home asset in the rules forecast (net worth includes the home at
+ * `value`, growing at `appreciation`); `hoaMonthly` is dropped, it is already in
+ * `spending.rentUtilities` (owner costs) and would only invite counting it twice.
  */
-export type ForecastFacts = Omit<Profile, 'zip' | 'committedMoveId' | 'doneMoveIds' | 'events' | 'asOf'> & {
+export type ForecastFacts = Omit<Profile, 'zip' | 'committedMoveId' | 'doneMoveIds' | 'events' | 'asOf' | 'home'> & {
+  home?: ForecastFactsHome;
   events?: ForecastFactsEvent[];
 };
+
+/** The home as the AI forecaster sees it (see `ForecastFacts`). */
+export type ForecastFactsHome = Pick<Home, 'tenure' | 'value' | 'appreciation'>;
 
 /**
  * The profile as `ForecastFacts`; a deep copy, so editing it never reaches the profile. Each event is
@@ -31,8 +38,11 @@ export type ForecastFacts = Omit<Profile, 'zip' | 'committedMoveId' | 'doneMoveI
  */
 export function forecastFacts(p: Profile): ForecastFacts {
   const {
-    zip: _zip, committedMoveId: _committedMoveId, doneMoveIds: _doneMoveIds, events, asOf, ...facts
+    zip: _zip, committedMoveId: _committedMoveId, doneMoveIds: _doneMoveIds, events, asOf, home, ...rest
   } = cloneProfile(p);
+  const facts: ForecastFacts = home
+    ? { ...rest, home: { tenure: home.tenure, value: home.value, appreciation: home.appreciation } }
+    : rest;
   if (!events || events.length === 0) return facts;
   if (asOf === undefined) throw new RangeError('Profile.asOf is required when the profile has events');
   return { ...facts, events: events.map((e) => factsEvent(e, eventStartMonth(asOf, e.month))) };

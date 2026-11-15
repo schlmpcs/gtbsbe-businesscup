@@ -93,7 +93,7 @@ Implementation details (T3, `packages/engine/loan/`):
 ### Forecast (Amir, Y2)
 
 ```
-net worth N_t = cash_t + retirement_t − Σ debt balances_t
+net worth N_t = cash_t + retirement_t (+ home_t for an owner) − Σ debt balances_t
 each month:
   income   = takeHomePay × (1+incomeGrowth)^(t/12)
   spending = Σ spending categories EXCEPT debtPayments, × (1+inflation)^(t/12)
@@ -118,6 +118,8 @@ one-off  in its start month: a cost is paid like a cash purchase, income is adde
 same field: the latest start wins; ties go to the later event in the list
 estimates: an event value with isEstimate shifts by ±estimateSpread in low/high, like any estimated field
 ```
+
+**The home (JF4, #136).** A profile with `home` owns it: `simulate()` opens the real estate group at `home.value`, growing at `home.appreciation` (monthly rate `(1+appreciation)^(1/12) − 1`), so net worth is `cash + retirement + home − debts` at every month, `forecast()`, goals, Can I Afford It? and Next Moves included (`withHomeAsset`, the one place it is decided). The mortgage is a `'mortgage'` debt with P&I as its payment, so paying it down builds equity; owner costs sit in `spending.rentUtilities`. The home value is not shifted in the low/high band. A renter's numbers are exactly as before. `netWorthOf` counts the home; `profileToAccounts` adds a Home real estate account (id `home`) and `accountsToProfile` sets `home.value` from the included real estate accounts, which `plan()` passes as the real estate balance, so the home is counted once. The AI forecaster sees `home` (tenure, value, appreciation) in `forecastFacts` and is told net worth includes it; today's net worth in its prompt is the rules month 0. `negotiateRent` is never offered to an owner (`moveKindApplies`, `level2KindsFor`).
 
 A move's patch changes today's values only, so a later event on the same field replaces it from its month. The client keeps only future events: when an event's month arrives, the store's `foldStartedEvents` makes it today's value (pay → `takeHomePay`, spending → `spending[category]`, value and `isEstimate` from the event; a past one-off is dropped) and the legacy Future screen shows a one-line note once. It runs after hydration, when the month rolls over while the page is open, and when a whole profile arrives (the server session).
 

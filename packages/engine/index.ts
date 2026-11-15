@@ -14,17 +14,18 @@ export {
 export { forecast, applyPatch, type ForecastOptions } from './forecast';
 export {
   simulate, forecastMonths, resolveRates, monthlyRate, inflationAnnualOf, cardMinPaymentFor,
-  usesCardFormula, hasEstimates, SYNTHETIC_CARD_ID,
+  usesCardFormula, hasEstimates, withHomeAsset, SYNTHETIC_CARD_ID,
   type Simulation, type SimulationMonth, type SimulateOptions, type ForecastRates,
   type ScheduledPurchase, type Scenario,
 } from './simulate';
 export {
   anchorIssues, anchorsToForecast, deflateForecast, forecastSanityIssues, pointAt, scenarioEffectIssues,
 } from './anchors';
-export { forecastFacts, rulesBundle, type ForecastFacts, type ForecastFactsEvent } from './bundle';
+export { forecastFacts, rulesBundle, type ForecastFacts, type ForecastFactsEvent, type ForecastFactsHome } from './bundle';
 export { eventStartMonth, addMonths, withoutEvents } from './events';
 export {
-  rankMoves, moveCandidates, rankCandidates, movesLevel, isLevelUnlocked, moveKindOf, MOVE_LEVELS, MOVES_SHOWN,
+  rankMoves, moveCandidates, rankCandidates, movesLevel, isLevelUnlocked, moveKindOf, moveKindApplies, level2KindsFor,
+  MOVE_LEVELS, MOVES_SHOWN,
   DISCRETIONARY_CATEGORIES, type MoveCandidate, type RankMovesOptions,
 } from './moves';
 export { canAfford, AFFORD_CHECK_MONTHS, AFFORD_MAX_WAIT_MONTHS, type AffordCheck, type AffordOptions } from './afford';
@@ -65,9 +66,11 @@ export {
 export { plan } from './plan';                                                                 // MP3
 export { monteCarlo } from './monteCarlo';                                                     // MP5
 export { defaultEvent, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown } from './planEvents'; // MP4
-export { accountsToProfile, profileToAccounts, netWorthSummary } from './accounts';            // MP8
+export { defaultEventSources, type DefaultEventSources } from './planEvents';                  // MP4 (the editor's sources, MP7b)
+export { accountsToProfile, profileToAccounts, netWorthSummary, HOME_ACCOUNT_ID } from './accounts';            // MP8
 export { budgetRows, budgetRowsForYear } from './budget';                                      // MP9
 export { cashFlowSummary } from './cashFlow';                                                  // MP9
+export { ownerCosts, defaultHome, tenureOf } from './home';                                   // JF4
 export {
   baselineScenario, duplicateScenario, compareScenarios, planMoveEffects, previewEvent,
   MAX_SCENARIOS, BASELINE_SCENARIO_ID, BASELINE_SCENARIO_NAME, COMPARE_TIE, type PlanMoveEffectsOptions,

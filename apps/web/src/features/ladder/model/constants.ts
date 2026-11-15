@@ -1,5 +1,5 @@
 // Slider bounds for the ladder screens (UI ranges, not finance assumptions).
-import type { CostCategory, Money } from '@lifeguessr/types';
+import type { CostCategory, HomeTenure, Money } from '@lifeguessr/types';
 import type { BalanceFieldKey, InputBounds } from './types';
 
 /** S7 sliders in display order, with their default upper bound and step (monthly dollars). */
@@ -37,6 +37,15 @@ export const DEBT_BOUNDS = {
   apr: { min: 0, max: 1, step: 0.0001 },
   minPayment: { min: 0, max: 1_000_000, step: 1 },
 } as const satisfies Record<string, InputBounds>;
+
+/** JF4 S8 home bounds: value is a balance (HomeSchema: ≥ 0), HOA a monthly fee. */
+export const HOME_BOUNDS = {
+  value: { min: 0, max: 100_000_000, step: 1 },
+  hoaMonthly: { min: 0, max: 100_000, step: 1 },
+} as const satisfies Record<string, InputBounds>;
+
+/** JF4 S8 "Your home" choices, in display order. */
+export const HOME_TENURES = ['rent', 'mortgage', 'outright'] as const satisfies readonly HomeTenure[];
 
 /** End of the S8 debt-load gauge's dial (a display scale past the red threshold, not a rule). */
 export const DEBT_LOAD_GAUGE_MAX = 0.6;

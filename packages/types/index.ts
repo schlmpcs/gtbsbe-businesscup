@@ -2,6 +2,7 @@ import type { AvatarFacts } from './avatar';
 import type { Goal } from './goal';
 import type { Cadence, ServiceCategory } from './subscriptions';
 import type { TOOL_IDS } from './constants';
+import type { PlanEventType } from './plan';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
 // Change only together (Amir + Aibek): update this file, the zod schemas in ./schemas.ts,
 // the fixtures in packages/data/fixtures and both consumers in the same PR.
@@ -119,6 +120,25 @@ export type Debt = { id: string; kind: 'card'|'auto'|'student'|'personal'|'bnpl'
  * Typed by the person, so never an estimate; a car here has no loan (insurance and fuel only).
  */
 export type HouseholdFacts = { adults: 1|2; kids: KidAge[]; bedrooms: 0|1|2|3|4; hasCar: boolean };
+/**
+ * JF4 (#136): the home the person lives in today. `Profile.home` absent = renting (the housing line
+ * `spending.rentUtilities` is rent + utilities). When present the person owns: the home's value is an
+ * asset in net worth and grows at `appreciation`; `spending.rentUtilities` then holds owner costs
+ * (property tax + insurance + upkeep + HOA + utilities, engine `ownerCosts`). A mortgage is NOT here:
+ * it is a `Debt` of kind 'mortgage' in `Profile.debts` (its payment is P&I), so paying it down builds equity.
+ */
+export type HomeTenure = 'rent' | 'mortgage' | 'outright';
+export type Home = {
+  tenure: Exclude<HomeTenure, 'rent'>;
+  value: Estimate<Money>;        // BALANCE: what the home is worth today (default: AreaData.homeValueMedian)
+  appreciation: Estimate<Rate>;  // per year, nominal (default: AreaData.homeAppreciationAnnual, else inflation)
+  hoaMonthly: Money;             // monthly HOA / condo fee the user typed; 0 = none
+};
+/** One line of an owner's monthly housing cost (engine `ownerCosts`). */
+export type OwnerCostLine = { key: 'propertyTax' | 'insurance' | 'upkeep' | 'hoa' | 'utilities';
+  monthly: Money; isEstimate: boolean; source?: Source };
+/** ownerCosts(home, area): what goes in `spending.rentUtilities` for an owner. Monthly. Excludes mortgage P&I (that is in debts). */
+export type OwnerCosts = { lines: OwnerCostLine[]; total: Money };
 export type Profile = {
   /** Optional household facts, confirmed in the avatar preview; no effect on forecast math. */
   household?: AvatarFacts;
@@ -130,6 +150,8 @@ export type Profile = {
   cash: Estimate<Money>; retirement: Estimate<Money>;   // balances
   retirementShare: Estimate<Rate>; // share of a positive monthly surplus saved to retirement
   debts: Debt[]; zip?: string;
+  /** JF4: the home the person owns today. Absent = renting. */
+  home?: Home;
   committedMoveId?: string; doneMoveIds: string[];
   /** Future changes the person expects (at most MAX_LIFE_EVENTS). Absent = none. */
   events?: LifeEvent[];
@@ -385,7 +407,13 @@ export type ClientFunnelEvent =
   | { name: 'sample_loaded' }
   | { name: 'forecast_horizon_changed'; props: { years: HorizonYears } }
   /** S10 "Coming up": an event was added (its kind, and the shortcut it came from; never its amount or month). */
-  | { name: 'life_event_added'; props: { kind: LifeEventKind; preset?: LifeEventPreset } };
+  | { name: 'life_event_added'; props: { kind: LifeEventKind; preset?: LifeEventPreset } }
+  /** /plan (MP7b): the type of the event, the number of scenarios, the Monte Carlo settings; never an amount or a name. */
+  | { name: 'plan_viewed' }
+  | { name: 'plan_event_added' | 'plan_event_edited'; props: { type: PlanEventType } }
+  | { name: 'scenario_added'; props: { scenarios: number } }
+  | { name: 'chance_run'; props: { paths: number; fixedSeed: boolean } }
+  | { name: 'compare_viewed' };
 
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =

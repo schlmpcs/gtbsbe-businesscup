@@ -6,7 +6,7 @@ import { cloneProfileDemo } from '@/fixtures';
 import { forecastModel, type LlmClient } from './client';
 import {
   FORECAST_CALL_TIMEOUT_MS, FORECAST_DEADLINE_MS, FORECAST_MIN_RETRY_MS, PROMPT_FINGERPRINT, PROMPT_VERSION,
-  EVENTS_FACT_LINE, forecastOutputFormat, forecastPrompt, forecastWithModel, promptFingerprint,
+  EVENTS_FACT_LINE, HOME_FACT_LINE, forecastOutputFormat, forecastPrompt, forecastWithModel, promptFingerprint,
 } from './forecast';
 import { type ForecastRequest } from './schemas';
 import { DEMO_SCENARIOS, goodAnswer, goodReply, forecastReply, reply, toWire, type WireForecast } from './testUtils';
@@ -660,7 +660,7 @@ describe('forecastPrompt', () => {
   });
 
   it('is versioned so cache keys can follow it', () => {
-    expect(PROMPT_VERSION).toBe(4); // 4: life events
+    expect(PROMPT_VERSION).toBe(5); // 4: life events, 5: the owner's home
   });
 
   describe('life events', () => {
@@ -701,6 +701,28 @@ describe('forecastPrompt', () => {
       expect(bundle.base.points[0]!.mid).toBe(simulate(req.profile, 0).path[0]!.netWorth);
       const withoutEvents = rulesBundle(request().profile, req.scenarios);
       expect(rulesBundle(req.profile, req.scenarios).base.in10y.mid).not.toBe(withoutEvents.base.in10y.mid);
+    });
+  });
+
+  describe('home (JF4)', () => {
+    const owner = (): ForecastRequest => request({
+      profile: { ...cloneProfileDemo(), home: { tenure: 'outright', value: { value: 300_000, isEstimate: true }, appreciation: { value: 0.04, isEstimate: false }, hoaMonthly: 0 } },
+    });
+
+    it('explains the home, shows it in the facts and counts it in today\'s net worth (the rules month 0)', () => {
+      const req = owner();
+      const { content } = forecastPrompt(req);
+      expect(content).toContain(HOME_FACT_LINE);
+      expect(content).toContain('"home":{"tenure":"outright","value":{"value":300000,"isEstimate":true},"appreciation":{"value":0.04,"isEstimate":false}}');
+      // Demo net worth today: 3,800 + 14,500 − 6,400 − 17,800 = −5,900; plus the $300,000 home = 294,100.
+      expect(simulate(req.profile, 0).path[0]!.netWorth).toBeCloseTo(294_100, 6);
+      expect(content).toContain('Net worth today (cash + retirement + home − debts): $294,100');
+    });
+
+    it('leaves the line out for a renter', () => {
+      const { content } = forecastPrompt(request());
+      expect(content).not.toContain(HOME_FACT_LINE);
+      expect(content).toContain('Net worth today (cash + retirement − debts)');
     });
   });
 });

@@ -14,7 +14,7 @@ export type { GameData, GameActions, GameState } from './game';
 export { getAnonId, ANON_ID_KEY } from './anonId';
 export { useHydrated, startHydration } from './hydration';
 export { useSessionSync, setSessionAdapter } from './sessionSync';
-export type { DebtInput, FoldedNote, LifeEventCategory, ProfileField } from './profileOps';
+export type { DebtInput, FoldedNote, HomeInput, LifeEventCategory, ProfileField } from './profileOps';
 export { stampProfile, useCurrentMonth, useProfile } from './profile';
 export { usePro, useProStore, initialProData, resetProStore, PRO_CACHE_KEY } from './pro';
 export type { ProActions, ProData, ProState, ProVM } from './pro';

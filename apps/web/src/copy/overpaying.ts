@@ -51,6 +51,8 @@ export const overpaying = {
     amountPlaceholder: '0',
     fromProfile: 'From your profile',
     noWriteBack: 'What you type here stays on this device. It never changes your profile.',
+    /** JF4: the profile says the person owns their home. */
+    ownerHousing: 'You own your home, so your housing costs are not compared with rent here.',
     errors: {
       zip: 'Enter a 5-digit US ZIP code.',
       amount: 'Enter an amount above $0, or leave it blank.',

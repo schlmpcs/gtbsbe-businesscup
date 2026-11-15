@@ -66,14 +66,19 @@ describe('accountsToProfile / profileToAccounts mapping per group', () => {
     expect(p.cash).toEqual({ value: 1_500, isEstimate: true });
     // retirement = 401(k) 3,000 + investments 2,000.
     expect(p.retirement).toEqual({ value: 5_000, isEstimate: false });
-    // Real estate, vehicle and other assets have no profile field; the excluded student loan is skipped.
+    // Real estate is the home (JF4): the base has none, so one is made with tenure 'mortgage' (there is a
+    // mortgage account) and the default appreciation (inflation, an estimate). Vehicle and other assets
+    // have no profile field; the excluded student loan is skipped.
+    expect(p.home).toEqual({
+      tenure: 'mortgage', value: { value: 400_000, isEstimate: false }, appreciation: { value: 0.03, isEstimate: true }, hoaMonthly: 0,
+    });
     expect(p.debts).toEqual([
       { id: 'cc', kind: 'card', balance: 3_000, apr: 0.2, minPayment: { value: 90, isEstimate: false } },
       { id: 'auto', kind: 'auto', balance: 15_000, apr: 0.07, minPayment: { value: 400, isEstimate: false } },
       { id: 'mtg', kind: 'mortgage', balance: 320_000, apr: 0.06, minPayment: { value: 2_000, isEstimate: false } },
     ]);
     // Everything the accounts do not describe comes from the base profile.
-    const { cash: _c, retirement: _r, debts: _d, ...rest } = p;
+    const { cash: _c, retirement: _r, debts: _d, home: _h, ...rest } = p;
     const { cash: _bc, retirement: _br, debts: _bd, ...baseRest } = profileDemo;
     expect(rest).toEqual(baseRest);
   });

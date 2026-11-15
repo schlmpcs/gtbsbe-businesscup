@@ -9,8 +9,8 @@ import { applyPatch } from '@lifeguessr/engine';
 import {
   CategoryTotalsSchema, HorizonYearsSchema, LIFE_EVENT_PRESETS, MAX_LIFE_EVENTS, MOVE_KINDS, ProfilePatchSchema, ProfileSchema,
   PurchaseSchema, CostCategorySchema, YearMonthSchema,
-  type CategoryTotals, type CostCategory, type HorizonYears, type HouseholdFacts, type LifeEvent, type Money, type Move, type Profile,
-  type ProfilePatch, type Purchase, type YearMonth,
+  type AreaData, type CategoryTotals, type CostCategory, type Estimate, type HomeTenure, type HorizonYears, type HouseholdFacts,
+  type LifeEvent, type Money, type Move, type Profile, type ProfilePatch, type Purchase, type YearMonth,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { GoalSchema, type Goal } from '@lifeguessr/types';
@@ -25,8 +25,8 @@ import { cloneProfileDemo } from '@/fixtures';
 import { safeStateStorage } from '@/lib/safeStorage';
 import {
   addDebt, addLifeEvent, applyUserPatch, foldStartedEvents, mergeStatementHistory, mergeStatementTotals, removeDebt,
-  removeLifeEvent, setField, setSpending, setSubscriptionsLine, skipField, updateDebt, updateLifeEvent, withoutAsOf,
-  type DebtInput, type FoldedNote, type ProfileField,
+  removeLifeEvent, setField, setHome, setSpending, setSubscriptionsLine, skipField, updateDebt, updateLifeEvent, withoutAsOf,
+  type DebtInput, type FoldedNote, type HomeInput, type ProfileField,
 } from './profileOps';
 
 /** demo = the sample profile (nothing entered yet); closestLife = built from a life card; user = edited. */
@@ -70,6 +70,11 @@ export type AppData = {
   dailyEntries: DailyEntry[];
   /** Bills calendar: due days the user set per bill and their paydays (client state only). */
   bills: BillsSettings;
+  /**
+   * JF4: the housing line as it was before the person picked "own" on S8, put back if they switch to
+   * rent again (owning replaces it with owner costs). Null while renting, or when nothing was kept.
+   */
+  rentBeforeHome: Estimate<Money> | null;
 };
 
 /** State for this page load only (not persisted). */
@@ -99,6 +104,12 @@ export type AppActions = {
   addDebt: (input: DebtInput) => string;
   updateDebt: (id: string, input: DebtInput) => void;
   removeDebt: (id: string) => void;
+  /**
+   * JF4 S8 "Your home": rent, own with a mortgage or own outright, and typed home fields (measured).
+   * Owning sets the housing line to the owner costs (engine ownerCosts, for `area`); renting removes the
+   * home and puts the rent back (see profileOps `setHome`). `area` is the area the profile's ZIP uses.
+   */
+  setHome: (tenure: HomeTenure, area: AreaData | null, input?: HomeInput) => void;
   /** A patch the user confirmed (parsed from their own words): patched fields become measured. */
   applyUserPatch: (patch: ProfilePatch) => void;
   /** S9 seam: statement category totals → measured spending (+ pay) and month history. */
@@ -170,6 +181,7 @@ export function initialAppData(): AppData {
     foldedNotes: [],
     dailyEntries: [],
     bills: initialBillsSettings(),
+    rentBeforeHome: null,
   };
 }
 
@@ -222,6 +234,7 @@ const persistedFields = {
   dailyEntries: z.unknown().transform(restoreDailyEntries),
   // Added after version 1 went out: older saved state has no `bills`, which gives the defaults.
   bills: z.unknown().transform(restoreBills),
+  rentBeforeHome: z.object({ value: z.number().min(0), isEstimate: z.boolean() }).nullable(),
 } satisfies { [K in keyof AppData]: z.ZodType };
 
 /** No real household spends this much a month in one category; above it the saved data is broken. */
@@ -253,7 +266,7 @@ export const useAppStore = create<AppState>()(
       setProfile: (profile, origin) => set({ profile: withoutAsOf(profile), profileOrigin: origin }),
       setSelfGuess: (guess) => set({ selfGuess: guess }),
       chooseClosestLife: (cardId, profile) =>
-        set({ profile: withoutAsOf(profile), profileOrigin: 'closestLife', closestCardId: cardId, committedMove: null }),
+        set({ profile: withoutAsOf(profile), profileOrigin: 'closestLife', closestCardId: cardId, committedMove: null, rentBeforeHome: null }),
       setSpending: (category, value) => set((s) => ({ profile: setSpending(s.profile, category, value), profileOrigin: 'user' })),
       setHousehold: (facts, zip) =>
         set((s) => {
@@ -271,6 +284,11 @@ export const useAppStore = create<AppState>()(
       },
       updateDebt: (id, input) => set((s) => ({ profile: updateDebt(s.profile, id, input), profileOrigin: 'user' })),
       removeDebt: (id) => set((s) => ({ profile: removeDebt(s.profile, id), profileOrigin: 'user' })),
+      setHome: (tenure, area, input = {}) =>
+        set((s) => {
+          const { profile, rentBefore } = setHome(s.profile, tenure, area, input, s.rentBeforeHome);
+          return profile === s.profile ? s : { profile, rentBeforeHome: rentBefore, profileOrigin: 'user' };
+        }),
       applyUserPatch: (patch) => set((s) => ({ profile: applyUserPatch(s.profile, patch), profileOrigin: 'user' })),
       applyStatementTotals: (months) =>
         set((s) => {
@@ -389,6 +407,7 @@ export const useAppStore = create<AppState>()(
         foldedNotes: s.foldedNotes,
         dailyEntries: s.dailyEntries,
         bills: s.bills,
+        rentBeforeHome: s.rentBeforeHome,
       }),
       merge: mergePersisted,
     },
