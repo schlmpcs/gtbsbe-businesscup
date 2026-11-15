@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { welcome as t } from '@/copy';
-import { Art, Button, cx, Icon, Sticker } from '@/ui-kit';
+import { Art, Button, cx, EstimateTag, Icon, Sticker, TweenText } from '@/ui-kit';
 import type { AnalysisIcon, AnalysisRowVM, AnalysisVM, LifeLineKpiVM, OnboardingVM, RevealVM } from '../model/types';
 
 type LinkComponent = (props: { href: string; className?: string; children: ReactNode }) => ReactNode;
@@ -635,19 +635,30 @@ function MiniChart({ points, ageDomain, valueDomain, callout }: {
 
 // ----- 5. Decision -----------------------------------------------------------------------------
 
+/** Where a value sits on the decision slider's track: the thumb's centre (the .ob-range thumb is 1.75rem wide). */
+const onTrack = (share: number) => `calc(0.875rem + (100% - 1.75rem) * ${share})`;
+
 function DecisionStep({ vm, Link, doneHref, chart }: { vm: OnboardingVM; Link: LinkComponent; doneHref: string; chart?: ReactNode }) {
   const ll = vm.lifeline;
   if (ll.status !== 'ready') return null;
   const s = ll.slider;
   const k = ll.kpis.find((x) => x.id === 'chance')!;
+  const span = Math.max(1, s.max - s.min);
+  const share = (age: number) => (age - s.min) / span;
+  const baseShare = share(s.base);
+  const toneText = (tone: string) => (tone === 'bad' ? 'text-primary' : tone === 'good' ? 'text-positive' : 'text-chart-6');
   return (
     <div className="grid gap-xl lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
       <div className="flex min-w-0 flex-col gap-lg">
         <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.decision.sticker}</Sticker>
-        <h1 className="font-display text-3xl font-extrabold leading-tight sm:text-5xl">
+        {/* Room for three lines, so a longer headline never pushes the slider down mid-drag. */}
+        <h1 className="min-h-[3lh] font-display text-3xl font-extrabold leading-tight sm:text-5xl">
           {ll.headline.lead}
-          {ll.headline.payoff && <>, <span className={ll.headline.payoffTone === 'bad' ? 'text-negative' : 'text-primary'}>{ll.headline.payoff}</span></>}
+          {ll.headline.payoff && <>, <span className={ll.headline.payoffTone === 'bad' ? 'text-negative' : 'text-primary'}><TweenText text={ll.headline.payoff} /></span></>}
         </h1>
+        <p data-testid="onboarding-decision-why" className="-mt-sm min-h-[3lh] text-sm leading-relaxed text-text-muted">
+          {ll.headline.why ?? t.decision.title}
+        </p>
         <div className="relative flex flex-col gap-md rounded-xl bg-ink p-xl text-on-primary">
           <div className="flex items-end justify-between gap-md">
             <span className="font-display text-2xl font-extrabold">
@@ -655,20 +666,57 @@ function DecisionStep({ vm, Link, doneHref, chart }: { vm: OnboardingVM; Link: L
             </span>
             <span className="text-right">
               <span className="block text-xs font-bold uppercase tracking-wide text-chart-6">{k.label}</span>
-              <span className={cx('font-display text-4xl font-extrabold tabular-nums', k.tone === 'bad' ? 'text-primary' : k.tone === 'good' ? 'text-positive' : undefined)}>
-                {k.value ?? k.note}
+              <span className={cx('block font-display text-4xl font-extrabold tabular-nums', k.tone === 'bad' ? 'text-primary' : k.tone === 'good' ? 'text-positive' : undefined)}>
+                {k.value ? <TweenText text={k.value} /> : k.note}
               </span>
+              {/* Always one line tall: "▼ −100 pts", "same as your plan", or empty at the plan's age. */}
+              <span className={cx('block min-h-[1lh] text-xs font-bold tabular-nums', toneText(k.tone))}>{k.delta}</span>
             </span>
           </div>
-          <label htmlFor="ob-decision" className="sr-only">{s.label}</label>
-          <input id="ob-decision" data-testid="onboarding-decision" type="range" min={s.min} max={s.max} step={1} value={s.value}
-            aria-valuetext={s.formatValue(s.value)} onChange={(e) => ll.setAge(Number(e.target.value))}
-            className="w-full cursor-pointer accent-primary" />
-          <div aria-hidden="true" className="flex justify-between text-xs text-chart-6 tabular-nums">
-            <span>{s.min}</span><span>{s.max}</span>
+          <div className="relative pt-lg">
+            {/* The plan's age: a tick on the track and its label above it. */}
+            <span aria-hidden="true" className={cx('pointer-events-none absolute top-0 whitespace-nowrap text-xs font-bold text-chart-6',
+              baseShare < 0.15 ? '-translate-x-[0.875rem]' : baseShare > 0.85 ? '-translate-x-[calc(100%-0.875rem)]' : '-translate-x-1/2')}
+              style={{ left: onTrack(baseShare) }}>
+              {s.baseLabel}
+            </span>
+            <span aria-hidden="true" className="pointer-events-none absolute top-[calc(var(--spacing-lg)-0.25rem)] h-[1.125rem] w-0.5 -translate-x-1/2 rounded-full bg-chart-6"
+              style={{ left: onTrack(baseShare) }} />
+            <label htmlFor="ob-decision" className="sr-only">{s.label}</label>
+            <input id="ob-decision" data-testid="onboarding-decision" type="range" min={s.min} max={s.max} step={1} value={s.value}
+              aria-valuetext={s.formatValue(s.value)} onChange={(e) => ll.setAge(Number(e.target.value))}
+              className="ob-range relative" style={{ '--ob-fill': `${share(s.value) * 100}%` } as CSSProperties} />
+          </div>
+          {/* The Chance of success at every age on the slider, from the same simulations (fixed seed). */}
+          <div className="flex flex-col gap-xs">
+            <div className="relative h-4 mx-[0.875rem]" role={s.chances ? 'img' : undefined}
+              aria-label={s.chances ? `${s.chancesLabel}: ${s.chances.map((c) => c.label).join(', ')}` : undefined}>
+              {s.chances
+                ? s.chances.map((c) => (
+                  <span key={c.age} title={c.label}
+                    className={cx('absolute bottom-0 -translate-x-1/2 rounded-sm transition-[height,opacity] duration-300',
+                      c.tone === 'good' ? 'bg-positive' : 'bg-primary', c.age === s.value ? 'opacity-100' : 'opacity-45')}
+                    style={{ left: `${share(c.age) * 100}%`, width: `calc(${100 / span}% - 3px)`, height: `${Math.max(12, c.pct)}%` }} />
+                ))
+                : <span className="absolute inset-x-0 bottom-0 h-1 animate-pulse rounded-full bg-on-primary/10" />}
+            </div>
+            <div aria-hidden="true" className="flex justify-between text-xs text-chart-6 tabular-nums">
+              <span>{s.min}</span><span>{s.chancesLabel}</span><span>{s.max}</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-sm border-t border-on-primary/10 pt-md">
+            <span className="flex items-center gap-sm text-xs font-bold uppercase tracking-wide text-chart-6">
+              <Icon name="home" size={14} />{s.origin}
+              {s.isEstimate && <span className="ml-auto normal-case tracking-normal" title={s.estimateNote}><EstimateTag /></span>}
+            </span>
+            <ul className="flex flex-wrap gap-xs">
+              {s.facts.map((f) => (
+                <li key={f.label} className="rounded-full bg-on-primary/10 px-sm py-xs text-xs font-semibold tabular-nums">{f.label}</li>
+              ))}
+            </ul>
           </div>
           {s.value === s.base && (
-            <span aria-hidden="true" className="absolute -top-3 right-lg rotate-[-6deg] rounded-full bg-primary px-md py-xs text-sm font-extrabold">
+            <span aria-hidden="true" className="ob-pop absolute -top-3 right-lg rotate-[-6deg] rounded-full bg-primary px-md py-xs text-sm font-extrabold">
               {t.decision.hint}
             </span>
           )}

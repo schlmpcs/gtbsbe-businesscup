@@ -5,6 +5,7 @@
 // - Chance of success and the p10–p90 band come from decisionSweep(), run on the next task after the
 //   plan paints (like /plan's Chance run), one fixed seed for every year so a change between two years
 //   is the decision's, not noise.
+// - "Why" splits the net worth gap at retirement of those two plans into the home equity and the rest (retirementBreakdown).
 // A plan without "Buy a home" gets the engine's default one (defaultEvent: the area's median home, its
 // tax and insurance), three years from now, as a draft: "Put it in my plan" adds it to the scenario.
 // Rounding and wording happen here (copy.lifeline); the UI only lays the numbers out.
@@ -50,7 +51,6 @@ export function sweepYears(baseYear: number, asOfYear: number, retireYear: numbe
 }
 
 const compact = (v: number) => formatMoney(v, { compact: true });
-const signedCompact = (v: number) => formatMoney(v, { compact: true, signed: true });
 const pct = (r: number) => formatRate(r, 0);
 const tone = (v: number): LifeLineTone => (v > 0 ? 'good' : v < 0 ? 'bad' : 'neutral');
 
@@ -61,6 +61,40 @@ export function niceStep(span: number): number {
   const mag = 10 ** Math.floor(Math.log10(raw));
   const f = raw / mag;
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * mag;
+}
+
+/**
+ * The net worth gap at `age` (picked − plan) split into the decision's home equity (its `<eventId>:home`
+ * row minus its `<eventId>:mortgage` row, as plan() reports them) and everything else ("savings": cash,
+ * investments, retirement, other debts). equity + savings = the net worth gap. Null when either plan has
+ * no row of its own for that home (plan() merges it into a real estate account the person already has)
+ * or no year at that age. Pure (exported for tests).
+ */
+export function retirementBreakdown(base: PlanResult, selected: PlanResult, eventId: string, age: number): { equity: number; savings: number } | null {
+  const equityAt = (r: PlanResult) => {
+    const y = r.years.find((x) => x.age === age);
+    const home = y?.accounts.find((a) => a.accountId === `${eventId}:home`);
+    if (!y || !home) return null;
+    const mortgage = y.accounts.find((a) => a.accountId === `${eventId}:mortgage`)?.end ?? 0;
+    return { netWorth: y.netWorth, equity: home.end - mortgage };
+  };
+  const b = equityAt(base);
+  const s = equityAt(selected);
+  if (!b || !s) return null;
+  const equity = s.equity - b.equity;
+  return { equity, savings: s.netWorth - b.netWorth - equity };
+}
+
+/** retirementBreakdown() in words ("Why: 2 fewer years of owning leaves $61.3K less home equity at 67; …"); a part that rounds to $0 is left out. Pure (exported for tests). */
+export function decisionWhy(
+  b: { equity: number; savings: number },
+  move: { years: number; later: boolean; renting: boolean; age: number },
+): string | null {
+  const zero = formatMoney(0);
+  const parts: string[] = [];
+  if (formatMoney(Math.abs(b.equity)) !== zero) parts.push(copy.why.equity(move.years, move.later, compact(Math.abs(b.equity)), b.equity > 0, move.age));
+  if (formatMoney(Math.abs(b.savings)) !== zero) parts.push(copy.why.savings(move.years, move.later, move.renting, compact(Math.abs(b.savings)), b.savings > 0));
+  return parts.length ? `${copy.why.lead}${parts.join(copy.why.join)}${copy.why.end}` : null;
 }
 
 const pointsOf = (r: PlanResult): LifeLinePoint[] => r.years.map((y) => ({ age: y.age, netWorth: y.netWorth }));
@@ -74,8 +108,10 @@ export function lifeLineData(args: {
   plans: { selected: PlanResult; base: PlanResult };
   chance: { selected: Chance; base: Chance } | 'measuring' | 'error';
   years: number[];
+  /** Success rate at every slider year (the same sweep as `chance`); null or absent while measuring. */
+  chanceByYear?: ReadonlyMap<number, number> | null;
 }): Omit<Extract<LifeLineVM, { status: 'ready' }>, 'setAge' | 'applyToPlan'> {
-  const { decision, inputs, selectedYear, plans, chance, years } = args;
+  const { decision, inputs, selectedYear, plans, chance, years, chanceByYear = null } = args;
   const { selected: sel, base } = plans;
   const cal = calendarOf(inputs.profile, 0);
   const ageOf = (year: number) => year - cal.birthYear;
@@ -104,7 +140,7 @@ export function lifeLineData(args: {
     label: copy.kpi.chance,
     value: measured ? pct(measured.selected.successRate) : null,
     was: measured && moved ? pct(measured.base.successRate) : null,
-    delta: measured && moved && chancePts !== 0 ? copy.kpi.pts(`${chancePts > 0 ? '▲ +' : '▼ −'}${Math.abs(chancePts)}`) : null,
+    delta: measured && moved ? (chancePts !== 0 ? copy.kpi.pts(`${chancePts > 0 ? '▲ +' : '▼ −'}${Math.abs(chancePts)}`) : copy.kpi.same) : null,
     tone: measured ? (moved ? tone(chancePts) : measured.selected.successRate >= GOOD_SUCCESS_RATE ? 'good' : 'bad') : 'neutral',
     gaugePct: measured ? Math.round(measured.selected.successRate * 100) : null,
     note: chance === 'measuring' ? copy.kpi.measuring : chance === 'error' ? copy.kpi.unavailable : null,
@@ -133,10 +169,15 @@ export function lifeLineData(args: {
       payoff = selShort === null ? copy.payoff.lasts(endAge) : copy.payoff.runsOut(selShort);
       payoffTone = selShort === null ? 'good' : 'bad';
     } else if (compact(nwDiff) !== compact(0)) {
-      payoff = copy.payoff.atRetirement(signedCompact(nwDiff));
+      payoff = copy.payoff.atRetirement(compact(Math.abs(nwDiff)), nwDiff > 0);
       payoffTone = tone(nwDiff);
     }
   }
+
+  const breakdown = moved ? retirementBreakdown(base, sel, decision.eventId, retireAge) : null;
+  const why = breakdown
+    ? decisionWhy(breakdown, { years: Math.abs(selectedYear - baseYear), later: selectedYear > baseYear, renting: decision.event.replaceHousing, age: retireAge })
+    : null;
 
   // ----- Chart
   const selected = pointsOf(sel);
@@ -183,7 +224,7 @@ export function lifeLineData(args: {
     retireCallout: { age: retireAge, netWorth: netWorthAt(sel, retireAge), label: copy.chart.atRetirement(compact(netWorthAt(sel, retireAge)), retireAge) },
     beforeCallout: before ? { age: retireAge, netWorth: netWorthAt(base, retireAge), label: copy.chart.was(compact(netWorthAt(base, retireAge))) } : null,
     runsOut: shortLine ? { ...shortLine, label: copy.chart.runsOut(shortLine.age) } : null,
-    dragged: moved ? { fromAge: baseAge, toAge: selAge } : null,
+    dragged: moved ? { fromAge: baseAge, toAge: selAge, label: copy.slider.yourPlan(baseAge) } : null,
     legend: {
       selected: copy.chart.selected(selAge),
       before: moved ? copy.chart.before(baseAge) : null,
@@ -204,6 +245,8 @@ export function lifeLineData(args: {
     max: ageOf(years.at(-1)!),
     value: selAge,
     base: baseAge,
+    baseLabel: copy.slider.yourPlan(baseAge),
+    origin: copy.slider.origin(decision.inPlan),
     ticks: years.map(ageOf),
     formatValue: copy.slider.value,
     facts: [
@@ -211,6 +254,13 @@ export function lifeLineData(args: {
       { label: copy.slider.downPayment(formatMoney(ev.downPayment), pct(downShare)), tone: 'plain' as const },
       { label: copy.slider.payment(formatMoney(monthly)), tone: 'plain' as const },
     ],
+    chances: chanceByYear && years.every((y) => chanceByYear.has(y))
+      ? years.map((y) => {
+          const rate = chanceByYear.get(y)!;
+          return { age: ageOf(y), pct: Math.round(rate * 100), tone: rate >= GOOD_SUCCESS_RATE ? 'good' as const : 'bad' as const, label: copy.slider.chanceAt(ageOf(y), pct(rate)) };
+        })
+      : null,
+    chancesLabel: copy.slider.chances,
     isEstimate: ev.insuranceMonthly.isEstimate,
     estimateNote: copy.slider.estimate,
   };
@@ -219,7 +269,7 @@ export function lifeLineData(args: {
   return {
     status: 'ready',
     sticker: copy.sticker,
-    headline: { lead, payoff, payoffTone },
+    headline: { lead, payoff, payoffTone, why },
     sub: copy.sub(LIFELINE_PATHS.toLocaleString('en-US'), endAge),
     kpis: [atRetirement, chanceKpi, runsOut],
     chart,
@@ -244,7 +294,8 @@ function planAtYear(inputs: PlanInputs, decision: HomeDecision, year: number): P
   return r;
 }
 
-type SweepState = { of: HomeDecision; inputs: PlanInputs; result: Map<number, Chance> | 'error' };
+/** `rates`: the success rate per year, built once per sweep for the slider's per-age strip. */
+type SweepState = { of: HomeDecision; inputs: PlanInputs; result: Map<number, Chance> | 'error'; rates: ReadonlyMap<number, number> | null };
 
 export function useLifeLine(): LifeLineVM {
   const inputs = usePlanInputs();
@@ -269,13 +320,15 @@ export function useLifeLine(): LifeLineVM {
     const settings = effectiveSettings({ ...DEFAULT_CHANCE_SETTINGS, paths: LIFELINE_PATHS, seed: fixedSeed }, decision.scenario, inputs.area);
     const timer = setTimeout(() => {
       let result: SweepState['result'];
+      let rates: SweepState['rates'] = null;
       try {
         const points = decisionSweep(inputs.profile, inputs.accounts, decision.scenario, decision.eventId, years, inputs.area, settings);
         result = new Map(points.map((p) => [p.year, p.chance!]));
+        rates = new Map(points.map((p) => [p.year, p.chance!.successRate]));
       } catch {
         result = 'error';
       }
-      setSweep({ of: decision, inputs, result });
+      setSweep({ of: decision, inputs, result, rates });
     }, 0);
     return () => clearTimeout(timer);
   }, [decision, years, inputs, fixedSeed]);
@@ -306,7 +359,8 @@ export function useLifeLine(): LifeLineVM {
     if (!decision) return { status: 'loading' };
     const selected = planAtYear(inputs, decision, selectedYear);
     const base = planAtYear(inputs, decision, baseYear);
-    const current = sweep && sweep.of === decision && sweep.inputs === inputs ? sweep.result : null;
+    const fresh = sweep && sweep.of === decision && sweep.inputs === inputs ? sweep : null;
+    const current = fresh ? fresh.result : null;
     const chance =
       current === null ? 'measuring' as const
         : current === 'error' ? 'error' as const
@@ -314,7 +368,7 @@ export function useLifeLine(): LifeLineVM {
             ? { selected: current.get(selectedYear)!, base: current.get(baseYear)! }
             : 'error' as const;
     return {
-      ...lifeLineData({ decision, inputs, selectedYear, plans: { selected, base }, chance, years }),
+      ...lifeLineData({ decision, inputs, selectedYear, plans: { selected, base }, chance, years, chanceByYear: fresh?.rates ?? null }),
       setAge,
       applyToPlan,
     };

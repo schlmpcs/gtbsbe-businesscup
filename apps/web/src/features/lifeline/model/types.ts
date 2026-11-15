@@ -42,8 +42,8 @@ export type LifeLineChartVM = {
   beforeCallout: { age: number; netWorth: number; label: string } | null;
   /** Where the before line (or, without one, the picked line) runs out of money. */
   runsOut: { age: number; label: string; line: 'selected' | 'before' } | null;
-  /** Where the slider's ghost (the plan's year) and the picked year sit, for the "you dragged it" arrow. */
-  dragged: { fromAge: number; toAge: number } | null;
+  /** Where the slider's ghost (the plan's year) and the picked year sit, for the "you dragged it" arrow; `label` names the plan's age ("your plan: 38"). */
+  dragged: { fromAge: number; toAge: number; label: string } | null;
   legend: { selected: string; before: string | null; band: string };
 };
 
@@ -57,11 +57,17 @@ export type LifeLineSliderVM = {
   min: number;
   max: number;
   value: number;
-  /** The plan's age (the ghost knob). */
+  /** The plan's age (the ghost knob), and its tick label ("your plan: 38"). */
   base: number;
+  baseLabel: string;
+  /** Where the home comes from: "Your plan buys a home" or the area's typical home (a draft). */
+  origin: string;
   ticks: number[];
   formatValue: (age: number) => string;
   facts: { label: string; tone: 'good' | 'plain' }[];
+  /** The Chance of success at every slider age (one fixed seed: the differences are the decision's); null while measuring. */
+  chances: { age: number; pct: number; tone: 'good' | 'bad'; label: string }[] | null;
+  chancesLabel: string;
   isEstimate: boolean;
   estimateNote: string;
 };
@@ -71,7 +77,8 @@ export type LifeLineVM =
   | {
       status: 'ready';
       sticker: string;
-      headline: { lead: string; payoff: string | null; payoffTone: LifeLineTone };
+      /** `why`: the net worth gap at retirement split into home equity and savings (null when nothing moved). */
+      headline: { lead: string; payoff: string | null; payoffTone: LifeLineTone; why: string | null };
       sub: string;
       kpis: LifeLineKpiVM[];
       chart: LifeLineChartVM;
