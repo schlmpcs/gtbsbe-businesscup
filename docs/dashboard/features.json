@@ -1,0 +1,3438 @@
+{
+  "$comment": "The product map. `pnpm dashboard` reads this file, checks every part against GitHub issues and the code on origin/main (and on the named branch), and writes docs/dashboard/index.html. Edit features here, not in the HTML. A part's status is computed: its `paths` all on main = live (`kind: preview` = live preview); on `branch` only = built, not merged; some paths on main = in progress; none = to build (or proposal when the feature has `proposal: true`). An open issue on a live part shows as live with follow-ups. `scope: later` parts are shown but do not count toward the feature's status. `status` on a part overrides the computed one (say why in `note`). Paths ending in / match a folder.",
+  "product": {
+    "name": "LifeGuessr",
+    "tagline": "A forward-looking budget planner for US adults aged 25–45, with a daily guessing game as the marketing engine.",
+    "pitch": "Money apps forecast your accounts. We forecast your decisions, and rank which one to make next.",
+    "thesis": "Nobody can feel what their life costs, or where small choices lead. The game proves it in a minute. The app fixes it."
+  },
+  "groups": [
+    {
+      "id": "acquire",
+      "name": "Acquire",
+      "title": "The daily game",
+      "blurb": "Free, no sign-up, same five homes for everyone. This is how people find us.",
+      "pos": [
+        1,
+        0
+      ]
+    },
+    {
+      "id": "activate",
+      "name": "Activate",
+      "title": "Build your profile",
+      "blurb": "From \"guess your own month\" to a full balance sheet in about a minute. Skipped fields become labeled estimates.",
+      "pos": [
+        2,
+        0
+      ]
+    },
+    {
+      "id": "value",
+      "name": "Core value",
+      "title": "Forecast and moves",
+      "blurb": "What people pay for: you in 10 years, and your next money moves ranked in dollars.",
+      "pos": [
+        3,
+        0
+      ]
+    },
+    {
+      "id": "tools",
+      "name": "Money tools",
+      "title": "On demand",
+      "blurb": "Opened whenever a real purchase, loan or big decision comes up.",
+      "pos": [
+        4,
+        1
+      ]
+    },
+    {
+      "id": "retain",
+      "name": "Retain",
+      "title": "Come back",
+      "blurb": "Daily: the game. Monthly: the check-in. On demand: the tools.",
+      "pos": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "monetize",
+      "name": "Monetize",
+      "title": "Pro",
+      "blurb": "The paywall shows after people have seen their own forecast.",
+      "pos": [
+        4,
+        0
+      ]
+    },
+    {
+      "id": "grow",
+      "name": "Grow",
+      "title": "Spread",
+      "blurb": "Share cards, creators and streamers bring the next players.",
+      "pos": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "trust",
+      "name": "Trust layer",
+      "title": "Why it's real",
+      "blurb": "Judges read the repo: tested math, sourced data, checked AI, privacy, a live deploy.",
+      "pos": [
+        0,
+        2
+      ],
+      "span": 5
+    },
+    {
+      "id": "ship",
+      "name": "Ship",
+      "title": "Submission",
+      "blurb": "What has to be true at hour 24."
+    }
+  ],
+  "judging": [
+    {
+      "id": "works",
+      "weight": 40,
+      "question": "Does it work?",
+      "means": "Works end to end in production, nothing faked or hardcoded; UX and code quality (they read the repo)."
+    },
+    {
+      "id": "sell",
+      "weight": 20,
+      "question": "What do we sell?",
+      "means": "Clear what the user pays for and why they come back tomorrow."
+    },
+    {
+      "id": "who",
+      "weight": 15,
+      "question": "Who do we sell to?",
+      "means": "A clear problem and a deep understanding of US adults aged 25–45."
+    },
+    {
+      "id": "money",
+      "weight": 15,
+      "question": "Why does it make money?",
+      "means": "A big niche, a path to $100M ARR, LTV above CAC."
+    },
+    {
+      "id": "new",
+      "weight": 10,
+      "question": "Is it new?",
+      "means": "Not a copy of an existing business."
+    }
+  ],
+  "funnel": [
+    {
+      "id": "discover",
+      "name": "Discover",
+      "what": "A TikTok clip, a stream, a creator pack or a friend's share grid.",
+      "screens": [],
+      "events": []
+    },
+    {
+      "id": "play",
+      "name": "Play today's five",
+      "what": "Straight into the first home, no sign-up. Tap rooms for clues, guess the monthly cost.",
+      "screens": [
+        "S2",
+        "S4"
+      ],
+      "events": [
+        "play_started"
+      ]
+    },
+    {
+      "id": "finish",
+      "name": "Reveal and result",
+      "what": "Typical range, cost bars with sources, points, the share grid. Bridge: \"now guess your own month\".",
+      "screens": [
+        "S3"
+      ],
+      "events": [
+        "game_finished"
+      ]
+    },
+    {
+      "id": "guessSelf",
+      "name": "Guess yourself",
+      "what": "One slider for your own monthly cost: the first personal step.",
+      "screens": [
+        "S5"
+      ],
+      "events": [
+        "own_guess_submitted"
+      ]
+    },
+    {
+      "id": "build",
+      "name": "Build your profile",
+      "what": "Closest life as a starting point, quick sliders, a 6-tap balance sheet.",
+      "screens": [
+        "S6",
+        "S7",
+        "S8"
+      ],
+      "events": [
+        "sliders_adjusted",
+        "balance_sheet_edited"
+      ]
+    },
+    {
+      "id": "exact",
+      "name": "Make it exact",
+      "what": "Optional: upload a CSV statement, parsed in the browser. Estimates become measured values.",
+      "screens": [
+        "S9"
+      ],
+      "events": [
+        "statement_applied"
+      ]
+    },
+    {
+      "id": "aha",
+      "name": "Aha: you in 10 years",
+      "what": "The forecast with its range, the top 3 moves in dollars, and (planned) a goal.",
+      "screens": [
+        "S10",
+        "S1"
+      ],
+      "events": [
+        "forecast_viewed"
+      ]
+    },
+    {
+      "id": "paywall",
+      "name": "Paywall",
+      "what": "Shown only after the user has seen their own forecast.",
+      "screens": [
+        "S15"
+      ],
+      "events": [
+        "paywall_viewed"
+      ]
+    },
+    {
+      "id": "paid",
+      "name": "Paid",
+      "what": "Yearly first ($39.99), monthly $6.99. Test-mode Stripe and a jury promo code.",
+      "screens": [
+        "S15"
+      ],
+      "events": [
+        "pro_purchased"
+      ]
+    },
+    {
+      "id": "return",
+      "name": "Return",
+      "what": "Daily new five, the monthly check-in, Can I Afford It? and Loan Lab when life happens.",
+      "screens": [
+        "S1",
+        "S11",
+        "S12",
+        "S13",
+        "S14"
+      ],
+      "events": [
+        "move_committed",
+        "afford_checked",
+        "loan_compared"
+      ],
+      "loop": true
+    }
+  ],
+  "owners": {
+    "amir": "Amir",
+    "aibek": "Aibek",
+    "kiko": "Kiko",
+    "team": "Team"
+  },
+  "features": [
+    {
+      "id": "F1",
+      "name": "Five Lives: the daily game",
+      "group": "acquire",
+      "funnel": "play",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Five homes a day, the same for everyone. Tap rooms for clues that cost points, guess what the life costs per month on a log slider.",
+      "screens": [
+        "S2"
+      ],
+      "route": "/play",
+      "owners": [
+        "amir",
+        "aibek"
+      ],
+      "judging": [
+        "works",
+        "new"
+      ],
+      "events": [
+        "play_started",
+        "clue_opened",
+        "home_guessed",
+        "game_finished"
+      ],
+      "parts": [
+        {
+          "label": "Daily routes: today's five, clue on tap, guess scored on the server",
+          "issues": [
+            18
+          ],
+          "paths": [
+            "apps/web/app/api/daily/route.ts",
+            "apps/web/app/api/daily/clue/route.ts",
+            "apps/web/app/api/daily/guess/route.ts"
+          ]
+        },
+        {
+          "label": "Play screen: clue board, guess slider, five-home strip",
+          "issues": [
+            7
+          ],
+          "paths": [
+            "apps/web/app/play/page.tsx",
+            "apps/web/src/features/game/ui/PlayScreen.tsx",
+            "apps/web/src/features/game/ui/GuessPanel.tsx"
+          ]
+        },
+        {
+          "label": "50 life cards on real area data, each day easy → curveball",
+          "issues": [
+            23,
+            15
+          ],
+          "paths": [
+            "packages/data/cards/cards.json",
+            "packages/data/out/areas.json"
+          ]
+        },
+        {
+          "label": "Scoring: range-based, clue multiplier down to 50%",
+          "issues": [
+            2
+          ],
+          "paths": [
+            "packages/engine/score.ts",
+            "packages/engine/cost.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G-HOUSE",
+      "name": "Dollhouse cutaway (house scene)",
+      "group": "acquire",
+      "funnel": "play",
+      "tier": "extra",
+      "demo": true,
+      "pitch": "Each home is an illustrated cutaway: tap the garage, kitchen or kids' room to zoom in. Every clickable prop comes from the card's data and matches one cost line.",
+      "screens": [
+        "S2"
+      ],
+      "route": "/play",
+      "owners": [
+        "aibek",
+        "kiko"
+      ],
+      "judging": [
+        "new",
+        "works"
+      ],
+      "judgeLine": "Like GeoGuessr's looking around, for money. And a test proves no prop ever contradicts the numbers.",
+      "parts": [
+        {
+          "label": "sceneOf: deterministic props, cost-consistency test for every card",
+          "issues": [
+            25
+          ],
+          "paths": [
+            "packages/engine/scene.ts",
+            "apps/web/src/ui-kit/HouseScene.tsx"
+          ]
+        },
+        {
+          "label": "3D sprite kit (WebP renders) as the default clue panel",
+          "issues": [
+            27
+          ],
+          "paths": [
+            "apps/web/src/features/game/ui/HouseScene3D.tsx",
+            "apps/web/public/scene/garage/luxury.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "name": "Typical Range reveal",
+      "group": "acquire",
+      "funnel": "finish",
+      "tier": "core",
+      "demo": true,
+      "pitch": "A needle sweeps to the mid, the range band lights up with your guess pinned on it, then cost bars by category, each with its source and year.",
+      "screens": [
+        "S3"
+      ],
+      "route": "/play",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "works",
+        "who"
+      ],
+      "parts": [
+        {
+          "label": "Reveal view: guess on the range, points × multiplier, surprise line",
+          "issues": [
+            7
+          ],
+          "paths": [
+            "apps/web/src/features/game/ui/RevealView.tsx",
+            "apps/web/src/features/game/ui/RangeScale.tsx"
+          ]
+        },
+        {
+          "label": "Cost bars with a source per category",
+          "issues": [
+            2
+          ],
+          "paths": [
+            "apps/web/src/ui-kit/BarBreakdown.tsx",
+            "apps/web/src/ui-kit/SourceNote.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G-STREAM",
+      "name": "Streamer mode",
+      "group": "acquire",
+      "funnel": "play",
+      "tier": "extra",
+      "pitch": "Big type, a countdown, the answer hidden until the streamer locks in. Never shows the player's own money.",
+      "screens": [
+        "S4"
+      ],
+      "route": "/play?stream=1",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "money",
+        "new"
+      ],
+      "judgeLine": "The game is built for Twitch and TikTok from day one: that is our CAC story.",
+      "parts": [
+        {
+          "label": "Stream layout with a lock-in countdown",
+          "issues": [
+            7
+          ],
+          "paths": [
+            "apps/web/src/features/game/ui/Countdown.tsx"
+          ]
+        },
+        {
+          "label": "Chat votes which room to open, via a room code",
+          "scope": "later"
+        }
+      ]
+    },
+    {
+      "id": "F11",
+      "name": "This Life vs Yours",
+      "group": "acquire",
+      "funnel": "finish",
+      "tier": "extra",
+      "pitch": "On the reveal, the stranger's monthly costs next to yours, category by category: \"they pay $1,900 for rent, you pay $1,450\".",
+      "screens": [
+        "S18"
+      ],
+      "owners": [
+        "amir",
+        "kiko"
+      ],
+      "judging": [
+        "who",
+        "sell"
+      ],
+      "judgeLine": "The moment the game turns personal: it bridges a stranger's life to your own forecast.",
+      "doc": "docs/design/04-this-life-vs-yours.md",
+      "parts": [
+        {
+          "label": "Figma frame S18 (panel + teaser)",
+          "issues": []
+        },
+        {
+          "label": "Panel on the reveal, teaser before your numbers exist"
+        }
+      ]
+    },
+    {
+      "id": "G-DUEL",
+      "name": "Duel game: \"Which life costs more?\"",
+      "group": "acquire",
+      "funnel": "play",
+      "tier": "core",
+      "pitch": "Two composite lives, one question, one tap: which costs more per month? Five a day, the same for everyone. The reveal shows both totals by category with sources, what decided it, and the crowd's pick; the day ends with a grid, your blind spot and a challenge link.",
+      "screens": [
+        "S2",
+        "S3"
+      ],
+      "owners": [
+        "amir",
+        "kiko"
+      ],
+      "judging": [
+        "new",
+        "works"
+      ],
+      "doc": "docs/design/USER-JOURNEY.md",
+      "parts": [
+        {
+          "label": "Contracts, pairing (easy → close), pick score, decidedBy, blind spot",
+          "issues": [
+            104
+          ],
+          "paths": [
+            "packages/engine/duel.ts",
+            "packages/types/schemas.ts"
+          ]
+        },
+        {
+          "label": "Duel UI and view-model (/duel, and /play: the default game)",
+          "issues": [
+            104
+          ],
+          "paths": [
+            "apps/web/app/duel/page.tsx",
+            "apps/web/src/features/game/model/useDuel.ts",
+            "apps/web/src/features/game/ui/DuelScreen.tsx"
+          ]
+        },
+        {
+          "label": "DU1 server duel set on the catalog: shared card builder, hints, scorer",
+          "issues": [
+            110
+          ],
+          "paths": [
+            "apps/web/src/server/game/duel.ts"
+          ]
+        },
+        {
+          "label": "DU2 duel store: days, hints, picks (migration 7)",
+          "issues": [
+            111
+          ],
+          "paths": [
+            "apps/web/src/server/store/duel.ts"
+          ]
+        },
+        {
+          "label": "DU3 GET /api/daily?game=duel with progress",
+          "issues": [
+            112
+          ],
+          "paths": [
+            "apps/web/app/api/daily/route.ts"
+          ]
+        },
+        {
+          "label": "DU4 POST /api/daily/pick",
+          "issues": [
+            113
+          ],
+          "paths": [
+            "apps/web/app/api/daily/pick/route.ts"
+          ]
+        },
+        {
+          "label": "DU5 POST /api/daily/hint",
+          "issues": [
+            114
+          ],
+          "paths": [
+            "apps/web/app/api/daily/hint/route.ts"
+          ]
+        },
+        {
+          "label": "DU6 HTTP duel client: API builds play the duel against the server",
+          "issues": [
+            115
+          ],
+          "paths": [
+            "apps/web/src/features/game/model/duelClient.ts"
+          ]
+        },
+        {
+          "label": "DU7 crowd counts from stored picks",
+          "issues": [
+            116
+          ],
+          "paths": [
+            "apps/web/src/server/game/duelProgress.ts"
+          ]
+        },
+        {
+          "label": "DU8 challenge view with the friend's score",
+          "issues": [
+            117
+          ],
+          "paths": [
+            "apps/web/app/api/daily/challenge/route.ts"
+          ]
+        },
+        {
+          "label": "DU9 duel share image",
+          "issues": [
+            118
+          ],
+          "paths": [
+            "apps/web/src/server/game/shareCard.tsx"
+          ]
+        },
+        {
+          "label": "DU10 wider event mask + duel events",
+          "issues": [
+            119
+          ],
+          "paths": [
+            "packages/types/index.ts"
+          ]
+        },
+        {
+          "label": "DU11 production plays the duel at /play against the server (build flags, CI on the production build, rollback, smoke check)",
+          "issues": [
+            120
+          ],
+          "paths": [
+            "deploy/Dockerfile",
+            "apps/web/app/play/page.tsx",
+            "apps/web/app/api/health/route.ts"
+          ]
+        }
+      ],
+      "demo": true,
+      "route": "/play",
+      "events": [
+        "play_started",
+        "hint_opened",
+        "duel_picked",
+        "game_finished",
+        "result_shared"
+      ]
+    },
+    {
+      "id": "G-HABIT",
+      "name": "Habit duel: which costs more over 10 years?",
+      "group": "acquire",
+      "funnel": "play",
+      "tier": "extra",
+      "proposal": true,
+      "pitch": "\"A coffee every workday\" vs \"$90 a month of subscriptions\". The engine computes the 10-year answer; only pairs that hold under both low and high return assumptions are used.",
+      "screens": [
+        "X4"
+      ],
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "new",
+        "who"
+      ],
+      "judgeLine": "Proves the thesis in ten seconds, and the same math then ranks the player's own moves.",
+      "doc": "docs/PRODUCT-NEXT.md",
+      "parts": [
+        {
+          "label": "habitCost + robust-pair check, item catalogue with sources"
+        },
+        {
+          "label": "One habit duel per day (round 4 or 5)"
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "name": "Guess Yourself",
+      "group": "activate",
+      "funnel": "guessSelf",
+      "tier": "core",
+      "demo": true,
+      "pitch": "One slider: what does your own month cost? Then the engine's estimate for someone like you.",
+      "screens": [
+        "S5"
+      ],
+      "route": "/me/guess",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "who"
+      ],
+      "events": [
+        "own_guess_submitted"
+      ],
+      "parts": [
+        {
+          "label": "S5 screen and view-model",
+          "issues": [
+            8
+          ],
+          "paths": [
+            "apps/web/app/me/guess/page.tsx",
+            "apps/web/src/features/ladder/ui/GuessYourself.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "name": "Closest Life",
+      "group": "activate",
+      "funnel": "build",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Pick the home from today's game that looks most like yours. It becomes your starting profile, every field marked as an estimate.",
+      "screens": [
+        "S6"
+      ],
+      "route": "/me/closest",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "works"
+      ],
+      "events": [
+        "closest_life_chosen"
+      ],
+      "parts": [
+        {
+          "label": "S6 screen; cardToProfile in the engine",
+          "issues": [
+            8,
+            2
+          ],
+          "paths": [
+            "apps/web/app/me/closest/page.tsx",
+            "apps/web/src/features/ladder/ui/ClosestLife.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "name": "Quick Sliders + \"describe your life\"",
+      "group": "activate",
+      "funnel": "build",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Rent, car, food, subscriptions, savings in about 30 seconds. Or type it in plain English: AI turns it into fields, you confirm before anything changes.",
+      "screens": [
+        "S7"
+      ],
+      "route": "/me/sliders",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "works",
+        "who"
+      ],
+      "events": [
+        "sliders_adjusted"
+      ],
+      "parts": [
+        {
+          "label": "Quick sliders",
+          "issues": [
+            8
+          ],
+          "paths": [
+            "apps/web/app/me/sliders/page.tsx",
+            "apps/web/src/features/ladder/ui/QuickSliders.tsx"
+          ]
+        },
+        {
+          "label": "Describe your life: /api/ai/parse → typed fields, confirmed by the user",
+          "issues": [
+            11
+          ],
+          "paths": [
+            "apps/web/app/api/ai/parse/route.ts",
+            "apps/web/src/features/ladder/ui/DescribeLife.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "name": "Balance sheet in 6 taps",
+      "group": "activate",
+      "funnel": "build",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Age, take-home pay, cash, retirement, card balance and APR, other loans. Skipped fields become flagged estimates, so the 10-year range shows how much is a guess.",
+      "screens": [
+        "S8"
+      ],
+      "route": "/me/balance",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "works"
+      ],
+      "events": [
+        "balance_sheet_edited"
+      ],
+      "parts": [
+        {
+          "label": "S8 balance sheet with debts",
+          "issues": [
+            8
+          ],
+          "paths": [
+            "apps/web/app/me/balance/page.tsx",
+            "apps/web/src/features/ladder/ui/BalanceSheet.tsx",
+            "apps/web/src/features/ladder/ui/DebtForm.tsx"
+          ]
+        },
+        {
+          "label": "Things you own: home, car, investments (complete net worth)",
+          "scope": "later"
+        }
+      ]
+    },
+    {
+      "id": "F7",
+      "name": "Make It Exact: statement upload",
+      "group": "activate",
+      "funnel": "exact",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Drop a bank CSV. It is read in the browser, names and account numbers are masked, only merchant labels and amounts are sorted into categories. Estimates become measured values.",
+      "screens": [
+        "S9"
+      ],
+      "route": "/me/upload",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "works",
+        "who"
+      ],
+      "events": [
+        "statement_applied"
+      ],
+      "parts": [
+        {
+          "label": "In-browser CSV reading, column detection, masking",
+          "issues": [
+            19
+          ],
+          "paths": [
+            "apps/web/src/features/upload/model/readStatementFile.ts",
+            "packages/engine/statement.ts"
+          ],
+          "note": "Two anonymized real exports remain. Payee masking on bill-pay, check, deposit and ACH lines is in review (PR #102)."
+        },
+        {
+          "label": "Payee and payer names masked on bill-pay, check, deposit and ACH lines",
+          "issues": [
+            19
+          ],
+          "branch": "aibek/t6-payee-privacy",
+          "paths": [
+            "apps/web/src/lib/statement/payeePrivacy.test.ts"
+          ]
+        },
+        {
+          "label": "/api/statement/categorize → category totals, nothing stored",
+          "issues": [
+            20
+          ],
+          "paths": [
+            "apps/web/app/api/statement/categorize/route.ts"
+          ]
+        },
+        {
+          "label": "Upload screen + \"What we keep\" panel",
+          "issues": [
+            8
+          ],
+          "paths": [
+            "apps/web/app/me/upload/page.tsx",
+            "apps/web/src/features/ladder/ui/StatementUpload.tsx",
+            "apps/web/src/features/ladder/ui/WhatWeKeep.tsx"
+          ]
+        },
+        {
+          "label": "\"Connect your bank app\" card (coming soon)",
+          "issues": [
+            52
+          ],
+          "paths": [
+            "apps/web/src/features/ladder/ui/StatementUpload.tsx"
+          ],
+          "kind": "preview"
+        },
+        {
+          "label": "PDF statements",
+          "scope": "later"
+        }
+      ]
+    },
+    {
+      "id": "A-NOLOGIN",
+      "name": "No sign-up, saved profile",
+      "group": "activate",
+      "funnel": "build",
+      "tier": "core",
+      "pitch": "A silent anonymous ID in the browser; reload and your profile and wishlist are still there. No accounts, no email.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "works",
+        "who"
+      ],
+      "parts": [
+        {
+          "label": "POST/GET /api/session on the Postgres store",
+          "issues": [
+            17
+          ],
+          "paths": [
+            "apps/web/app/api/session/route.ts",
+            "apps/web/src/server/store/"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F8",
+      "name": "You in 10 years",
+      "group": "value",
+      "funnel": "aha",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Your net worth over 10 years as a line with a range band, in today's dollars by default. The band narrows as estimates become real numbers.",
+      "screens": [
+        "S10",
+        "S1"
+      ],
+      "route": "/future",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "sell",
+        "works"
+      ],
+      "events": [
+        "forecast_viewed"
+      ],
+      "parts": [
+        {
+          "label": "Rules forecast: inflation, income growth, debt payoff, range band, today's dollars",
+          "issues": [
+            3
+          ],
+          "paths": [
+            "packages/engine/forecast.ts",
+            "packages/engine/simulate.ts",
+            "packages/engine/assumptions.ts"
+          ]
+        },
+        {
+          "label": "S10 screen with the chart and the today's-dollars toggle",
+          "issues": [
+            9
+          ],
+          "paths": [
+            "apps/web/app/future/page.tsx",
+            "apps/web/src/features/forecast/ui/FutureScreen.tsx",
+            "apps/web/src/ui-kit/ForecastChart.tsx"
+          ]
+        },
+        {
+          "label": "\"How we calculate\" panel: every assumption with its source",
+          "issues": [
+            9
+          ],
+          "paths": [
+            "apps/web/src/features/forecast/ui/HowWeCalculate.tsx",
+            "apps/web/src/features/forecast/model/howWeCalculate.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "V-AIFC",
+      "name": "AI forecast, checked by code",
+      "group": "value",
+      "funnel": "aha",
+      "tier": "extra",
+      "demo": true,
+      "pitch": "Claude produces the 10-year forecast; code checks it (shape, today's balance exact, a sanity envelope against the rules engine), labels it \"AI estimate\", and falls back to the rules forecast if anything fails.",
+      "screens": [
+        "S1",
+        "S10"
+      ],
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "new",
+        "works"
+      ],
+      "judgeLine": "AI where it helps, code where it must be right: pull the API key and the forecast still renders, labeled.",
+      "doc": "docs/design/01-ai-forecast-states.md",
+      "parts": [
+        {
+          "label": "Y15 contracts + pure helpers (anchors, sanity envelope, rules bundle)",
+          "issues": [
+            43
+          ],
+          "paths": [
+            "packages/engine/anchors.ts",
+            "packages/engine/bundle.ts"
+          ]
+        },
+        {
+          "label": "Y16 POST /api/ai/forecast: prompt, checks, one retry, rules fallback",
+          "issues": [
+            44
+          ],
+          "paths": [
+            "apps/web/app/api/ai/forecast/route.ts",
+            "apps/web/src/server/ai/forecast.ts"
+          ]
+        },
+        {
+          "label": "Y17 cache + in-flight dedup by profile hash",
+          "issues": [
+            45
+          ],
+          "paths": [
+            "apps/web/src/server/ai/forecastCache.ts"
+          ]
+        },
+        {
+          "label": "Y18 client hook, async S1/S10, source labels",
+          "issues": [
+            46
+          ],
+          "paths": [
+            "apps/web/src/features/forecast/model/useForecastBundle.ts",
+            "apps/web/src/ui-kit/Tag.tsx"
+          ]
+        },
+        {
+          "label": "Y19 eval script: run-to-run spread, gap to rules, band after upload",
+          "issues": [
+            47
+          ],
+          "paths": [
+            "apps/web/evals/forecast.eval.ts"
+          ]
+        },
+        {
+          "label": "Y20 explanations name the source (\"Our AI estimate…\")",
+          "issues": [
+            48
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F9",
+      "name": "Next Moves, ranked in dollars",
+      "group": "value",
+      "funnel": "aha",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Your top 3 moves sorted by their 10-year effect: pay the card first, cut a category, cancel subscriptions. Commit to one with \"I'm doing this\"; \"Why?\" explains it in two sentences.",
+      "screens": [
+        "S10"
+      ],
+      "route": "/future",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "sell",
+        "new"
+      ],
+      "judgeLine": "Nobody else ranks your next decision in dollars. This is the product.",
+      "events": [
+        "move_committed"
+      ],
+      "parts": [
+        {
+          "label": "rankMoves level 1 + unlock rules",
+          "issues": [
+            4
+          ],
+          "paths": [
+            "packages/engine/moves.ts"
+          ]
+        },
+        {
+          "label": "Moves list with commit / done",
+          "issues": [
+            9
+          ],
+          "paths": [
+            "apps/web/src/features/forecast/ui/NextMoves.tsx",
+            "apps/web/src/features/forecast/model/useNextMoves.ts"
+          ]
+        },
+        {
+          "label": "\"Why?\": /api/ai/explain, numbers checked against the input",
+          "issues": [
+            11
+          ],
+          "paths": [
+            "apps/web/app/api/ai/explain/route.ts",
+            "apps/web/src/features/forecast/model/useMoveExplain.ts"
+          ]
+        },
+        {
+          "label": "Levels 2–3 (retirement match, HSA, refinance, rent, insurance)",
+          "scope": "later",
+          "note": "Level 2 shows as a locked preview today."
+        }
+      ]
+    },
+    {
+      "id": "S1-TODAY",
+      "name": "Today screen",
+      "group": "value",
+      "funnel": "return",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Home base: the month-end projection, you in 10 years, today's game, your committed move, and doors to every tool.",
+      "screens": [
+        "S1"
+      ],
+      "route": "/",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "sell"
+      ],
+      "parts": [
+        {
+          "label": "S1 screen",
+          "issues": [
+            9
+          ],
+          "paths": [
+            "apps/web/app/page.tsx",
+            "apps/web/src/features/forecast/ui/TodayScreen.tsx"
+          ]
+        },
+        {
+          "label": "Month-end card: drift flags after 3 uploaded months (monthEnd)",
+          "issues": [
+            22
+          ],
+          "paths": [
+            "packages/engine/month.ts",
+            "apps/web/src/features/forecast/model/useToday.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "V-GOAL",
+      "name": "Goal: plan to a number",
+      "group": "value",
+      "funnel": "aha",
+      "tier": "extra",
+      "demo": true,
+      "pitch": "Set a target net worth and a horizon. See on track / within range / behind, the gap in dollars, the extra monthly saving needed, and how much your top moves close.",
+      "screens": [
+        "S10"
+      ],
+      "owners": [
+        "aibek",
+        "kiko"
+      ],
+      "judging": [
+        "sell",
+        "who"
+      ],
+      "judgeLine": "Turns a forecast into a plan, and \"on track\" always comes from tested code, never the model.",
+      "doc": "docs/design/02-goal-card.md",
+      "parts": [
+        {
+          "label": "Engine: goalStatus, extraSavingToReach, movesTowardGoal",
+          "issues": [
+            69
+          ]
+        },
+        {
+          "label": "Goal card on S10, saved with the session",
+          "issues": [
+            69
+          ]
+        }
+      ]
+    },
+    {
+      "id": "V-AHA",
+      "name": "Your blind spot: guess vs actual",
+      "group": "value",
+      "funnel": "aha",
+      "tier": "extra",
+      "proposal": true,
+      "pitch": "Before the balance sheet, guess your net worth today and in 10 years (bands, since it can be negative). After the forecast, see how far off you were and where you rank among today's five.",
+      "screens": [
+        "S5",
+        "S10"
+      ],
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "who",
+        "new"
+      ],
+      "judgeLine": "The strongest proof moment is personal. And the miss-factor event gives us real counts for the pitch.",
+      "doc": "docs/PRODUCT-NEXT.md",
+      "parts": [
+        {
+          "label": "Two band picks on S5"
+        },
+        {
+          "label": "Reveal on S10 + rank among the five"
+        },
+        {
+          "label": "Miss-factor event (bucket only, never values)"
+        }
+      ]
+    },
+    {
+      "id": "F14",
+      "name": "Can I Afford It?",
+      "group": "tools",
+      "funnel": "return",
+      "tier": "core",
+      "pitch": "A planned purchase, one-time or recurring, paid by cash, card or loan: its effect on this month, 12 months, 5 and 10 years, and a verdict (fits / wait N months / no) with the reason.",
+      "screens": [
+        "S11"
+      ],
+      "route": "/afford",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "sell",
+        "works"
+      ],
+      "events": [
+        "afford_checked"
+      ],
+      "parts": [
+        {
+          "label": "canAfford: cushion, debt load, card revolves; with / without forecasts",
+          "issues": [
+            5
+          ],
+          "paths": [
+            "packages/engine/afford.ts"
+          ]
+        },
+        {
+          "label": "S11 form, verdict, with/without chart",
+          "issues": [
+            10
+          ],
+          "paths": [
+            "apps/web/app/afford/page.tsx",
+            "apps/web/src/features/afford/ui/AffordScreen.tsx",
+            "apps/web/src/features/afford/ui/AffordResultPanel.tsx"
+          ]
+        },
+        {
+          "label": "Type it: \"a $1,200 laptop on my card\" → parsed, confirmed",
+          "issues": [
+            11
+          ],
+          "paths": [
+            "apps/web/src/features/afford/ui/PurchaseParse.tsx"
+          ]
+        },
+        {
+          "label": "Wishlist (Pro)",
+          "issues": [
+            51
+          ],
+          "paths": [
+            "apps/web/src/features/afford/ui/Wishlist.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F15",
+      "name": "Loan Lab",
+      "group": "tools",
+      "funnel": "return",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Car, personal, student, BNPL, card and mortgage loans. Compare 3 offers side by side, see the debt-load gauge, slide extra payments, pick a payoff order.",
+      "screens": [
+        "S12"
+      ],
+      "route": "/loan",
+      "owners": [
+        "aibek",
+        "amir"
+      ],
+      "judging": [
+        "sell",
+        "works"
+      ],
+      "events": [
+        "loan_compared"
+      ],
+      "parts": [
+        {
+          "label": "Loan engine: amortize, compareLoans, payoffOrder, debt load, 10-year effect",
+          "issues": [
+            16
+          ],
+          "paths": [
+            "packages/engine/loan/amortize.ts",
+            "packages/engine/loan/index.ts"
+          ]
+        },
+        {
+          "label": "S12: offers side by side, gauges, extra-payment slider",
+          "issues": [
+            10
+          ],
+          "paths": [
+            "apps/web/app/loan/page.tsx",
+            "apps/web/src/features/loan/ui/OfferCompare.tsx",
+            "apps/web/src/features/loan/ui/DebtLoadGauges.tsx",
+            "apps/web/src/features/loan/ui/ExtraPayment.tsx"
+          ]
+        },
+        {
+          "label": "Payoff order (avalanche / snowball)",
+          "issues": [
+            16
+          ],
+          "paths": [
+            "apps/web/src/features/loan/ui/PayoffOrder.tsx"
+          ]
+        },
+        {
+          "label": "Type an offer in plain English",
+          "issues": [
+            11
+          ],
+          "paths": [
+            "apps/web/src/features/loan/ui/LoanParse.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "name": "Decisions: path A vs path B",
+      "group": "tools",
+      "funnel": "return",
+      "tier": "core",
+      "pitch": "Big choices run through your own forecast: keep your car or lease a new one, today. Moving city, a kid, a job offer, a wedding next.",
+      "screens": [
+        "S13"
+      ],
+      "route": "/decide",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "sell",
+        "who"
+      ],
+      "parts": [
+        {
+          "label": "Keep the car vs lease, both paths through forecast()",
+          "issues": [
+            24
+          ],
+          "paths": [
+            "apps/web/app/decide/page.tsx",
+            "apps/web/src/features/mocks/ui/DecideScreen.tsx"
+          ],
+          "kind": "preview"
+        },
+        {
+          "label": "Moving city, having a kid, job offer, wedding",
+          "scope": "later"
+        }
+      ]
+    },
+    {
+      "id": "M-SUBS",
+      "name": "Subscription audit",
+      "group": "tools",
+      "funnel": "return",
+      "tier": "extra",
+      "demo": true,
+      "pitch": "Guess what you pay for subscriptions, tick what you have, see the gap, then upload a statement to find the ones you forgot: price rises, intro prices that ended, overlaps. Mark what you'd cancel and see it over 10 years; export the renewals as a calendar.",
+      "screens": [
+        "S21"
+      ],
+      "route": "/tools/subscriptions",
+      "owners": [
+        "amir",
+        "aibek"
+      ],
+      "judging": [
+        "who",
+        "works"
+      ],
+      "judgeLine": "Shows the one sourced gap in our thesis ($86 guessed vs $219 itemized) in your own numbers, and findings never leave the browser.",
+      "doc": "docs/design/08-subscription-audit.md",
+      "events": [
+        "tool_opened",
+        "subs_started",
+        "subs_revealed",
+        "subs_flagged",
+        "subs_cancel_marked",
+        "renewals_exported"
+      ],
+      "parts": [
+        {
+          "label": "M1 contracts, schemas, events and fixtures for the three tools",
+          "issues": [
+            77
+          ],
+          "branch": "micro/m1-contracts",
+          "paths": [
+            "packages/data/fixtures/tools.ts",
+            "packages/data/fixtures/subscriptions.expected.json"
+          ]
+        },
+        {
+          "label": "M2 tool plumbing: local tool state, strict events, per-tool funnels (shared by all three)",
+          "issues": [
+            78
+          ],
+          "paths": [
+            "packages/types/tools.ts",
+            "apps/web/src/state/tools.ts",
+            "apps/web/e2e/tools/harness.spec.ts"
+          ]
+        },
+        {
+          "label": "M3 detectSubscriptions: recurring charges, price rises, intro endings, overlaps",
+          "issues": [
+            79
+          ],
+          "branch": "micro/m3-detect-subscriptions",
+          "paths": [
+            "packages/engine/subscriptions.ts"
+          ]
+        },
+        {
+          "label": "M4 known-services catalogue (each price with a year and source) + label classes from the categorizer",
+          "issues": [
+            80
+          ],
+          "paths": [
+            "packages/data/subscriptions.json",
+            "packages/data/subscriptions.ts"
+          ]
+        },
+        {
+          "label": "M5 S21: guess → ticks → reveal → statement → cancel plan",
+          "issues": [
+            81
+          ],
+          "branch": "micro/m5-subscription-audit",
+          "paths": [
+            "apps/web/app/tools/subscriptions/page.tsx",
+            "apps/web/src/features/subscriptions/model/useSubscriptions.ts",
+            "apps/web/src/features/subscriptions/ui/SubscriptionsScreen.tsx"
+          ]
+        },
+        {
+          "label": "M6 renewals calendar: renewalsToIcs + browser download",
+          "issues": [
+            82
+          ],
+          "branch": "micro/m6-renewals-ics",
+          "paths": [
+            "apps/web/src/lib/ics.ts",
+            "apps/web/src/lib/download.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "M-OVER",
+      "name": "Overpaying check",
+      "group": "tools",
+      "funnel": "return",
+      "tier": "extra",
+      "pitch": "Your rent, car insurance, groceries and childcare against sourced benchmarks for your area: below, in range or above, the gap per month and year, and the 10-year effect of closing it. Works cold, with no profile.",
+      "screens": [
+        "S23"
+      ],
+      "route": "/tools/overpaying",
+      "owners": [
+        "aibek",
+        "amir"
+      ],
+      "judging": [
+        "new",
+        "works"
+      ],
+      "judgeLine": "Every benchmark carries its source (HUD, Census, NAIC, USDA, DOL); it says \"above the typical range\", never \"you are overpaying\".",
+      "doc": "docs/design/11-overpaying-check.md",
+      "events": [
+        "tool_opened",
+        "overpaying_checked"
+      ],
+      "parts": [
+        {
+          "label": "M10 overpayingCheck against sourced area benchmarks",
+          "issues": [
+            86
+          ],
+          "paths": [
+            "packages/engine/overpaying.ts",
+            "packages/types/overpaying.ts"
+          ]
+        },
+        {
+          "label": "M11 S23: cold flow, ZIP or nearest metro, 10-year effect",
+          "issues": [
+            87
+          ],
+          "branch": "micro/m11-overpaying-check",
+          "paths": [
+            "apps/web/app/tools/overpaying/page.tsx",
+            "apps/web/src/features/overpaying/model/useOverpaying.ts",
+            "apps/web/src/features/overpaying/ui/OverpayingScreen.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "M-PAYOFF",
+      "name": "Debt payoff planner (in Loan Lab)",
+      "group": "tools",
+      "funnel": "return",
+      "tier": "extra",
+      "pitch": "Avalanche vs snowball vs minimums on your debts plus the selected offer: an extra monthly payment, the debt-free date, interest saved, and the extra needed to finish by a chosen date. Replaces Loan Lab's payoff-order card.",
+      "screens": [
+        "S12"
+      ],
+      "route": "/loan",
+      "owners": [
+        "aibek",
+        "amir"
+      ],
+      "judging": [
+        "sell",
+        "works"
+      ],
+      "doc": "docs/design/12-debt-payoff.md",
+      "events": [
+        "payoff_planned"
+      ],
+      "parts": [
+        {
+          "label": "M12 payoffPlan, comparePayoff, extraToFinishBy",
+          "issues": [
+            88
+          ],
+          "paths": [
+            "packages/engine/loan/payoff.ts",
+            "packages/types/payoff.ts"
+          ]
+        },
+        {
+          "label": "M13 planner section in Loan Lab: view-model, placeholder UI (last)",
+          "issues": [
+            89
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F12",
+      "name": "Monthly check-in",
+      "group": "retain",
+      "funnel": "return",
+      "tier": "core",
+      "pitch": "Your latest month against the 3 before it, drift by category, and progress on the move you committed to: \"I did it\" or \"not yet\".",
+      "screens": [
+        "S14"
+      ],
+      "route": "/checkin",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "sell"
+      ],
+      "parts": [
+        {
+          "label": "Check-in screen on engine data (monthEnd)",
+          "issues": [
+            24
+          ],
+          "paths": [
+            "apps/web/app/checkin/page.tsx",
+            "apps/web/src/features/mocks/ui/CheckinScreen.tsx"
+          ],
+          "kind": "preview"
+        },
+        {
+          "label": "Save check-ins and move progress over time",
+          "scope": "later"
+        }
+      ]
+    },
+    {
+      "id": "R-STREAK",
+      "name": "Daily streak",
+      "group": "retain",
+      "funnel": "return",
+      "tier": "next",
+      "pitch": "Consecutive days with a finished set, shown in the game header and on the share grid.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "sell"
+      ],
+      "parts": [
+        {
+          "label": "Streak from stored guesses, shown on S2 and the grid"
+        }
+      ]
+    },
+    {
+      "id": "R-WEEK",
+      "name": "Guess your own week",
+      "group": "retain",
+      "funnel": "return",
+      "tier": "next",
+      "pitch": "Before you look, guess what you spent this week. The game becomes budgeting practice.",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "sell",
+        "new"
+      ],
+      "parts": [
+        {
+          "label": "Weekly self-guess against uploaded totals",
+          "scope": "later"
+        }
+      ]
+    },
+    {
+      "id": "R-CARDS",
+      "name": "Endless daily sets",
+      "group": "retain",
+      "funnel": "return",
+      "tier": "next",
+      "pitch": "50 hand-made cards last 10 days. Generate cards from 60 ZIPs × lifestyle templates so a set never repeats within a season.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "money"
+      ],
+      "parts": [
+        {
+          "label": "Card generator from areas.json × templates",
+          "scope": "later"
+        }
+      ]
+    },
+    {
+      "id": "F13",
+      "name": "Pro paywall",
+      "group": "monetize",
+      "funnel": "paywall",
+      "tier": "core",
+      "demo": true,
+      "pitch": "$39.99/year first, $6.99/month. With no Stripe key the demo runs a simulated in-app checkout (nothing is charged); with a Stripe test key it uses Stripe Checkout in test mode. A promo code for the jury. Pro unlocks the wishlist (and later check-ins, decisions, history).",
+      "screens": [
+        "S15"
+      ],
+      "route": "/pro",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "money",
+        "sell"
+      ],
+      "events": [
+        "paywall_viewed"
+      ],
+      "parts": [
+        {
+          "label": "Simulated in-app checkout when there is no Stripe key (nothing charged)",
+          "issues": [
+            51
+          ],
+          "paths": [
+            "apps/web/app/api/pro/demo-checkout/route.ts",
+            "apps/web/src/features/pro/ui/DemoCheckoutBlock.tsx"
+          ]
+        },
+        {
+          "label": "Stripe test checkout + confirm; a live key is refused",
+          "issues": [
+            51
+          ],
+          "paths": [
+            "apps/web/app/api/pro/checkout/route.ts",
+            "apps/web/app/api/pro/confirm/route.ts"
+          ]
+        },
+        {
+          "label": "Jury promo code unlock",
+          "issues": [
+            51
+          ],
+          "paths": [
+            "apps/web/app/api/pro/demo-unlock/route.ts",
+            "apps/web/src/features/pro/ui/PromoCodeForm.tsx"
+          ]
+        },
+        {
+          "label": "S15 paywall with plan picker; entitlements on the store",
+          "issues": [
+            51,
+            17
+          ],
+          "paths": [
+            "apps/web/app/pro/page.tsx",
+            "apps/web/src/features/pro/ui/Paywall.tsx",
+            "apps/web/src/features/pro/ui/PlanPicker.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F16",
+      "name": "Share cards and grid",
+      "group": "grow",
+      "funnel": "discover",
+      "tier": "core",
+      "pitch": "A spoiler-free emoji grid (🟩 in range, 🟨 500+, 🟥 below) and 9:16 / 1:1 PNG cards rendered from a stored result, so a score can't be faked.",
+      "screens": [
+        "S3"
+      ],
+      "owners": [
+        "aibek",
+        "amir"
+      ],
+      "judging": [
+        "money",
+        "works"
+      ],
+      "events": [
+        "result_shared"
+      ],
+      "parts": [
+        {
+          "label": "Emoji grid with Web Share / clipboard fallback",
+          "issues": [
+            7
+          ],
+          "paths": [
+            "apps/web/src/features/game/model/share.ts",
+            "apps/web/src/features/game/ui/SummaryView.tsx"
+          ]
+        },
+        {
+          "label": "GET /api/share: 9:16 and 1:1 PNGs from a stored result",
+          "issues": [
+            18
+          ],
+          "paths": [
+            "apps/web/app/api/share/route.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G-LEAD",
+      "name": "Daily leaderboard",
+      "group": "grow",
+      "funnel": "finish",
+      "tier": "extra",
+      "pitch": "Ranked from scores the server computed. Made-up handles (\"Thrifty Otter 12\"), your row pinned, a countdown to the next set. No prizes.",
+      "screens": [
+        "S16"
+      ],
+      "route": "/leaderboard",
+      "owners": [
+        "aibek",
+        "kiko"
+      ],
+      "judging": [
+        "money",
+        "works"
+      ],
+      "judgeLine": "A client can't post a score: the board is summed from guesses the server scored.",
+      "doc": "docs/design/03-leaderboard.md",
+      "parts": [
+        {
+          "label": "GET /api/leaderboard from stored results",
+          "issues": [
+            18
+          ],
+          "paths": [
+            "apps/web/app/api/leaderboard/route.ts"
+          ]
+        },
+        {
+          "label": "S16 screen + embed on the game summary",
+          "paths": [
+            "apps/web/app/leaderboard/page.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G-PACKS",
+      "name": "Creator packs",
+      "group": "grow",
+      "funnel": "discover",
+      "tier": "extra",
+      "pitch": "Themed sets of five homes, always available and shareable by link: \"Guess the NYC 25-year-old\", \"Your city vs mine\".",
+      "screens": [
+        "S17"
+      ],
+      "route": "/packs",
+      "owners": [
+        "aibek",
+        "kiko"
+      ],
+      "judging": [
+        "money",
+        "new"
+      ],
+      "judgeLine": "Creators get content, we get players: a channel that costs us nothing per install.",
+      "doc": "docs/design/05-creator-packs.md",
+      "parts": [
+        {
+          "label": "Pack data: nyc-25 and city-swap (2 × 5 homes)",
+          "issues": [
+            23
+          ],
+          "paths": [
+            "packages/data/cards/cards.json"
+          ]
+        },
+        {
+          "label": "Gallery, pack intro and pack summary screens",
+          "paths": [
+            "apps/web/app/packs/page.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G-CHALLENGE",
+      "name": "Challenge link: \"beat my 4/5\"",
+      "group": "grow",
+      "funnel": "discover",
+      "tier": "next",
+      "proposal": true,
+      "pitch": "Share a link to the same set with your score on it; the friend plays and sees both results.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "money"
+      ],
+      "doc": "docs/PRODUCT-NEXT.md",
+      "parts": [
+        {
+          "label": "Challenge link from the stored resultId"
+        }
+      ]
+    },
+    {
+      "id": "G-AVATAR",
+      "name": "Real-person avatars (opt-in)",
+      "group": "grow",
+      "funnel": "discover",
+      "tier": "next",
+      "proposal": true,
+      "pitch": "After seeing their forecast, players can publish a coarse, unlinked version of their numbers to the duel pool, stamped \"self-reported\" or \"statement-verified\".",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "new"
+      ],
+      "doc": "docs/PRODUCT-NEXT.md",
+      "parts": [
+        {
+          "label": "Publish / unpublish with preview and consent",
+          "issues": [
+            105
+          ]
+        },
+        {
+          "label": "\"Your avatar was picked X times\" stats",
+          "issues": [
+            105
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T-ENGINE",
+      "name": "Pure, tested money engine",
+      "group": "trust",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Every loan payment, cost, score, verdict and month-end comes from deterministic functions with Vitest tests. An LLM never produces those numbers.",
+      "owners": [
+        "amir",
+        "aibek"
+      ],
+      "judging": [
+        "works"
+      ],
+      "judgeLine": "Open packages/engine: every number on screen has a function and a test.",
+      "parts": [
+        {
+          "label": "cost, score, cardToProfile",
+          "issues": [
+            2
+          ],
+          "paths": [
+            "packages/engine/cost.ts",
+            "packages/engine/score.ts"
+          ]
+        },
+        {
+          "label": "forecast, applyPatch, rankMoves, canAfford",
+          "issues": [
+            3,
+            4,
+            5
+          ],
+          "paths": [
+            "packages/engine/forecast.ts",
+            "packages/engine/moves.ts",
+            "packages/engine/afford.ts"
+          ]
+        },
+        {
+          "label": "loan, compareLoans, payoffOrder, monthEnd",
+          "issues": [
+            16,
+            22
+          ],
+          "paths": [
+            "packages/engine/loan/",
+            "packages/engine/month.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T-DATA",
+      "name": "Every number has a source",
+      "group": "trust",
+      "tier": "core",
+      "pitch": "60 ZIPs in 15 metros from HUD, Census ACS, DOL childcare, USDA, EIA, BLS and NAIC. Each value carries its source and year; defaulted inputs carry an \"estimate\" tag.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "works",
+        "who"
+      ],
+      "parts": [
+        {
+          "label": "Data pipeline → areas.json (pnpm data:refresh)",
+          "issues": [
+            15
+          ],
+          "paths": [
+            "packages/data/out/areas.json",
+            "packages/data/areas.ts"
+          ]
+        },
+        {
+          "label": "SourceNote and EstimateTag on every number",
+          "paths": [
+            "apps/web/src/ui-kit/SourceNote.tsx",
+            "apps/web/src/ui-kit/EstimateTag.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T-AI",
+      "name": "AI with guardrails",
+      "group": "trust",
+      "tier": "core",
+      "pitch": "AI parses text into typed JSON (the user confirms), sorts merchant labels and writes two-sentence explanations whose numbers are checked against the input. Everything works without a key.",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "works",
+        "new"
+      ],
+      "parts": [
+        {
+          "label": "/api/ai/parse and /api/ai/explain, zod-validated, rate-limited, template fallback",
+          "issues": [
+            11
+          ],
+          "paths": [
+            "apps/web/app/api/ai/parse/route.ts",
+            "apps/web/app/api/ai/explain/route.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T-PRIVACY",
+      "name": "Privacy by design",
+      "group": "trust",
+      "tier": "core",
+      "pitch": "Statements never leave the browser raw. Only masked merchant labels, amounts, month and day are sent; only category totals are kept. The \"What we keep\" panel lists exactly that.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "works",
+        "who"
+      ],
+      "parts": [
+        {
+          "label": "Masking in the browser + \"What we keep\"",
+          "issues": [
+            19,
+            20
+          ],
+          "paths": [
+            "apps/web/src/features/upload/model/readStatementFile.ts",
+            "apps/web/src/features/ladder/ui/WhatWeKeep.tsx"
+          ]
+        },
+        {
+          "label": "Payee names on bill-pay, check, deposit and ACH lines never leave the browser",
+          "issues": [
+            19
+          ],
+          "branch": "aibek/t6-payee-privacy",
+          "paths": [
+            "apps/web/src/lib/statement/payeePrivacy.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T-FAIR",
+      "name": "The server holds the answers",
+      "group": "trust",
+      "tier": "extra",
+      "pitch": "The browser only gets what's visible; each clue is fetched on tap and recorded; guesses are scored on the server, one per card per player per day.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "works"
+      ],
+      "judgeLine": "Open the network tab: no answer reaches the browser before you guess.",
+      "parts": [
+        {
+          "label": "Clue log + server scoring + UNIQUE guess per day",
+          "issues": [
+            18
+          ],
+          "paths": [
+            "apps/web/app/api/daily/guess/route.ts",
+            "apps/web/app/api/daily/clue/route.ts"
+          ]
+        },
+        {
+          "label": "API build ships no answers in browser chunks (CI check)",
+          "paths": [
+            ".github/workflows/ci.yml"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T-FUNNEL",
+      "name": "Funnel analytics + live funnel page",
+      "group": "trust",
+      "tier": "extra",
+      "pitch": "Fixed, anonymous events from every step; a report of people per step and conversion; an internal page to open live numbers during the pitch instead of typing them into a slide.",
+      "screens": [
+        "S19"
+      ],
+      "route": "/admin/funnel",
+      "owners": [
+        "aibek",
+        "kiko"
+      ],
+      "judging": [
+        "money",
+        "works"
+      ],
+      "judgeLine": "Real usage numbers from the live app, on stage.",
+      "doc": "docs/design/06-funnel-dashboard.md",
+      "parts": [
+        {
+          "label": "POST /api/events + GET /api/events/funnel",
+          "issues": [
+            21
+          ],
+          "paths": [
+            "apps/web/app/api/events/route.ts",
+            "apps/web/app/api/events/funnel/route.ts"
+          ]
+        },
+        {
+          "label": "S19 funnel page",
+          "paths": [
+            "apps/web/app/admin/funnel/page.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T-QUALITY",
+      "name": "CI, e2e demo path, auto-deploy",
+      "group": "trust",
+      "tier": "core",
+      "demo": true,
+      "pitch": "Lint (with the UI import rule), typecheck, Vitest and a Playwright walk of the demo path on every PR; main deploys itself with a health check and automatic rollback.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "works"
+      ],
+      "parts": [
+        {
+          "label": "CI + Playwright demo path",
+          "issues": [
+            14,
+            21
+          ],
+          "paths": [
+            ".github/workflows/ci.yml",
+            "apps/web/e2e/demo-path.spec.ts"
+          ]
+        },
+        {
+          "label": "Deploy to the team server, health check, rollback",
+          "issues": [
+            14
+          ],
+          "paths": [
+            ".github/workflows/deploy.yml",
+            "deploy/deploy.sh",
+            "apps/web/app/api/health/route.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T-DESIGN",
+      "name": "Design system",
+      "group": "trust",
+      "tier": "core",
+      "pitch": "Figma variables → tokens.json → CSS; presentational UI that only imports the kit (lint-enforced); every primitive live at /kit.",
+      "owners": [
+        "kiko",
+        "amir"
+      ],
+      "judging": [
+        "works"
+      ],
+      "parts": [
+        {
+          "label": "Tokens from Figma (Dollhouse)",
+          "issues": [
+            29
+          ],
+          "paths": [
+            "tokens.json",
+            "apps/web/src/ui-kit/tokens.css"
+          ]
+        },
+        {
+          "label": "Figma frames S1–S15 + skin pass",
+          "issues": [
+            28,
+            12
+          ],
+          "paths": [
+            "apps/web/app/kit/page.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SHIP-A",
+      "name": "Deck, demo data, rehearsal",
+      "group": "ship",
+      "tier": "core",
+      "pitch": "A deck of 10 slides or fewer, the demo profile and statement, before/after numbers from the Y19 eval (never typed by hand), one full rehearsal.",
+      "owners": [
+        "amir"
+      ],
+      "judging": [
+        "sell",
+        "who",
+        "money"
+      ],
+      "parts": [
+        {
+          "label": "SA: deck, demo data, rehearsal",
+          "issues": [
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SHIP-B",
+      "name": "README, performance, final deploy",
+      "group": "ship",
+      "tier": "core",
+      "pitch": "README lists every feature, phone performance checked, final deploy, a backup recording of the demo.",
+      "owners": [
+        "aibek"
+      ],
+      "judging": [
+        "works"
+      ],
+      "parts": [
+        {
+          "label": "SB: README, performance, final deploy, backup recording",
+          "issues": [
+            26
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SHIP-0",
+      "name": "Hour 0 leftovers",
+      "group": "ship",
+      "tier": "core",
+      "pitch": "LLM key on the server (no training on API data; zero retention is not enabled, so no copy may claim it), frame priority, sprite id list.",
+      "owners": [
+        "team"
+      ],
+      "judging": [
+        "works"
+      ],
+      "parts": [
+        {
+          "label": "H0: contracts, fixtures, stack, sprite ids",
+          "issues": [
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "screens": [
+    {
+      "id": "S1",
+      "name": "Today",
+      "route": "/",
+      "paths": [
+        "apps/web/app/page.tsx"
+      ],
+      "feature": "S1-TODAY",
+      "short": "Today",
+      "pos": [
+        3,
+        3
+      ]
+    },
+    {
+      "id": "S2",
+      "name": "Game: the duel round",
+      "route": "/play",
+      "paths": [
+        "apps/web/src/features/game/ui/DuelScreen.tsx",
+        "apps/web/app/play/page.tsx"
+      ],
+      "feature": "G-DUEL",
+      "short": "Duel round",
+      "pos": [
+        1,
+        0
+      ]
+    },
+    {
+      "id": "S3",
+      "name": "Duel reveal and day result",
+      "route": "/play (state)",
+      "paths": [
+        "apps/web/src/features/game/ui/DuelReveal.tsx",
+        "apps/web/src/features/game/ui/DuelSummary.tsx"
+      ],
+      "feature": "G-DUEL",
+      "short": "Reveal + day",
+      "pos": [
+        2,
+        0
+      ]
+    },
+    {
+      "id": "S4",
+      "name": "Streamer mode (slider rollback)",
+      "route": "/play?stream=1",
+      "paths": [
+        "apps/web/src/features/game/ui/Countdown.tsx"
+      ],
+      "feature": "G-STREAM",
+      "short": "Streamer mode",
+      "pos": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "S5",
+      "name": "Guess yourself",
+      "route": "/me/guess",
+      "paths": [
+        "apps/web/app/me/guess/page.tsx"
+      ],
+      "feature": "F3",
+      "short": "Guess yourself",
+      "pos": [
+        3,
+        0
+      ]
+    },
+    {
+      "id": "S6",
+      "name": "Closest life",
+      "route": "/me/closest",
+      "paths": [
+        "apps/web/app/me/closest/page.tsx"
+      ],
+      "feature": "F4",
+      "short": "Closest life",
+      "pos": [
+        4,
+        0
+      ]
+    },
+    {
+      "id": "S7",
+      "name": "Quick sliders",
+      "route": "/me/sliders",
+      "paths": [
+        "apps/web/app/me/sliders/page.tsx"
+      ],
+      "feature": "F5",
+      "short": "Quick sliders",
+      "pos": [
+        5,
+        0
+      ]
+    },
+    {
+      "id": "S8",
+      "name": "Balance sheet",
+      "route": "/me/balance",
+      "paths": [
+        "apps/web/app/me/balance/page.tsx"
+      ],
+      "feature": "F6",
+      "short": "Balance sheet",
+      "pos": [
+        6,
+        0
+      ]
+    },
+    {
+      "id": "S9",
+      "name": "Statement upload",
+      "route": "/me/upload",
+      "paths": [
+        "apps/web/app/me/upload/page.tsx"
+      ],
+      "feature": "F7",
+      "short": "Statement upload",
+      "pos": [
+        6,
+        1
+      ]
+    },
+    {
+      "id": "S10",
+      "name": "You in 10 years + Next Moves",
+      "route": "/future",
+      "paths": [
+        "apps/web/app/future/page.tsx"
+      ],
+      "feature": "F8",
+      "short": "Forecast + moves",
+      "pos": [
+        6,
+        2
+      ]
+    },
+    {
+      "id": "S11",
+      "name": "Can I Afford It?",
+      "route": "/afford",
+      "paths": [
+        "apps/web/app/afford/page.tsx"
+      ],
+      "feature": "F14",
+      "short": "Can I afford it?",
+      "pos": [
+        1,
+        4
+      ]
+    },
+    {
+      "id": "S12",
+      "name": "Loan Lab",
+      "route": "/loan",
+      "paths": [
+        "apps/web/app/loan/page.tsx"
+      ],
+      "feature": "F15",
+      "short": "Loan Lab",
+      "pos": [
+        2,
+        4
+      ]
+    },
+    {
+      "id": "S13",
+      "name": "Decision (car)",
+      "route": "/decide",
+      "paths": [
+        "apps/web/app/decide/page.tsx"
+      ],
+      "kind": "preview",
+      "feature": "F10",
+      "short": "Decision (car)",
+      "pos": [
+        3,
+        4
+      ]
+    },
+    {
+      "id": "S14",
+      "name": "Monthly check-in",
+      "route": "/checkin",
+      "paths": [
+        "apps/web/app/checkin/page.tsx"
+      ],
+      "kind": "preview",
+      "feature": "F12",
+      "short": "Monthly check-in",
+      "pos": [
+        4,
+        4
+      ]
+    },
+    {
+      "id": "S15",
+      "name": "Pro paywall",
+      "route": "/pro",
+      "paths": [
+        "apps/web/app/pro/page.tsx"
+      ],
+      "feature": "F13",
+      "short": "Pro paywall",
+      "pos": [
+        5,
+        2
+      ]
+    },
+    {
+      "id": "S16",
+      "name": "Leaderboard",
+      "route": "/leaderboard",
+      "paths": [
+        "apps/web/app/leaderboard/page.tsx"
+      ],
+      "feature": "G-LEAD",
+      "short": "Leaderboard",
+      "pos": [
+        3,
+        1
+      ]
+    },
+    {
+      "id": "S17",
+      "name": "Creator packs",
+      "route": "/packs",
+      "paths": [
+        "apps/web/app/packs/page.tsx"
+      ],
+      "feature": "G-PACKS",
+      "short": "Creator packs",
+      "pos": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "S18",
+      "name": "This Life vs Yours",
+      "route": "panel on S3",
+      "feature": "F11",
+      "short": "Life vs yours",
+      "pos": [
+        2,
+        1
+      ]
+    },
+    {
+      "id": "S19",
+      "name": "Funnel (internal)",
+      "route": "/admin/funnel",
+      "paths": [
+        "apps/web/app/admin/funnel/page.tsx"
+      ],
+      "feature": "T-FUNNEL",
+      "short": "Funnel (internal)",
+      "pos": [
+        6,
+        4
+      ]
+    },
+    {
+      "id": "S21",
+      "name": "Subscription audit",
+      "route": "/tools/subscriptions",
+      "paths": [
+        "apps/web/app/tools/subscriptions/page.tsx"
+      ],
+      "feature": "M-SUBS",
+      "short": "Subscriptions",
+      "pos": [
+        4,
+        3
+      ],
+      "branch": "micro/m5-subscription-audit"
+    },
+    {
+      "id": "S23",
+      "name": "Overpaying check",
+      "route": "/tools/overpaying",
+      "paths": [
+        "apps/web/app/tools/overpaying/page.tsx"
+      ],
+      "feature": "M-OVER",
+      "short": "Overpaying check",
+      "pos": [
+        2,
+        3
+      ],
+      "branch": "micro/m11-overpaying-check"
+    },
+    {
+      "id": "X1–X8",
+      "name": "Duel: round, reveal, day result",
+      "route": "/duel",
+      "feature": "G-DUEL",
+      "short": "Duel",
+      "pos": [
+        0,
+        2
+      ],
+      "paths": [
+        "apps/web/app/duel/page.tsx"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "q": "Does the duel replace today's slider game?",
+      "detail": "Decided (D-1): yes, the cost duel \"Which life costs more?\" replaces the slider at /play once the server routes land (#109). The slider stays as the fallback.",
+      "owners": [
+        "team"
+      ],
+      "blocks": [
+        "G-HABIT",
+        "V-AHA"
+      ]
+    },
+    {
+      "q": "Truth for a composite's net worth",
+      "detail": "(a) author it from sourced age-based figures, labeled illustrative, or (b) seeds ask only cost questions until real avatars exist. Amir leans (b).",
+      "owners": [
+        "team"
+      ],
+      "blocks": [
+        "G-DUEL"
+      ]
+    },
+    {
+      "q": "S5: two net-worth bands, or a number for your monthly cost?",
+      "owners": [
+        "team"
+      ],
+      "blocks": [
+        "V-AHA",
+        "F3"
+      ]
+    },
+    {
+      "q": "The look of the game",
+      "detail": "Photo clues, phone-style tiles, or a mix in a vertical story layout. Kiko should weigh in.",
+      "owners": [
+        "kiko"
+      ],
+      "blocks": [
+        "G-DUEL"
+      ]
+    },
+    {
+      "q": "Free vs Pro",
+      "detail": "Which of Can I Afford It? and Loan Lab sit behind the paywall, and whether the goal is free. Micro-tools default (not agreed): every tool free, the renewals calendar is the one Pro candidate.",
+      "owners": [
+        "team"
+      ],
+      "blocks": [
+        "F13",
+        "F14",
+        "F15",
+        "V-GOAL",
+        "M-SUBS"
+      ]
+    },
+    {
+      "q": "Defaults marked [proposal]",
+      "detail": "Minimum picks before a crowd percentage, scoring, grid and band edges.",
+      "owners": [
+        "team"
+      ],
+      "blocks": [
+        "G-DUEL"
+      ]
+    },
+    {
+      "q": "Assets on Profile",
+      "detail": "Add homeValue, carValue, otherInvestments? Which defaults can we source? Changes the contract on both sides.",
+      "owners": [
+        "team"
+      ],
+      "blocks": [
+        "F6"
+      ]
+    },
+    {
+      "q": "Goal source next to the AI forecast",
+      "detail": "The verdict uses the rules forecast; decide how it sits beside the AI headline number.",
+      "owners": [
+        "amir",
+        "aibek"
+      ],
+      "blocks": [
+        "V-GOAL",
+        "V-AIFC"
+      ]
+    },
+    {
+      "q": "Cut order",
+      "detail": "Leaderboard is first to cut; the challenge link would replace it as the social feature.",
+      "owners": [
+        "team"
+      ],
+      "blocks": [
+        "G-LEAD",
+        "G-CHALLENGE"
+      ]
+    },
+    {
+      "q": "Micro-tools defaults",
+      "detail": "Picked as defaults, not agreed: the two door tools work cold; no /tools hub page; subscription findings stay in the browser (D3); the audit extends the statement-upload step on the demo path (D4).",
+      "owners": [
+        "amir"
+      ],
+      "blocks": [
+        "M-SUBS",
+        "M-OVER"
+      ]
+    }
+  ],
+  "flowEdges": [
+    {
+      "from": "acquire",
+      "to": "activate",
+      "via": [
+        [
+          2,
+          0.16
+        ]
+      ],
+      "label": "now guess\nyour own",
+      "kind": "funnel"
+    },
+    {
+      "from": "activate",
+      "to": "value",
+      "via": [
+        [
+          3,
+          0.16
+        ]
+      ],
+      "label": "your\nnumbers",
+      "kind": "funnel"
+    },
+    {
+      "from": "value",
+      "to": "monetize",
+      "via": [
+        [
+          4,
+          0.16
+        ]
+      ],
+      "label": "after your\nforecast",
+      "kind": "funnel"
+    },
+    {
+      "from": "acquire",
+      "to": "grow",
+      "via": [
+        [
+          1,
+          0.16
+        ]
+      ],
+      "label": "shares\nthe grid"
+    },
+    {
+      "from": "grow",
+      "to": "acquire",
+      "via": [
+        [
+          1,
+          0.4
+        ]
+      ],
+      "label": "new\nplayers"
+    },
+    {
+      "from": "value",
+      "to": "retain",
+      "via": [
+        [
+          3.25,
+          1.5
+        ]
+      ],
+      "label": "monthly check-in on your move"
+    },
+    {
+      "from": "value",
+      "to": "tools",
+      "via": [
+        [
+          3.75,
+          1.5
+        ]
+      ],
+      "label": "your profile,\non demand",
+      "labelPos": [
+        3.78,
+        1.12
+      ],
+      "labelAnchor": "start"
+    },
+    {
+      "from": "monetize",
+      "to": "tools",
+      "label": "Pro unlocks\nthe wishlist"
+    },
+    {
+      "from": "retain",
+      "to": "acquire",
+      "label": "daily\nnew five",
+      "kind": "loop"
+    }
+  ],
+  "screenEdges": [
+    {
+      "from": "S17",
+      "to": "S2",
+      "via": [
+        [
+          1,
+          0.35
+        ]
+      ],
+      "label": "plays"
+    },
+    {
+      "from": "S1",
+      "to": "S2",
+      "via": [
+        [
+          1,
+          3.5
+        ],
+        [
+          1,
+          0.65
+        ]
+      ],
+      "label": "today's five",
+      "labelPos": [
+        1.04,
+        2.5
+      ],
+      "labelAnchor": "start"
+    },
+    {
+      "from": "S2",
+      "to": "S3",
+      "label": "guess",
+      "kind": "funnel"
+    },
+    {
+      "from": "S3",
+      "to": "S5",
+      "label": "your\nown",
+      "kind": "funnel"
+    },
+    {
+      "from": "S5",
+      "to": "S6",
+      "kind": "funnel"
+    },
+    {
+      "from": "S6",
+      "to": "S7",
+      "kind": "funnel"
+    },
+    {
+      "from": "S7",
+      "to": "S8",
+      "kind": "funnel"
+    },
+    {
+      "from": "S8",
+      "to": "S9",
+      "label": "upload",
+      "kind": "funnel"
+    },
+    {
+      "from": "S9",
+      "to": "S10",
+      "kind": "funnel"
+    },
+    {
+      "from": "S8",
+      "to": "S10",
+      "via": [
+        [
+          7,
+          0.5
+        ],
+        [
+          7,
+          2.5
+        ]
+      ],
+      "label": "skip",
+      "kind": "funnel"
+    },
+    {
+      "from": "S10",
+      "to": "S15",
+      "label": "after\nforecast",
+      "kind": "funnel"
+    },
+    {
+      "from": "S3",
+      "to": "S16",
+      "via": [
+        [
+          2.75,
+          1
+        ],
+        [
+          3.5,
+          1
+        ]
+      ],
+      "label": "your rank",
+      "labelPos": [
+        3.2,
+        1.11
+      ]
+    },
+    {
+      "from": "S3",
+      "to": "S18",
+      "label": "panel",
+      "kind": "part"
+    },
+    {
+      "from": "S2",
+      "to": "S4",
+      "label": "?stream=1",
+      "kind": "part"
+    },
+    {
+      "from": "S1",
+      "to": "S10",
+      "via": [
+        [
+          6.5,
+          3.5
+        ]
+      ],
+      "label": "your forecast"
+    },
+    {
+      "from": "S1",
+      "to": "S11",
+      "via": [
+        [
+          3.5,
+          4
+        ],
+        [
+          1.5,
+          4
+        ]
+      ]
+    },
+    {
+      "from": "S1",
+      "to": "S12",
+      "via": [
+        [
+          3.5,
+          4
+        ],
+        [
+          2.5,
+          4
+        ]
+      ]
+    },
+    {
+      "from": "S1",
+      "to": "S13"
+    },
+    {
+      "from": "S1",
+      "to": "S14",
+      "via": [
+        [
+          3.5,
+          4
+        ],
+        [
+          4.5,
+          4
+        ]
+      ],
+      "label": "on demand",
+      "labelPos": [
+        4,
+        3.93
+      ]
+    },
+    {
+      "from": "S1",
+      "to": "S21"
+    },
+    {
+      "from": "S1",
+      "to": "S23"
+    }
+  ],
+  "system": {
+    "lanes": [
+      "Browser",
+      "Server · Next.js routes",
+      "Data and services",
+      "Shared code",
+      "Delivery"
+    ],
+    "nodes": [
+      {
+        "id": "ui",
+        "label": "Screens",
+        "sub": "~30 routes",
+        "pos": [
+          0,
+          0
+        ],
+        "paths": [
+          "apps/web/src/features/game/ui/PlayScreen.tsx"
+        ]
+      },
+      {
+        "id": "vm",
+        "label": "View-models",
+        "sub": "one hook per screen",
+        "pos": [
+          1,
+          0
+        ],
+        "paths": [
+          "apps/web/src/features/forecast/model/useFuture.ts"
+        ]
+      },
+      {
+        "id": "state",
+        "label": "Local state",
+        "sub": "profile · plan",
+        "pos": [
+          2,
+          0
+        ],
+        "paths": [
+          "apps/web/src/state/"
+        ]
+      },
+      {
+        "id": "csv",
+        "label": "Read statement",
+        "sub": "CSV/photo, masked",
+        "pos": [
+          5,
+          0
+        ],
+        "paths": [
+          "apps/web/src/features/upload/model/readStatementFile.ts"
+        ],
+        "issues": [
+          19
+        ]
+      },
+      {
+        "id": "daily",
+        "label": "/api/daily/*",
+        "sub": "clue, guess, duel",
+        "pos": [
+          0,
+          1
+        ],
+        "paths": [
+          "apps/web/app/api/daily/route.ts",
+          "apps/web/app/api/daily/clue/route.ts",
+          "apps/web/app/api/daily/guess/route.ts",
+          "apps/web/app/api/daily/pick/route.ts"
+        ]
+      },
+      {
+        "id": "board",
+        "label": "Board + share",
+        "sub": "board · avatars",
+        "pos": [
+          1,
+          1
+        ],
+        "paths": [
+          "apps/web/app/api/leaderboard/route.ts",
+          "apps/web/app/api/share/route.ts",
+          "apps/web/app/api/avatar/route.ts"
+        ]
+      },
+      {
+        "id": "session",
+        "label": "/api/session",
+        "sub": "+ couples plan",
+        "pos": [
+          2,
+          1
+        ],
+        "paths": [
+          "apps/web/app/api/session/route.ts",
+          "apps/web/app/api/together/route.ts"
+        ]
+      },
+      {
+        "id": "events",
+        "label": "/api/events",
+        "sub": "+ funnel report",
+        "pos": [
+          3,
+          1
+        ],
+        "paths": [
+          "apps/web/app/api/events/route.ts",
+          "apps/web/app/api/events/funnel/route.ts"
+        ]
+      },
+      {
+        "id": "pro",
+        "label": "/api/pro/*",
+        "sub": "checkout, confirm",
+        "pos": [
+          4,
+          1
+        ],
+        "paths": [
+          "apps/web/app/api/pro/checkout/route.ts",
+          "apps/web/app/api/pro/confirm/route.ts",
+          "apps/web/app/api/pro/status/route.ts"
+        ]
+      },
+      {
+        "id": "categorize",
+        "label": "/api/statement",
+        "sub": "sorts into totals",
+        "pos": [
+          5,
+          1
+        ],
+        "paths": [
+          "apps/web/app/api/statement/categorize/route.ts",
+          "apps/web/app/api/statement/sample/route.ts"
+        ]
+      },
+      {
+        "id": "ai",
+        "label": "/api/ai/*",
+        "sub": "parse text/photo",
+        "pos": [
+          6,
+          1
+        ],
+        "paths": [
+          "apps/web/app/api/ai/parse/route.ts",
+          "apps/web/app/api/ai/parse-image/route.ts",
+          "apps/web/app/api/ai/explain/route.ts"
+        ]
+      },
+      {
+        "id": "forecast",
+        "label": "AI forecast",
+        "sub": "checked, cached",
+        "pos": [
+          7,
+          1
+        ],
+        "paths": [
+          "apps/web/app/api/ai/forecast/route.ts",
+          "apps/web/src/server/ai/forecastCache.ts",
+          "apps/web/src/server/ai/prewarm.ts"
+        ]
+      },
+      {
+        "id": "data",
+        "label": "Cards + areas",
+        "sub": "answers stay here",
+        "pos": [
+          0,
+          2
+        ],
+        "paths": [
+          "packages/data/cards/cards.json",
+          "packages/data/out/areas.json"
+        ]
+      },
+      {
+        "id": "store",
+        "label": "Postgres store",
+        "sub": "sessions · games · couples · events · Pro",
+        "pos": [
+          2,
+          2
+        ],
+        "span": 2,
+        "paths": [
+          "apps/web/src/server/store/"
+        ]
+      },
+      {
+        "id": "stripe",
+        "label": "Stripe",
+        "sub": "test mode only",
+        "pos": [
+          4,
+          2
+        ],
+        "external": true,
+        "paths": [
+          "apps/web/app/api/pro/checkout/route.ts"
+        ]
+      },
+      {
+        "id": "claude",
+        "label": "Claude API",
+        "sub": "Haiku default, forecast model by env",
+        "pos": [
+          5,
+          2
+        ],
+        "span": 2,
+        "external": true,
+        "paths": [
+          "apps/web/src/server/ai/client.ts"
+        ]
+      },
+      {
+        "id": "engine",
+        "label": "packages/engine",
+        "sub": "pure + tested (~40 modules): simulate · plan · Monte Carlo · what-if · decide · afford · loan · moves · goals · statement · duel · scene",
+        "pos": [
+          0,
+          3
+        ],
+        "span": 8,
+        "paths": [
+          "packages/engine/index.ts",
+          "packages/engine/simulate.ts",
+          "packages/engine/monteCarlo.ts",
+          "packages/engine/plan.ts"
+        ]
+      },
+      {
+        "id": "ci",
+        "label": "GitHub Actions CI",
+        "sub": "lint · types · tests · e2e",
+        "pos": [
+          0,
+          4
+        ],
+        "span": 1.6,
+        "paths": [
+          ".github/workflows/ci.yml"
+        ]
+      },
+      {
+        "id": "deploy",
+        "label": "Deploy runner",
+        "sub": "health check, rollback",
+        "pos": [
+          2.1,
+          4
+        ],
+        "span": 1.6,
+        "paths": [
+          ".github/workflows/deploy.yml",
+          "deploy/deploy.sh"
+        ]
+      },
+      {
+        "id": "docker",
+        "label": "Docker, team server",
+        "sub": "app + Postgres",
+        "pos": [
+          4.2,
+          4
+        ],
+        "span": 1.6,
+        "paths": [
+          "deploy/compose.yaml",
+          "deploy/Dockerfile"
+        ]
+      },
+      {
+        "id": "tsf",
+        "label": "Tailscale Funnel",
+        "sub": "public HTTPS",
+        "pos": [
+          6.3,
+          4
+        ],
+        "span": 1.7,
+        "paths": [
+          "deploy/README.md"
+        ]
+      }
+    ],
+    "bus": {
+      "from": "vm",
+      "row": 1,
+      "label": "fetch JSON",
+      "labelPos": [
+        4,
+        0.86
+      ],
+      "labelAnchor": "middle"
+    },
+    "edges": [
+      {
+        "from": "ui",
+        "to": "vm",
+        "label": "props,\nevents",
+        "both": true
+      },
+      {
+        "from": "vm",
+        "to": "state",
+        "label": "saves"
+      },
+      {
+        "from": "vm",
+        "to": "engine",
+        "via": [
+          [
+            2,
+            0.64
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        "label": "imports: plan, Monte\nCarlo, what-if",
+        "labelPos": [
+          1.94,
+          2.5
+        ],
+        "labelAnchor": "end"
+      },
+      {
+        "from": "csv",
+        "to": "categorize",
+        "label": "masked labels\n+ amounts only",
+        "kind": "accent",
+        "labelPos": [
+          5.56,
+          0.86
+        ],
+        "labelAnchor": "start"
+      },
+      {
+        "from": "daily",
+        "to": "data",
+        "label": "answers",
+        "labelPos": [
+          0.45,
+          1.9
+        ],
+        "labelAnchor": "end"
+      },
+      {
+        "from": "daily",
+        "to": "store",
+        "via": [
+          [
+            0.8,
+            1.9
+          ],
+          [
+            2.35,
+            1.9
+          ]
+        ],
+        "label": "clues, guesses, duels"
+      },
+      {
+        "from": "session",
+        "to": "store",
+        "label": "profile, plan"
+      },
+      {
+        "from": "events",
+        "to": "store",
+        "label": "events"
+      },
+      {
+        "from": "pro",
+        "to": "stripe",
+        "label": "checkout"
+      },
+      {
+        "from": "categorize",
+        "to": "claude",
+        "label": "labels",
+        "kind": "accent"
+      },
+      {
+        "from": "ai",
+        "to": "claude",
+        "label": "text"
+      },
+      {
+        "from": "forecast",
+        "to": "claude",
+        "via": [
+          [
+            7.25,
+            1.9
+          ],
+          [
+            6.75,
+            1.9
+          ]
+        ],
+        "label": "facts"
+      },
+      {
+        "from": "forecast",
+        "to": "engine",
+        "via": [
+          [
+            7.6,
+            1.9
+          ]
+        ],
+        "label": "checks +\nfallback",
+        "labelPos": [
+          7.64,
+          2.5
+        ],
+        "labelAnchor": "start"
+      },
+      {
+        "from": "ci",
+        "to": "deploy",
+        "label": "main passes"
+      },
+      {
+        "from": "deploy",
+        "to": "docker",
+        "label": "build, swap"
+      },
+      {
+        "from": "tsf",
+        "to": "docker",
+        "label": ":443 → :3000"
+      }
+    ]
+  }
+}
