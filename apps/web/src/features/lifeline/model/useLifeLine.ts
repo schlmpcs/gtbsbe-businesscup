@@ -6,16 +6,17 @@
 //   plan paints (like /plan's Chance run), one fixed seed for every year so a change between two years
 //   is the decision's, not noise.
 // A plan without "Buy a home" gets the engine's default one (defaultEvent: the area's median home, its
-// tax and insurance), three years from now, as a draft: "Put it in my plan" adds it to the scenario.
+// tax and insurance), in the first year from three years out that the plan can pay for it, as a draft: "Put it in my plan" adds it to the scenario.
 // Rounding and wording happen here (copy.lifeline); the UI only lays the numbers out.
-import { buyHomeBreakdown, decisionSweep, defaultEvent, eventAtYear, plan } from '@lifeguessr/engine';
+import { buyHomeBreakdown, DECISION_SWEEP_MAX_YEARS, decisionSweep, defaultEvent, eventAtYear, plan } from '@lifeguessr/engine';
 import type { DecisionSweepPoint, PlanEventOf, PlanResult, Scenario } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { lifeline as copy } from '@/copy';
 import { formatMoney, formatRate } from '@/lib/format';
-import { calendarOf, usePlanInputs, type PlanInputs } from '@/features/plan/model/planEngine';
+import { calendarOf, NO_MOVES, profileFor, usePlanInputs, type PlanInputs } from '@/features/plan/model/planEngine';
 import { DEFAULT_CHANCE_SETTINGS, usePlanReady, usePlanStore } from '@/features/plan/model/planStore';
 import { effectiveSettings, GOOD_SUCCESS_RATE } from '@/features/plan/model/useChanceOfSuccess';
+import { useScenarios } from '@/features/plan/model/useScenarios';
 import type { LifeLineChartVM, LifeLineKpiVM, LifeLinePoint, LifeLineTone, LifeLineVM } from './types';
 
 /** Paths per year of the sweep: enough for a steady percentage, light enough for ~1 s on a phone. */
@@ -32,13 +33,28 @@ const CHANCE_HEADLINE_MIN = 0.05;
 type Chance = NonNullable<DecisionSweepPoint['chance']>;
 export type HomeDecision = { scenario: Scenario; eventId: string; inPlan: boolean; event: PlanEventOf<'buyHome'> };
 
-/** The active scenario's first enabled "Buy a home", or the default one as a draft three years out. */
+/** The active scenario's first enabled "Buy a home", or the default one as a draft in the first year the plan can pay for it. */
 export function homeDecision(inputs: PlanInputs, scenario: Scenario): HomeDecision {
   const own = scenario.events.find((e): e is PlanEventOf<'buyHome'> => e.type === 'buyHome' && e.enabled);
   if (own) return { scenario, eventId: own.id, inPlan: true, event: own };
   const asOf = inputs.profile.asOf!;
   const ctx = { profile: inputs.profile, assumptions: scenario.assumptions, asOf, ...(inputs.area ? { area: inputs.area } : {}) };
-  const event = { ...defaultEvent('buyHome', ctx), id: DRAFT_EVENT_ID, year: Number(asOf.slice(0, 4)) + DRAFT_YEARS_AHEAD };
+  const first = Number(asOf.slice(0, 4)) + DRAFT_YEARS_AHEAD;
+  const draft = { ...defaultEvent('buyHome', ctx), id: DRAFT_EVENT_ID, year: first };
+  const withDraft = { ...scenario, events: [...scenario.events, draft] };
+  // The draft starts at the first year the plan can pay for it (plan() has no year short of cash), so the
+  // line the person meets is one that works and dragging sooner shows what it costs. No such year before
+  // retiring: it stays three years out, and the plan says it runs out.
+  const last = Math.min(first + DECISION_SWEEP_MAX_YEARS - 1, calendarOf(inputs.profile, 0).birthYear + scenario.assumptions.retireAge - 1);
+  const planned = profileFor(inputs, NO_MOVES);
+  let year = first;
+  for (let y = first; y <= last; y++) {
+    if (plan(planned, inputs.accounts, eventAtYear(withDraft, DRAFT_EVENT_ID, y), inputs.area).kpis.shortfallAge === null) {
+      year = y;
+      break;
+    }
+  }
+  const event = { ...draft, year };
   return { scenario: { ...scenario, events: [...scenario.events, event] }, eventId: DRAFT_EVENT_ID, inPlan: false, event };
 }
 
@@ -95,7 +111,8 @@ export function lifeLineData(args: {
     value: compact(sel.kpis.netWorthAtRetirement),
     was: moved ? compact(base.kpis.netWorthAtRetirement) : null,
     delta: moved && compact(nwDiff) !== compact(0) ? `${nwDiff > 0 ? '▲' : '▼'} ${compact(Math.abs(nwDiff))}` : null,
-    tone: moved ? tone(nwDiff) : 'neutral',
+    // Not a gain to celebrate when the cash runs out on the way there.
+    tone: !moved ? 'neutral' : sel.kpis.shortfallAge !== null && nwDiff > 0 ? 'neutral' : tone(nwDiff),
   };
   const chanceDiff = measured ? measured.selected.successRate - measured.base.successRate : 0;
   const chancePts = Math.round(chanceDiff * 100);
@@ -122,10 +139,15 @@ export function lifeLineData(args: {
   };
 
   // ----- Headline
-  const lead = !moved ? copy.lead.same : selectedYear > baseYear ? copy.lead.later(selectedYear - baseYear) : copy.lead.sooner(baseYear - selectedYear);
+  const lead = !moved ? (selShort !== null ? copy.lead.sameShort(selAge) : copy.lead.same) : selectedYear > baseYear ? copy.lead.later(selectedYear - baseYear) : copy.lead.sooner(baseYear - selectedYear);
   let payoff: string | null = null;
   let payoffTone: LifeLineTone = 'neutral';
-  if (moved) {
+  // Running out of cash is the headline whenever the line on screen does: the chance and the net worth at
+  // retirement (home equity included) say nothing a person can act on once the cash is gone.
+  if (selShort !== null) {
+    payoff = copy.payoff.runsOut(selShort);
+    payoffTone = 'bad';
+  } else if (moved) {
     if (measured && Math.abs(chanceDiff) >= CHANCE_HEADLINE_MIN) {
       payoff = copy.payoff.chance(pct(measured.base.successRate), pct(measured.selected.successRate));
       payoffTone = tone(chanceDiff);
@@ -168,7 +190,8 @@ export function lifeLineData(args: {
   }
   markers.push({ id: 'retire', age: retireAge, label: copy.chart.marker.retire, icon: 'beach', tone: 'positive' });
 
-  const shortLine = before && baseShort !== null ? { age: baseShort, line: 'before' as const } : selShort !== null ? { age: selShort, line: 'selected' as const } : null;
+  // The line on screen first (the headline names its age); a move that fixes the plan marks where it used to run out.
+  const shortLine = selShort !== null ? { age: selShort, line: 'selected' as const } : before && baseShort !== null ? { age: baseShort, line: 'before' as const } : null;
   const chart: LifeLineChartVM = {
     title: copy.chart.title(endAge),
     ariaLabel: copy.chart.ariaLabel,
@@ -180,8 +203,9 @@ export function lifeLineData(args: {
     xTicks,
     yTicks,
     markers: markers.filter((m) => m.age >= firstAge && m.age <= lastAge),
-    retireCallout: { age: retireAge, netWorth: netWorthAt(sel, retireAge), label: copy.chart.atRetirement(compact(netWorthAt(sel, retireAge)), retireAge) },
-    beforeCallout: before ? { age: retireAge, netWorth: netWorthAt(base, retireAge), label: copy.chart.was(compact(netWorthAt(base, retireAge))) } : null,
+    // A line that runs out of cash carries the "Out of cash" label instead of a net worth at retirement.
+    retireCallout: selShort !== null ? null : { age: retireAge, netWorth: netWorthAt(sel, retireAge), label: copy.chart.atRetirement(compact(netWorthAt(sel, retireAge)), retireAge) },
+    beforeCallout: before && selShort === null ? { age: retireAge, netWorth: netWorthAt(base, retireAge), label: copy.chart.was(compact(netWorthAt(base, retireAge))) } : null,
     runsOut: shortLine ? { ...shortLine, label: copy.chart.runsOut(shortLine.age) } : null,
     dragged: moved ? { fromAge: baseAge, toAge: selAge } : null,
     legend: {
@@ -240,13 +264,16 @@ function planAtYear(inputs: PlanInputs, decision: HomeDecision, year: number): P
   let byYear = byDecision.get(decision);
   if (!byYear) byDecision.set(decision, (byYear = new Map()));
   let r = byYear.get(year);
-  if (!r) byYear.set(year, (r = plan(inputs.profile, inputs.accounts, eventAtYear(decision.scenario, decision.eventId, year), inputs.area)));
+  if (!r) byYear.set(year, (r = plan(profileFor(inputs, NO_MOVES), inputs.accounts, eventAtYear(decision.scenario, decision.eventId, year), inputs.area)));
   return r;
 }
 
 type SweepState = { of: HomeDecision; inputs: PlanInputs; result: Map<number, Chance> | 'error' };
 
 export function useLifeLine(): LifeLineVM {
+  // The scenarios follow the profile here as on /plan and the dashboard (useScenarios seeds them), and
+  // the plan is computed the way planOf() computes it, so every screen shows one plan.
+  useScenarios();
   const inputs = usePlanInputs();
   const ready = usePlanReady();
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
@@ -270,7 +297,7 @@ export function useLifeLine(): LifeLineVM {
     const timer = setTimeout(() => {
       let result: SweepState['result'];
       try {
-        const points = decisionSweep(inputs.profile, inputs.accounts, decision.scenario, decision.eventId, years, inputs.area, settings);
+        const points = decisionSweep(profileFor(inputs, NO_MOVES), inputs.accounts, decision.scenario, decision.eventId, years, inputs.area, settings);
         result = new Map(points.map((p) => [p.year, p.chance!]));
       } catch {
         result = 'error';

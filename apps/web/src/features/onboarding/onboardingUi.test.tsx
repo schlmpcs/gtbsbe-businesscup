@@ -21,24 +21,31 @@ const landing = (over: Partial<LandingVM> = {}): LandingVM => ({
   restartHref: '/start',
   resumeChapter: null,
   sampleHref: '/plan',
+  playHref: '/play',
+  sampleFacts: [{ id: 'age', value: '32' }, { id: 'cash', value: '$3,800' }],
   seeSample: vi.fn(),
   ...over,
 });
 
 describe('landing', () => {
-  it('a first visit: one Start, the sample plan link, the three chapters', async () => {
+  it('a first visit: Start, the sample plan link, and what the product is', async () => {
     const vm = landing();
     render(<Landing vm={vm} Link={Link} homeHref="/" />);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(onboarding.landing.title);
-    expect(screen.getByRole('link', { name: onboarding.landing.start }).getAttribute('href')).toBe('/start');
+    expect(screen.getAllByRole('link', { name: onboarding.landing.start }).map((a) => a.getAttribute('href'))).toEqual(['/start', '/start']);
     await userEvent.setup().click(screen.getByRole('link', { name: onboarding.landing.sample }));
     expect(vm.seeSample).toHaveBeenCalled();
-    expect(within(screen.getByRole('region', { name: onboarding.landing.chaptersLabel })).getAllByRole('listitem')).toHaveLength(3);
+    // The page says what the product is: four facts, the sample life's own numbers, six steps, the FAQ.
+    expect(within(screen.getByRole('region', { name: onboarding.landing.statsLabel })).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(screen.getByTestId('landing-sample-facts')).getByText('$3,800')).toBeTruthy();
+    expect(within(screen.getByTestId('landing-steps')).getAllByRole('listitem')).toHaveLength(6);
+    expect(within(screen.getByTestId('landing-faq')).getAllByRole('group')).toHaveLength(onboarding.landing.faq.items.length);
+    expect(screen.getByRole('link', { name: onboarding.landing.nav.play }).getAttribute('href')).toBe('/play');
   });
 
   it('a story in progress: Continue; a finished one: only the redirect frame', () => {
     const { unmount } = render(<Landing vm={landing({ mode: 'continue', resumeChapter: 3, startHref: '/start?ch=3' })} Link={Link} homeHref="/" />);
-    expect(screen.getByRole('link', { name: onboarding.landing.continue(3) }).getAttribute('href')).toBe('/start?ch=3');
+    expect(screen.getAllByRole('link', { name: onboarding.landing.continue(3) })[0]!.getAttribute('href')).toBe('/start?ch=3');
     unmount();
     render(<Landing vm={landing({ mode: 'redirect' })} Link={Link} homeHref="/" />);
     expect(screen.getByRole('status').textContent).toBe(onboarding.landing.redirecting);

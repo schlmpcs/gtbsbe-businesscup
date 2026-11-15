@@ -2,6 +2,7 @@
 // scenarios follow the profile (planStore.ts → seedScenarios): the demo pair on the demo profile, the
 // engine's Baseline on the person's own. Nothing is seeded or listed before the saved plan is loaded
 // (usePlanReady), so a saved plan is never replaced by a seed and the demo tabs never flash.
+import type { Profile } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo } from 'react';
 import { plan as copy } from '@/copy';
 import { useAppStore } from '@/state/store';
@@ -10,6 +11,12 @@ import { seedScenarios, usePlanReady, usePlanStore } from './planStore';
 import type { ScenariosVM } from './types';
 
 export const DEFAULT_SCENARIO_ICON = 'home';
+
+/** Which seed a profile's scenarios hold: the demo pair or the person's own, for this year and birth year. */
+export function seedKeyOf(demo: boolean, profile: Profile, endAge: number): string {
+  const cal = calendarOf(profile, endAge);
+  return `${demo ? 'demo' : 'own'}:${cal.firstYear}:${cal.birthYear}`;
+}
 
 export function useScenarios(): ScenariosVM {
   const ready = usePlanReady();
@@ -27,8 +34,7 @@ export function useScenarios(): ScenariosVM {
     if (!ready) return;
     const first = usePlanStore.getState().scenarios[0];
     if (!first) return;
-    const cal = calendarOf(inputs.profile, first.assumptions.endAge);
-    const key = `${demo ? 'demo' : 'own'}:${cal.firstYear}:${cal.birthYear}`;
+    const key = seedKeyOf(demo, inputs.profile, first.assumptions.endAge);
     if (usePlanStore.getState().seedKey === key) return;
     seed(key, seedScenarios(demo, eventContext(inputs, first)));
   }, [ready, inputs, demo, seed]);
