@@ -82,6 +82,18 @@ describe('AccountsScreen', () => {
     expect(screen.getByTestId('accounts-networth-value')).toHaveTextContent(formatMoney(-4900));
   });
 
+  it("asks a vehicle for its value today and explains its yearly change", () => {
+    render(<Accounts />);
+    fireEvent.click(screen.getByTestId('accounts-add'));
+    fireEvent.click(screen.getByTestId('add-account-type-vehicle'));
+    expect(screen.getByText('Add asset: Vehicle')).toBeInTheDocument();
+    expect(screen.getByLabelText(t.fields.value)).toBe(screen.getByTestId('add-account-balance'));
+    expect(screen.queryByText(t.fields.balance)).toBeNull();
+    expect(screen.getByTestId('add-account-growth')).toHaveAttribute('placeholder', '−15');
+    expect(screen.getByText('Leave blank to use a typical −15% a year (cars lose value). Use a minus for a loss.')).toBeInTheDocument();
+    expect(screen.queryByText(t.form.aprHint)).toBeNull();
+  });
+
   it('shows the empty state with the import link when there are no accounts', () => {
     act(() => useAccountsStore.setState({ accounts: [] }));
     render(<Accounts />);

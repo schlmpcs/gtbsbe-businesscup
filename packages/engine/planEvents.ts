@@ -12,7 +12,8 @@
 // applied (those starting in or before that month, in simulate()'s order). To stack plan events on
 // each other, expand them in date order and add each result's `lifeEvents` to `ctx.profile.events`
 // before expanding the next. Each "back to" at the end of an event reads the profile the same way,
-// at the end month, without the event itself.
+// at the end month, without the event itself. Social Security is the exception: it adds its benefit
+// to every pay change from its start on, so it is expanded after all other events (orderPlanEvents).
 import type {
   BuyHomeBreakdown, CostCategory, Debt, Estimate, ExpandedEvent, ExpenseFinancingBreakdown, LifeEvent, Money,
   PlanEvent, PlanEventContext, PlanEventOf, PlanEventType, Source, YearMonth,
@@ -100,6 +101,23 @@ export function expenseFinancingBreakdown(event: PlanEventOf<'expense'>): Expens
   // A level payment that clears the loan in exactly termMonths: interest = payments − principal.
   const totalInterest = financed === 0 ? 0 : monthlyPayment * f.termMonths - financed;
   return { downPayment, financed, monthlyPayment, totalInterest };
+}
+
+// ----- expansion order -------------------------------------------------------------------------
+
+/**
+ * The order plan() and monteCarlo() expand a scenario's enabled events in: by year (same year: Retire
+ * first, otherwise list order), and every Social Security event last (by year, then list order),
+ * because it adds its benefit on top of every pay change from its start on (see expandEvent).
+ */
+export function orderPlanEvents(events: readonly PlanEvent[]): PlanEvent[] {
+  const rank = (e: PlanEvent) => (e.type === 'socialSecurity' ? 2 : e.type === 'retire' ? 0 : 1);
+  const group = (e: PlanEvent) => (e.type === 'socialSecurity' ? 1 : 0);
+  return events
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => e.enabled)
+    .sort((x, y) => group(x.e) - group(y.e) || x.e.year - y.e.year || rank(x.e) - rank(y.e) || x.i - y.i)
+    .map(({ e }) => e);
 }
 
 // ----- expandEvent -----------------------------------------------------------------------------
@@ -216,11 +234,24 @@ export function expandEvent(event: PlanEvent, ctx: PlanEventContext): ExpandedEv
       return { lifeEvents: oneOff(`${id}:income`, start, event.amount, 'income'), debts: [], assets: [] };
     case 'retire':
       return { lifeEvents: [pay(`${id}:pay`, start, { value: 0, isEstimate: false })], debts: [], assets: [] };
-    case 'socialSecurity':
-      // Sets take-home pay to the benefit: it adds to income only when it starts at or after the
-      // retire event (pay already 0). Started before retirement it would replace the salary, and a
-      // later Retire sets pay to 0 again; so expand Retire first, and keep its year ≤ this one.
-      return { lifeEvents: [pay(`${id}:pay`, start, { ...event.monthly })], debts: [], assets: [] };
+    case 'socialSecurity': {
+      // Adds the benefit to whatever take-home pay is in effect from its start on: work pay while still
+      // working (claiming does not require retiring), 0 after Retire. Pay LifeEvents SET pay, so every
+      // pay change after the start (a later Retire, New job, Career break, …) is re-issued with the
+      // benefit added, in the same month, after it in the list (simulate() applies ties in list order,
+      // so this one wins). Expand Social Security after every other event (`orderPlanEvents`).
+      const b = event.monthly;
+      const later = scheduled(ctx).filter(({ start: s }) => s > startIndex);
+      return {
+        lifeEvents: [
+          pay(`${id}:pay`, start, plus(payAt(ctx, start), b.value, b.isEstimate)),
+          ...later.flatMap(({ event: e }) => e.kind === 'pay' ? [e] : [])
+            .map((e, i) => pay(`${id}:pay-${i + 1}`, e.month, plus(e.takeHomePay, b.value, b.isEstimate))),
+        ],
+        debts: [],
+        assets: [],
+      };
+    }
   }
 }
 

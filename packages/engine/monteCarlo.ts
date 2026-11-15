@@ -48,7 +48,6 @@ import {
   type Money,
   type MonteCarloResult,
   type MonteCarloSettings,
-  type PlanEvent,
   type PlanEventContext,
   type Profile,
   type Rate,
@@ -61,7 +60,7 @@ import {
 import { eventStartMonth } from './events';
 import { PAID_OFF_EPSILON } from './loan/amortize';
 import { homeGrowth, plan } from './plan';
-import { expandEvent, planEventMonth } from './planEvents';
+import { expandEvent, orderPlanEvents, planEventMonth } from './planEvents';
 import { type ExtraAssetGroup, type SimulateOptions, type YearlyRates, monthlyRate, simulate } from './simulate';
 
 /**
@@ -103,8 +102,6 @@ export function sampleYearlyRates(
 const CASH = 0, INVESTMENTS = 1, RETIREMENT = 2, REAL_ESTATE = 3, VEHICLE = 4, OTHER_ASSET = 5; // ASSET_GROUPS order
 const groupIndex = (g: AssetGroup): number => ASSET_GROUPS.indexOf(g);
 const EXTRA_GROUPS: readonly ExtraAssetGroup[] = ['investments', 'realEstate', 'vehicle', 'otherAsset'];
-/** Same year: Retire before everything, Social Security after (as plan.ts orders them). */
-const sameYearRank = (e: PlanEvent) => (e.type === 'retire' ? 0 : e.type === 'socialSecurity' ? 2 : 1);
 
 type Prepared = {
   yearCount: number;
@@ -182,10 +179,7 @@ function prepare(
   const growth = homeGrowth(groupGrowth(live, a.growth, a.inflation, area), base, live);
 
   // plan.ts step 2: events in date order, each expanded on the profile with the ones before it.
-  const ordered = scenario.events.filter((e) => e.enabled)
-    .map((e, i) => ({ e, i }))
-    .sort((x, y) => x.e.year - y.e.year || sameYearRank(x.e) - sameYearRank(y.e) || x.i - y.i)
-    .map(({ e }) => e);
+  const ordered = orderPlanEvents(scenario.events);
   let lifeEvents: LifeEvent[] = [...(base.events ?? [])];
   const newDebts: { month: number; debt: Debt }[] = [];
   const newAssets: NonNullable<SimulateOptions['newAssets']>[number][] = [];

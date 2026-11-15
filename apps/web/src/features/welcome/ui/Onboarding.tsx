@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { welcome as t } from '@/copy';
 import { Art, Button, cx, EstimateTag, Icon, Sticker, TweenText } from '@/ui-kit';
-import type { AnalysisIcon, AnalysisRowVM, AnalysisVM, LifeLineKpiVM, OnboardingVM, RevealVM } from '../model/types';
+import type { AboutVM, AnalysisIcon, AnalysisRowVM, AnalysisVM, BalancesVM, FieldVM, LifeLineKpiVM, OnboardingVM, RevealVM } from '../model/types';
 
 type LinkComponent = (props: { href: string; className?: string; children: ReactNode }) => ReactNode;
 
@@ -55,7 +55,9 @@ export function Onboarding({ vm, Link, uploadHref, doneHref, warmup, decisionCha
           ) : (
             <>
               <div key={vm.step} className="ob-fade-up order-2 flex min-w-0 max-w-(--container-xl) flex-col gap-lg lg:order-none">
+                {vm.step === 'about' && <AboutStep about={vm.about} />}
                 {vm.step === 'guess' && <GuessStep vm={vm} />}
+                {vm.step === 'balances' && <BalancesStep balances={vm.balances} />}
                 {vm.step === 'connect' && <ConnectStep vm={vm} Link={Link} uploadHref={uploadHref} />}
                 {vm.step === 'connecting' && <ConnectingStep vm={vm} Link={Link} uploadHref={uploadHref} />}
                 {vm.step === 'reveal' && vm.reveal && <RevealStep vm={vm} reveal={vm.reveal} />}
@@ -142,7 +144,101 @@ function House({ vm, dark, badge }: { vm: OnboardingVM; dark: boolean; badge: st
   );
 }
 
-// ----- 1. Guess --------------------------------------------------------------------------------
+// ----- 1. About you -----------------------------------------------------------------------------
+
+const PANEL = 'mt-xs flex flex-col gap-lg rounded-xl bg-surface p-lg shadow-md ring-1 ring-border sm:p-xl';
+const FIELD_LABEL = 'text-xs font-bold uppercase tracking-wide text-text-muted';
+
+function TextField({ field, onChange, error }: { field: FieldVM; onChange: (v: string) => void; error?: string }) {
+  const id = `ob-${field.id}`;
+  return (
+    <div className="flex min-w-0 flex-col gap-xs">
+      <label htmlFor={id} className={FIELD_LABEL}>{field.label}</label>
+      <div className={cx('flex min-h-12 items-center gap-xs rounded-lg bg-bg px-md ring-1 transition focus-within:ring-2 focus-within:ring-primary',
+        field.invalid ? 'ring-2 ring-negative' : 'ring-border')}>
+        {field.prefix && <span className="font-display text-xl font-extrabold text-text-muted">{field.prefix}</span>}
+        <input id={id} data-testid={id} type="text" inputMode={field.inputMode} autoComplete="off" value={field.value}
+          placeholder={field.placeholder} aria-invalid={field.invalid || undefined}
+          onChange={(e) => onChange(e.target.value)}
+          className="min-w-0 flex-1 bg-transparent py-sm font-display text-xl font-extrabold tabular-nums outline-none placeholder:text-text-muted/50" />
+        {field.suffix && <span className="text-sm font-semibold text-text-muted">{field.suffix}</span>}
+      </div>
+      {field.invalid && error ? <span className="text-xs font-semibold text-negative">{error}</span>
+        : field.hint ? <span className="text-xs text-text-muted">{field.hint}</span> : null}
+    </div>
+  );
+}
+
+function AboutStep({ about: a }: { about: AboutVM }) {
+  const c = t.about;
+  return (
+    <form className="contents" onSubmit={(e) => { e.preventDefault(); a.submit(); }} data-testid="onboarding-about">
+      <Sticker tone="ink" tilt={-2} className="self-start text-sm">{c.sticker}</Sticker>
+      <h1 className={H1}>{c.title}</h1>
+      <p className={LEAD}>{c.body}</p>
+      <div className={PANEL}>
+        <div className="grid gap-lg sm:grid-cols-2">
+          <TextField field={a.age} onChange={(v) => a.setField('age', v)} error={c.invalid.age} />
+          <TextField field={a.zip} onChange={(v) => a.setField('zip', v)} error={c.invalid.zip} />
+        </div>
+        <TextField field={a.takeHome} onChange={(v) => a.setField('takeHome', v)} error={c.invalid.takeHome} />
+        <fieldset className="flex flex-col gap-xs">
+          <legend className={cx(FIELD_LABEL, 'mb-xs')}>{c.household}</legend>
+          <div className="flex flex-wrap items-center gap-sm">
+            {([1, 2] as const).map((n) => (
+              <button key={n} type="button" aria-pressed={a.adults === n} onClick={() => a.setAdults(n)} data-testid={`ob-adults-${n}`}
+                className={cx('min-h-11 rounded-full px-lg text-sm font-bold ring-1 transition',
+                  a.adults === n ? 'bg-ink text-on-primary ring-ink' : 'bg-bg ring-border hover:ring-primary')}>
+                {c.adults[n]}
+              </button>
+            ))}
+            <span className="ml-auto flex items-center gap-sm">
+              <span className="text-sm font-semibold">{c.kids}</span>
+              <button type="button" aria-label={c.kidMinus} disabled={a.kids <= 0} onClick={() => a.setKids(a.kids - 1)}
+                className="flex size-11 items-center justify-center rounded-full bg-bg text-xl font-bold ring-1 ring-border disabled:opacity-40">−</button>
+              <output aria-live="polite" className="w-12 text-center font-display text-xl font-extrabold tabular-nums">{c.kidsValue(a.kids)}</output>
+              <button type="button" aria-label={c.kidPlus} disabled={a.kids >= a.maxKids} onClick={() => a.setKids(a.kids + 1)}
+                className="flex size-11 items-center justify-center rounded-full bg-bg text-xl font-bold ring-1 ring-border disabled:opacity-40">+</button>
+            </span>
+          </div>
+        </fieldset>
+      </div>
+      <Button size="lg" type="submit" className={cx('self-stretch sm:self-start', a.canSubmit && 'ob-pulse')} data-testid="onboarding-about-next">
+        {c.cta} <Icon name="arrowRight" size={18} />
+      </Button>
+    </form>
+  );
+}
+
+// ----- 2b. Add it up ---------------------------------------------------------------------------
+
+function BalancesStep({ balances: b }: { balances: BalancesVM }) {
+  const c = t.balances;
+  const group = (label: string, fields: FieldVM[], tone: string) => (
+    <fieldset className="flex flex-col gap-md">
+      <legend className={cx('mb-xs text-sm font-extrabold uppercase tracking-wide', tone)}>{label}</legend>
+      <div className="grid gap-md sm:grid-cols-2">
+        {fields.map((f) => <TextField key={f.id} field={f} onChange={(v) => b.setField(f.id, v)} error={c.invalid} />)}
+      </div>
+    </fieldset>
+  );
+  return (
+    <form className="contents" onSubmit={(e) => { e.preventDefault(); b.submit(); }} data-testid="onboarding-balances">
+      <Sticker tone="ink" tilt={-2} className="self-start text-sm">{c.sticker}</Sticker>
+      <h1 className={H1}>{c.title}</h1>
+      <p className={LEAD}>{c.body}</p>
+      <div className={PANEL}>
+        {group(c.own, b.own, 'text-positive')}
+        {group(c.owe, b.owe, 'text-negative')}
+      </div>
+      <Button size="lg" type="submit" disabled={!b.canSubmit} className="ob-pulse self-stretch sm:self-start" data-testid="onboarding-balances-next">
+        {c.cta} <Icon name="arrowRight" size={18} />
+      </Button>
+    </form>
+  );
+}
+
+// ----- 2. Guess --------------------------------------------------------------------------------
 
 function GuessStep({ vm }: { vm: OnboardingVM }) {
   const g = vm.guess;

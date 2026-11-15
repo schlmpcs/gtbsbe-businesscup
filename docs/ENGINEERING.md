@@ -173,6 +173,7 @@ Tests (`plan.test.ts`), expected numbers worked by hand from the inputs in each 
 - Savings split 50/50 cash/investments: deposits match within $1.
 - Today's vs future dollars: future = today × (1 + i)^t at every year.
 - Retire at 67: income stops at 67; Social Security from its year adds income.
+- Retire at 72 with Social Security at 67: work pay + benefit at 70, the benefit alone from 72 on; on the demo inputs, retiring at 62 / 67 / 72 / 76 never lowers take-home before the later retirement age and raises net worth at the end.
 - Golden snapshot for `scenario.demo.json` (regenerate the `plan.demo.json` fixture with `pnpm fixtures:plan`).
 - Performance: one `plan()` for a 25-year-old to 90 runs in < 10 ms (Monte Carlo needs it).
 
@@ -195,7 +196,7 @@ Two pure functions in `packages/engine/planEvents.ts`.
 | `careerBreak` | 1 year | `pay` = 0 at start, back to the previous pay at `endYear` |
 | `windfall` | $10,000 | `oneOff` income |
 | `retire` | year = birth year + `retireAge` | `pay` = 0 |
-| `socialSecurity` | at 67; monthly = estimate (new assumption: a share of current take-home, `assumption: true`; the SSA Quick Calculator is the user's better source) | `pay` = monthly (adds on top only if after retire; documented) |
+| `socialSecurity` | at 67; monthly = estimate (new assumption: a share of current take-home, `assumption: true`; the SSA Quick Calculator is the user's better source) | **adds** monthly to the take-home pay in effect from its start: work pay + benefit while still working (claiming does not need retiring), benefit only after Retire. Pay events set pay, so it also re-issues every later pay change (Retire, New job, Career break, …) with the benefit added; `orderPlanEvents` expands it after every other event |
 
 Rules:
 - The monthly payment shown in the event panel is **one function**, `buyHomeBreakdown(event) → { principalAndInterest, propertyTax, insurance, total }`, so the UI and the engine never disagree. Same for `expenseFinancingBreakdown`.
@@ -208,6 +209,7 @@ Tests (`planEvents.test.ts`):
 - `replaceHousing: false` adds to rent; `true` replaces it.
 - Have a kid: childcare stops after `childcareYears`.
 - Career break: pay 0, then restored to the pay **before** the break (including a prior `newJob`).
+- Social Security: work pay + benefit while working; a later Retire keeps the benefit; `orderPlanEvents` puts it last.
 - Every `defaultEvent` for the demo ZIP has a `Source` or `isEstimate` on each amount.
 - Disabled events expand to nothing.
 
