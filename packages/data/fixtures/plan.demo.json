@@ -4,34 +4,34 @@
     {
       "year": 2026,
       "age": 32,
-      "netWorth": -3104.48,
-      "assets": 20246.51,
+      "netWorth": -3102.91,
+      "assets": 20248.08,
       "liabilities": 23350.99,
       "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
           "start": 1293.61,
-          "growth": 7.18,
-          "deposits": 641.33,
+          "growth": 6.63,
+          "deposits": 192.4,
           "withdrawals": 0,
-          "end": 1942.12
+          "end": 1492.63
         },
         {
           "accountId": "savings-1",
           "start": 2487.71,
-          "growth": 13.8,
-          "deposits": 1233.32,
+          "growth": 12.74,
+          "deposits": 370,
           "withdrawals": 0,
-          "end": 3734.84
+          "end": 2870.45
         },
         {
           "accountId": "retirement-1",
           "start": 14428.74,
-          "growth": 140.81,
-          "deposits": 0,
+          "growth": 142.17,
+          "deposits": 562.4,
           "withdrawals": 0,
-          "end": 14569.55
+          "end": 15133.31
         },
         {
           "accountId": "card-1",
@@ -48,6 +48,14 @@
           "deposits": 0,
           "withdrawals": 819.95,
           "end": 17109.17
+        },
+        {
+          "accountId": "group:investments",
+          "start": 0,
+          "growth": 1.82,
+          "deposits": 749.86,
+          "withdrawals": 0,
+          "end": 751.68
         },
         {
           "accountId": "ev-buy-home:home",
@@ -91,34 +99,34 @@
     {
       "year": 2027,
       "age": 33,
-      "netWorth": 13895.85,
-      "assets": 32208.17,
+      "netWorth": 14042.21,
+      "assets": 32354.54,
       "liabilities": 18312.33,
       "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 1885.55,
-          "growth": 109.16,
-          "deposits": 3894.38,
+          "start": 1449.16,
+          "growth": 59.25,
+          "deposits": 1168.32,
           "withdrawals": 0,
-          "end": 5889.09
+          "end": 2676.73
         },
         {
           "accountId": "savings-1",
-          "start": 3626.06,
-          "growth": 209.92,
-          "deposits": 7489.2,
+          "start": 2786.85,
+          "growth": 113.95,
+          "deposits": 2246.76,
           "withdrawals": 0,
-          "end": 11325.18
+          "end": 5147.55
         },
         {
           "accountId": "retirement-1",
-          "start": 14145.19,
-          "growth": 848.71,
-          "deposits": 0,
+          "start": 14692.53,
+          "growth": 973.3,
+          "deposits": 3415.08,
           "withdrawals": 0,
-          "end": 14993.9
+          "end": 19080.91
         },
         {
           "accountId": "card-1",
@@ -135,6 +143,14 @@
           "deposits": 0,
           "withdrawals": 4776.41,
           "end": 12940.82
+        },
+        {
+          "accountId": "group:investments",
+          "start": 729.79,
+          "growth": 166.12,
+          "deposits": 4553.43,
+          "withdrawals": 0,
+          "end": 5449.34
         },
         {
           "accountId": "ev-buy-home:home",
@@ -178,34 +194,34 @@
     {
       "year": 2028,
       "age": 34,
-      "netWorth": 31267.65,
-      "assets": 44618.17,
+      "netWorth": 31802.38,
+      "assets": 45152.9,
       "liabilities": 13350.52,
       "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 5717.57,
-          "growth": 226.16,
-          "deposits": 4041.49,
+          "start": 2598.76,
+          "growth": 94.35,
+          "deposits": 1212.45,
           "withdrawals": 0,
-          "end": 9985.21
+          "end": 3905.56
         },
         {
           "accountId": "savings-1",
-          "start": 10995.32,
-          "growth": 434.92,
-          "deposits": 7772.1,
+          "start": 4997.62,
+          "growth": 181.45,
+          "deposits": 2331.63,
           "withdrawals": 0,
-          "end": 19202.34
+          "end": 7510.7
         },
         {
           "accountId": "retirement-1",
-          "start": 14557.19,
-          "growth": 873.43,
-          "deposits": 0,
+          "start": 18525.16,
+          "growth": 1206.82,
+          "deposits": 3544.08,
           "withdrawals": 0,
-          "end": 15430.62
+          "end": 23276.06
         },
         {
           "accountId": "card-1",
@@ -222,6 +238,14 @@
           "deposits": 0,
           "withdrawals": 4637.29,
           "end": 8727.97
+        },
+        {
+          "accountId": "group:investments",
+          "start": 5290.62,
+          "growth": 444.52,
+          "deposits": 4725.43,
+          "withdrawals": 0,
+          "end": 10460.58
         },
         {
           "accountId": "ev-buy-home:home",
@@ -265,34 +289,34 @@
     {
       "year": 2029,
       "age": 35,
-      "netWorth": 34675.83,
-      "assets": 585378.29,
-      "liabilities": 452189.88,
-      "shortfall": 98512.58,
+      "netWorth": 50171.42,
+      "assets": 58613.85,
+      "liabilities": 8442.43,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 9694.38,
-          "growth": 23.91,
-          "deposits": 0,
-          "withdrawals": 9718.29,
-          "end": 0
+          "start": 3791.81,
+          "growth": 130.69,
+          "deposits": 1252,
+          "withdrawals": 0,
+          "end": 5174.5
         },
         {
           "accountId": "savings-1",
-          "start": 18643.04,
-          "growth": 45.98,
-          "deposits": 0,
-          "withdrawals": 18689.02,
-          "end": 0
+          "start": 7291.94,
+          "growth": 251.33,
+          "deposits": 2407.69,
+          "withdrawals": 0,
+          "end": 9950.97
         },
         {
           "accountId": "retirement-1",
-          "start": 14981.18,
-          "growth": 72.92,
-          "deposits": 0,
-          "withdrawals": 15054.11,
-          "end": 0
+          "start": 22598.11,
+          "growth": 1454.39,
+          "deposits": 3659.69,
+          "withdrawals": 0,
+          "end": 27712.2
         },
         {
           "accountId": "card-1",
@@ -311,20 +335,20 @@
           "end": 4464.42
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 0,
-          "growth": 24967.77,
-          "deposits": 560410.52,
+          "accountId": "group:investments",
+          "start": 10155.9,
+          "growth": 740.69,
+          "deposits": 4879.59,
           "withdrawals": 0,
-          "end": 585378.29
+          "end": 15776.19
         },
         {
-          "accountId": "ev-buy-home:mortgage",
+          "accountId": "ev-buy-home:home",
           "start": 0,
-          "growth": 26590.17,
-          "deposits": 448328.42,
-          "withdrawals": 31171.15,
-          "end": 443747.44
+          "growth": 0,
+          "deposits": 0,
+          "withdrawals": 0,
+          "end": 0
         }
       ],
       "cashFlow": {
@@ -341,55 +365,53 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 43164.91
           },
           {
             "key": "debtPayments",
-            "amount": 37218.35
+            "amount": 6047.2
           },
           {
             "key": "oneOffCosts",
-            "amount": 119495.15
+            "amount": 0
           }
         ],
-        "withdrawals": 15054.11,
-        "net": -139647.4
+        "withdrawals": 0,
+        "net": 12198.97
       },
-      "events": [
-        "ev-buy-home"
-      ]
+      "events": []
     },
     {
       "year": 2030,
       "age": 36,
-      "netWorth": 46319.78,
-      "assets": 596006.03,
-      "liabilities": 429226.93,
-      "shortfall": 120459.32,
+      "netWorth": 69146.37,
+      "assets": 72713.52,
+      "liabilities": 3567.15,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 5023.79,
+          "growth": 168.15,
+          "deposits": 1287.57,
           "withdrawals": 0,
-          "end": 0
+          "end": 6479.5
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 9661.13,
+          "growth": 323.36,
+          "deposits": 2476.09,
           "withdrawals": 0,
-          "end": 0
+          "end": 12460.58
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 26905.04,
+          "growth": 1715.67,
+          "deposits": 3763.66,
           "withdrawals": 0,
-          "end": 0
+          "end": 32384.38
         },
         {
           "accountId": "card-1",
@@ -408,20 +430,20 @@
           "end": 143.8
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 568328.43,
-          "growth": 27677.59,
-          "deposits": 0,
+          "accountId": "group:investments",
+          "start": 15316.69,
+          "growth": 1054.16,
+          "deposits": 5018.21,
           "withdrawals": 0,
-          "end": 596006.03
+          "end": 21389.06
         },
         {
-          "accountId": "ev-buy-home:mortgage",
-          "start": 430822.76,
-          "growth": 27851.47,
+          "accountId": "ev-buy-home:home",
+          "start": 0,
+          "growth": 0,
           "deposits": 0,
-          "withdrawals": 33014.45,
-          "end": 425659.77
+          "withdrawals": 0,
+          "end": 0
         }
       ],
       "cashFlow": {
@@ -438,11 +460,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 43164.91
           },
           {
             "key": "debtPayments",
-            "amount": 38715.11
+            "amount": 5700.65
           },
           {
             "key": "oneOffCosts",
@@ -450,41 +472,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -21649.01
+        "net": 12545.53
       },
       "events": []
     },
     {
       "year": 2031,
       "age": 37,
-      "netWorth": 59010.27,
-      "assets": 606826.72,
-      "liabilities": 410859.63,
-      "shortfall": 136956.82,
+      "netWorth": 88681.75,
+      "assets": 91627.78,
+      "liabilities": 2946.02,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 6290.78,
+          "growth": 212.16,
+          "deposits": 1740.79,
           "withdrawals": 0,
-          "end": 0
+          "end": 8243.73
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 12097.65,
+          "growth": 408,
+          "deposits": 3347.67,
           "withdrawals": 0,
-          "end": 0
+          "end": 15853.32
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 31441.14,
+          "growth": 2022.76,
+          "deposits": 5088.46,
           "withdrawals": 0,
-          "end": 0
+          "end": 38552.36
         },
         {
           "accountId": "card-1",
@@ -503,20 +525,20 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 578646.63,
-          "growth": 28180.09,
-          "deposits": 0,
+          "accountId": "group:investments",
+          "start": 20766.08,
+          "growth": 1427.68,
+          "deposits": 6784.61,
           "withdrawals": 0,
-          "end": 606826.72
+          "end": 28978.37
         },
         {
-          "accountId": "ev-buy-home:mortgage",
-          "start": 413261.92,
-          "growth": 26704.55,
+          "accountId": "ev-buy-home:home",
+          "start": 0,
+          "growth": 0,
           "deposits": 0,
-          "withdrawals": 32052.87,
-          "end": 407913.6
+          "withdrawals": 0,
+          "end": 0
         }
       ],
       "cashFlow": {
@@ -533,11 +555,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 43164.91
           },
           {
             "key": "debtPayments",
-            "amount": 33337.52
+            "amount": 1284.65
           },
           {
             "key": "oneOffCosts",
@@ -545,41 +567,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -16271.43
+        "net": 16961.53
       },
       "events": []
     },
     {
       "year": 2032,
       "age": 38,
-      "netWorth": 72614.41,
-      "assets": 617843.87,
-      "liabilities": 393027.59,
-      "shortfall": 152201.87,
+      "netWorth": 108717.82,
+      "assets": 111253.07,
+      "liabilities": 2535.25,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 8003.62,
+          "growth": 264.17,
+          "deposits": 1771.58,
           "withdrawals": 0,
-          "end": 0
+          "end": 10039.37
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 15391.57,
+          "growth": 508.02,
+          "deposits": 3406.88,
           "withdrawals": 0,
-          "end": 0
+          "end": 19306.48
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 37429.47,
+          "growth": 2385.7,
+          "deposits": 5178.46,
           "withdrawals": 0,
-          "end": 0
+          "end": 44993.64
         },
         {
           "accountId": "card-1",
@@ -598,20 +620,20 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 589152.16,
-          "growth": 28691.71,
-          "deposits": 0,
+          "accountId": "group:investments",
+          "start": 28134.34,
+          "growth": 1874.64,
+          "deposits": 6904.62,
           "withdrawals": 0,
-          "end": 617843.87
+          "end": 36913.59
         },
         {
-          "accountId": "ev-buy-home:mortgage",
-          "start": 396032.63,
-          "growth": 25579,
+          "accountId": "ev-buy-home:home",
+          "start": 0,
+          "growth": 0,
           "deposits": 0,
-          "withdrawals": 31119.29,
-          "end": 390492.33
+          "withdrawals": 0,
+          "end": 0
         }
       ],
       "cashFlow": {
@@ -628,11 +650,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 43164.91
           },
           {
             "key": "debtPayments",
-            "amount": 32103.93
+            "amount": 984.64
           },
           {
             "key": "oneOffCosts",
@@ -640,41 +662,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -15037.84
+        "net": 17261.54
       },
       "events": []
     },
     {
       "year": 2033,
       "age": 39,
-      "netWorth": 87110.74,
-      "assets": 629061.03,
-      "liabilities": 375561.37,
-      "shortfall": 166388.92,
+      "netWorth": 116456.43,
+      "assets": 359160.79,
+      "liabilities": 242704.36,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "start": 9746.96,
+          "growth": 27.24,
+          "deposits": 269.81,
+          "withdrawals": 9771,
+          "end": 273.01
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "start": 18744.15,
+          "growth": 52.38,
+          "deposits": 518.86,
+          "withdrawals": 18790.38,
+          "end": 525.01
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "start": 43683.14,
+          "growth": 2288.3,
+          "deposits": 788.67,
+          "withdrawals": 6402.31,
+          "end": 40357.8
         },
         {
           "accountId": "card-1",
@@ -693,20 +715,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 35838.44,
+          "growth": 199.21,
+          "deposits": 1051.56,
+          "withdrawals": 36012.89,
+          "end": 1076.33
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 599848.41,
-          "growth": 29212.62,
-          "deposits": 0,
+          "start": 0,
+          "growth": 13517.75,
+          "deposits": 303410.89,
           "withdrawals": 0,
-          "end": 629061.03
+          "end": 316928.64
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 379118.77,
-          "growth": 24473.74,
-          "deposits": 0,
-          "withdrawals": 30212.9,
-          "end": 373379.61
+          "start": 0,
+          "growth": 15755.26,
+          "deposits": 242728.71,
+          "withdrawals": 17961.37,
+          "end": 240522.6
         }
       ],
       "cashFlow": {
@@ -723,53 +753,55 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 31060.25
+            "amount": 18808.72
           },
           {
             "key": "oneOffCosts",
-            "amount": 0
+            "amount": 72815.53
           }
         ],
-        "withdrawals": 0,
-        "net": -13994.16
+        "withdrawals": 42415.19,
+        "net": -68347.67
       },
-      "events": []
+      "events": [
+        "ev-buy-home"
+      ]
     },
     {
       "year": 2034,
       "age": 40,
-      "netWorth": 102480.83,
-      "assets": 640481.85,
-      "liabilities": 358436.86,
-      "shortfall": 179564.16,
+      "netWorth": 136830,
+      "assets": 369723.74,
+      "liabilities": 232893.74,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 265.05,
+          "growth": 12.7,
+          "deposits": 361.66,
           "withdrawals": 0,
-          "end": 0
+          "end": 639.41
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 509.72,
+          "growth": 24.42,
+          "deposits": 695.5,
           "withdrawals": 0,
-          "end": 0
+          "end": 1229.64
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 39182.33,
+          "growth": 2378.55,
+          "deposits": 1057.16,
           "withdrawals": 0,
-          "end": 0
+          "end": 42618.05
         },
         {
           "accountId": "card-1",
@@ -788,20 +820,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 1044.98,
+          "growth": 99.52,
+          "deposits": 1409.55,
+          "withdrawals": 0,
+          "end": 2554.04
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 610738.87,
-          "growth": 29742.98,
+          "start": 307697.71,
+          "growth": 14984.88,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 640481.85
+          "end": 322682.59
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 362504.48,
-          "growth": 23387.75,
+          "start": 233517.09,
+          "growth": 16522.61,
           "deposits": 0,
-          "withdrawals": 29332.91,
-          "end": 356559.31
+          "withdrawals": 19023.51,
+          "end": 231016.19
         }
       ],
       "cashFlow": {
@@ -818,11 +858,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 30062.12
+            "amount": 19752.72
           },
           {
             "key": "oneOffCosts",
@@ -830,41 +870,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -12996.02
+        "net": 3523.87
       },
       "events": []
     },
     {
       "year": 2035,
       "age": 41,
-      "netWorth": 118708.48,
-      "assets": 652110.01,
-      "liabilities": 341631.28,
-      "shortfall": 191770.26,
+      "netWorth": 157874.13,
+      "assets": 381171.01,
+      "liabilities": 223296.88,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 620.79,
+          "growth": 24.3,
+          "deposits": 428.96,
           "withdrawals": 0,
-          "end": 0
+          "end": 1074.05
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 1193.83,
+          "growth": 46.72,
+          "deposits": 824.93,
           "withdrawals": 0,
-          "end": 0
+          "end": 2065.48
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 41376.75,
+          "growth": 2515.59,
+          "deposits": 1253.89,
           "withdrawals": 0,
-          "end": 0
+          "end": 45146.22
         },
         {
           "accountId": "card-1",
@@ -883,20 +923,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 2479.65,
+          "growth": 192.76,
+          "deposits": 1671.85,
+          "withdrawals": 0,
+          "end": 4344.26
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 621827.04,
-          "growth": 30282.98,
+          "start": 313284.06,
+          "growth": 15256.93,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 652110.01
+          "end": 328541
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 346174.09,
-          "growth": 22319.99,
+          "start": 224287.56,
+          "growth": 15863,
           "deposits": 0,
-          "withdrawals": 28478.56,
-          "end": 340015.52
+          "withdrawals": 18469.43,
+          "end": 221681.12
         }
       ],
       "cashFlow": {
@@ -913,11 +961,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 29106.09
+            "amount": 19096.96
           },
           {
             "key": "oneOffCosts",
@@ -925,41 +973,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -12039.99
+        "net": 4179.63
       },
       "events": []
     },
     {
       "year": 2036,
       "age": 42,
-      "netWorth": 135779.48,
-      "assets": 663949.29,
-      "liabilities": 325123,
-      "shortfall": 203046.82,
+      "netWorth": 179591.95,
+      "assets": 393490.39,
+      "liabilities": 213898.44,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 1042.77,
+          "growth": 37.84,
+          "deposits": 493.15,
           "withdrawals": 0,
-          "end": 0
+          "end": 1573.75
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 2005.32,
+          "growth": 72.76,
+          "deposits": 948.37,
           "withdrawals": 0,
-          "end": 0
+          "end": 3026.45
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 43831.28,
+          "growth": 2667.98,
+          "deposits": 1441.52,
           "withdrawals": 0,
-          "end": 0
+          "end": 47940.79
         },
         {
           "accountId": "card-1",
@@ -978,20 +1026,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 4217.73,
+          "growth": 303.87,
+          "deposits": 1922.03,
+          "withdrawals": 0,
+          "end": 6443.63
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 633116.52,
-          "growth": 30832.77,
+          "start": 318971.84,
+          "growth": 15533.93,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 663949.29
+          "end": 334505.77
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 330112.16,
-          "growth": 21269.45,
+          "start": 215224.39,
+          "growth": 15215.07,
           "deposits": 0,
-          "withdrawals": 27649.08,
-          "end": 323732.53
+          "withdrawals": 17931.49,
+          "end": 212507.97
         }
       ],
       "cashFlow": {
@@ -1008,11 +1064,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 28189.12
+            "amount": 18471.52
           },
           {
             "key": "oneOffCosts",
@@ -1020,41 +1076,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -11123.02
+        "net": 4805.07
       },
       "events": []
     },
     {
       "year": 2037,
       "age": 43,
-      "netWorth": 153681.43,
-      "assets": 676003.52,
-      "liabilities": 308891.39,
-      "shortfall": 213430.7,
+      "netWorth": 201988.08,
+      "assets": 406672.05,
+      "liabilities": 204683.97,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 1527.92,
+          "growth": 53.23,
+          "deposits": 554.48,
           "withdrawals": 0,
-          "end": 0
+          "end": 2135.63
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 2938.3,
+          "growth": 102.37,
+          "deposits": 1066.31,
           "withdrawals": 0,
-          "end": 0
+          "end": 4106.98
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 46544.45,
+          "growth": 2835.66,
+          "deposits": 1620.79,
           "withdrawals": 0,
-          "end": 0
+          "end": 51000.91
         },
         {
           "accountId": "card-1",
@@ -1073,20 +1129,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 6255.95,
+          "growth": 432.69,
+          "deposits": 2161.06,
+          "withdrawals": 0,
+          "end": 8849.69
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 644610.96,
-          "growth": 31392.55,
+          "start": 324762.89,
+          "growth": 15815.95,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 676003.52
+          "end": 340578.84
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 314303.42,
-          "growth": 20235.14,
+          "start": 206318.42,
+          "growth": 14578.16,
           "deposits": 0,
-          "withdrawals": 26843.77,
-          "end": 307694.8
+          "withdrawals": 17409.21,
+          "end": 203487.38
         }
       ],
       "cashFlow": {
@@ -1103,11 +1167,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 27308.5
+            "amount": 17873.94
           },
           {
             "key": "oneOffCosts",
@@ -1115,41 +1179,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -10242.41
+        "net": 5402.64
       },
       "events": []
     },
     {
       "year": 2038,
       "age": 44,
-      "netWorth": 172403.54,
-      "assets": 688276.59,
-      "liabilities": 292916.72,
-      "shortfall": 222956.33,
+      "netWorth": 225068.51,
+      "assets": 420708.32,
+      "liabilities": 195639.8,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 2073.43,
+          "growth": 70.4,
+          "deposits": 613.17,
           "withdrawals": 0,
-          "end": 0
+          "end": 2757
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 3987.36,
+          "growth": 135.39,
+          "deposits": 1179.18,
           "withdrawals": 0,
-          "end": 0
+          "end": 5301.92
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 49515.45,
+          "growth": 3018.6,
+          "deposits": 1792.35,
           "withdrawals": 0,
-          "end": 0
+          "end": 54326.4
         },
         {
           "accountId": "card-1",
@@ -1168,20 +1232,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 8591.94,
+          "growth": 579.09,
+          "deposits": 2389.8,
+          "withdrawals": 0,
+          "end": 11560.82
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 656314.09,
-          "growth": 31962.5,
+          "start": 330659.07,
+          "growth": 16103.1,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 688276.59
+          "end": 346762.16
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 298732.81,
-          "growth": 19216.07,
+          "start": 197560.56,
+          "growth": 13951.64,
           "deposits": 0,
-          "withdrawals": 26061.91,
-          "end": 291886.97
+          "withdrawals": 16902.14,
+          "end": 194610.05
         }
       ],
       "cashFlow": {
@@ -1198,11 +1270,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 26461.85
+            "amount": 17302.08
           },
           {
             "key": "oneOffCosts",
@@ -1210,41 +1282,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -9395.76
+        "net": 5974.5
       },
       "events": []
     },
     {
       "year": 2039,
       "age": 45,
-      "netWorth": 191936.54,
-      "assets": 700772.49,
-      "liabilities": 277180,
-      "shortfall": 231655.95,
+      "netWorth": 248840.48,
+      "assets": 435593.44,
+      "liabilities": 186752.95,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 2676.7,
+          "growth": 89.27,
+          "deposits": 669.42,
           "withdrawals": 0,
-          "end": 0
+          "end": 3435.39
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 5147.5,
+          "growth": 171.67,
+          "deposits": 1287.35,
           "withdrawals": 0,
-          "end": 0
+          "end": 6606.52
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 52744.08,
+          "growth": 3216.81,
+          "deposits": 1956.77,
           "withdrawals": 0,
-          "end": 0
+          "end": 57917.66
         },
         {
           "accountId": "card-1",
@@ -1263,20 +1335,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 11224.1,
+          "growth": 742.99,
+          "deposits": 2609.03,
+          "withdrawals": 0,
+          "end": 14576.12
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 668229.7,
-          "growth": 32542.79,
+          "start": 336662.29,
+          "growth": 16395.45,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 700772.49
+          "end": 353057.75
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 283385.41,
-          "growth": 18211.25,
+          "start": 188941.8,
+          "growth": 13334.84,
           "deposits": 0,
-          "withdrawals": 25302.83,
-          "end": 276293.83
+          "withdrawals": 16409.85,
+          "end": 185866.78
         }
       ],
       "cashFlow": {
@@ -1293,11 +1373,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 25647
+            "amount": 16754.02
           },
           {
             "key": "oneOffCosts",
@@ -1305,41 +1385,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -8580.91
+        "net": 6522.56
       },
       "events": []
     },
     {
       "year": 2040,
       "age": 46,
-      "netWorth": 212272.47,
-      "assets": 713495.25,
-      "liabilities": 261662.92,
-      "shortfall": 239559.85,
+      "netWorth": 273312.4,
+      "assets": 451323.43,
+      "liabilities": 178011.03,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 3335.33,
+          "growth": 109.77,
+          "deposits": 723.4,
           "withdrawals": 0,
-          "end": 0
+          "end": 4168.5
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 6414.1,
+          "growth": 211.1,
+          "deposits": 1391.15,
           "withdrawals": 0,
-          "end": 0
+          "end": 8016.35
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 56230.73,
+          "growth": 3430.31,
+          "deposits": 2114.55,
           "withdrawals": 0,
-          "end": 0
+          "end": 61775.59
         },
         {
           "accountId": "card-1",
@@ -1358,20 +1438,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 14151.57,
+          "growth": 924.38,
+          "deposits": 2819.4,
+          "withdrawals": 0,
+          "end": 17895.36
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 680361.64,
-          "growth": 33133.61,
+          "start": 342774.51,
+          "growth": 16693.12,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 713495.25
+          "end": 359467.63
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 268246.44,
-          "growth": 17219.73,
+          "start": 180453.19,
+          "growth": 12727.12,
           "deposits": 0,
-          "withdrawals": 24565.85,
-          "end": 260900.31
+          "withdrawals": 15931.89,
+          "end": 177248.42
         }
       ],
       "cashFlow": {
@@ -1388,11 +1476,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 24862.04
+            "amount": 16228.07
           },
           {
             "key": "oneOffCosts",
@@ -1400,41 +1488,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -7795.94
+        "net": 7048.51
       },
       "events": []
     },
     {
       "year": 2041,
       "age": 47,
-      "netWorth": 233404.68,
-      "assets": 726449,
-      "liabilities": 246347.73,
-      "shortfall": 246696.59,
+      "netWorth": 298493.77,
+      "assets": 467895.89,
+      "liabilities": 169402.12,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 4047.09,
+          "growth": 131.83,
+          "deposits": 775.26,
           "withdrawals": 0,
-          "end": 0
+          "end": 4954.18
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 7782.86,
+          "growth": 253.52,
+          "deposits": 1490.89,
           "withdrawals": 0,
-          "end": 0
+          "end": 9527.28
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 59976.3,
+          "growth": 3659.17,
+          "deposits": 2266.15,
           "withdrawals": 0,
-          "end": 0
+          "end": 65901.63
         },
         {
           "accountId": "card-1",
@@ -1453,20 +1541,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 17374.13,
+          "growth": 1123.24,
+          "deposits": 3021.54,
+          "withdrawals": 0,
+          "end": 21518.91
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 692713.83,
-          "growth": 33735.16,
+          "start": 348997.7,
+          "growth": 16996.19,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 726449
+          "end": 365993.89
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 253301.27,
-          "growth": 16240.53,
+          "start": 172085.84,
+          "growth": 12127.85,
           "deposits": 0,
-          "withdrawals": 23850.34,
-          "end": 245691.46
+          "withdrawals": 15467.86,
+          "end": 168745.84
         }
       ],
       "cashFlow": {
@@ -1483,11 +1579,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 24105.23
+            "amount": 15722.74
           },
           {
             "key": "oneOffCosts",
@@ -1495,41 +1591,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -7039.14
+        "net": 7553.84
       },
       "events": []
     },
     {
       "year": 2042,
       "age": 48,
-      "netWorth": 255327.62,
-      "assets": 739637.93,
-      "liabilities": 231217.19,
-      "shortfall": 253093.12,
+      "netWorth": 324395.14,
+      "assets": 485309.88,
+      "liabilities": 160914.74,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 4809.89,
+          "growth": 155.4,
+          "deposits": 825.15,
           "withdrawals": 0,
-          "end": 0
+          "end": 5790.43
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 9249.78,
+          "growth": 298.85,
+          "deposits": 1586.82,
           "withdrawals": 0,
-          "end": 0
+          "end": 11135.45
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 63982.17,
+          "growth": 3903.5,
+          "deposits": 2411.97,
           "withdrawals": 0,
-          "end": 0
+          "end": 70297.64
         },
         {
           "accountId": "card-1",
@@ -1548,20 +1644,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 20892.15,
+          "growth": 1339.62,
+          "deposits": 3215.96,
+          "withdrawals": 0,
+          "end": 25447.73
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 705290.29,
-          "growth": 34347.64,
+          "start": 355333.87,
+          "growth": 17304.76,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 739637.93
+          "end": 372638.63
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 238535.39,
-          "growth": 15272.7,
+          "start": 163830.91,
+          "growth": 11536.39,
           "deposits": 0,
-          "withdrawals": 23155.67,
-          "end": 230652.42
+          "withdrawals": 15017.34,
+          "end": 160349.97
         }
       ],
       "cashFlow": {
@@ -1578,11 +1682,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 23375.02
+            "amount": 15236.68
           },
           {
             "key": "oneOffCosts",
@@ -1590,41 +1694,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -6308.93
+        "net": 8039.9
       },
       "events": []
     },
     {
       "year": 2043,
       "age": 49,
-      "netWorth": 278036.85,
-      "assets": 753066.3,
-      "liabilities": 216254.28,
-      "shortfall": 258775.17,
+      "netWorth": 351028.04,
+      "assets": 503565.61,
+      "liabilities": 152537.58,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 5621.78,
+          "growth": 180.41,
+          "deposits": 873.16,
           "withdrawals": 0,
-          "end": 0
+          "end": 6675.35
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 10811.12,
+          "growth": 346.95,
+          "deposits": 1679.15,
           "withdrawals": 0,
-          "end": 0
+          "end": 12837.22
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 68250.13,
+          "growth": 4163.4,
+          "deposits": 2552.3,
           "withdrawals": 0,
-          "end": 0
+          "end": 74965.84
         },
         {
           "accountId": "card-1",
@@ -1643,20 +1747,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 24706.53,
+          "growth": 1573.59,
+          "deposits": 3403.07,
+          "withdrawals": 0,
+          "end": 29683.19
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 718095.07,
-          "growth": 34971.23,
+          "start": 361785.08,
+          "growth": 17618.93,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 753066.3
+          "end": 379404.01
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 223934.39,
-          "growth": 14315.31,
+          "start": 155679.58,
+          "growth": 10952.11,
           "deposits": 0,
-          "withdrawals": 22481.24,
-          "end": 215768.46
+          "withdrawals": 14579.94,
+          "end": 152051.76
         }
       ],
       "cashFlow": {
@@ -1673,11 +1785,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 22670.2
+            "amount": 14768.9
           },
           {
             "key": "oneOffCosts",
@@ -1685,41 +1797,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -5604.11
+        "net": 8507.68
       },
       "events": []
     },
     {
       "year": 2044,
       "age": 50,
-      "netWorth": 301529.96,
-      "assets": 766738.48,
-      "liabilities": 201428.89,
-      "shortfall": 263779.63,
+      "netWorth": 378405.87,
+      "assets": 522652.01,
+      "liabilities": 144246.14,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 6480.93,
+          "growth": 206.81,
+          "deposits": 918.14,
           "withdrawals": 0,
-          "end": 0
+          "end": 7605.87
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 12463.32,
+          "growth": 397.71,
+          "deposits": 1765.65,
           "withdrawals": 0,
-          "end": 0
+          "end": 14626.68
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 72782.37,
+          "growth": 4438.95,
+          "deposits": 2683.79,
           "withdrawals": 0,
-          "end": 0
+          "end": 79905.1
         },
         {
           "accountId": "card-1",
@@ -1738,20 +1850,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 28818.63,
+          "growth": 1825.13,
+          "deposits": 3578.38,
+          "withdrawals": 0,
+          "end": 34222.14
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 731132.33,
-          "growth": 35606.14,
+          "start": 368353.41,
+          "growth": 17938.81,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 766738.48
+          "end": 386292.22
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 209483.94,
-          "growth": 13367.4,
+          "start": 147623.06,
+          "growth": 10374.37,
           "deposits": 0,
-          "withdrawals": 21826.44,
-          "end": 201024.9
+          "withdrawals": 14155.28,
+          "end": 143842.15
         }
       ],
       "cashFlow": {
@@ -1768,11 +1888,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 22001.8
+            "amount": 14330.63
           },
           {
             "key": "oneOffCosts",
@@ -1780,41 +1900,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -4935.7
+        "net": 8945.95
       },
       "events": []
     },
     {
       "year": 2045,
       "age": 51,
-      "netWorth": 325808.67,
-      "assets": 780658.88,
-      "liabilities": 186715.71,
-      "shortfall": 268134.5,
+      "netWorth": 406545.88,
+      "assets": 542566.59,
+      "liabilities": 136020.71,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 7384.34,
+          "growth": 234.5,
+          "deposits": 960.98,
           "withdrawals": 0,
-          "end": 0
+          "end": 8579.81
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 14200.66,
+          "growth": 450.96,
+          "deposits": 1848.03,
           "withdrawals": 0,
-          "end": 0
+          "end": 16499.64
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 77577.77,
+          "growth": 4730.08,
+          "deposits": 2809,
           "withdrawals": 0,
-          "end": 0
+          "end": 85116.85
         },
         {
           "accountId": "card-1",
@@ -1833,20 +1953,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 33225.38,
+          "growth": 2094.07,
+          "deposits": 3745.34,
+          "withdrawals": 0,
+          "end": 39064.79
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 744406.29,
-          "growth": 36252.59,
+          "start": 375040.99,
+          "growth": 18264.5,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 780658.88
+          "end": 393305.49
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 195169.8,
-          "growth": 12428.04,
+          "start": 139652.57,
+          "growth": 9802.53,
           "deposits": 0,
-          "withdrawals": 21190.72,
-          "end": 186407.12
+          "withdrawals": 13742.99,
+          "end": 135712.11
         }
       ],
       "cashFlow": {
@@ -1863,11 +1991,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 21360.97
+            "amount": 13913.24
           },
           {
             "key": "oneOffCosts",
@@ -1875,41 +2003,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -4294.87
+        "net": 9363.35
       },
       "events": []
     },
     {
       "year": 2046,
       "age": 52,
-      "netWorth": 350876.48,
-      "assets": 794832,
-      "liabilities": 172096.83,
-      "shortfall": 271858.69,
+      "netWorth": 435467.1,
+      "assets": 563315.96,
+      "liabilities": 127848.86,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 8329.92,
+          "growth": 263.43,
+          "deposits": 1002.57,
           "withdrawals": 0,
-          "end": 0
+          "end": 9595.92
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 16019.07,
+          "growth": 506.6,
+          "deposits": 1928.01,
           "withdrawals": 0,
-          "end": 0
+          "end": 18453.69
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 82637.72,
+          "growth": 5036.98,
+          "deposits": 2930.58,
           "withdrawals": 0,
-          "end": 0
+          "end": 90605.28
         },
         {
           "accountId": "card-1",
@@ -1928,20 +2056,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 37926.98,
+          "growth": 2380.58,
+          "deposits": 3907.44,
+          "withdrawals": 0,
+          "end": 44214.99
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 757921.24,
-          "growth": 36910.76,
+          "start": 381849.99,
+          "growth": 18596.09,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 794832
+          "end": 400446.08
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 180977.79,
-          "growth": 11496.3,
+          "start": 131759.33,
+          "growth": 9235.97,
           "deposits": 0,
-          "withdrawals": 20573.52,
-          "end": 171900.56
+          "withdrawals": 13342.71,
+          "end": 127652.6
         }
       ],
       "cashFlow": {
@@ -1958,11 +2094,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 20738.8
+            "amount": 13508
           },
           {
             "key": "oneOffCosts",
@@ -1970,41 +2106,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -3672.71
+        "net": 9768.59
       },
       "events": []
     },
     {
       "year": 2047,
       "age": 53,
-      "netWorth": 376738.31,
-      "assets": 809262.45,
-      "liabilities": 157553.57,
-      "shortfall": 274970.57,
+      "netWorth": 465189.99,
+      "assets": 584907.38,
+      "liabilities": 119717.39,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 9316.42,
+          "growth": 293.58,
+          "deposits": 1042.94,
           "withdrawals": 0,
-          "end": 0
+          "end": 10652.95
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 17916.2,
+          "growth": 564.58,
+          "deposits": 2005.66,
           "withdrawals": 0,
-          "end": 0
+          "end": 20486.44
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 87966.29,
+          "growth": 5359.91,
+          "deposits": 3048.61,
           "withdrawals": 0,
-          "end": 0
+          "end": 96374.81
         },
         {
           "accountId": "card-1",
@@ -2023,20 +2159,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 42927.18,
+          "growth": 2684.87,
+          "deposits": 4064.81,
+          "withdrawals": 0,
+          "end": 49676.86
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 771681.56,
-          "growth": 37580.89,
+          "start": 388782.6,
+          "growth": 18933.71,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 809262.45
+          "end": 407716.32
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 166893.75,
-          "growth": 10571.24,
+          "start": 123934.56,
+          "growth": 8674.06,
           "deposits": 0,
-          "withdrawals": 19974.29,
-          "end": 157490.71
+          "withdrawals": 12954.09,
+          "end": 119654.53
         }
       ],
       "cashFlow": {
@@ -2053,11 +2197,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 20134.76
+            "amount": 13114.56
           },
           {
             "key": "oneOffCosts",
@@ -2065,41 +2209,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -3068.67
+        "net": 10162.02
       },
       "events": []
     },
     {
       "year": 2048,
       "age": 54,
-      "netWorth": 403395.55,
-      "assets": 823954.88,
-      "liabilities": 143163.03,
-      "shortfall": 277396.31,
+      "netWorth": 495732.09,
+      "assets": 607440.9,
+      "liabilities": 111708.81,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 10342.67,
+          "growth": 324.97,
+          "deposits": 1091.49,
           "withdrawals": 0,
-          "end": 0
+          "end": 11759.13
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 19889.75,
+          "growth": 624.95,
+          "deposits": 2099.02,
           "withdrawals": 0,
-          "end": 0
+          "end": 22613.72
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 93567.78,
+          "growth": 5699.52,
+          "deposits": 3190.5,
           "withdrawals": 0,
-          "end": 0
+          "end": 102457.8
         },
         {
           "accountId": "card-1",
@@ -2118,20 +2262,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 48229.96,
+          "growth": 3007.74,
+          "deposits": 4254,
+          "withdrawals": 0,
+          "end": 55491.7
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 785691.7,
-          "growth": 38263.19,
+          "start": 395841.08,
+          "growth": 19277.46,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 823954.88
+          "end": 415118.55
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 152903.6,
-          "growth": 9651.94,
+          "start": 116169.45,
+          "growth": 8116.15,
           "deposits": 0,
-          "withdrawals": 19392.51,
-          "end": 143163.03
+          "withdrawals": 12576.78,
+          "end": 111708.81
         }
       ],
       "cashFlow": {
@@ -2148,11 +2300,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 19457.3
+            "amount": 12641.57
           },
           {
             "key": "oneOffCosts",
@@ -2160,41 +2312,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -2391.21
+        "net": 10635.01
       },
       "events": []
     },
     {
       "year": 2049,
       "age": 55,
-      "netWorth": 430827.8,
-      "assets": 838914.06,
-      "liabilities": 128903.02,
-      "shortfall": 279183.24,
+      "netWorth": 527091.1,
+      "assets": 630897.39,
+      "liabilities": 103806.29,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 11416.63,
+          "growth": 357.86,
+          "deposits": 1135.73,
           "withdrawals": 0,
-          "end": 0
+          "end": 12910.22
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 21955.07,
+          "growth": 688.19,
+          "deposits": 2184.1,
           "withdrawals": 0,
-          "end": 0
+          "end": 24827.35
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 99473.59,
+          "growth": 6057.73,
+          "deposits": 3319.83,
           "withdrawals": 0,
-          "end": 0
+          "end": 108851.15
         },
         {
           "accountId": "card-1",
@@ -2213,20 +2365,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 53875.44,
+          "growth": 3351.61,
+          "deposits": 4426.45,
+          "withdrawals": 0,
+          "end": 61653.5
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 799956.2,
-          "growth": 38957.87,
+          "start": 403027.71,
+          "growth": 19627.45,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 838914.06
+          "end": 422655.16
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 138993.23,
-          "growth": 8737.47,
+          "start": 108455.16,
+          "growth": 7561.61,
           "deposits": 0,
-          "withdrawals": 18827.68,
-          "end": 128903.02
+          "withdrawals": 12210.47,
+          "end": 103806.29
         }
       ],
       "cashFlow": {
@@ -2243,11 +2403,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 18827.68
+            "amount": 12210.47
           },
           {
             "key": "oneOffCosts",
@@ -2255,41 +2415,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -1761.59
+        "net": 11066.11
       },
       "events": []
     },
     {
       "year": 2050,
       "age": 56,
-      "netWorth": 459034.37,
-      "assets": 854144.83,
-      "liabilities": 114696.17,
-      "shortfall": 280414.29,
+      "netWorth": 559282.5,
+      "assets": 655220.28,
+      "liabilities": 95937.78,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 12534.2,
+          "growth": 391.88,
+          "deposits": 1172.23,
           "withdrawals": 0,
-          "end": 0
+          "end": 14098.31
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 24104.23,
+          "growth": 753.62,
+          "deposits": 2254.29,
           "withdrawals": 0,
-          "end": 0
+          "end": 27112.14
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 105680.73,
+          "growth": 6433.06,
+          "deposits": 3426.53,
           "withdrawals": 0,
-          "end": 0
+          "end": 115540.32
         },
         {
           "accountId": "card-1",
@@ -2308,20 +2468,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 59857.76,
+          "growth": 3714.42,
+          "deposits": 4568.7,
+          "withdrawals": 0,
+          "end": 68140.89
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 814479.67,
-          "growth": 39665.16,
+          "start": 410344.82,
+          "growth": 19983.79,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 854144.83
+          "end": 430328.61
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 125148.57,
-          "growth": 7826.91,
+          "start": 100782.81,
+          "growth": 7009.79,
           "deposits": 0,
-          "withdrawals": 18279.3,
-          "end": 114696.17
+          "withdrawals": 11854.82,
+          "end": 95937.78
         }
       ],
       "cashFlow": {
@@ -2338,11 +2506,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 18279.3
+            "amount": 11854.82
           },
           {
             "key": "oneOffCosts",
@@ -2350,41 +2518,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -1213.21
+        "net": 11421.76
       },
       "events": []
     },
     {
       "year": 2051,
       "age": 57,
-      "netWorth": 488018.55,
-      "assets": 869652.12,
-      "liabilities": 100527.92,
-      "shortfall": 281105.66,
+      "netWorth": 592325.55,
+      "assets": 680419.54,
+      "liabilities": 88093.99,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 13687.68,
+          "growth": 426.97,
+          "deposits": 1207.67,
           "withdrawals": 0,
-          "end": 0
+          "end": 15322.33
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 26322.47,
+          "growth": 821.1,
+          "deposits": 2322.44,
           "withdrawals": 0,
-          "end": 0
+          "end": 29466.01
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 112175.07,
+          "growth": 6825.54,
+          "deposits": 3530.11,
           "withdrawals": 0,
-          "end": 0
+          "end": 122530.72
         },
         {
           "accountId": "card-1",
@@ -2403,20 +2571,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 66156.2,
+          "growth": 4096.08,
+          "deposits": 4706.82,
+          "withdrawals": 0,
+          "end": 74959.11
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 829266.83,
-          "growth": 40385.29,
+          "start": 417794.77,
+          "growth": 20346.61,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 869652.12
+          "end": 438141.37
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 111355.51,
-          "growth": 6919.31,
+          "start": 93143.47,
+          "growth": 6460.06,
           "deposits": 0,
-          "withdrawals": 17746.9,
-          "end": 100527.92
+          "withdrawals": 11509.54,
+          "end": 88093.99
         }
       ],
       "cashFlow": {
@@ -2433,11 +2609,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 17746.9
+            "amount": 11509.54
           },
           {
             "key": "oneOffCosts",
@@ -2445,41 +2621,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -680.8
+        "net": 11767.05
       },
       "events": []
     },
     {
       "year": 2052,
       "age": 58,
-      "netWorth": 517784.22,
-      "assets": 885448.79,
-      "liabilities": 86383.68,
-      "shortfall": 281280.89,
+      "netWorth": 626240.24,
+      "assets": 706505.83,
+      "liabilities": 80265.59,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 2.68,
+          "start": 14876.04,
+          "growth": 463.09,
+          "deposits": 1242.08,
           "withdrawals": 0,
-          "end": 2.68
+          "end": 16581.21
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 5.15,
+          "start": 28607.78,
+          "growth": 890.56,
+          "deposits": 2388.61,
           "withdrawals": 0,
-          "end": 5.15
+          "end": 31886.95
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 118961.86,
+          "growth": 7235.48,
+          "deposits": 3630.68,
           "withdrawals": 0,
-          "end": 0
+          "end": 129828.03
         },
         {
           "accountId": "card-1",
@@ -2498,20 +2674,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 72775.83,
+          "growth": 4496.91,
+          "deposits": 4840.91,
+          "withdrawals": 0,
+          "end": 82113.65
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 844322.45,
-          "growth": 41118.5,
+          "start": 425379.97,
+          "growth": 20716,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 885440.95
+          "end": 446095.98
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 97599.92,
-          "growth": 6013.76,
+          "start": 85528.15,
+          "growth": 5911.75,
           "deposits": 0,
-          "withdrawals": 17230,
-          "end": 86383.68
+          "withdrawals": 11174.31,
+          "end": 80265.59
         }
       ],
       "cashFlow": {
@@ -2528,11 +2712,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 17230
+            "amount": 11174.31
           },
           {
             "key": "oneOffCosts",
@@ -2540,41 +2724,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -163.9
+        "net": 12102.27
       },
       "events": []
     },
     {
       "year": 2053,
       "age": 59,
-      "netWorth": 548335.89,
-      "assets": 901865.58,
-      "liabilities": 72248.81,
-      "shortfall": 281280.89,
+      "netWorth": 661047.32,
+      "assets": 733490.46,
+      "liabilities": 72443.13,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 2.6,
-          "growth": 1.23,
-          "deposits": 115.61,
+          "start": 16098.27,
+          "growth": 500.22,
+          "deposits": 1275.48,
           "withdrawals": 0,
-          "end": 119.44
+          "end": 17873.96
         },
         {
           "accountId": "savings-1",
-          "start": 5,
-          "growth": 2.37,
-          "deposits": 222.33,
+          "start": 30958.2,
+          "growth": 961.96,
+          "deposits": 2452.84,
           "withdrawals": 0,
-          "end": 229.7
+          "end": 34373
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 126046.63,
+          "growth": 7663.23,
+          "deposits": 3728.32,
           "withdrawals": 0,
-          "end": 0
+          "end": 137438.18
         },
         {
           "accountId": "card-1",
@@ -2593,20 +2777,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 79721.99,
+          "growth": 4917.22,
+          "deposits": 4971.1,
+          "withdrawals": 0,
+          "end": 89610.31
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 859651.41,
-          "growth": 41865.02,
+          "start": 433102.89,
+          "growth": 21092.11,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 901516.44
+          "end": 454195
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 83867.65,
-          "growth": 5109.3,
+          "start": 77927.76,
+          "growth": 5364.22,
           "deposits": 0,
-          "withdrawals": 16728.15,
-          "end": 72248.81
+          "withdrawals": 10848.84,
+          "end": 72443.13
         }
       ],
       "cashFlow": {
@@ -2623,11 +2815,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 16728.15
+            "amount": 10848.84
           },
           {
             "key": "oneOffCosts",
@@ -2635,41 +2827,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": 337.94
+        "net": 12427.74
       },
       "events": []
     },
     {
       "year": 2054,
       "age": 60,
-      "netWorth": 579678.67,
-      "assets": 919068.12,
-      "liabilities": 58108.57,
-      "shortfall": 281280.89,
+      "netWorth": 696768.36,
+      "assets": 761385.44,
+      "liabilities": 64617.08,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 115.97,
-          "growth": 6.91,
-          "deposits": 282.29,
+          "start": 17353.36,
+          "growth": 538.31,
+          "deposits": 1307.91,
           "withdrawals": 0,
-          "end": 405.17
+          "end": 19199.58
         },
         {
           "accountId": "savings-1",
-          "start": 223.01,
-          "growth": 13.29,
-          "deposits": 542.87,
+          "start": 33371.85,
+          "growth": 1035.22,
+          "deposits": 2515.21,
           "withdrawals": 0,
-          "end": 779.18
+          "end": 36922.28
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 133435.13,
+          "growth": 8109.11,
+          "deposits": 3823.12,
           "withdrawals": 0,
-          "end": 0
+          "end": 145367.36
         },
         {
           "accountId": "card-1",
@@ -2688,20 +2880,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 87000.3,
+          "growth": 5357.36,
+          "deposits": 5097.49,
+          "withdrawals": 0,
+          "end": 97455.15
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 875258.67,
-          "growth": 42625.1,
+          "start": 440966.02,
+          "growth": 21475.05,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 917883.77
+          "end": 462441.07
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 70144.47,
-          "growth": 4205.02,
+          "start": 70333.14,
+          "growth": 4816.8,
           "deposits": 0,
-          "withdrawals": 16240.92,
-          "end": 58108.57
+          "withdrawals": 10532.86,
+          "end": 64617.08
         }
       ],
       "cashFlow": {
@@ -2718,11 +2918,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 16240.92
+            "amount": 10532.86
           },
           {
             "key": "oneOffCosts",
@@ -2730,41 +2930,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": 825.17
+        "net": 12743.73
       },
       "events": []
     },
     {
       "year": 2055,
       "age": 61,
-      "netWorth": 611818.29,
-      "assets": 937047.32,
-      "liabilities": 43948.15,
-      "shortfall": 281280.89,
+      "netWorth": 733425.68,
+      "assets": 790203.45,
+      "liabilities": 56777.77,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 393.37,
-          "growth": 17.45,
-          "deposits": 444.12,
+          "start": 18640.37,
+          "growth": 577.35,
+          "deposits": 1339.39,
           "withdrawals": 0,
-          "end": 854.94
+          "end": 20557.12
         },
         {
           "accountId": "savings-1",
-          "start": 756.48,
-          "growth": 33.55,
-          "deposits": 854.08,
+          "start": 35846.87,
+          "growth": 1110.3,
+          "deposits": 2575.76,
           "withdrawals": 0,
-          "end": 1644.12
+          "end": 39532.92
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 141133.36,
+          "growth": 8573.51,
+          "deposits": 3915.15,
           "withdrawals": 0,
-          "end": 0
+          "end": 153622.02
         },
         {
           "accountId": "card-1",
@@ -2783,20 +2983,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 94616.65,
+          "growth": 5817.68,
+          "deposits": 5220.2,
+          "withdrawals": 0,
+          "end": 105654.54
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 891149.29,
-          "growth": 43398.97,
+          "start": 448971.91,
+          "growth": 21864.93,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 934548.26
+          "end": 470836.84
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 56416.08,
-          "growth": 3299.95,
+          "start": 62735.03,
+          "growth": 4268.81,
           "deposits": 0,
-          "withdrawals": 15767.89,
-          "end": 43948.15
+          "withdrawals": 10226.08,
+          "end": 56777.77
         }
       ],
       "cashFlow": {
@@ -2813,11 +3021,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 15767.89
+            "amount": 10226.08
           },
           {
             "key": "oneOffCosts",
@@ -2825,41 +3033,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": 1298.21
+        "net": 13050.51
       },
       "events": []
     },
     {
       "year": 2056,
       "age": 62,
-      "netWorth": 644761.09,
-      "assets": 955794.62,
-      "liabilities": 29752.64,
-      "shortfall": 281280.89,
+      "netWorth": 771042.47,
+      "assets": 819957.88,
+      "liabilities": 48915.4,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 830.04,
-          "growth": 32.7,
-          "deposits": 601.24,
+          "start": 19958.37,
+          "growth": 617.31,
+          "deposits": 1369.96,
           "withdrawals": 0,
-          "end": 1463.97
+          "end": 21945.65
         },
         {
           "accountId": "savings-1",
-          "start": 1596.23,
-          "growth": 62.88,
-          "deposits": 1156.23,
+          "start": 38381.48,
+          "growth": 1187.14,
+          "deposits": 2634.54,
           "withdrawals": 0,
-          "end": 2815.34
+          "end": 42203.16
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 149147.59,
+          "growth": 9056.8,
+          "deposits": 4004.51,
           "withdrawals": 0,
-          "end": 0
+          "end": 162208.9
         },
         {
           "accountId": "card-1",
@@ -2878,20 +3086,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 102577.22,
+          "growth": 6298.56,
+          "deposits": 5339.34,
+          "withdrawals": 0,
+          "end": 114215.12
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 907328.41,
-          "growth": 44186.89,
+          "start": 457123.15,
+          "growth": 22261.9,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 951515.31
+          "end": 479385.05
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 42668.11,
-          "growth": 2393.16,
+          "start": 55124.05,
+          "growth": 3719.58,
           "deposits": 0,
-          "withdrawals": 15308.63,
-          "end": 29752.64
+          "withdrawals": 9928.23,
+          "end": 48915.4
         }
       ],
       "cashFlow": {
@@ -2908,11 +3124,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 15308.63
+            "amount": 9928.23
           },
           {
             "key": "oneOffCosts",
@@ -2920,41 +3136,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": 1757.46
+        "net": 13348.36
       },
       "events": []
     },
     {
       "year": 2057,
       "age": 63,
-      "netWorth": 678514.06,
-      "assets": 975301.93,
-      "liabilities": 15506.98,
-      "shortfall": 281280.89,
+      "netWorth": 809642.76,
+      "assets": 850662.8,
+      "liabilities": 41020.05,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 1421.33,
-          "growth": 52.52,
-          "deposits": 753.78,
+          "start": 21306.45,
+          "growth": 658.16,
+          "deposits": 1399.64,
           "withdrawals": 0,
-          "end": 2227.63
+          "end": 23364.25
         },
         {
           "accountId": "savings-1",
-          "start": 2733.34,
-          "growth": 101,
-          "deposits": 1449.57,
+          "start": 40973.95,
+          "growth": 1265.69,
+          "deposits": 2691.62,
           "withdrawals": 0,
-          "end": 4283.91
+          "end": 44931.26
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 157484.37,
+          "growth": 9559.37,
+          "deposits": 4091.26,
           "withdrawals": 0,
-          "end": 0
+          "end": 171134.99
         },
         {
           "accountId": "card-1",
@@ -2973,20 +3189,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 110888.47,
+          "growth": 6800.38,
+          "deposits": 5455.01,
+          "withdrawals": 0,
+          "end": 123143.86
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 923801.27,
-          "growth": 44989.12,
+          "start": 465422.37,
+          "growth": 22666.07,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 968790.39
+          "end": 488088.44
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 28886.05,
-          "growth": 1483.67,
+          "start": 47490.68,
+          "growth": 3168.42,
           "deposits": 0,
-          "withdrawals": 14862.75,
-          "end": 15506.98
+          "withdrawals": 9639.06,
+          "end": 41020.05
         }
       ],
       "cashFlow": {
@@ -3003,11 +3227,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 14862.75
+            "amount": 9639.06
           },
           {
             "key": "oneOffCosts",
@@ -3015,41 +3239,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": 2203.35
+        "net": 13637.53
       },
       "events": []
     },
     {
       "year": 2058,
       "age": 64,
-      "netWorth": 713084.8,
-      "assets": 995561.69,
-      "liabilities": 1196.01,
-      "shortfall": 281280.89,
+      "netWorth": 849251.42,
+      "assets": 882333.04,
+      "liabilities": 33081.61,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 2162.75,
-          "growth": 76.79,
-          "deposits": 901.87,
+          "start": 22683.74,
+          "growth": 699.87,
+          "deposits": 1428.45,
           "withdrawals": 0,
-          "end": 3141.41
+          "end": 24812.07
         },
         {
           "accountId": "savings-1",
-          "start": 4159.13,
-          "growth": 147.67,
-          "deposits": 1734.37,
+          "start": 43622.58,
+          "growth": 1345.91,
+          "deposits": 2747.03,
           "withdrawals": 0,
-          "end": 6041.18
+          "end": 47715.52
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 166150.48,
+          "growth": 10081.62,
+          "deposits": 4175.48,
           "withdrawals": 0,
-          "end": 0
+          "end": 180407.59
         },
         {
           "accountId": "card-1",
@@ -3068,20 +3292,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 119557.14,
+          "growth": 7323.56,
+          "deposits": 5567.31,
+          "withdrawals": 0,
+          "end": 132448.01
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 940573.19,
-          "growth": 45805.91,
+          "start": 473872.28,
+          "growth": 23077.58,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 986379.11
+          "end": 496949.86
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 15055.32,
-          "growth": 570.54,
+          "start": 39825.29,
+          "growth": 2614.63,
           "deposits": 0,
-          "withdrawals": 14429.85,
-          "end": 1196.01
+          "withdrawals": 9358.31,
+          "end": 33081.61
         }
       ],
       "cashFlow": {
@@ -3098,11 +3330,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 14429.85
+            "amount": 9358.31
           },
           {
             "key": "oneOffCosts",
@@ -3110,41 +3342,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": 2636.24
+        "net": 13918.28
       },
       "events": []
     },
     {
       "year": 2059,
       "age": 65,
-      "netWorth": 748287.57,
-      "assets": 1029568.46,
-      "liabilities": 0,
-      "shortfall": 281280.89,
+      "netWorth": 889894.28,
+      "assets": 914984.11,
+      "liabilities": 25089.83,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 3049.91,
-          "growth": 159.95,
-          "deposits": 5439,
+          "start": 24089.39,
+          "growth": 742.43,
+          "deposits": 1456.43,
           "withdrawals": 0,
-          "end": 8648.87
+          "end": 26288.24
         },
         {
           "accountId": "savings-1",
-          "start": 5865.22,
-          "growth": 307.59,
-          "deposits": 10459.62,
+          "start": 46325.75,
+          "growth": 1427.74,
+          "deposits": 2800.83,
           "withdrawals": 0,
-          "end": 16632.44
+          "end": 50554.31
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 175153,
+          "growth": 10624,
+          "deposits": 4257.25,
           "withdrawals": 0,
-          "end": 0
+          "end": 190034.25
         },
         {
           "accountId": "card-1",
@@ -3163,20 +3395,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 128590.3,
+          "growth": 7868.51,
+          "deposits": 5676.34,
+          "withdrawals": 0,
+          "end": 142135.15
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 957649.62,
-          "growth": 46637.54,
+          "start": 482475.59,
+          "growth": 23496.56,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1004287.16
+          "end": 505972.15
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 1161.17,
-          "growth": 6.29,
+          "start": 32118.07,
+          "growth": 2057.49,
           "deposits": 0,
-          "withdrawals": 1167.46,
-          "end": 0
+          "withdrawals": 9085.74,
+          "end": 25089.83
         }
       ],
       "cashFlow": {
@@ -3193,11 +3433,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 1167.46
+            "amount": 9085.74
           },
           {
             "key": "oneOffCosts",
@@ -3205,41 +3445,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": 15898.63
+        "net": 14190.85
       },
       "events": []
     },
     {
       "year": 2060,
       "age": 66,
-      "netWorth": 783819,
-      "assets": 1065099.88,
-      "liabilities": 0,
-      "shortfall": 281280.89,
+      "netWorth": 931598.03,
+      "assets": 948632.28,
+      "liabilities": 17034.24,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 8396.96,
-          "growth": 331.33,
-          "deposits": 5838.4,
+          "start": 25522.57,
+          "growth": 785.79,
+          "deposits": 1483.59,
           "withdrawals": 0,
-          "end": 14566.69
+          "end": 27791.95
         },
         {
           "accountId": "savings-1",
-          "start": 16148,
-          "growth": 637.17,
-          "deposits": 11227.69,
+          "start": 49081.86,
+          "growth": 1511.14,
+          "deposits": 2853.06,
           "withdrawals": 0,
-          "end": 28012.86
+          "end": 53446.05
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
-          "deposits": 0,
+          "start": 184499.27,
+          "growth": 11186.94,
+          "deposits": 4336.64,
           "withdrawals": 0,
-          "end": 0
+          "end": 200022.85
         },
         {
           "accountId": "card-1",
@@ -3258,20 +3498,28 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 137995.29,
+          "growth": 8435.69,
+          "deposits": 5782.19,
+          "withdrawals": 0,
+          "end": 152213.18
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 975036.07,
-          "growth": 47484.26,
+          "start": 491235.1,
+          "growth": 23923.15,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1022520.33
+          "end": 515158.25
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 0,
-          "growth": 0,
+          "start": 24359.06,
+          "growth": 1496.29,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 8821.1,
+          "end": 17034.24
         }
       ],
       "cashFlow": {
@@ -3288,11 +3536,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 0
+            "amount": 8821.1
           },
           {
             "key": "oneOffCosts",
@@ -3300,41 +3548,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": 17066.09
+        "net": 14455.48
       },
       "events": []
     },
     {
       "year": 2061,
       "age": 67,
-      "netWorth": 782333.56,
-      "assets": 1063614.45,
-      "liabilities": 0,
-      "shortfall": 281280.89,
+      "netWorth": 936904.28,
+      "assets": 945808.48,
+      "liabilities": 8904.19,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 14142.42,
-          "growth": 332.22,
+          "start": 26982.47,
+          "growth": 706.25,
           "deposits": 0,
-          "withdrawals": 6767.03,
-          "end": 7707.6
+          "withdrawals": 7572.24,
+          "end": 20116.48
         },
         {
           "accountId": "savings-1",
-          "start": 27196.96,
-          "growth": 638.88,
+          "start": 51889.37,
+          "growth": 1358.18,
           "deposits": 0,
-          "withdrawals": 13013.53,
-          "end": 14822.31
+          "withdrawals": 14562,
+          "end": 38685.54
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 194196.95,
+          "growth": 11651.82,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 205848.76
         },
         {
           "accountId": "card-1",
@@ -3353,20 +3601,28 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 992738.18,
-          "growth": 48346.35,
+          "accountId": "group:investments",
+          "start": 147779.78,
+          "growth": 8866.79,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1041084.53
+          "end": 156646.57
+        },
+        {
+          "accountId": "ev-buy-home:home",
+          "start": 500153.64,
+          "growth": 24357.48,
+          "deposits": 0,
+          "withdrawals": 0,
+          "end": 524511.12
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 0,
-          "growth": 0,
+          "start": 16538.1,
+          "growth": 930.27,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 8564.18,
+          "end": 8904.19
         }
       ],
       "cashFlow": {
@@ -3383,11 +3639,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 0
+            "amount": 8564.18
           },
           {
             "key": "oneOffCosts",
@@ -3395,7 +3651,7 @@
           }
         ],
         "withdrawals": 0,
-        "net": -19780.56
+        "net": -22134.25
       },
       "events": [
         "ev-retire",
@@ -3405,34 +3661,34 @@
     {
       "year": 2062,
       "age": 68,
-      "netWorth": 781185.16,
-      "assets": 1062466.05,
-      "liabilities": 0,
-      "shortfall": 281280.89,
+      "netWorth": 943017.34,
+      "assets": 943706.15,
+      "liabilities": 688.81,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 7483.11,
-          "growth": 132.44,
+          "start": 19530.56,
+          "growth": 483.86,
           "deposits": 0,
-          "withdrawals": 6767.03,
-          "end": 848.51
+          "withdrawals": 7486.91,
+          "end": 12527.52
         },
         {
           "accountId": "savings-1",
-          "start": 14390.59,
-          "growth": 254.69,
+          "start": 37558.78,
+          "growth": 930.5,
           "deposits": 0,
-          "withdrawals": 13013.53,
-          "end": 1631.76
+          "withdrawals": 14397.9,
+          "end": 24091.38
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 199853.17,
+          "growth": 11991.19,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 211844.36
         },
         {
           "accountId": "card-1",
@@ -3451,20 +3707,28 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 1010761.68,
-          "growth": 49224.09,
+          "accountId": "group:investments",
+          "start": 152084.05,
+          "growth": 9125.04,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1059985.78
+          "end": 161209.09
+        },
+        {
+          "accountId": "ev-buy-home:home",
+          "start": 509234.1,
+          "growth": 24799.7,
+          "deposits": 0,
+          "withdrawals": 0,
+          "end": 534033.8
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 0,
-          "growth": 0,
+          "start": 8644.85,
+          "growth": 358.7,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 8314.74,
+          "end": 688.81
         }
       ],
       "cashFlow": {
@@ -3481,11 +3745,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 0
+            "amount": 8314.74
           },
           {
             "key": "oneOffCosts",
@@ -3493,41 +3757,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -19780.56
+        "net": -21884.8
       },
       "events": []
     },
     {
       "year": 2063,
       "age": 69,
-      "netWorth": 780379.92,
-      "assets": 1079230.18,
+      "netWorth": 949821.49,
+      "assets": 949821.49,
       "liabilities": 0,
-      "shortfall": 298850.26,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 823.8,
-          "growth": 2.7,
+          "start": 12162.64,
+          "growth": 295.41,
           "deposits": 0,
-          "withdrawals": 826.5,
-          "end": 0
+          "withdrawals": 4872.53,
+          "end": 7585.52
         },
         {
           "accountId": "savings-1",
-          "start": 1584.23,
-          "growth": 5.19,
+          "start": 23389.69,
+          "growth": 568.09,
           "deposits": 0,
-          "withdrawals": 1589.41,
-          "end": 0
+          "withdrawals": 9370.25,
+          "end": 14587.53
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 205674.13,
+          "growth": 12340.45,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 218014.58
         },
         {
           "accountId": "card-1",
@@ -3546,19 +3810,27 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 1029112.41,
-          "growth": 50117.77,
+          "accountId": "group:investments",
+          "start": 156513.68,
+          "growth": 9390.82,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1079230.18
+          "end": 165904.5
+        },
+        {
+          "accountId": "ev-buy-home:home",
+          "start": 518479.41,
+          "growth": 25249.95,
+          "deposits": 0,
+          "withdrawals": 0,
+          "end": 543729.36
         },
         {
           "accountId": "ev-buy-home:mortgage",
-          "start": 0,
-          "growth": 0,
+          "start": 668.75,
+          "growth": 3.96,
           "deposits": 0,
-          "withdrawals": 0,
+          "withdrawals": 672.71,
           "end": 0
         }
       ],
@@ -3576,11 +3848,11 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
-            "amount": 0
+            "amount": 672.71
           },
           {
             "key": "oneOffCosts",
@@ -3588,41 +3860,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -19780.56
+        "net": -14242.78
       },
       "events": []
     },
     {
       "year": 2064,
       "age": 70,
-      "netWorth": 779924.07,
-      "assets": 1098823.97,
+      "netWorth": 957120.53,
+      "assets": 957120.53,
       "liabilities": 0,
-      "shortfall": 318899.9,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
+          "start": 7364.58,
+          "growth": 157.79,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 4642.39,
+          "end": 2879.97
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
+          "start": 14162.65,
+          "growth": 303.43,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 8927.68,
+          "end": 5538.41
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 211664.64,
+          "growth": 12699.88,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 224364.52
         },
         {
           "accountId": "card-1",
@@ -3641,12 +3913,20 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 1047796.29,
-          "growth": 51027.68,
+          "accountId": "group:investments",
+          "start": 161072.33,
+          "growth": 9664.34,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1098823.97
+          "end": 170736.67
+        },
+        {
+          "accountId": "ev-buy-home:home",
+          "start": 527892.58,
+          "growth": 25708.37,
+          "deposits": 0,
+          "withdrawals": 0,
+          "end": 553600.95
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -3671,7 +3951,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -3683,41 +3963,41 @@
           }
         ],
         "withdrawals": 0,
-        "net": -19780.56
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2065,
       "age": 71,
-      "netWorth": 779823.95,
-      "assets": 1118773.49,
+      "netWorth": 964900.75,
+      "assets": 964900.75,
       "liabilities": 0,
-      "shortfall": 338949.54,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
-          "start": 0,
-          "growth": 0,
+          "start": 2796.09,
+          "growth": 29.03,
           "deposits": 0,
-          "withdrawals": 0,
+          "withdrawals": 2825.12,
           "end": 0
         },
         {
           "accountId": "savings-1",
-          "start": 0,
-          "growth": 0,
+          "start": 5377.09,
+          "growth": 55.83,
           "deposits": 0,
-          "withdrawals": 0,
+          "withdrawals": 5432.92,
           "end": 0
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 217829.63,
+          "growth": 13069.78,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 230899.41
         },
         {
           "accountId": "card-1",
@@ -3736,12 +4016,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 165763.76,
+          "growth": 9897.84,
+          "deposits": 0,
+          "withdrawals": 5312.03,
+          "end": 170349.57
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1066819.39,
-          "growth": 51954.1,
+          "start": 537476.65,
+          "growth": 26175.11,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1118773.49
+          "end": 563651.77
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -3766,7 +4054,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -3777,18 +4065,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 5312.03,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2066,
       "age": 72,
-      "netWorth": 780086.02,
-      "assets": 1139085.21,
+      "netWorth": 972883.57,
+      "assets": 972883.57,
       "liabilities": 0,
-      "shortfall": 358999.19,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -3808,11 +4096,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 224174.18,
+          "growth": 13450.45,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 237624.64
         },
         {
           "accountId": "card-1",
@@ -3831,12 +4119,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 165387.94,
+          "growth": 9556.01,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 161373.88
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1086187.86,
-          "growth": 52897.35,
+          "start": 547234.72,
+          "growth": 26650.33,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1139085.21
+          "end": 573885.06
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -3861,7 +4157,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -3872,18 +4168,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2067,
       "age": 73,
-      "netWorth": 780716.86,
-      "assets": 1159765.68,
+      "netWorth": 980986.63,
+      "assets": 980986.63,
       "liabilities": 0,
-      "shortfall": 379048.83,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -3903,11 +4199,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 230703.53,
+          "growth": 13842.21,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 244545.74
         },
         {
           "accountId": "card-1",
@@ -3926,12 +4222,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 156673.67,
+          "growth": 9033.16,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 152136.75
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1105907.97,
-          "growth": 53857.72,
+          "start": 557169.96,
+          "growth": 27134.18,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1159765.68
+          "end": 584304.13
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -3956,7 +4260,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -3967,18 +4271,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2068,
       "age": 74,
-      "netWorth": 781723.15,
-      "assets": 1180821.63,
+      "netWorth": 989211.39,
+      "assets": 989211.39,
       "liabilities": 0,
-      "shortfall": 399098.47,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -3998,11 +4302,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 237423.05,
+          "growth": 14245.38,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 251668.43
         },
         {
           "accountId": "card-1",
@@ -4021,12 +4325,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 147705.59,
+          "growth": 8495.07,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 142630.59
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1125986.1,
-          "growth": 54835.52,
+          "start": 567285.57,
+          "growth": 27626.81,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1180821.63
+          "end": 594912.37
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4051,7 +4363,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4062,18 +4374,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2069,
       "age": 75,
-      "netWorth": 783111.73,
-      "assets": 1202259.84,
+      "netWorth": 997559.33,
+      "assets": 997559.33,
       "liabilities": 0,
-      "shortfall": 419148.11,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4093,11 +4405,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 244338.28,
+          "growth": 14660.3,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 258998.58
         },
         {
           "accountId": "card-1",
@@ -4116,12 +4428,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 138476.3,
+          "growth": 7941.31,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 132847.54
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1146428.76,
-          "growth": 55831.08,
+          "start": 577584.83,
+          "growth": 28128.38,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1202259.84
+          "end": 605713.21
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4146,7 +4466,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4157,18 +4477,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2070,
       "age": 76,
-      "netWorth": 784889.52,
-      "assets": 1224087.28,
+      "netWorth": 1006031.92,
+      "assets": 1006031.92,
       "liabilities": 0,
-      "shortfall": 439197.76,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4188,11 +4508,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 251454.93,
+          "growth": 15087.3,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 266542.23
         },
         {
           "accountId": "card-1",
@@ -4211,12 +4531,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 128978.2,
+          "growth": 7371.43,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 122779.56
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1167242.57,
-          "growth": 56844.71,
+          "start": 588071.08,
+          "growth": 28639.06,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1224087.28
+          "end": 616710.14
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4241,7 +4569,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4252,18 +4580,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2071,
       "age": 77,
-      "netWorth": 787063.6,
-      "assets": 1246311,
+      "netWorth": 1014630.64,
+      "assets": 1014630.64,
       "liabilities": 0,
-      "shortfall": 459247.4,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4283,11 +4611,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 258778.86,
+          "growth": 15526.73,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 274305.59
         },
         {
           "accountId": "card-1",
@@ -4306,12 +4634,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 119203.45,
+          "growth": 6784.94,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 112418.33
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1188434.25,
-          "growth": 57876.75,
+          "start": 598747.71,
+          "growth": 29159.01,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1246311
+          "end": 627906.72
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4336,7 +4672,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4347,18 +4683,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2072,
       "age": 78,
-      "netWorth": 789641.16,
-      "assets": 1268938.2,
+      "netWorth": 1023356.97,
+      "assets": 1023356.97,
       "liabilities": 0,
-      "shortfall": 479297.04,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4378,11 +4714,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 266316.11,
+          "growth": 15978.97,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 282295.08
         },
         {
           "accountId": "card-1",
@@ -4401,12 +4737,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 109144.01,
+          "growth": 6181.38,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 101755.31
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1210010.68,
-          "growth": 58927.52,
+          "start": 609618.18,
+          "growth": 29688.41,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1268938.2
+          "end": 639306.58
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4431,7 +4775,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4442,18 +4786,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2073,
       "age": 79,
-      "netWorth": 792629.52,
-      "assets": 1291976.2,
+      "netWorth": 1032212.4,
+      "assets": 1032212.4,
       "liabilities": 0,
-      "shortfall": 499346.68,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4473,11 +4817,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 274072.89,
+          "growth": 16444.37,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 290517.26
         },
         {
           "accountId": "card-1",
@@ -4496,12 +4840,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 98791.57,
+          "growth": 5560.23,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 90781.73
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1231978.83,
-          "growth": 59997.37,
+          "start": 620686,
+          "growth": 30227.41,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1291976.2
+          "end": 650913.41
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4526,7 +4878,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4537,18 +4889,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2074,
       "age": 80,
-      "netWorth": 796036.15,
-      "assets": 1315432.47,
+      "netWorth": 1041198.42,
+      "assets": 1041198.42,
       "liabilities": 0,
-      "shortfall": 519396.32,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4568,11 +4920,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 282055.6,
+          "growth": 16923.34,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 298978.93
         },
         {
           "accountId": "card-1",
@@ -4591,12 +4943,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 88137.6,
+          "growth": 4920.99,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 79488.52
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1254345.83,
-          "growth": 61086.64,
+          "start": 631954.77,
+          "growth": 30776.2,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1315432.47
+          "end": 662730.96
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4621,7 +4981,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4632,18 +4992,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2075,
       "age": 81,
-      "netWorth": 799868.63,
-      "assets": 1339314.59,
+      "netWorth": 1050316.51,
+      "assets": 1050316.51,
       "liabilities": 0,
-      "shortfall": 539445.97,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4663,11 +5023,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 290270.81,
+          "growth": 17416.25,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 307687.06
         },
         {
           "accountId": "card-1",
@@ -4686,12 +5046,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 77173.32,
+          "growth": 4263.13,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 67866.39
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1277118.9,
-          "growth": 62195.69,
+          "start": 643428.12,
+          "growth": 31334.95,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1339314.59
+          "end": 674763.07
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4716,7 +5084,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4727,18 +5095,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2076,
       "age": 82,
-      "netWorth": 804134.7,
-      "assets": 1363630.31,
+      "netWorth": 1059568.18,
+      "assets": 1059568.18,
       "liabilities": 0,
-      "shortfall": 559495.61,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4758,11 +5126,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 298725.3,
+          "growth": 17923.52,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 316648.82
         },
         {
           "accountId": "card-1",
@@ -4781,12 +5149,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 65889.7,
+          "growth": 3586.12,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 55905.74
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1300305.43,
-          "growth": 63324.87,
+          "start": 655109.78,
+          "growth": 31903.85,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1363630.31
+          "end": 687013.62
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4811,7 +5187,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4822,18 +5198,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2077,
       "age": 83,
-      "netWorth": 808842.23,
-      "assets": 1388387.48,
+      "netWorth": 1068954.92,
+      "assets": 1068954.92,
       "liabilities": 0,
-      "shortfall": 579545.25,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4853,11 +5229,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 307426.03,
+          "growth": 18445.56,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 325871.6
         },
         {
           "accountId": "card-1",
@@ -4876,12 +5252,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 54277.42,
+          "growth": 2889.38,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 43596.73
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1323912.92,
-          "growth": 64474.56,
+          "start": 667003.52,
+          "growth": 32483.07,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1388387.48
+          "end": 699486.59
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -4906,7 +5290,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -4917,18 +5301,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2078,
       "age": 84,
-      "netWorth": 813999.23,
-      "assets": 1413594.12,
+      "netWorth": 1078478.21,
+      "assets": 1078478.21,
       "liabilities": 0,
-      "shortfall": 599594.89,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -4948,11 +5332,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 316380.19,
+          "growth": 18982.81,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 335363
         },
         {
           "accountId": "card-1",
@@ -4971,12 +5355,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 42326.93,
+          "growth": 2172.35,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 30929.21
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1347949.01,
-          "growth": 65645.12,
+          "start": 679113.19,
+          "growth": 33072.81,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1413594.12
+          "end": 712186
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -5001,7 +5393,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -5012,18 +5404,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2079,
       "age": 85,
-      "netWorth": 819613.87,
-      "assets": 1439258.4,
+      "netWorth": 1088139.56,
+      "assets": 1088139.56,
       "liabilities": 0,
-      "shortfall": 619644.53,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -5043,11 +5435,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 325595.15,
+          "growth": 19535.71,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 345130.86
         },
         {
           "accountId": "card-1",
@@ -5066,12 +5458,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 30028.36,
+          "growth": 1434.44,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 17892.72
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1372421.48,
-          "growth": 66836.93,
+          "start": 691442.72,
+          "growth": 33673.26,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1439258.4
+          "end": 725115.98
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -5096,7 +5496,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -5107,18 +5507,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2080,
       "age": 86,
-      "netWorth": 825694.45,
-      "assets": 1465388.63,
+      "netWorth": 1097940.46,
+      "assets": 1097940.46,
       "liabilities": 0,
-      "shortfall": 639694.18,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -5138,11 +5538,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 335078.5,
+          "growth": 20104.71,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 0
+          "end": 355183.21
         },
         {
           "accountId": "card-1",
@@ -5161,12 +5561,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 17371.58,
+          "growth": 675.03,
+          "deposits": 0,
+          "withdrawals": 13570.07,
+          "end": 4476.54
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1397338.26,
-          "growth": 68050.37,
+          "start": 703996.1,
+          "growth": 34284.61,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1465388.63
+          "end": 738280.71
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -5191,7 +5599,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -5202,18 +5610,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2081,
       "age": 87,
-      "netWorth": 832249.44,
-      "assets": 1491993.26,
+      "netWorth": 1107882.39,
+      "assets": 1107882.39,
       "liabilities": 0,
-      "shortfall": 659743.82,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -5233,11 +5641,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 344838.07,
+          "growth": 20531.29,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 9171.42,
+          "end": 356197.94
         },
         {
           "accountId": "card-1",
@@ -5256,12 +5664,20 @@
           "end": 0
         },
         {
+          "accountId": "group:investments",
+          "start": 4346.15,
+          "growth": 52.5,
+          "deposits": 0,
+          "withdrawals": 4398.65,
+          "end": 0
+        },
+        {
           "accountId": "ev-buy-home:home",
-          "start": 1422707.41,
-          "growth": 69285.85,
+          "start": 716777.39,
+          "growth": 34907.06,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1491993.26
+          "end": 751684.45
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -5286,7 +5702,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -5297,18 +5713,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2082,
       "age": 88,
-      "netWorth": 839287.44,
-      "assets": 1519080.9,
+      "netWorth": 1117966.84,
+      "assets": 1117966.84,
       "liabilities": 0,
-      "shortfall": 679793.46,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -5328,11 +5744,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 345823.25,
+          "growth": 20382.13,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 13570.07,
+          "end": 352635.31
         },
         {
           "accountId": "card-1",
@@ -5351,12 +5767,20 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 1448537.14,
-          "growth": 70543.76,
+          "accountId": "group:investments",
+          "start": 0,
+          "growth": 0,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1519080.9
+          "end": 0
+        },
+        {
+          "accountId": "ev-buy-home:home",
+          "start": 729790.73,
+          "growth": 35540.81,
+          "deposits": 0,
+          "withdrawals": 0,
+          "end": 765331.53
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -5381,7 +5805,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -5392,18 +5816,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2083,
       "age": 89,
-      "netWorth": 846817.23,
-      "assets": 1546660.33,
+      "netWorth": 1128195.29,
+      "assets": 1128195.29,
       "liabilities": 0,
-      "shortfall": 699843.1,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -5423,11 +5847,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 342364.38,
+          "growth": 20174.6,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 13570.07,
+          "end": 348968.91
         },
         {
           "accountId": "card-1",
@@ -5446,12 +5870,20 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 1474835.83,
-          "growth": 71824.5,
+          "accountId": "group:investments",
+          "start": 0,
+          "growth": 0,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1546660.33
+          "end": 0
+        },
+        {
+          "accountId": "ev-buy-home:home",
+          "start": 743040.32,
+          "growth": 36186.06,
+          "deposits": 0,
+          "withdrawals": 0,
+          "end": 779226.39
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -5476,7 +5908,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -5487,18 +5919,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     },
     {
       "year": 2084,
       "age": 90,
-      "netWorth": 854847.73,
-      "assets": 1574740.48,
+      "netWorth": 1138569.22,
+      "assets": 1138569.22,
       "liabilities": 0,
-      "shortfall": 719892.75,
+      "shortfall": 0,
       "accounts": [
         {
           "accountId": "checking-1",
@@ -5518,11 +5950,11 @@
         },
         {
           "accountId": "retirement-1",
-          "start": 0,
-          "growth": 0,
+          "start": 338804.76,
+          "growth": 19961.02,
           "deposits": 0,
-          "withdrawals": 0,
-          "end": 0
+          "withdrawals": 13570.07,
+          "end": 345195.71
         },
         {
           "accountId": "card-1",
@@ -5541,12 +5973,20 @@
           "end": 0
         },
         {
-          "accountId": "ev-buy-home:home",
-          "start": 1501611.97,
-          "growth": 73128.5,
+          "accountId": "group:investments",
+          "start": 0,
+          "growth": 0,
           "deposits": 0,
           "withdrawals": 0,
-          "end": 1574740.48
+          "end": 0
+        },
+        {
+          "accountId": "ev-buy-home:home",
+          "start": 756530.47,
+          "growth": 36843.03,
+          "deposits": 0,
+          "withdrawals": 0,
+          "end": 793373.51
         },
         {
           "accountId": "ev-buy-home:mortgage",
@@ -5571,7 +6011,7 @@
         "expenses": [
           {
             "key": "spending",
-            "amount": 44345
+            "amount": 38134.5
           },
           {
             "key": "debtPayments",
@@ -5582,18 +6022,18 @@
             "amount": 0
           }
         ],
-        "withdrawals": 0,
-        "net": -19780.56
+        "withdrawals": 13570.07,
+        "net": -13570.07
       },
       "events": []
     }
   ],
   "kpis": {
-    "netWorthEndOfYear": -3104.48,
-    "netWorthAtRetirement": 782333.56,
+    "netWorthEndOfYear": -3102.91,
+    "netWorthAtRetirement": 936904.28,
     "retireAge": 67,
-    "netWorthAtEnd": 854847.73,
-    "shortfallAge": 35
+    "netWorthAtEnd": 1138569.22,
+    "shortfallAge": null
   },
   "display": "today",
   "source": "rules"

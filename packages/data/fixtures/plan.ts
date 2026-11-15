@@ -30,12 +30,17 @@ export const accountsDemo: readonly Account[] = deepFreeze(AccountSchema.array()
 
 /**
  * The Baseline scenario of the demo profile (age 32 in 2026, ZIP 75206): Retire at 67 (2061), Social
- * Security at 67 (placeholder estimate: 40% of take-home), and Buy a home in 2029 with the ZIP's
- * defaults (ACS median value, 20% down, 30 years at the mortgage default, ACS tax rate, NAIC insurance).
+ * Security at 67 (placeholder estimate: 40% of take-home), and Buy a home in 2033 (age 39): a $375,000
+ * starter home (below the ZIP's $615,400 ACS median value, which this household cannot save a down
+ * payment for), 20% down ($75,000), 30 years at the current mortgage default (Freddie Mac PMMS 7.11%),
+ * the ACS tax rate and NAIC insurance. Monthly savings split 30% cash / 40% investments / 30% retirement.
  */
 export const scenarioDemo: Readonly<Scenario> = deepFreeze(ScenarioSchema.parse(scenarioJson));
 
-/** `scenarioDemo` plus Have a kid in 2030 (Dallas County infant childcare, 5 years): the Compare pair. */
+/**
+ * `scenarioDemo` plus Have a kid in 2030 (Dallas County infant childcare, 5 years): the Compare pair. The
+ * kid's costs on top of the home do not fit this income, so this one runs short (from age 39).
+ */
 export const scenarioAlt: Readonly<Scenario> = deepFreeze(ScenarioSchema.parse(scenarioAltJson));
 
 /** PLACEHOLDER plan of `scenarioDemo` (today's dollars), until MP3 regenerates it. */

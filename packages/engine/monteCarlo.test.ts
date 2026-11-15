@@ -17,7 +17,7 @@ const settings = (o: Partial<MonteCarloSettings> = {}): MonteCarloSettings => ({
   paths: 200, seed: 42, inflation: { mean: 0.03, sd: 0.02 }, growth: {}, endThreshold: 0, ...o,
 });
 
-/** The demo household (32, July 2026) with its accounts and the demo scenario (home in 2029, retire 2061). */
+/** The demo household (32, July 2026) with its accounts and the demo scenario (home in 2033, retire 2061). */
 const demo = { profile: { ...structuredClone(profileDemo), asOf: '2026-07' } as Profile, area: areaByZip('75206') };
 const demoScenario = structuredClone(scenarioDemo) as Scenario;
 
