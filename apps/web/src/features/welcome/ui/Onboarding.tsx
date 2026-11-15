@@ -560,8 +560,7 @@ function DecisionStep({ vm, Link, doneHref }: { vm: OnboardingVM; Link: LinkComp
   const ll = vm.lifeline;
   if (ll.status !== 'ready') return null;
   const s = ll.slider;
-  const kChance = ll.kpis.find((k) => k.id === 'chance')!;
-  const kOut = ll.kpis.find((k) => k.id === 'runsOut')!;
+  const k = ll.kpis.find((x) => x.id === 'chance')!;
   return (
     <>
       <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.decision.sticker}</Sticker>
@@ -569,27 +568,22 @@ function DecisionStep({ vm, Link, doneHref }: { vm: OnboardingVM; Link: LinkComp
         {ll.headline.lead}
         {ll.headline.payoff && <>, <span className={ll.headline.payoffTone === 'bad' ? 'text-negative' : 'text-primary'}>{ll.headline.payoff}</span></>}
       </h1>
-      <p className="text-text-muted">{t.decision.title}</p>
-      <div className="grid grid-cols-2 gap-sm">
-        {[kChance, kOut].map((k) => (
-          <div key={k.id} className="rounded-lg bg-surface p-md shadow-sm">
-            <span className="block text-xs font-bold uppercase tracking-wide text-text-muted">{k.label}</span>
-            <span className={cx('font-display text-3xl font-extrabold tabular-nums', k.tone === 'bad' ? 'text-negative' : k.tone === 'good' ? 'text-positive' : undefined)}>
+      <div className="relative flex flex-col gap-md rounded-xl bg-ink p-xl text-on-primary">
+        <div className="flex items-end justify-between gap-md">
+          <span className="font-display text-2xl font-extrabold">
+            {s.title.replace(String(s.value), '')}<span className="text-primary">{s.value}</span>
+          </span>
+          <span className="text-right">
+            <span className="block text-xs font-bold uppercase tracking-wide text-chart-6">{k.label}</span>
+            <span className={cx('font-display text-4xl font-extrabold tabular-nums', k.tone === 'bad' ? 'text-primary' : k.tone === 'good' ? 'text-positive' : undefined)}>
               {k.value ?? k.note}
             </span>
-            {k.was && <span className="ml-sm text-sm text-text-muted line-through">{k.was}</span>}
-          </div>
-        ))}
-      </div>
-      <div className="relative flex flex-col gap-sm rounded-xl bg-ink p-xl text-on-primary">
-        <span className="text-xs font-bold uppercase tracking-wide text-chart-6">{s.eyebrow}</span>
-        <span className="font-display text-2xl font-extrabold">
-          {s.title.replace(String(s.value), '')}<span className="text-primary">{s.value}</span>{s.titleNot}
-        </span>
+          </span>
+        </div>
         <label htmlFor="ob-decision" className="sr-only">{s.label}</label>
         <input id="ob-decision" data-testid="onboarding-decision" type="range" min={s.min} max={s.max} step={1} value={s.value}
           aria-valuetext={s.formatValue(s.value)} onChange={(e) => ll.setAge(Number(e.target.value))}
-          className="mt-md w-full cursor-pointer accent-primary" />
+          className="w-full cursor-pointer accent-primary" />
         <div aria-hidden="true" className="flex justify-between text-xs text-chart-6 tabular-nums">
           <span>{s.min}</span><span>{s.max}</span>
         </div>
