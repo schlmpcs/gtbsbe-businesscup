@@ -62,6 +62,7 @@ export {
 export { plan } from './plan';                                                                 // MP3
 export { monteCarlo } from './monteCarlo';                                                     // MP5
 export { defaultEvent, expandEvent, buyHomeBreakdown, expenseFinancingBreakdown } from './planEvents'; // MP4
+export { defaultEventSources, type DefaultEventSources } from './planEvents';                  // MP4 (the editor's sources, MP7b)
 export { accountsToProfile, profileToAccounts, netWorthSummary, HOME_ACCOUNT_ID } from './accounts';            // MP8
 export { budgetRows, budgetRowsForYear } from './budget';                                      // MP9
 export { cashFlowSummary } from './cashFlow';                                                  // MP9

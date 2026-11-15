@@ -537,6 +537,13 @@ export const ClientEventEnvelopeSchema = z.discriminatedUnion('name', [
   bare('renewals_exported'),
   withProps('overpaying_checked', { lines: z.number().int().min(0).max(4), above: z.number().int().min(0).max(4) }),
   withProps('payoff_planned', { method: z.enum(['avalanche','snowball']) }),
+  // /plan (MP7b): event types and counts only, never an amount or a name.
+  bare('plan_viewed'),
+  withProps('plan_event_added', { type: z.enum(PLAN_EVENT_TYPES) }),
+  withProps('plan_event_edited', { type: z.enum(PLAN_EVENT_TYPES) }),
+  withProps('scenario_added', { scenarios: z.number().int().min(2).max(4) }),          // MAX_SCENARIOS
+  withProps('chance_run', { paths: z.number().int().min(1).max(5000), fixedSeed: z.boolean() }), // MONTE_CARLO_MAX_PATHS
+  bare('compare_viewed'),
 ]);
 
 /** POST /api/events: 1–EVENTS_BATCH_MAX events for one anonymous id. */

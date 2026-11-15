@@ -2,6 +2,7 @@ import type { AvatarFacts } from './avatar';
 import type { Goal } from './goal';
 import type { Cadence, ServiceCategory } from './subscriptions';
 import type { TOOL_IDS } from './constants';
+import type { PlanEventType } from './plan';
 // Shared contracts for LifeGuessr. Source of truth: docs/ARCHITECTURE.md → Contracts.
 // Change only together (Amir + Aibek): update this file, the zod schemas in ./schemas.ts,
 // the fixtures in packages/data/fixtures and both consumers in the same PR.
@@ -405,7 +406,13 @@ export type ClientFunnelEvent =
   | { name: 'sample_loaded' }
   | { name: 'forecast_horizon_changed'; props: { years: HorizonYears } }
   /** S10 "Coming up": an event was added (its kind, and the shortcut it came from; never its amount or month). */
-  | { name: 'life_event_added'; props: { kind: LifeEventKind; preset?: LifeEventPreset } };
+  | { name: 'life_event_added'; props: { kind: LifeEventKind; preset?: LifeEventPreset } }
+  /** /plan (MP7b): the type of the event, the number of scenarios, the Monte Carlo settings; never an amount or a name. */
+  | { name: 'plan_viewed' }
+  | { name: 'plan_event_added' | 'plan_event_edited'; props: { type: PlanEventType } }
+  | { name: 'scenario_added'; props: { scenarios: number } }
+  | { name: 'chance_run'; props: { paths: number; fixedSeed: boolean } }
+  | { name: 'compare_viewed' };
 
 /** Recorded by the server routes themselves (Pro); a browser cannot send them. */
 export type ServerFunnelEvent =

@@ -1,12 +1,14 @@
-// "Chance of success": the Monte Carlo gauge, bands, sample paths, histograms and settings. Fixture
-// backed: run() flips straight to 'done' with monteCarlo.demo.json. MP7b runs the seeded simulation in a
-// Web Worker (monteCarlo.worker.ts) and cancels the previous run when settings change.
-import { monteCarloDemo } from '@lifeguessr/data/fixtures/plan';
-import { ASSET_GROUPS, type MonteCarloSettings } from '@lifeguessr/types';
+// "Chance of success": the Monte Carlo gauge, bands, sample paths, histograms and settings. run()
+// sends monteCarlo() (MP5) of the active scenario to a Web Worker (monteCarlo.worker.ts) with the
+// settings' seed, or a new one when the fixed seed is off; a settings or plan change cancels the run in
+// progress and drops the result (planStore.ts).
+import { ASSET_GROUPS, type MonteCarloResult, type MonteCarloSettings } from '@lifeguessr/types';
 import { useCallback, useMemo } from 'react';
 import { plan as copy } from '@/copy';
+import { track } from '@/lib/events';
 import { formatMoney } from '@/lib/format';
 import { pct } from './planFormat';
+import { usePlanInputs } from './planInputs';
 import { usePlanStore } from './planStore';
 import type { ChanceOfSuccessVM, ChanceResultVM, ChanceSettingsPatch, ChanceSettingsVM, HistogramVM } from './types';
 
@@ -16,8 +18,7 @@ export const GOOD_SUCCESS_RATE = 0.8;
 
 const compact = (v: number) => formatMoney(v, { compact: true });
 
-function resultVM(): ChanceResultVM {
-  const r = monteCarloDemo;
+export function resultVM(r: MonteCarloResult): ChanceResultVM {
   const successfulPaths = Math.round(r.successRate * r.paths);
   const bins = (id: HistogramVM['id'], label: (n: number) => string): HistogramVM => ({
     id,
@@ -65,11 +66,25 @@ function settingsVM(s: MonteCarloSettings): ChanceSettingsVM {
 }
 
 export function useChanceOfSuccess(): ChanceOfSuccessVM {
-  const status = usePlanStore((s) => s.chanceStatus);
+  const inputs = usePlanInputs();
+  const storedStatus = usePlanStore((s) => s.chanceStatus);
+  const runOf = usePlanStore((s) => s.chanceRunOf);
+  const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
+  // A run made from other inputs (the profile or the accounts changed since) or another version of the
+  // scenario is not this plan's: it shows as idle.
+  const status = runOf && runOf.inputs === inputs && runOf.scenario === scenario ? storedStatus : 'idle';
   const settings = usePlanStore((s) => s.chanceSettings);
+  const result = usePlanStore((s) => s.chanceResult);
   const setChance = usePlanStore((s) => s.setChance);
+  const runChance = usePlanStore((s) => s.runChance);
 
-  const run = useCallback(() => setChance({ chanceStatus: 'done' }), [setChance]);
+  const run = useCallback(() => {
+    const { scenarios, activeId, chanceSettings } = usePlanStore.getState();
+    const scenario = scenarios.find((s) => s.id === activeId);
+    if (!scenario) return;
+    runChance(inputs, scenario);
+    track({ name: 'chance_run', props: { paths: chanceSettings.paths, fixedSeed: chanceSettings.seed !== null } });
+  }, [inputs, runChance]);
 
   const updateSettings = useCallback(
     (patch: ChanceSettingsPatch) => {
@@ -81,7 +96,7 @@ export function useChanceOfSuccess(): ChanceOfSuccessVM {
       if (patch.seed !== undefined) next.seed = patch.seed;
       if (patch.inflation) next.inflation = { mean: Math.max(0, patch.inflation.mean), sd: Math.max(0, patch.inflation.sd) };
       if (patch.endThreshold !== undefined && Number.isFinite(patch.endThreshold)) next.endThreshold = patch.endThreshold;
-      // A new setting makes the shown result stale: go back to idle (MP7b: cancel the running worker).
+      // A new setting makes the shown result stale: back to idle, and the running worker is cancelled.
       setChance({ chanceSettings: next, chanceStatus: 'idle', ...(next.seed !== null ? { fixedSeed: next.seed } : {}) });
     },
     [setChance],
@@ -98,13 +113,13 @@ export function useChanceOfSuccess(): ChanceOfSuccessVM {
   return useMemo(
     () => ({
       status,
-      result: status === 'done' ? resultVM() : null,
+      result: status === 'done' && result ? resultVM(result) : null,
       settings: settingsVM(settings),
       idleMessage: copy.chance.idle,
       run,
       updateSettings,
       setFixedSeed,
     }),
-    [status, settings, run, updateSettings, setFixedSeed],
+    [status, settings, result, run, updateSettings, setFixedSeed],
   );
 }

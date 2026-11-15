@@ -1,10 +1,13 @@
 // The assumptions panel: every PlanAssumptions field with its hint and source, per-group growth
-// overrides, the withdrawal order and the savings split. Fixture-backed (planStore.ts) until MP7b.
-import { ASSET_GROUPS, type AccountGroup, type PlanAssumptions, type Rate } from '@lifeguessr/types';
+// overrides (next to the default plan() uses), the withdrawal order and the savings split.
+import {
+  assumptionSource, cashYieldAnnual, inflationAnnualFallback, returnAnnualNominal, vehicleDepreciationAnnual,
+} from '@lifeguessr/engine';
+import { ASSET_GROUPS, type AccountGroup, type AreaData, type AssetGroup, type PlanAssumptions, type Rate, type Source } from '@lifeguessr/types';
 import { useCallback, useMemo, useState } from 'react';
 import { plan as copy } from '@/copy';
-import { FIXTURE_AREA, yearAtAge } from './fixturePlan';
 import { money, pct } from './planFormat';
+import { calendarOf, usePlanInputs, yearAtAge, yearRangeOf } from './planInputs';
 import { usePlanStore } from './planStore';
 import { clampYear, movedEvent } from './usePlan';
 import type { AssumptionFieldVM, AssumptionKey, AssumptionsVM, GrowthRowVM, PlanFieldValue } from './types';
@@ -12,15 +15,27 @@ import type { AssumptionFieldVM, AssumptionKey, AssumptionsVM, GrowthRowVM, Plan
 export const RETIRE_AGE_RANGE = { min: 40, max: 80 } as const;
 export const END_AGE_MAX = 110;
 
-/** Placeholder growth defaults per year until MP3's engine defaults land (real estate: the area's appreciation). */
-const GROWTH_DEFAULTS: Record<(typeof ASSET_GROUPS)[number], Rate> = {
-  cash: 0.01, investments: 0.06, retirement: 0.06, realEstate: FIXTURE_AREA.homeAppreciationAnnual?.value ?? 0.04, vehicle: -0.1, otherAsset: 0.02,
-};
+/**
+ * The growth plan() uses for a group without an override (plan.ts groupGrowth): the engine's cash yield,
+ * nominal return and car depreciation; real estate at the area's home appreciation, else inflation;
+ * other assets at inflation.
+ */
+function growthDefaults(area: AreaData | undefined, inflation: Rate): Record<AssetGroup, { rate: Rate; source: Source }> {
+  const assumed = (rate: Rate) => ({ rate, source: assumptionSource });
+  return {
+    cash: assumed(cashYieldAnnual.value),
+    investments: assumed(returnAnnualNominal.value),
+    retirement: assumed(returnAnnualNominal.value),
+    realEstate: area?.homeAppreciationAnnual ? { rate: area.homeAppreciationAnnual.value, source: area.homeAppreciationAnnual.source } : assumed(inflation),
+    vehicle: assumed(vehicleDepreciationAnnual.value),
+    otherAsset: assumed(inflation),
+  };
+}
 
 const num = (v: PlanFieldValue): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const SPLIT_TOLERANCE = 0.0001;
 
-function fieldsOf(a: PlanAssumptions): AssumptionFieldVM[] {
+function fieldsOf(a: PlanAssumptions, area: AreaData | undefined): AssumptionFieldVM[] {
   const h = copy.assumptions.hints;
   const l = copy.assumptions.labels;
   const fields: AssumptionFieldVM[] = [
@@ -28,9 +43,9 @@ function fieldsOf(a: PlanAssumptions): AssumptionFieldVM[] {
     { key: 'endAge', kind: 'count', label: l.endAge!, value: a.endAge, display: String(a.endAge), isEstimate: false, hint: h.endAge, min: a.retireAge + 1, max: END_AGE_MAX },
     {
       key: 'inflation', kind: 'rate', label: l.inflation!, value: a.inflation, display: pct(a.inflation, 2),
-      // Default is the area's CPI; anything else is the person's own number.
-      isEstimate: a.inflation === FIXTURE_AREA.cpiYoY.value && (FIXTURE_AREA.cpiYoY.isEstimate ?? false),
-      source: FIXTURE_AREA.cpiYoY.source, hint: h.inflation, min: 0, max: 0.2,
+      // Default is the area's CPI (BLS), else the engine's fallback; anything else is the person's own number.
+      isEstimate: area ? a.inflation === area.cpiYoY.value && (area.cpiYoY.isEstimate ?? false) : a.inflation === inflationAnnualFallback.value,
+      source: area?.cpiYoY.source ?? assumptionSource, hint: h.inflation, min: 0, max: 0.2,
     },
     {
       key: 'display', kind: 'choice', label: l.display!, value: a.display, display: copy.display[a.display], isEstimate: false,
@@ -48,6 +63,7 @@ function fieldsOf(a: PlanAssumptions): AssumptionFieldVM[] {
 }
 
 export function useAssumptions(): AssumptionsVM {
+  const inputs = usePlanInputs();
   const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
   const edit = usePlanStore((s) => s.edit);
   const [error, setError] = useState<AssumptionsVM['error']>(null);
@@ -68,12 +84,16 @@ export function useAssumptions(): AssumptionsVM {
           if (n === null) return;
           const age = Math.round(Math.min(RETIRE_AGE_RANGE.max, Math.max(RETIRE_AGE_RANGE.min, n)));
           if (!scenarioId) return;
+          const cal = calendarOf(inputs.profile);
           // The Retire event sits at the retirement age.
-          edit(scenarioId, (s) => ({
-            ...s,
-            assumptions: { ...s.assumptions, retireAge: age, endAge: Math.max(s.assumptions.endAge, age + 1) },
-            events: s.events.map((e) => (e.type === 'retire' ? movedEvent(e, clampYear(yearAtAge(age))) : e)),
-          }));
+          edit(scenarioId, (s) => {
+            const endAge = Math.max(s.assumptions.endAge, age + 1);
+            return {
+              ...s,
+              assumptions: { ...s.assumptions, retireAge: age, endAge },
+              events: s.events.map((e) => (e.type === 'retire' ? movedEvent(e, clampYear(yearAtAge(cal, age), yearRangeOf(cal, endAge))) : e)),
+            };
+          });
           return;
         }
         case 'endAge':
@@ -94,7 +114,7 @@ export function useAssumptions(): AssumptionsVM {
           return;
       }
     },
-    [edit, patch, scenarioId],
+    [edit, patch, scenarioId, inputs.profile],
   );
 
   const updateGrowth = useCallback(
@@ -131,17 +151,18 @@ export function useAssumptions(): AssumptionsVM {
 
   return useMemo((): AssumptionsVM => {
     const a = scenario?.assumptions;
+    const defaults = growthDefaults(inputs.area, a?.inflation ?? inflationAnnualFallback.value);
     const growth: GrowthRowVM[] = ASSET_GROUPS.map((group) => {
       const override = a?.growth[group] ?? null;
-      const rate = override ?? GROWTH_DEFAULTS[group];
+      const rate = override ?? defaults[group].rate;
       return {
-        group, label: copy.groups[group], override, rate, rateLabel: pct(rate, 2), hint: copy.assumptions.growthHint(pct(GROWTH_DEFAULTS[group], 2)),
-        ...(group === 'realEstate' && FIXTURE_AREA.homeAppreciationAnnual ? { source: FIXTURE_AREA.homeAppreciationAnnual.source } : {}),
+        group, label: copy.groups[group], override, rate, rateLabel: pct(rate, 2), hint: copy.assumptions.growthHint(pct(defaults[group].rate, 2)),
+        source: defaults[group].source,
       };
     });
     const errorMessage = error === 'savingsSplit' ? copy.assumptions.savingsSplitError : error === 'withdrawalOrder' ? copy.assumptions.withdrawalOrderError : null;
     return {
-      fields: a ? fieldsOf(a) : [],
+      fields: a ? fieldsOf(a, inputs.area) : [],
       growth,
       withdrawalOrder: (a?.withdrawalOrder ?? []).map((group) => ({ group, label: copy.groups[group] })),
       savingsSplit: (a?.savingsSplit ?? []).map((x) => ({ group: x.group, label: copy.groups[x.group], share: x.share, shareLabel: pct(x.share, 0) })),
@@ -152,5 +173,5 @@ export function useAssumptions(): AssumptionsVM {
       setWithdrawalOrder,
       setSavingsSplit,
     };
-  }, [scenario, error, update, updateGrowth, setWithdrawalOrder, setSavingsSplit]);
+  }, [scenario, inputs.area, error, update, updateGrowth, setWithdrawalOrder, setSavingsSplit]);
 }
