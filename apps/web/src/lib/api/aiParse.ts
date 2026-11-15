@@ -5,8 +5,8 @@
 // `value` is validated with the contract's zod schema here as well. It holds parsed *inputs* the
 // user must confirm before they are applied, never results.
 import {
-  DEBT_KINDS, LoanInputSchema, ProfilePatchSchema, PurchaseSchema, SpendItemSchema,
-  type Debt, type LoanInput, type ProfilePatch, type Purchase, type SpendItem,
+  DEBT_KINDS, LoanInputSchema, ProfilePatchSchema, PurchaseSchema, SpendItemSchema, WhatIfParseSchema,
+  type Debt, type LoanInput, type ProfilePatch, type Purchase, type SpendItem, type WhatIfParse,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import { postJson } from './http';
@@ -53,5 +53,25 @@ export async function parseText<K extends ParseKind>(kind: K, text: string, opts
     anonId: opts.anonId,
     signal: opts.signal,
   });
+  return { value: res.value, inferred: res.inferred };
+}
+
+// ----- kind 'plan': the /plan what-if field -------------------------------------------------------
+// → 200 { ok: true, kind: 'plan', value: WhatIfParse, needsConfirmation: true, inferred }
+// → 4xx/5xx { ok: false, error: { code } } (503 unavailable, 422 nothing_found / invalid_output, 429, 502).
+// The value holds event types, years, labels and a metro (amounts only when written): the engine
+// (whatIfEvents) computes every number from them.
+const whatIfResponseSchema = z.object({
+  ok: z.literal(true),
+  kind: z.literal('plan'),
+  value: WhatIfParseSchema,
+  inferred: z.array(z.string()).default([]),
+});
+
+export async function parseWhatIf(
+  text: string,
+  opts: Pick<ParseOptions, 'anonId' | 'signal'> = {},
+): Promise<{ value: WhatIfParse; inferred: string[] }> {
+  const res = await postJson('/api/ai/parse', { kind: 'plan', text }, whatIfResponseSchema, opts);
   return { value: res.value, inferred: res.inferred };
 }

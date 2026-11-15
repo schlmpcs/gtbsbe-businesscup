@@ -210,3 +210,24 @@ export type CashFlowSummary = {
  */
 export type LedgerTransaction = { id: string; date: string /* YYYY-MM-DD */; label: string; amount: Money; // + in, − out
   accountId?: string; cls: StatementClass; categoryOverridden: boolean; goalId?: string };
+
+// ----- "Write your what-if" (/api/ai/parse kind 'plan') ---------------------------------------
+// The model turns a sentence ("a kid in 2029 and a move to Denver") into typed intents; it never
+// fills a cost. `amount` is set only when the text writes the number; everything else comes from
+// the engine (whatIfEvents → defaultEvent, area data for a move).
+
+export const WHAT_IF_TYPES = [
+  'haveKid', 'buyHome', 'newJob', 'careerBreak', 'windfall', 'retire', 'expense', 'income', 'move',
+] as const;
+export type WhatIfType = (typeof WHAT_IF_TYPES)[number];
+export type WhatIfItem = {
+  type: WhatIfType;
+  year: number | null;              // calendar year; null = not stated (engine default, usually next year)
+  label: string;                    // short name for the chip and the event, e.g. "Move to Denver"
+  metro: string | null;             // 'move' only: one of coveredMetros() (e.g. "Denver, CO"); null otherwise
+  amount: Money | null;             // only when written in the text. income/newJob/expense-monthly: monthly;
+                                    // windfall/expense-once: once; buyHome: home value
+  cadence: 'once' | 'monthly' | null; // expense only
+  endYear: number | null;           // income/expense/careerBreak when stated
+};
+export type WhatIfParse = { items: WhatIfItem[] };

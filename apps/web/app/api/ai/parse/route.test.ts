@@ -243,7 +243,7 @@ describe('structured output schemas', () => {
     }
   };
 
-  it.each(['life', 'purchase', 'loan', 'spend'] as const)('%s: closed objects, all properties required', (kind) => {
+  it.each(['life', 'purchase', 'loan', 'spend', 'plan'] as const)('%s: closed objects, all properties required', (kind) => {
     const { schema } = outputFormat(kind);
     walk(schema, (o) => {
       if (o.type === 'object' && o.properties) {
@@ -300,5 +300,66 @@ describe('POST /api/ai/parse kind spend (daily log)', () => {
     create.mockResolvedValueOnce(bad).mockResolvedValueOnce(bad);
     const res = await post({ kind: 'spend', text: 'card 50' });
     expect((await res.json()).error.code).toBe('invalid_output');
+  });
+});
+
+describe('POST /api/ai/parse kind plan (write your what-if)', () => {
+  const item = (over: Record<string, unknown>) => ({
+    type: 'expense', year: null, label: 'x', metro: null, amount: null, cadence: null, endYear: null, ...over,
+  });
+  const kid = item({ type: 'haveKid', year: 2029, label: 'Baby' });
+  const denver = item({ type: 'move', label: 'Move to Denver', metro: 'Denver, CO' });
+
+  it('maps a sentence to typed what-if items and tells the model the current year', async () => {
+    create.mockResolvedValueOnce(replyJson({ items: [kid, denver] }));
+    const res = await post({ kind: 'plan', text: 'a kid in 2029 and a move to Denver' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      ok: true,
+      kind: 'plan',
+      value: { items: [kid, denver] },
+      needsConfirmation: true,
+      inferred: [],
+    });
+    expect(sentContent(0)).toContain(`The current year is ${new Date().getFullYear()}.`);
+    expect(create.mock.calls[0][0].system).toContain('Denver, CO');
+  });
+
+  it('keeps an amount written in the text, and resolves a year the text does not spell out', async () => {
+    const home = item({ type: 'buyHome', year: new Date().getFullYear() + 1, label: 'Buy a home', amount: 400_000 });
+    create.mockResolvedValueOnce(replyJson({ items: [home] }));
+    const res = await post({ kind: 'plan', text: 'buy a $400k house next year' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).value).toEqual({ items: [home] });
+  });
+
+  it('never accepts an amount the user did not write: retries once, then invalid_output', async () => {
+    const invented = replyJson({ items: [item({ type: 'haveKid', year: 2029, label: 'Baby', amount: 1_200 })] });
+    create.mockResolvedValueOnce(invented).mockResolvedValueOnce(invented);
+    const res = await post({ kind: 'plan', text: 'a kid in 2029' });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe('invalid_output');
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(sentContent(1)).toContain('items.0.amount: this amount is not written in the text');
+  });
+
+  it('rejects a metro we have no data for (wire schema)', async () => {
+    const bad = replyJson({ items: [item({ type: 'move', label: 'Move to Boise', metro: 'Boise, ID' })] });
+    create.mockResolvedValueOnce(bad).mockResolvedValueOnce(bad);
+    const res = await post({ kind: 'plan', text: 'move to Boise' });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe('invalid_output');
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it('nothing usable (or only a move without a covered metro) is nothing_found', async () => {
+    create.mockResolvedValueOnce(replyJson({ items: [] }));
+    const res = await post({ kind: 'plan', text: 'hello there' });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe('nothing_found');
+
+    create.mockResolvedValueOnce(replyJson({ items: [item({ type: 'move', label: 'Move to Boise' })] }));
+    const res2 = await post({ kind: 'plan', text: 'move to Boise' });
+    expect((await res2.json()).error.code).toBe('nothing_found');
   });
 });
