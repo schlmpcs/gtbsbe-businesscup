@@ -238,6 +238,8 @@ export type DebtRowVM = {
   kind: Debt['kind'];
   balance: Money;
   apr: Rate;
+  /** The APR is the kind's typical rate (prefilled or found in the statement, JF7), not the user's. */
+  aprIsEstimate: boolean;
   minPayment: Money;
   minPaymentIsEstimate: boolean;
 };

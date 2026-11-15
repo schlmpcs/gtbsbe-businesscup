@@ -82,6 +82,7 @@ export function useBalanceSheet(): BalanceSheetVM {
         kind: d.kind,
         balance: d.balance,
         apr: d.apr,
+        aprIsEstimate: d.aprIsEstimate === true,
         minPayment: d.minPayment.value,
         minPaymentIsEstimate: d.minPayment.isEstimate,
       })),
@@ -129,7 +130,7 @@ export function useBalanceSheet(): BalanceSheetVM {
       if (!detected) return '';
       setDismissed(true);
       // The payment seen in the statement is the user's own: kept as their payment (measured).
-      return addDebt({ kind, balance, apr: debtAprDefaults.value[kind], minPayment: detected.monthlyPayment });
+      return addDebt({ kind, balance, apr: debtAprDefaults.value[kind], aprIsEstimate: true, minPayment: detected.monthlyPayment });
     },
     [detected, addDebt],
   );

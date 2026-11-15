@@ -3,7 +3,8 @@
 // that kind and the minimum with the engine estimate, both tagged estimate and editable inline.
 // Local draft state only; the view-model gets the values on Save. APR is typed as a percent and
 // handed over as a decimal (NumberInput percent mode). An untouched minimum is sent as null: the
-// view-model then estimates it and keeps it tagged as an estimate.
+// view-model then estimates it and keeps it tagged as an estimate. An untouched APR is sent with
+// `aprIsEstimate`, so the saved debt keeps its estimate tag (JF7).
 import { useState } from 'react';
 import { ladder } from '@/copy';
 import { Button, Choice, Field, formatMoney, NumberInput, Row, Stack } from '@/ui-kit';
@@ -42,7 +43,7 @@ export function DebtForm({ title, kinds, bounds, initial, aprDefaults, estimateM
       onSubmit={(e) => {
         e.preventDefault();
         if (draft.balance === null) return;
-        onSave({ kind: draft.kind, balance: draft.balance, apr, minPayment: draft.minPayment });
+        onSave({ kind: draft.kind, balance: draft.balance, apr, aprIsEstimate, minPayment: draft.minPayment });
       }}
     >
       <h3 className="text-base font-semibold">{title}</h3>

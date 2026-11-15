@@ -6,7 +6,9 @@
 // right. The review lists a few follow-up questions (what the statement can't settle, each one
 // skippable) above the categorized months, which follow the answers before they enter the profile.
 // Connecting a bank app is not built, so it is not offered here (decision D-7: no dead buttons).
-import { useId, useState } from 'react';
+// `findings` is the JF7 "We found" review of paychecks and debts (features/upload), shown above the
+// months it was read from.
+import { useId, useState, type ReactNode } from 'react';
 import { common, ladder } from '@/copy';
 import {
   Art, BarBreakdown, Button, Card, Choice, cx, Field, formatMoney, NumberInput, Row, Stack, Tag,
@@ -36,9 +38,14 @@ function errorText(error: StatementUploadError | null): string {
   }
 }
 
-export type StatementUploadProps = { vm: StatementUploadVM; progress: LadderProgressVM };
+export type StatementUploadProps = {
+  vm: StatementUploadVM;
+  progress: LadderProgressVM;
+  /** Another feature's block for the statement's result (JF7: paychecks and debts found). */
+  findings?: ReactNode;
+};
 
-export function StatementUpload({ vm, progress }: StatementUploadProps) {
+export function StatementUpload({ vm, progress, findings }: StatementUploadProps) {
   const inputId = useId();
   const noteId = useId();
   const titleId = useId();
@@ -138,6 +145,8 @@ export function StatementUpload({ vm, progress }: StatementUploadProps) {
               </Row>
             </div>
           )}
+
+          {vm.status !== 'reading' && vm.status !== 'error' && findings}
 
           {vm.status === 'review' && (
             <Card title={t.reviewTitle}>

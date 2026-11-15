@@ -10,14 +10,15 @@
 // The sample life cards are not here: they live in '@lifeguessr/data/fixtures/cards' (see the note
 // in cards.ts), so importing this barrel never puts game answers in a browser bundle.
 import {
-  AreaDataSchema, CategoryTotalsSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema, sourced,
-  type AreaData, type CategoryTotals, type LoanInput, type Money, type Profile, type Sourced,
+  AreaDataSchema, CategoryTotalsSchema, LoanInputSchema, NonNegativeMoneySchema, ProfileSchema, sourced, StatementFindingsSchema,
+  type AreaData, type CategoryTotals, type LoanInput, type Money, type Profile, type Sourced, type StatementFindings,
 } from '@lifeguessr/types';
 import { z } from 'zod';
 import areaDataJson from './areaData.sample.json';
 import leaseScenarioJson from './leaseScenario.sample.json';
 import loanOffersJson from './loanOffers.sample.json';
 import profileJson from './profile.demo.json';
+import statementFindingsJson from './statementFindings.sample.json';
 import statementTotalsJson from './statementTotals.sample.json';
 import { TogetherPartnerSchema, type TogetherPartner } from '@lifeguessr/types';
 import togetherPartnerJson from './togetherPartner.sample.json';
@@ -93,6 +94,16 @@ export const leaseScenarioSample: Readonly<LeaseScenario> = deepFreeze({
  */
 export const statementTotalsSample: readonly CategoryTotals[] = deepFreeze(
   CategoryTotalsSchema.array().parse(statementTotalsJson),
+);
+
+/**
+ * JF7: what `findIncomeAndDebts` finds in statement.sample.csv (the S9 "We found" review): the
+ * biweekly ACME paycheck ($2,400 × 26 ÷ 12 = $5,200 a month), the Toyota car loan ($412) and the
+ * Capital One card ($250), with each kind's typical APR and its source. Checked against the engine
+ * on the real sample in apps/web/src/lib/statement/findingsGolden.test.ts.
+ */
+export const statementFindingsSample: Readonly<StatementFindings> = deepFreeze(
+  StatementFindingsSchema.parse(statementFindingsJson),
 );
 
 /** AreaData for a fixture ZIP; throws if the ZIP is not in the fixtures. */
