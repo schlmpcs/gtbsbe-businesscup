@@ -1,8 +1,9 @@
 'use client';
 
-// /start: the onboarding. One round of today's duel → "What are you worth?" → connect a bank → the
-// analysis → the answer → your plan to 90 → one decision. Thin route: the view-model hooks feed the
-// presentational screens; the duel round is the game's own warm-up (features/game).
+// /start: the onboarding. One round of today's duel → about you → "What are you worth?" → connect a
+// bank (or upload a statement) → the analysis → "here's what we found, anything else?" → the answer →
+// your plan to 90 → one decision. Thin route: the view-model hooks feed the presentational screens;
+// the duel round is the game's own warm-up (features/game).
 import Link from 'next/link';
 import { lifeline as lifelineCopy, welcome as copy } from '@/copy';
 import { useDuel } from '@/features/game/model/useDuel';
@@ -10,7 +11,6 @@ import { DuelWarmup } from '@/features/game/ui/DuelWarmup';
 import { LifeLineChart } from '@/features/lifeline/ui/LifeLineHero';
 import { useOnboarding } from '@/features/welcome/model/useOnboarding';
 import { Onboarding } from '@/features/welcome/ui/Onboarding';
-import { SCREEN_ROUTES } from '@/lib/screens';
 
 export default function StartPage() {
   const vm = useOnboarding();
@@ -19,7 +19,6 @@ export default function StartPage() {
     <Onboarding
       vm={vm}
       Link={Link}
-      uploadHref={SCREEN_ROUTES.S9}
       doneHref="/dashboard"
       decisionChart={vm.lifeline.status === 'ready' ? (
         <LifeLineChart

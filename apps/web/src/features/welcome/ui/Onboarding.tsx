@@ -12,8 +12,6 @@ type LinkComponent = (props: { href: string; className?: string; children: React
 export type OnboardingProps = {
   vm: OnboardingVM;
   Link: LinkComponent;
-  /** Statement upload (S9), for "Rather upload a statement". */
-  uploadHref: string;
   /** Where "Open my plan" goes (Home, with the Life line filled in). */
   doneHref: string;
   /** Step 1: one round of today's duel (the route renders the game's own warm-up). */
@@ -32,7 +30,7 @@ const DARK_LABEL = 'block text-xs font-bold uppercase tracking-wide text-chart-6
 /** A quiet panel on the dark steps. */
 const DARK_PANEL = 'rounded-lg bg-on-primary/5 ring-1 ring-on-primary/10';
 
-export function Onboarding({ vm, Link, uploadHref, doneHref, warmup, decisionChart }: OnboardingProps) {
+export function Onboarding({ vm, Link, doneHref, warmup, decisionChart }: OnboardingProps) {
   const dark = DARK_STEPS.has(vm.step);
   const wide = vm.step === 'play' || vm.step === 'decision' || (vm.step === 'analyzing' && !!vm.analysis);
   return (
@@ -57,9 +55,9 @@ export function Onboarding({ vm, Link, uploadHref, doneHref, warmup, decisionCha
               <div key={vm.step} className="ob-fade-up order-2 flex min-w-0 max-w-(--container-xl) flex-col gap-lg lg:order-none">
                 {vm.step === 'about' && <AboutStep about={vm.about} />}
                 {vm.step === 'guess' && <GuessStep vm={vm} />}
-                {vm.step === 'balances' && <BalancesStep balances={vm.balances} />}
-                {vm.step === 'connect' && <ConnectStep vm={vm} Link={Link} uploadHref={uploadHref} />}
-                {vm.step === 'connecting' && <ConnectingStep vm={vm} Link={Link} uploadHref={uploadHref} />}
+                {vm.step === 'connect' && <ConnectStep vm={vm} />}
+                {vm.step === 'connecting' && <ConnectingStep vm={vm} />}
+                {vm.step === 'found' && <BalancesStep balances={vm.balances} />}
                 {vm.step === 'reveal' && vm.reveal && <RevealStep vm={vm} reveal={vm.reveal} />}
                 {vm.step === 'future' && <FutureStep vm={vm} />}
               </div>
@@ -153,12 +151,19 @@ function TextField({ field, onChange, error }: { field: FieldVM; onChange: (v: s
   const id = `ob-${field.id}`;
   return (
     <div className="flex min-w-0 flex-col gap-xs">
-      <label htmlFor={id} className={FIELD_LABEL}>{field.label}</label>
+      {field.tag ? (
+        <span className="flex flex-wrap items-center justify-between gap-x-sm gap-y-xs">
+          <label htmlFor={id} className={FIELD_LABEL}>{field.label}</label>
+          <span id={`${id}-tag`} className="flex items-center gap-xs rounded-full bg-positive/10 px-sm py-0.5 text-xs font-bold text-positive">
+            <Icon name="check" size={12} strokeWidth={3} />{field.tag}
+          </span>
+        </span>
+      ) : <label htmlFor={id} className={FIELD_LABEL}>{field.label}</label>}
       <div className={cx('flex min-h-12 items-center gap-xs rounded-lg bg-bg px-md ring-1 transition focus-within:ring-2 focus-within:ring-primary',
         field.invalid ? 'ring-2 ring-negative' : 'ring-border')}>
         {field.prefix && <span className="font-display text-xl font-extrabold text-text-muted">{field.prefix}</span>}
         <input id={id} data-testid={id} type="text" inputMode={field.inputMode} autoComplete="off" value={field.value}
-          placeholder={field.placeholder} aria-invalid={field.invalid || undefined}
+          placeholder={field.placeholder} aria-invalid={field.invalid || undefined} aria-describedby={field.tag ? `${id}-tag` : undefined}
           onChange={(e) => onChange(e.target.value)}
           className="min-w-0 flex-1 bg-transparent py-sm font-display text-xl font-extrabold tabular-nums outline-none placeholder:text-text-muted/50" />
         {field.suffix && <span className="text-sm font-semibold text-text-muted">{field.suffix}</span>}
@@ -210,7 +215,7 @@ function AboutStep({ about: a }: { about: AboutVM }) {
   );
 }
 
-// ----- 2b. Add it up ---------------------------------------------------------------------------
+// ----- 3b. Here's what we found: the statement's balance filled in, anything else typed ---------
 
 function BalancesStep({ balances: b }: { balances: BalancesVM }) {
   const c = t.balances;
@@ -228,6 +233,7 @@ function BalancesStep({ balances: b }: { balances: BalancesVM }) {
       <h1 className={H1}>{c.title}</h1>
       <p className={LEAD}>{c.body}</p>
       <div className={PANEL}>
+        {b.note && <p className="text-sm font-semibold text-text-muted" data-testid="onboarding-found-note">{b.note}</p>}
         {group(c.own, b.own, 'text-positive')}
         {group(c.owe, b.owe, 'text-negative')}
       </div>
@@ -270,9 +276,9 @@ function GuessStep({ vm }: { vm: OnboardingVM }) {
   );
 }
 
-// ----- 2. Connect ------------------------------------------------------------------------------
+// ----- 3. Connect: balance and spending in one connection (or an uploaded statement) ------------
 
-function ConnectStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkComponent; uploadHref: string }) {
+function ConnectStep({ vm }: { vm: OnboardingVM }) {
   return (
     <>
       <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.connect.sticker}</Sticker>
@@ -299,19 +305,37 @@ function ConnectStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkCom
           <li key={p} className="flex items-center gap-xs"><Icon name="shield" size={14} className="shrink-0 text-positive" />{p}</li>
         ))}
       </ul>
-      <Link href={uploadHref} className="self-start text-sm font-semibold text-primary underline-offset-4 hover:underline">{t.connect.upload}</Link>
+      <UploadPicker onFile={vm.upload} className="self-start" />
     </>
   );
 }
 
-function ConnectingStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: LinkComponent; uploadHref: string }) {
+/** "Rather upload a statement (CSV)": the file is read in this browser, then takes the bank's path. */
+function UploadPicker({ onFile, className }: { onFile: (file: File) => void; className?: string }) {
+  return (
+    <label className={cx('cursor-pointer text-sm font-semibold text-primary underline-offset-4 hover:underline focus-within:underline', className)}>
+      {t.connect.upload}
+      <input
+        type="file" accept=".csv,text/csv" className="sr-only" data-testid="onboarding-upload"
+        onChange={(e) => {
+          const picked = e.target.files?.[0];
+          e.target.value = '';
+          if (picked) onFile(picked);
+        }}
+      />
+    </label>
+  );
+}
+
+function ConnectingStep({ vm }: { vm: OnboardingVM }) {
   const c = vm.connecting!;
-  const bank = vm.banks.find((b) => b.name === c.bankName);
-  const phases = t.connecting.phases;
+  const file = c.source === 'file';
+  const bank = file ? undefined : vm.banks.find((b) => b.name === c.bankName);
+  const phases = file ? t.connecting.file.phases : t.connecting.phases;
   return (
     <div className="flex flex-col gap-lg" data-testid="onboarding-connecting">
-      <Sticker tone="ink" tilt={-2} className="self-start text-sm"><Icon name="lock" size={14} />{t.connecting.sticker}</Sticker>
-      <h1 className={H1}>{t.connecting.title(c.bankName)}</h1>
+      <Sticker tone="ink" tilt={-2} className="self-start text-sm"><Icon name="lock" size={14} />{file ? t.connecting.file.sticker : t.connecting.sticker}</Sticker>
+      <h1 className={H1}>{file ? t.connecting.file.title : t.connecting.title(c.bankName)}</h1>
       <div className="mt-xs flex flex-col gap-xl rounded-xl bg-surface p-xl shadow-md ring-1 ring-border">
         <div className="flex items-center gap-md" aria-hidden="true">
           {bank && (
@@ -348,9 +372,9 @@ function ConnectingStep({ vm, Link, uploadHref }: { vm: OnboardingVM; Link: Link
         </ol>
         {c.failed && (
           <div className="flex flex-wrap items-center gap-md">
-            <p className="text-sm text-negative">{t.connecting.error}</p>
-            <Button onClick={vm.retry}>{t.connecting.retry}</Button>
-            <Link href={uploadHref} className="text-sm font-semibold text-primary hover:underline">{t.connect.upload}</Link>
+            <p className="text-sm text-negative">{file ? t.connecting.file.error : t.connecting.error}</p>
+            {!file && <Button onClick={vm.retry}>{t.connecting.retry}</Button>}
+            <UploadPicker onFile={vm.upload} />
           </div>
         )}
       </div>

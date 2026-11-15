@@ -1,16 +1,55 @@
 // @vitest-environment jsdom
-// /start onboarding: the reveal (pure) and the guess step. The connect flow runs end to end in
-// e2e/onboarding.spec.ts (it reads the sample statement through the real pipeline).
+// /start onboarding: the reveal (pure), the step order and the bank-first flow. Here the statement
+// read (bankDemo/fillAll) and the sample download are faked so the order, the prefill from the
+// statement's balance and the confirmed form can be checked; e2e/onboarding.spec.ts runs the same
+// flow end to end through the real parser and categorizer.
 import { useAppStore } from '@/state';
-import { COST_CATEGORIES, type CostCategory } from '@lifeguessr/types';
+import { COST_CATEGORIES, type CategoryTotals, type CostCategory } from '@lifeguessr/types';
 import { act, cleanup, renderHook } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { welcome as copy } from '@/copy';
+import { fillFromStatement } from '@/features/bankDemo/model/fillAll';
 import type { StatementMonthVM } from '@/features/ladder/model/types';
+import type { StatementFileResult } from '@/features/upload/model/types';
+import { clearAccounts, initAccounts } from '@/lib/model/accounts';
 import { analysisRows, BANKS, GUESS, revealOf, useOnboarding } from './useOnboarding';
+
+vi.mock('@/features/bankDemo/model/fillAll', () => ({ fillFromStatement: vi.fn() }));
+vi.mock('@/features/upload/model/sampleStatement', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  fetchSampleStatement: async () => new File(['sample'], 'statement.sample.csv', { type: 'text/csv' }),
+}));
+
+/** What the faked read of a statement gives: one month of spending with a paycheck. */
+const MONTH: CategoryTotals = {
+  month: '2026-10',
+  totals: Object.fromEntries(COST_CATEGORIES.map((c) => [c, c === 'rentUtilities' ? 1800 : c === 'groceries' ? 400 : 0])) as CategoryTotals['totals'],
+  oneOffs: [],
+  detectedPay: 5200,
+};
+const READ = {
+  months: [MONTH],
+  summary: { transactions: 120, skippedPending: 0, skippedOther: 0, from: '2026-10-01', to: '2026-10-31', convention: 'signed', categorizedBy: 'rules' },
+  classified: null,
+  followUps: [],
+  findings: { incomes: [], debts: [] },
+} as unknown as StatementFileResult;
+/** The statement's last Balance (null: the file has no Balance column). */
+let statementBalance: number | null = 7339.8;
+
+beforeEach(() => {
+  statementBalance = 7339.8;
+  vi.mocked(fillFromStatement).mockReset();
+  vi.mocked(fillFromStatement).mockImplementation(async () => ({
+    read: READ, imported: { added: 0, duplicates: 0, summary: READ.summary, followUps: [] }, balance: statementBalance,
+  }));
+});
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   useAppStore.getState().reset();
+  clearAccounts();
 });
 
 const month = (over: Partial<Record<CostCategory, number>>, detectedPay: number | null = 4800): StatementMonthVM => {
@@ -77,12 +116,24 @@ describe('analysisRows', () => {
 });
 
 describe('useOnboarding', () => {
-  const fillAbout = (r: { current: ReturnType<typeof useOnboarding> }) => {
+  type R = { current: ReturnType<typeof useOnboarding> };
+  const fillAbout = (r: R) => {
     act(() => r.current.about.setField('age', '41'));
     act(() => r.current.about.setField('zip', '94110'));
     act(() => r.current.about.setField('takeHome', '$7,250'));
     act(() => r.current.about.submit());
   };
+  const toConnect = (r: R) => {
+    act(() => r.current.finishWarmup());
+    fillAbout(r);
+    act(() => r.current.lockGuess());
+  };
+  /** Move the clock in small acts, so effects (which schedule the next timers) run in between. */
+  const advance = async (ms: number) => {
+    for (let t = 0; t < ms; t += 250) await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+  };
+  /** Let the connection, the read and the analysis run to the end. */
+  const runAll = () => advance(30_000);
 
   it('warm-up → About you (the person’s own age, ZIP and pay enter the profile) → guess; back walks it in reverse', () => {
     const { result } = renderHook(() => useOnboarding());
@@ -105,7 +156,7 @@ describe('useOnboarding', () => {
     expect(result.current.step).toBe('play');
   });
 
-  it('the guess snaps to $1,000 and stays in range; locking it asks for balances, which replace the sample’s debts', () => {
+  it('the guess snaps to $1,000 and stays in range; locking it opens the bank connection first; back returns to the guess', () => {
     const { result } = renderHook(() => useOnboarding());
     act(() => result.current.finishWarmup());
     fillAbout(result);
@@ -114,27 +165,116 @@ describe('useOnboarding', () => {
     act(() => result.current.setGuess(10_000_000));
     expect(result.current.guess.value).toBe(GUESS.max);
     act(() => result.current.lockGuess());
-    expect(result.current).toMatchObject({ step: 'balances', house: 'house-blueprint' });
-    act(() => result.current.balances.setField('cash', '12,000'));
-    act(() => result.current.balances.setField('student', '30000'));
-    act(() => result.current.balances.submit());
-    expect(result.current).toMatchObject({ step: 'connect', stepIndex: 5 });
-    const p = useAppStore.getState().profile;
-    expect(p.cash.value).toBe(12_000);
-    expect(p.retirement.value).toBe(0);
-    expect(p.debts.map((d) => [d.kind, d.balance])).toEqual([['student', 30_000]]);
+    expect(result.current).toMatchObject({ step: 'connect', stepIndex: 4, house: 'house-blueprint' });
     expect(result.current.banks).toBe(BANKS);
     act(() => result.current.back());
-    expect(result.current.step).toBe('balances');
+    expect(result.current.step).toBe('guess');
+  });
+
+  it('a bank: connecting → analyzing → found, Checking & savings prefilled from the statement’s balance, the rest empty', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useOnboarding());
+    toConnect(result);
+    act(() => result.current.connect('chase'));
+    expect(result.current).toMatchObject({ step: 'connecting', stepIndex: 4, connecting: { bankName: 'Chase', source: 'bank' } });
+    await advance(5_000);
+    expect(result.current).toMatchObject({ step: 'analyzing', stepIndex: 5 });
+    await runAll();
+    expect(result.current).toMatchObject({ step: 'found', stepIndex: 6, house: 'house-build', reveal: null });
+    // The statement keeps the typed pay and writes no balance: the form is where balances are confirmed.
+    expect(vi.mocked(fillFromStatement)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fillFromStatement).mock.calls[0]![1]).toBe('Chase');
+    expect(vi.mocked(fillFromStatement).mock.calls[0]![3]).toEqual({ keepTyped: { takeHomePay: 7250 } });
+    const b = result.current.balances;
+    expect(b.own.map((f) => [f.id, f.value])).toEqual([['cash', '7,340'], ['retirement', '']]);
+    expect(b.own[0]!.tag).toBe(copy.balances.from.bank('Chase'));
+    expect(b.own[1]!.tag).toBeUndefined();
+    expect(b.owe.map((f) => f.value)).toEqual(['', '', '', '']);
+    expect(b.note).toBe(copy.balances.elsewhere.bank('Chase'));
+    expect(b.canSubmit).toBe(true);
+  });
+
+  it('the confirmed form is what the reveal uses, and the statement does not overwrite it afterwards', async () => {
+    vi.useFakeTimers();
+    initAccounts();
+    const { result } = renderHook(() => useOnboarding());
+    toConnect(result);
+    act(() => result.current.connect('chase'));
+    await runAll();
+    expect(result.current.step).toBe('found');
+    act(() => result.current.balances.setField('cash', '5,000'));
+    act(() => result.current.balances.setField('student', '30000'));
+    act(() => result.current.balances.submit());
+    expect(result.current).toMatchObject({ step: 'reveal', stepIndex: 7 });
+    await runAll();
+    expect(result.current.step).toBe('reveal');
+    expect(vi.mocked(fillFromStatement)).toHaveBeenCalledTimes(1);
+    const p = useAppStore.getState().profile;
+    expect(p.cash.value).toBe(5_000);
+    expect(p.retirement.value).toBe(0);
+    expect(p.debts.map((d) => [d.kind, d.balance])).toEqual([['student', 30_000]]);
+    expect(p.takeHomePay.value).toBe(7_250);
+    expect(result.current.reveal).toMatchObject({ netWorthLabel: '−$25,000', ownLabel: '$5,000', oweLabel: '$30,000' });
+  });
+
+  it('a statement without a Balance column leaves Checking & savings empty, untagged', async () => {
+    vi.useFakeTimers();
+    statementBalance = null;
+    const { result } = renderHook(() => useOnboarding());
+    toConnect(result);
+    act(() => result.current.connect('wells'));
+    await runAll();
+    expect(result.current.step).toBe('found');
+    expect(result.current.balances.own[0]).toMatchObject({ id: 'cash', value: '' });
+    expect(result.current.balances.own[0]!.tag).toBeUndefined();
+    expect(result.current.balances.note).toBe(copy.balances.elsewhere.bank('Wells Fargo'));
+  });
+
+  it('back follows the new order: analyzing → connect, found → connect, reveal → found (the form kept)', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useOnboarding());
+    toConnect(result);
+    act(() => result.current.connect('chase'));
+    await advance(5_000);
+    expect(result.current.step).toBe('analyzing');
+    act(() => result.current.back());
+    expect(result.current.step).toBe('connect');
+    await runAll();
+    expect(result.current.step).toBe('connect'); // the analysis timers were cleared
+    act(() => result.current.connect('chase'));
+    await runAll();
+    expect(result.current.step).toBe('found');
+    act(() => result.current.balances.setField('retirement', '30,000'));
+    act(() => result.current.balances.submit());
+    expect(result.current.step).toBe('reveal');
+    act(() => result.current.back());
+    expect(result.current.step).toBe('found');
+    expect(result.current.balances.own.map((f) => f.value)).toEqual(['7,340', '30,000']);
+    act(() => result.current.back());
+    expect(result.current.step).toBe('connect');
+  });
+
+  it('an uploaded statement takes the same path: reading → analyzing → found, prefilled from the file’s balance', async () => {
+    vi.useFakeTimers();
+    statementBalance = 1536.76;
+    const { result } = renderHook(() => useOnboarding());
+    toConnect(result);
+    const file = new File(['Date,Description,Amount,Balance'], 'my-bank.csv', { type: 'text/csv' });
+    act(() => result.current.upload(file));
+    expect(result.current).toMatchObject({ step: 'connecting', stepIndex: 4, connecting: { source: 'file' } });
+    await runAll();
+    expect(result.current.step).toBe('found');
+    expect(vi.mocked(fillFromStatement).mock.calls[0]![0]).toBe(file);
+    expect(vi.mocked(fillFromStatement).mock.calls[0]![3]).toEqual({ keepTyped: { takeHomePay: 7250 } });
+    expect(result.current.balances.own[0]).toMatchObject({ value: '1,537', tag: copy.balances.from.file });
+    expect(result.current.balances.note).toBe(copy.balances.elsewhere.file);
   });
 
   it('an unknown bank does nothing', () => {
     const { result } = renderHook(() => useOnboarding());
-    act(() => result.current.finishWarmup());
-    fillAbout(result);
-    act(() => result.current.lockGuess());
-    act(() => result.current.balances.submit());
+    toConnect(result);
     act(() => result.current.connect('nope'));
     expect(result.current.step).toBe('connect');
+    expect(vi.mocked(fillFromStatement)).not.toHaveBeenCalled();
   });
 });
