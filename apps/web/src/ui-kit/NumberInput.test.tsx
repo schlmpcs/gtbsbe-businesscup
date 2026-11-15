@@ -36,6 +36,17 @@ describe('Field + NumberInput', () => {
     expect(input).toHaveAttribute('inputmode', 'decimal');
   });
 
+  it('grouping={false} shows a year as 2027, not 2,027, at rest and after editing', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={2027} grouping={false} maxFractionDigits={0} />);
+    const input = screen.getByRole('textbox', { name: 'Amount' });
+    expect(input).toHaveValue('2027');
+    await user.click(input);
+    await user.keyboard('2031');
+    await user.tab();
+    expect(input).toHaveValue('2031');
+  });
+
   it('emits numbers while typing and null when cleared', async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
