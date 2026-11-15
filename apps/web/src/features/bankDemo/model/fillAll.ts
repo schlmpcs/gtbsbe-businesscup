@@ -73,14 +73,24 @@ async function fillGoal(): Promise<void> {
 }
 
 /** Read the demo bank's statement once and fill every screen from it. Throws like an import. */
-export async function fillFromDemoBank(
+export function fillFromDemoBank(
   file: File, bankId: DemoBankId, readDeps: ReadStatementDeps = {}, deps: DemoFillDeps = {},
+): Promise<DemoFillResult> {
+  return fillFromStatement(file, copy.banks[bankId], readDeps, deps);
+}
+
+/**
+ * The same fill for a statement under any bank name (the /start onboarding's bank picker): ledger,
+ * measured spending and pay, the checking account named after the bank, budget and goal.
+ */
+export async function fillFromStatement(
+  file: File, bankName: string, readDeps: ReadStatementDeps = {}, deps: DemoFillDeps = {},
 ): Promise<DemoFillResult> {
   const readFile = deps.readStatementFile ?? defaultReadStatementFile;
   const read = await readFile(file, { ...readDeps, anonId: readDeps.anonId ?? getAnonId() });
   const imported = await ledger().importRead(read);
   useAppStore.getState().applyStatementTotals(read.months);
-  fillChecking(copy.banks[bankId], latestBalance(await file.text()));
+  fillChecking(bankName, latestBalance(await file.text()));
   await Promise.all([fillBudget(), fillGoal()]);
   return { read, imported };
 }

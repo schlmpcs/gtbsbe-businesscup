@@ -4,9 +4,10 @@
 // analysis → the answer → your plan to 90 → one decision. Thin route: the view-model hooks feed the
 // presentational screens; the duel round is the game's own warm-up (features/game).
 import Link from 'next/link';
-import { welcome as copy } from '@/copy';
+import { lifeline as lifelineCopy, welcome as copy } from '@/copy';
 import { useDuel } from '@/features/game/model/useDuel';
 import { DuelWarmup } from '@/features/game/ui/DuelWarmup';
+import { LifeLineChart } from '@/features/lifeline/ui/LifeLineHero';
 import { useOnboarding } from '@/features/welcome/model/useOnboarding';
 import { Onboarding } from '@/features/welcome/ui/Onboarding';
 import { SCREEN_ROUTES } from '@/lib/screens';
@@ -20,6 +21,12 @@ export default function StartPage() {
       Link={Link}
       uploadHref={SCREEN_ROUTES.S9}
       doneHref="/dashboard"
+      decisionChart={vm.lifeline.status === 'ready' ? (
+        <LifeLineChart
+          chart={vm.lifeline.chart}
+          drag={{ min: vm.lifeline.slider.min, max: vm.lifeline.slider.max, onAge: vm.lifeline.setAge, hint: lifelineCopy.chart.dragHint }}
+        />
+      ) : null}
       warmup={<DuelWarmup vm={duel} onContinue={vm.finishWarmup} continueLabel={copy.warmup.cta} sticker={copy.warmup.sticker} />}
     />
   );

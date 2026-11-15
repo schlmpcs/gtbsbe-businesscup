@@ -2,7 +2,7 @@
 // every number and label comes from LifeLineVM; this file only lays them out and scales the chart to pixels.
 'use client';
 
-import type { ReactNode } from 'react';
+import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { lifeline as t } from '@/copy';
 import { Art, Button, cx, EstimateTag, Icon, type IconName, Sticker } from '@/ui-kit';
 import type { LifeLineChartVM, LifeLineKpiVM, LifeLineTone, LifeLineVM } from '../model/types';
@@ -68,7 +68,7 @@ export function LifeLineHero({ vm, planLink }: LifeLineHeroProps) {
           <h2 className="font-display text-xl font-extrabold">{vm.chart.title}</h2>
           <Legend chart={vm.chart} />
         </div>
-        <Chart chart={vm.chart} />
+        <LifeLineChart chart={vm.chart} drag={{ min: vm.slider.min, max: vm.slider.max, onAge: vm.setAge, hint: t.chart.dragHint }} />
       </div>
 
       <div className="grid gap-xl lg:grid-cols-2">
@@ -147,13 +147,44 @@ const PAD = { l: 64, r: 16, t: 56, b: 34 };
 const MARKER_COLOR = { primary: 'var(--color-primary)', violet: 'var(--color-chart-5)', positive: 'var(--color-positive)' } as const;
 const MARKER_ICON: Record<'home' | 'kid' | 'beach' | 'other', IconName> = { home: 'home', kid: 'kid', beach: 'beach', other: 'spark' };
 
-function Chart({ chart }: { chart: LifeLineChartVM }) {
+/** Drag the "Buy a home" pill along the ages (snaps to whole years, clamped to the slider's range). */
+export type LifeLineChartDrag = { min: number; max: number; onAge: (age: number) => void; hint: string };
+
+/** The Life line chart (also used by the onboarding's decision step). */
+export function LifeLineChart({ chart, drag }: { chart: LifeLineChartVM; drag?: LifeLineChartDrag }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [dragging, setDragging] = useState(false);
   const [a0, a1] = chart.ageDomain;
   const [v0, v1] = chart.valueDomain;
   const x = (age: number) => PAD.l + ((age - a0) / Math.max(1, a1 - a0)) * (W - PAD.l - PAD.r);
   const y = (v: number) => PAD.t + (1 - (v - v0) / Math.max(1, v1 - v0)) * (H - PAD.t - PAD.b);
   const path = (pts: { age: number; netWorth: number }[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.age).toFixed(1)},${y(p.netWorth).toFixed(1)}`).join(' ');
   const zero = y(0);
+  /** The age under the pointer (inverse of x), in whole years, clamped to the drag range. */
+  const ageAt = (clientX: number): number | null => {
+    const svg = svgRef.current;
+    const ctm = svg?.getScreenCTM();
+    if (!svg || !ctm || !drag) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    const sx = pt.matrixTransform(ctm.inverse()).x;
+    const age = a0 + ((sx - PAD.l) / (W - PAD.l - PAD.r)) * Math.max(1, a1 - a0);
+    return Math.min(drag.max, Math.max(drag.min, Math.round(age)));
+  };
+  const onDown = (e: ReactPointerEvent<SVGGElement>) => {
+    if (!drag) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  };
+  const onMove = (e: ReactPointerEvent<SVGGElement>) => {
+    if (!dragging) return;
+    const age = ageAt(e.clientX);
+    if (age !== null) drag?.onAge(age);
+  };
+  const onUp = (e: ReactPointerEvent<SVGGElement>) => {
+    setDragging(false);
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  };
   const yAt = (pts: { age: number; netWorth: number }[], age: number) => y(pts.find((p) => p.age === age)?.netWorth ?? 0);
 
   const band = chart.band
@@ -169,7 +200,7 @@ function Chart({ chart }: { chart: LifeLineChartVM }) {
     : null;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={chart.ariaLabel} className="h-auto w-full" data-testid="lifeline-chart">
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={chart.ariaLabel} className={cx('h-auto w-full', dragging && 'cursor-grabbing select-none')} data-testid="lifeline-chart">
       <defs>
         <pattern id="ll-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <line x1="0" y1="0" x2="0" y2="8" stroke="var(--color-negative)" strokeWidth="3" opacity="0.4" />
@@ -199,13 +230,24 @@ function Chart({ chart }: { chart: LifeLineChartVM }) {
         const mx = x(m.age);
         const my = yAt(chart.selected, m.age);
         const top = 22;
+        const draggable = Boolean(drag) && m.icon === 'home';
         return (
           <g key={m.id}>
             <line x1={mx} x2={mx} y1={my} y2={top + 14} stroke={MARKER_COLOR[m.tone]} strokeDasharray="2 4" strokeWidth="1.5" />
-            <g transform={`translate(${mx},${top})`}>
-              <rect x={-54} y={-15} width={108} height={30} rx={15} fill="var(--color-surface)" stroke={MARKER_COLOR[m.tone]} strokeWidth="2" />
+            <g
+              transform={`translate(${mx},${top})`}
+              {...(draggable ? {
+                onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp,
+                className: cx('touch-none', dragging ? 'cursor-grabbing' : 'cursor-grab'),
+                'data-testid': 'lifeline-drag-home',
+              } : {})}
+            >
+              {draggable && <title>{drag!.hint}</title>}
+              {draggable && <rect x={-64} y={-22} width={128} height={44} fill="transparent" />}
+              <rect x={-54} y={-15} width={108} height={30} rx={15} fill={draggable && dragging ? 'var(--color-primary-soft)' : 'var(--color-surface)'} stroke={MARKER_COLOR[m.tone]} strokeWidth={draggable ? 2.5 : 2} />
               <Icon name={MARKER_ICON[m.icon]} x={-44} y={-8} size={16} stroke={MARKER_COLOR[m.tone]} strokeWidth={2.2} />
-              <text x={8} y={5} textAnchor="middle" className="fill-text text-[13px] font-bold">{m.label}</text>
+              <text x={8} y={5} textAnchor="middle" className="pointer-events-none fill-text text-[13px] font-bold">{m.label}</text>
+              {draggable && !dragging && <text x={0} y={30} textAnchor="middle" className="pointer-events-none fill-primary text-[11px] font-bold">{'⟷ '}{drag!.hint}</text>}
             </g>
             <circle cx={mx} cy={my} r={5.5} fill="var(--color-surface)" stroke={MARKER_COLOR[m.tone]} strokeWidth="3" />
           </g>

@@ -10,6 +10,7 @@ import { netWorthSummary } from '@lifeguessr/engine';
 import { COST_CATEGORIES } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { common, welcome as copy } from '@/copy';
+import { fillFromStatement } from '@/features/bankDemo/model/fillAll';
 import { useStatementUpload } from '@/features/ladder/model/useStatementUpload';
 import type { StatementMonthVM, StatementReadVM } from '@/features/ladder/model/types';
 import { useLifeLine } from '@/features/lifeline/model/useLifeLine';
@@ -143,7 +144,14 @@ export function useOnboarding(): OnboardingVM {
   const profileOrigin = useAppStore((s) => s.profileOrigin);
   const loadSampleLife = useAppStore((s) => s.loadSample);
   const accounts = useAccountsStore((s) => s.accounts);
-  const upload = useStatementUpload();
+  // The connected bank's statement goes through the CSV pipeline once and fills every screen (ledger,
+  // Cash flow, Recurring, accounts, budget, goal: bankDemo/fillAll), named after the bank picked.
+  const bankName = useRef('');
+  const readAndFill = useCallback(
+    (file: File, deps?: Parameters<typeof fillFromStatement>[2]) => fillFromStatement(file, bankName.current, deps).then((r) => r.read),
+    [],
+  );
+  const upload = useStatementUpload({ readStatementFile: readAndFill });
   const lifeline = useLifeLine();
 
   const [step, setStep] = useState<OnboardingStep>('play');
@@ -188,6 +196,7 @@ export function useOnboarding(): OnboardingVM {
       // (the plan store seeds the sample plan for the sample profile on its own)
       if (profileOrigin === 'demo') loadSampleLife();
       setBankId(id);
+      bankName.current = BANKS.find((b) => b.id === id)?.name ?? '';
       setStep('connecting');
       start();
     },

@@ -18,11 +18,13 @@ export type OnboardingProps = {
   doneHref: string;
   /** Step 1: one round of today's duel (the route renders the game's own warm-up). */
   warmup: ReactNode;
+  /** Decision step: the Life line chart with the draggable "Buy a home" pill (the route renders it). */
+  decisionChart?: ReactNode;
 };
 
 const DARK_STEPS = new Set(['analyzing', 'reveal', 'future']);
 
-export function Onboarding({ vm, Link, uploadHref, doneHref, warmup }: OnboardingProps) {
+export function Onboarding({ vm, Link, uploadHref, doneHref, warmup, decisionChart }: OnboardingProps) {
   const dark = DARK_STEPS.has(vm.step);
   return (
     <main
@@ -32,7 +34,12 @@ export function Onboarding({ vm, Link, uploadHref, doneHref, warmup }: Onboardin
     >
       <div className="mx-auto grid w-full max-w-(--container-6xl) gap-xl px-lg py-xl lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-3xl lg:py-3xl">
         <div className="lg:hidden"><Progress vm={vm} dark={dark} /></div>
-        {vm.step === 'play' ? (
+        {vm.step === 'decision' ? (
+          <div className="order-2 flex min-w-0 flex-col gap-xl lg:col-span-2">
+            <div className="hidden lg:block"><Progress vm={vm} dark={dark} /></div>
+            <div key="decision" className="ob-fade-up"><DecisionStep vm={vm} Link={Link} doneHref={doneHref} chart={decisionChart} /></div>
+          </div>
+        ) : vm.step === 'play' ? (
           <div className="order-2 flex min-w-0 flex-col gap-xl lg:col-span-2">
             <div className="hidden lg:block"><Progress vm={vm} dark={dark} /></div>
             <div key="play" className="ob-fade-up">{warmup}</div>
@@ -51,11 +58,10 @@ export function Onboarding({ vm, Link, uploadHref, doneHref, warmup }: Onboardin
             {vm.step === 'connecting' && <ConnectingStep vm={vm} Link={Link} uploadHref={uploadHref} />}
             {vm.step === 'reveal' && vm.reveal && <RevealStep vm={vm} reveal={vm.reveal} />}
             {vm.step === 'future' && <FutureStep vm={vm} />}
-            {vm.step === 'decision' && <DecisionStep vm={vm} Link={Link} doneHref={doneHref} />}
           </div>
         </div>
         )}
-        {vm.step !== 'analyzing' && vm.step !== 'play' && <House vm={vm} />}
+        {vm.step !== 'analyzing' && vm.step !== 'play' && vm.step !== 'decision' && <House vm={vm} />}
       </div>
     </main>
   );
@@ -556,46 +562,49 @@ function MiniChart({ points, ageDomain, valueDomain, callout }: {
 
 // ----- 5. Decision -----------------------------------------------------------------------------
 
-function DecisionStep({ vm, Link, doneHref }: { vm: OnboardingVM; Link: LinkComponent; doneHref: string }) {
+function DecisionStep({ vm, Link, doneHref, chart }: { vm: OnboardingVM; Link: LinkComponent; doneHref: string; chart?: ReactNode }) {
   const ll = vm.lifeline;
   if (ll.status !== 'ready') return null;
   const s = ll.slider;
   const k = ll.kpis.find((x) => x.id === 'chance')!;
   return (
-    <>
-      <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.decision.sticker}</Sticker>
-      <h1 className="font-display text-3xl font-extrabold leading-tight sm:text-5xl">
-        {ll.headline.lead}
-        {ll.headline.payoff && <>, <span className={ll.headline.payoffTone === 'bad' ? 'text-negative' : 'text-primary'}>{ll.headline.payoff}</span></>}
-      </h1>
-      <div className="relative flex flex-col gap-md rounded-xl bg-ink p-xl text-on-primary">
-        <div className="flex items-end justify-between gap-md">
-          <span className="font-display text-2xl font-extrabold">
-            {s.title.replace(String(s.value), '')}<span className="text-primary">{s.value}</span>
-          </span>
-          <span className="text-right">
-            <span className="block text-xs font-bold uppercase tracking-wide text-chart-6">{k.label}</span>
-            <span className={cx('font-display text-4xl font-extrabold tabular-nums', k.tone === 'bad' ? 'text-primary' : k.tone === 'good' ? 'text-positive' : undefined)}>
-              {k.value ?? k.note}
+    <div className="grid gap-xl lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
+      <div className="flex min-w-0 flex-col gap-lg">
+        <Sticker tone="ink" tilt={-2} className="self-start text-sm">{t.decision.sticker}</Sticker>
+        <h1 className="font-display text-3xl font-extrabold leading-tight sm:text-5xl">
+          {ll.headline.lead}
+          {ll.headline.payoff && <>, <span className={ll.headline.payoffTone === 'bad' ? 'text-negative' : 'text-primary'}>{ll.headline.payoff}</span></>}
+        </h1>
+        <div className="relative flex flex-col gap-md rounded-xl bg-ink p-xl text-on-primary">
+          <div className="flex items-end justify-between gap-md">
+            <span className="font-display text-2xl font-extrabold">
+              {s.title.replace(String(s.value), '')}<span className="text-primary">{s.value}</span>
             </span>
-          </span>
+            <span className="text-right">
+              <span className="block text-xs font-bold uppercase tracking-wide text-chart-6">{k.label}</span>
+              <span className={cx('font-display text-4xl font-extrabold tabular-nums', k.tone === 'bad' ? 'text-primary' : k.tone === 'good' ? 'text-positive' : undefined)}>
+                {k.value ?? k.note}
+              </span>
+            </span>
+          </div>
+          <label htmlFor="ob-decision" className="sr-only">{s.label}</label>
+          <input id="ob-decision" data-testid="onboarding-decision" type="range" min={s.min} max={s.max} step={1} value={s.value}
+            aria-valuetext={s.formatValue(s.value)} onChange={(e) => ll.setAge(Number(e.target.value))}
+            className="w-full cursor-pointer accent-primary" />
+          <div aria-hidden="true" className="flex justify-between text-xs text-chart-6 tabular-nums">
+            <span>{s.min}</span><span>{s.max}</span>
+          </div>
+          {s.value === s.base && (
+            <span aria-hidden="true" className="absolute -top-3 right-lg rotate-[-6deg] rounded-full bg-primary px-md py-xs text-sm font-extrabold">
+              {t.decision.hint}
+            </span>
+          )}
         </div>
-        <label htmlFor="ob-decision" className="sr-only">{s.label}</label>
-        <input id="ob-decision" data-testid="onboarding-decision" type="range" min={s.min} max={s.max} step={1} value={s.value}
-          aria-valuetext={s.formatValue(s.value)} onChange={(e) => ll.setAge(Number(e.target.value))}
-          className="w-full cursor-pointer accent-primary" />
-        <div aria-hidden="true" className="flex justify-between text-xs text-chart-6 tabular-nums">
-          <span>{s.min}</span><span>{s.max}</span>
-        </div>
-        {s.value === s.base && (
-          <span aria-hidden="true" className="absolute -top-3 right-lg rotate-[-6deg] rounded-full bg-primary px-md py-xs text-sm font-extrabold">
-            {t.decision.hint}
-          </span>
-        )}
+        <Link href={doneHref} className="inline-flex min-h-12 items-center justify-center gap-sm self-stretch rounded-full bg-primary px-xl text-lg font-bold text-on-primary sm:self-start">
+          {t.decision.cta} <Icon name="arrowRight" size={18} />
+        </Link>
       </div>
-      <Link href={doneHref} className="inline-flex min-h-12 items-center justify-center gap-sm self-stretch rounded-full bg-primary px-xl text-lg font-bold text-on-primary sm:self-start">
-        {t.decision.cta} <Icon name="arrowRight" size={18} />
-      </Link>
-    </>
+      {chart && <div className="min-w-0 rounded-xl bg-surface p-lg shadow-md">{chart}</div>}
+    </div>
   );
 }

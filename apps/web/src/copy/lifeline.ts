@@ -40,6 +40,7 @@ export const lifeline = {
     atRetirement: (value: string, age: number) => `${value} at ${age}`,
     was: (value: string) => `was ${value}`,
     marker: { home: 'Buy a home', kid: 'Kid', retire: 'Retire' },
+    dragHint: 'drag',
     ariaLabel: 'Net worth by age for the year picked, compared with the year in your plan',
   },
   slider: {
