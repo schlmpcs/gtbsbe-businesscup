@@ -4,8 +4,8 @@
 // line, manual add, CSV import (read in this browser) and export. Presentational: everything comes from
 // useTransactions; the route passes its Link component, the import link and today's date.
 import { useState, type ComponentType, type ReactNode } from 'react';
-import { planner, transactions as t } from '@/copy';
-import { Button, buttonClassName, cx, formatMoney, formatMonthYear, PageHeader } from '@/ui-kit';
+import { bankDemo, planner, transactions as t } from '@/copy';
+import { Button, buttonClassName, cx, formatMoney, formatMonthYear, PageHeader, Tag } from '@/ui-kit';
 import { EmptyState, KpiStrip, Panel, Segmented } from '@/ui-kit/reports';
 import type { DirectionFilter, ImportStateVM, StatementClass, TransactionsVM } from '../model/types';
 import { AddTransactionForm } from './AddTransactionForm';
@@ -19,12 +19,14 @@ export type TransactionsScreenProps = {
   today?: string;
   /** Open the import panel on arrival (the dashboard's "Import CSV" links here with ?import=1). */
   openImport?: boolean;
+  /** Opens the demo bank link (labelled a demo; the route renders it and imports its statement). */
+  onConnectBank?: () => void;
 };
 
 const SELECT = 'min-h-11 w-full min-w-0 rounded-lg border border-border bg-bg px-sm text-base sm:text-sm';
 const DIRECTIONS: DirectionFilter[] = ['all', 'in', 'out'];
 
-export function TransactionsScreen({ vm, links, Link, today, openImport = false }: TransactionsScreenProps) {
+export function TransactionsScreen({ vm, links, Link, today, openImport = false, onConnectBank }: TransactionsScreenProps) {
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(openImport);
   const [applyAll, setApplyAll] = useState(false);
@@ -67,7 +69,7 @@ export function TransactionsScreen({ vm, links, Link, today, openImport = false 
           {!noLines && importing && (
             <Panel title={t.screen.importTitle} data-testid="transactions-import-panel">
               <div id="transactions-import">
-                <ImportPanel vm={vm} links={links} Link={Link} />
+                <ImportPanel vm={vm} links={links} Link={Link} onConnectBank={onConnectBank} />
               </div>
             </Panel>
           )}
@@ -99,6 +101,7 @@ export function TransactionsScreen({ vm, links, Link, today, openImport = false 
                     )}
                   </div>
                   <GuidedLink links={links} Link={Link} />
+                  {onConnectBank && <ConnectBank onClick={onConnectBank} />}
                 </div>
               }
             />
@@ -134,7 +137,17 @@ export function TransactionsScreen({ vm, links, Link, today, openImport = false 
 }
 
 /** The one import control: pick a CSV here, or take the guided path (it has a sample statement). */
-function ImportPanel({ vm, links, Link }: { vm: TransactionsVM; links: { upload: string }; Link: TransactionsScreenProps['Link'] }) {
+function ImportPanel({
+  vm,
+  links,
+  Link,
+  onConnectBank,
+}: {
+  vm: TransactionsVM;
+  links: { upload: string };
+  Link: TransactionsScreenProps['Link'];
+  onConnectBank?: () => void;
+}) {
   return (
     <div className="flex flex-col gap-md">
       <p className="max-w-prose text-sm text-text-muted">{t.screen.importBody}</p>
@@ -142,6 +155,25 @@ function ImportPanel({ vm, links, Link }: { vm: TransactionsVM; links: { upload:
         <ImportButton vm={vm} label={t.screen.importFile} />
         <GuidedLink links={links} Link={Link} />
       </div>
+      {onConnectBank && <ConnectBank onClick={onConnectBank} />}
+    </div>
+  );
+}
+
+/** "Connect your bank (demo)": the demo bank link, labelled a demo with sample data. */
+function ConnectBank({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex w-full flex-wrap items-center justify-between gap-md rounded-lg border-2 border-primary bg-surface p-md text-left">
+      <span className="flex min-w-0 flex-1 flex-col gap-xs">
+        <span className="flex flex-wrap items-center gap-sm">
+          <span className="font-semibold">{bankDemo.entry.short}</span>
+          <Tag className="border-primary font-bold text-primary">{bankDemo.badge}</Tag>
+        </span>
+        <span className="text-sm text-text-muted">{bankDemo.disclaimer}</span>
+      </span>
+      <Button variant="secondary" size="sm" onClick={onClick} data-testid="transactions-connect-bank">
+        {bankDemo.entry.cta}
+      </Button>
     </div>
   );
 }

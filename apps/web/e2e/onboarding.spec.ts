@@ -1,7 +1,9 @@
 // The onboarding story (landing "/" → /start, 4 chapters), phone and desktop: the sliders path with a
-// resume from the landing, and the sample-statement path with reduced motion and the chapter dots.
+// resume from the landing, the sample-statement path with reduced motion and the chapter dots, and the
+// demo bank link (labelled a demo; its statement goes through the CSV pipeline).
 // The full path with a CSV and the daily duel is demo-path.spec.ts.
 import { expect, test, type Page } from '@playwright/test';
+import { bankDemo as b } from '../src/copy/bankDemo';
 import { common } from '../src/copy/common';
 import { duel } from '../src/copy/duel';
 import { ladder } from '../src/copy/ladder';
@@ -126,4 +128,41 @@ test('sample statement path with reduced motion: final numbers at once; chapter 
   await expect(page.locator('[data-chapter-dot="4"]')).toHaveAttribute('aria-current', 'step');
   await page.getByRole('link', { name: o.future.dashboard }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
+});
+
+test('demo bank path: connect a made-up test bank, its statement is read like a CSV, the reveal is from it', async ({ page }) => {
+  test.slow();
+  await page.goto('/start');
+  await page.getByRole('button', { name: o.story.skipLabel(1) }).click();
+  await chapter2(page);
+
+  // The bank card comes first and says it is a demo with sample data.
+  const card = page.getByTestId('month-bank');
+  await expect(card).toBeVisible();
+  await expect(page.getByTestId('month-bank-badge')).toHaveText(b.badge);
+  await expect(card).toContainText(b.disclaimer);
+  // The CSV option uses our own English file button, not the browser's.
+  await expect(page.getByTestId('month-csv')).toContainText(o.month.pickFile);
+  await expect(page.getByTestId('month-csv-name')).toHaveText(o.month.noFile);
+  await noSideScroll(page);
+  await card.click();
+
+  const sheet = page.getByTestId('bank-demo');
+  await expect(sheet).toHaveAttribute('data-step', 'pick');
+  await page.getByLabel(b.pick.searchLabel).fill('harbor');
+  await expect(page.getByTestId('bank-demo-bank-maple')).toHaveCount(0);
+  await page.getByTestId('bank-demo-bank-harbor').click();
+  await expect(page.getByTestId('bank-demo-credentials-note')).toHaveText(b.signIn.note);
+  await page.getByTestId('bank-demo-connect').click();
+  await expect(sheet).toHaveAttribute('data-step', 'connected', { timeout: 10_000 });
+  await expect(page.getByTestId('bank-demo-account-checking')).toContainText(b.connected.checking);
+  await expect(page.getByTestId('bank-demo-account-card')).toContainText(b.connected.card);
+  await noSideScroll(page);
+  await page.getByTestId('bank-demo-use').click();
+
+  // The same review as an uploaded CSV, then the reveal says the month is from the statement.
+  await expect(page.getByTestId('statement-summary')).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: o.month.use }).click();
+  await expect(page.getByTestId('month-reveal')).toHaveAttribute('data-from', 'statement');
+  await expect(page.getByTestId('reveal-actual')).toHaveAttribute('data-value', /^\$[\d,]+$/);
 });

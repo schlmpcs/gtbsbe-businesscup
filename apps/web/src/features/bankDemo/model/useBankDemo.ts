@@ -3,9 +3,9 @@
 // that statement to the caller as a CSV File. The caller feeds it to the same pipeline as an uploaded
 // CSV (useStatementUpload.readFile on /start, the ledger import on /transactions), so the review and
 // every number after it come from the statement, as for any file.
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { bankDemo as copy } from '@/copy';
-import { demoBank, demoStatementFileName, searchDemoBanks, type DemoBankId } from './banks';
+import { demoBank, demoStatementFileName, isDemoBankId, searchDemoBanks, type DemoBankId } from './banks';
 import { fetchDemoStatement as defaultFetch } from './fetchDemoStatement';
 import { CONNECT_STEPS, connectSteps, flowReducer, INITIAL_FLOW } from './flow';
 import { previewStatement } from './preview';
@@ -16,12 +16,15 @@ export const STEP_MS = 650;
 export const REDUCED_STEP_MS = 120;
 
 export type UseBankDemoOptions = {
-  /** Gets the statement File once the person taps "Use these transactions". */
-  onUse: (file: File) => void;
+  /** Gets the statement File (and its bank) once the person taps "Use these transactions". */
+  onUse: (file: File, bankId: DemoBankId) => void;
   /** Downloads a bank's statement text (swappable in tests). */
   fetchStatement?: typeof defaultFetch;
   stepMs?: number;
 };
+
+/** A demo statement as the File the CSV pipeline reads. */
+export const statementFile = (id: DemoBankId, text: string): File => new File([text], demoStatementFileName(id), { type: 'text/csv' });
 
 const nameOf = (id: DemoBankId) => copy.banks[id];
 const bankVM = (id: DemoBankId): DemoBankVM => {
@@ -73,7 +76,7 @@ export function useBankDemo({ onUse, fetchStatement = defaultFetch, stepMs }: Us
   const { preview, bankId } = s;
   const use = useCallback(() => {
     if (!preview || !bankId) return;
-    onUse(new File([preview.text], demoStatementFileName(bankId), { type: 'text/csv' }));
+    onUse(statementFile(bankId, preview.text), bankId);
     dispatch({ type: 'close' });
   }, [preview, bankId, onUse]);
 
@@ -95,4 +98,30 @@ export function useBankDemo({ onUse, fetchStatement = defaultFetch, stepMs }: Us
     retry: connect,
     use,
   };
+}
+
+/** Query parameter that hands a connected demo bank to /transactions (from /accounts' add sheet). */
+export const DEMO_BANK_PARAM = 'bank';
+export const transactionsHandoffHref = (id: DemoBankId): string => `/transactions?${DEMO_BANK_PARAM}=${id}`;
+
+/**
+ * /transactions?bank=<id>: the demo bank connected on /accounts. Downloads its statement again and
+ * hands it to `onFile` (the ledger's CSV import) once; `done` runs after, to clear the parameter.
+ * Ignores anything that is not a demo bank id.
+ */
+export function useBankDemoHandoff(
+  bank: string | null,
+  onFile: (file: File) => void,
+  done: () => void,
+  fetchStatement: typeof defaultFetch = defaultFetch,
+): void {
+  const handled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!bank || !isDemoBankId(bank) || handled.current === bank) return;
+    handled.current = bank;
+    fetchStatement(bank)
+      .then((text) => onFile(statementFile(bank, text)))
+      .catch(() => undefined)
+      .finally(done);
+  }, [bank, onFile, done, fetchStatement]);
 }

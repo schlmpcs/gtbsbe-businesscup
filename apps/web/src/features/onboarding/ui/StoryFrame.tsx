@@ -36,7 +36,7 @@ export function Logo({ Link, href }: { Link: StoryLink; href: string }) {
 
 export function StoryFrame({ chapter, reached, onGoTo, Link, homeHref, children }: StoryFrameProps) {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-(--container-4xl) flex-col gap-lg px-lg py-md sm:py-lg" data-testid="story" data-chapter={chapter}>
+    <main className="mx-auto flex min-h-dvh w-full max-w-(--container-4xl) flex-col gap-lg overflow-x-clip px-lg py-md sm:py-lg" data-testid="story" data-chapter={chapter}>
       <header className="flex items-center justify-between gap-md">
         <Logo Link={Link} href={homeHref} />
         {chapter < 4 && (

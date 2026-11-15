@@ -3,10 +3,14 @@
 // /start: the onboarding story in 4 chapters (features/onboarding), the chapter in the URL (?ch=2…4) so
 // Back works and a chapter can be opened directly (the ladder's last step opens chapter 4). Each chapter
 // reuses the existing view-models: the practice duel (chapter 1), useGuessYourself + useClosestLife
-// (2), useStatementUpload + useQuickSliders + the month reveal (3), and the /plan hooks (4).
+// (2), useStatementUpload + useQuickSliders + the month reveal (3), and the /plan hooks (4). Chapter 3's
+// "Connect your bank" is the demo bank link (features/bankDemo, labelled a demo): its statement goes
+// to useStatementUpload.readFile, the same pipeline as an uploaded CSV.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useCallback } from 'react';
+import { useBankDemo } from '@/features/bankDemo/model/useBankDemo';
+import { BankDemoSheet } from '@/features/bankDemo/ui/BankDemoSheet';
 import { useClosestLife } from '@/features/ladder/model/useClosestLife';
 import { useGuessYourself } from '@/features/ladder/model/useGuessYourself';
 import { useQuickSliders } from '@/features/ladder/model/useQuickSliders';
@@ -47,6 +51,9 @@ export default function StartPage({ searchParams }: { searchParams: SearchParams
   const guess = useGuessYourself();
   const closest = useClosestLife();
   const upload = useStatementUpload();
+  const { readFile } = upload;
+  const onDemoStatement = useCallback((file: File) => readFile?.(file), [readFile]);
+  const bank = useBankDemo({ onUse: onDemoStatement });
   const sliders = useQuickSliders();
   const reveal = useMonthReveal();
   const scenarios = useScenarios();
@@ -59,7 +66,12 @@ export default function StartPage({ searchParams }: { searchParams: SearchParams
     <StoryFrame chapter={chapter} reached={story.reached} onGoTo={navigate} Link={Link} homeHref="/">
       {chapter === 1 && <ChapterPractice vm={practice} onDone={() => navigate(2)} dailyHref={SCREEN_ROUTES.S2} />}
       {chapter === 2 && <ChapterGuess guess={guess} closest={closest} practiceError={story.practiceError} onDone={() => navigate(3)} />}
-      {chapter === 3 && <ChapterMonth upload={upload} sliders={sliders} reveal={reveal} onDone={() => navigate(4)} />}
+      {chapter === 3 && (
+        <>
+          <ChapterMonth upload={upload} sliders={sliders} reveal={reveal} onDone={() => navigate(4)} onConnectBank={bank.start} />
+          <BankDemoSheet vm={bank} />
+        </>
+      )}
       {chapter === 4 && <ChapterFuture plan={plan} chance={chance} moves={moves} Link={Link} links={LINKS} />}
     </StoryFrame>
   );

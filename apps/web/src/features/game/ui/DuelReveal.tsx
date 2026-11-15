@@ -153,10 +153,6 @@ export function DuelReveal({ reveal }: { reveal: DuelRevealVM }) {
           ))}
         </ul>
 
-        <p className="inline-flex items-start gap-sm border-t border-border pt-md text-base font-medium">
-          <DuelIcon name="bulb" className="size-lg shrink-0 text-primary" />
-          {reveal.lesson}
-        </p>
       </section>
 
       <details className="w-full max-w-(--container-2xl) text-center text-sm text-text-muted">

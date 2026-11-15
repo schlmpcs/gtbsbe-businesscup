@@ -111,7 +111,7 @@ describe('the reveal’s side-by-side panel', () => {
     expect(rows.filter((r) => r.decided)).toHaveLength(1);
   });
 
-  it('renders both totals, a row per category with both amounts, the decider tag and the lesson', () => {
+  it('renders both totals, a row per category with both amounts, the decider tag', () => {
     render(<DuelReveal reveal={buildDuelReveal(1, { choice: 'B', result: both })} />);
     const panel = screen.getByTestId('duel-compare');
     expect(panel).toHaveTextContent('$3,100');
@@ -120,6 +120,7 @@ describe('the reveal’s side-by-side panel', () => {
     expect(list.querySelectorAll('li')).toHaveLength(4);
     expect(list).toHaveTextContent(t.reveal.compareRow('$0', '$2,000'));
     expect(screen.getByText(t.reveal.decidedTag)).toBeInTheDocument();
-    expect(panel).toHaveTextContent(both.lesson);
+    // The lesson shows once, in the ink band above, not again in the panel.
+    expect(panel).not.toHaveTextContent(both.lesson);
   });
 });

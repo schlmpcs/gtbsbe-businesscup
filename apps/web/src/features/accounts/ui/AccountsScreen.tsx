@@ -18,6 +18,8 @@ export type AccountsScreenProps = {
   addVm: AddAccountVM;
   links: { upload: string };
   Link: LinkComponent;
+  /** Opens the demo bank link from the add sheet (the route renders its sheet). */
+  onConnectBank?: () => void;
 };
 
 const PERIODS: AccountPeriod[] = ['1m', '3m', '1y', 'all'];
@@ -25,7 +27,7 @@ const MODES: SummaryMode[] = ['totals', 'percent'];
 /** Segment colors, in the order the view-model sorts the groups (largest first). */
 const SEGMENT = CYCLE.map((tone) => TONE_BG[tone]);
 
-export function AccountsScreen({ vm, addVm, links, Link }: AccountsScreenProps) {
+export function AccountsScreen({ vm, addVm, links, Link, onConnectBank }: AccountsScreenProps) {
   return (
     <main className="page flex flex-col gap-xl">
       <PageHeader
@@ -84,7 +86,7 @@ export function AccountsScreen({ vm, addVm, links, Link }: AccountsScreenProps) 
       <p className="text-xs text-text-muted">
         {t.screen.privacy} {planner.educational}
       </p>
-      <AddAccountSheet open={vm.adding} vm={addVm} uploadHref={links.upload} Link={Link} />
+      <AddAccountSheet open={vm.adding} vm={addVm} uploadHref={links.upload} Link={Link} onConnectBank={onConnectBank} />
     </main>
   );
 }

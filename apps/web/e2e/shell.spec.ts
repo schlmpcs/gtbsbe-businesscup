@@ -26,10 +26,13 @@ test('navigation: every page is reachable on this viewport, with the current pag
     await expect(page).toHaveURL(/\/goals$/);
     await expect(page.getByRole('navigation', { name: t.moreLabel })).toHaveCount(0);
     // Nothing hides under the fixed tab bar: the disclaimer at the very bottom scrolls clear of it.
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    const disclaimer = await page.getByText(common.disclaimer, { exact: true }).boundingBox();
+    // The page can still grow while its stores load, so scroll to the bottom until the footer settles above the bar.
     const bar = await tabs.boundingBox();
-    expect(disclaimer!.y + disclaimer!.height).toBeLessThanOrEqual(bar!.y + 1);
+    await expect.poll(async () => {
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const disclaimer = await page.getByText(common.disclaimer, { exact: true }).boundingBox();
+      return disclaimer!.y + disclaimer!.height <= bar!.y + 1;
+    }).toBe(true);
     // No horizontal scroll at phone width.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   } else {

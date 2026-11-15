@@ -2,7 +2,7 @@
 
 // Add account (P2): pick a type, then fill its form. A sheet from the bottom on phones, a dialog on wider
 // screens. Presentational: the fields, their errors and the estimate tags come from useAddAccount.
-import { accounts as t, planner } from '@/copy';
+import { accounts as t, bankDemo, planner } from '@/copy';
 import { Button, buttonClassName, cx, Field, Sheet, Stack, Tag, useFieldControl } from '@/ui-kit';
 import type { AccountGroup, AddAccountFieldVM, AddAccountVM } from '../model/types';
 import type { LinkComponent } from './AccountsScreen';
@@ -12,11 +12,13 @@ export type AddAccountSheetProps = {
   vm: AddAccountVM;
   uploadHref: string;
   Link: LinkComponent;
+  /** Opens the demo bank link (labelled a demo; the route renders it). Without it the row shows "Coming soon". */
+  onConnectBank?: () => void;
 };
 
 const FORM_ID = 'add-account-form';
 
-export function AddAccountSheet({ open, vm, uploadHref, Link }: AddAccountSheetProps) {
+export function AddAccountSheet({ open, vm, uploadHref, Link, onConnectBank }: AddAccountSheetProps) {
   const isForm = vm.step === 'form' && vm.group !== null;
   return (
     <Sheet
@@ -36,12 +38,22 @@ export function AddAccountSheet({ open, vm, uploadHref, Link }: AddAccountSheetP
         ) : undefined
       }
     >
-      {isForm ? <AccountForm vm={vm} /> : <PickType vm={vm} uploadHref={uploadHref} Link={Link} />}
+      {isForm ? <AccountForm vm={vm} /> : <PickType vm={vm} uploadHref={uploadHref} Link={Link} onConnectBank={onConnectBank} />}
     </Sheet>
   );
 }
 
-function PickType({ vm, uploadHref, Link }: { vm: AddAccountVM; uploadHref: string; Link: LinkComponent }) {
+function PickType({
+  vm,
+  uploadHref,
+  Link,
+  onConnectBank,
+}: {
+  vm: AddAccountVM;
+  uploadHref: string;
+  Link: LinkComponent;
+  onConnectBank?: () => void;
+}) {
   const sides = (['asset', 'liability'] as const).map((kind) => ({ kind, groups: vm.groups.filter((g) => g.kind === kind) }));
   return (
     <Stack gap="xl">
@@ -64,10 +76,25 @@ function PickType({ vm, uploadHref, Link }: { vm: AddAccountVM; uploadHref: stri
         </section>
       ))}
       <div className="flex flex-col gap-sm border-t border-border pt-lg">
-        <div className="flex items-center justify-between gap-md rounded-lg bg-surface-strong p-md opacity-70" aria-disabled="true">
-          <span className="font-semibold">{t.addMenu.connectBank}</span>
-          <Tag>{t.addMenu.connectBankNote}</Tag>
-        </div>
+        {onConnectBank ? (
+          <div className="flex flex-wrap items-center justify-between gap-md rounded-lg border-2 border-primary bg-surface p-md">
+            <span className="flex min-w-0 flex-1 flex-col gap-xs">
+              <span className="flex flex-wrap items-center gap-sm">
+                <span className="font-semibold">{bankDemo.entry.short}</span>
+                <Tag className="border-primary font-bold text-primary">{bankDemo.badge}</Tag>
+              </span>
+              <span className="text-sm text-text-muted">{bankDemo.disclaimer}</span>
+            </span>
+            <Button size="sm" onClick={onConnectBank} data-testid="add-account-connect-bank">
+              {bankDemo.entry.cta}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-md rounded-lg bg-surface-strong p-md opacity-70" aria-disabled="true">
+            <span className="font-semibold">{t.addMenu.connectBank}</span>
+            <Tag>{t.addMenu.connectBankNote}</Tag>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-md rounded-lg bg-surface-strong p-md">
           <span className="flex min-w-0 flex-col">
             <span className="font-semibold">{t.addMenu.importCsv}</span>

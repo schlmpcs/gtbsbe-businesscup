@@ -137,7 +137,7 @@ function BankCard({ onClick }: { onClick: () => void }) {
       data-testid="month-bank"
       className="ob-press flex w-full flex-col gap-md rounded-xl border-2 border-primary bg-surface p-xl text-left text-text shadow-md transition-shadow hover:shadow-lg sm:flex-row sm:items-center"
     >
-      <Art name="coins" className="w-20 shrink-0 sm:w-24" imgClassName="aspect-square" loading="eager" />
+      <Art name="step-month" className="w-20 shrink-0 sm:w-24" imgClassName="aspect-square" loading="eager" />
       <span className="flex min-w-0 flex-1 flex-col gap-sm">
         <Tag className="self-start border-primary font-bold text-primary" data-testid="month-bank-badge">
           {b.badge}
