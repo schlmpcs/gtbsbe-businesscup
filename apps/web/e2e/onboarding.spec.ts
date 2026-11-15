@@ -47,6 +47,6 @@ test('onboarding: warm-up duel, guess, connect a bank (demo), see what you are w
 
   await page.getByRole('link', { name: t.decision.cta }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByTestId('lifeline')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); // the dashboard (the Life line now lives in /start's last step)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

@@ -158,7 +158,7 @@ test('demo path: landing → /start (warm-up duel, guess, demo bank, reveal, pla
   await expectNoSideScroll(page);
   await page.getByRole('link', { name: w.decision.cta }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByTestId('lifeline')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); // the dashboard (the Life line now lives in /start's last step)
   // The onboarding is finished: "/" now opens the dashboard.
   await page.goto('/');
   await expect(page).toHaveURL(/\/dashboard$/);
