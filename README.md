@@ -1,11 +1,41 @@
 # LifeGuessr
 
-A forward-looking budget planner for US adults aged 25–45, plus a GeoGuessr-style daily game that brings people in. Built in 24 hours for the Zimran Business Cup.
+**A yearly money plan in 2 minutes, from a game, with no bank login, and a ranked list of which decision to make next.** For US adults aged 25–45. Built in 24 hours for the Zimran Business Cup. Educational simulation, not financial advice.
 
-- **Planner:** a forecast of your month and of "You in 10 years", your next best money moves ranked in dollars, "Can I Afford It?" and "Loan Lab". No sign-up, no bank login: a CSV statement, sliders, or a clearly labelled demo bank link (fictional banks, sample statements read through the same CSV path).
-- **Game:** explore a stranger's home, open clues, guess what their life costs per month, then guess your own.
+- **Planner:** Dashboard, Accounts, Transactions, Cash Flow, Budget, Recurring, Goals and the **Plan**: your net worth year by year to age 90, life events on a timeline (Buy a home, Have a kid, Retire, …), Compare scenarios, **Chance of success** (seeded Monte Carlo) and **Next Moves** ranked in dollars. No sign-up, no bank login: a CSV statement read in your browser, sliders, or a clearly labelled demo bank link (fictional banks, sample statements read through the same CSV path).
+- **Game:** the daily **Duel**, "Which life costs more?": five rounds, server-scored, a share grid and a challenge link. It hands you to your own month and your plan.
 
-Every number comes from a pure, tested engine (`packages/engine`) fed by public data with sources (HUD, BLS, USDA, DOL). AI only parses text and explains results; it never produces a number you see. Educational simulation, not financial advice.
+Every number comes from a pure, tested engine (`packages/engine`) fed by public data with sources (HUD, Census ACS, BLS, USDA, DOL, NAIC, FHFA). AI only parses text and explains results; it never produces a number you see.
+
+## For judges
+
+> **Live:** `https://<live-url>` **(TODO: paste the production link before submitting)**
+> Rules for the code: [CLAUDE.md](CLAUDE.md). Why the planner: [docs/PIVOT.md](docs/PIVOT.md). The 2-minute demo: [docs/DEMO.md](docs/DEMO.md).
+
+### Try it in 2 minutes (no US documents needed)
+
+1. **`/play`**: today's Duel. Pick the life that costs more; the reveal shows both monthly totals by category, with sources. The server holds the answers.
+2. **`/start`**: the onboarding story. Guess your own month, then count it from a CSV statement, the sliders, or the demo bank link (fictional banks with synthetic statements).
+3. **`/dashboard`**: the **Life line** on top. Drag "Buy a home" along the years: the plan to 90 and its Chance of success redraw (`plan()` and `decisionSweep()`, one fixed seed). Below it: net worth, spending, budget, recurring bills, goals.
+4. **`/plan`**: KPIs, the yearly line, events, Assumptions and Next Moves. **Add a life event → Buy a home**: mortgage, property tax and home insurance come from area data for your ZIP. Then `?view=chance` (1,000 seeded paths, success %, bands, histograms) and `?view=compare` (two scenarios overlaid).
+5. **`/transactions` → `/cashflow` → `/budget`**: the ledger, the Sankey and planned vs actual, from the statement you imported.
+
+### Planner routes and where their numbers come from
+
+| Route | What it does | Numbers from |
+| --- | --- | --- |
+| `/dashboard` | Life line hero, net worth, spending pace, budget, recurring, goals, today's Duel, setup checklist | `plan`, `decisionSweep`, `monteCarlo`, `netWorthSummary`, `budgetRows`, `rankMoves` |
+| `/plan` | Net worth to the end age, KPIs, events, Assumptions panel, Next Moves; saved in this browser | `plan`, `expandEvent`, `defaultEvent`, `buyHomeBreakdown`, `planMoveEffects` |
+| `/plan?view=chance` | Chance of success: seeded paths, p10–p90 band, success %, histograms | `monteCarlo` (mulberry32 seed; same seed, same result, tested) |
+| `/plan?view=compare` | Two scenarios side by side | two `plan()` runs (`compareScenarios`) |
+| `/accounts`, `/accounts/[id]` | Manual accounts, net worth by group; kept in this browser | `accountsToProfile`, `netWorthSummary` |
+| `/transactions` | Ledger from the CSV (or the demo bank), manual add, category override, export; kept in this browser | the browser CSV reader, `POST /api/statement/categorize` (masked labels only) |
+| `/cashflow` | Income, expenses, savings rate, Sankey | `cashFlowSummary` |
+| `/budget` | Planned vs actual per category | `budgetRows`, `budgetRowsForYear` |
+| `/recurring` | Recurring charges found in the ledger | `detectSubscriptions` |
+| `/goals` | Save up (on track / at risk) and Pay down (Loan Lab) | `goalStatus`, `extraSavingToReach`, payoff engine |
+
+The **AI estimate** line on `/plan` is off: it is not wired to `/api/ai/forecast` yet, because that route does not model a plan's new debts and assets. When wired it shows only inside the Monte Carlo p5–p95 band and never feeds a KPI (`features/plan/model/useAiLine.ts`). **Pro** is a simulated checkout: nothing is charged.
 
 ## Commands
 
