@@ -39,9 +39,9 @@ test('first visit: the landing has no numbers; See a sample plan opens /plan wit
   const l = ob.landing;
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(l.title);
-  await expect(page.getByText(l.note)).toBeVisible();
+  await expect(page.getByText(l.note).first()).toBeVisible();
   const hero = page.getByTestId('landing');
-  await expect(hero.getByRole('link', { name: l.start, exact: true })).toHaveAttribute('href', '/start');
+  await expect(hero.getByRole('link', { name: l.start, exact: true }).first()).toHaveAttribute('href', '/start');
   await expect(page.getByTestId('at-horizon')).toHaveCount(0); // no numbers on a first visit
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
   await noSideScroll(page);

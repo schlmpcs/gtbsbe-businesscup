@@ -15,15 +15,18 @@
 // The answer is netWorthSummary() of the accounts (which follow those answers); the future and the
 // decision are the home Life line (useLifeLine).
 import { netWorthSummary } from '@lifeguessr/engine';
-import { COST_CATEGORIES } from '@lifeguessr/types';
+import { COST_CATEGORIES, type PlanResult } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { common, welcome as copy } from '@/copy';
+import { common, lifeline as lifelineCopy, welcome as copy } from '@/copy';
 import { fillFromStatement } from '@/features/bankDemo/model/fillAll';
 import { useStatementUpload } from '@/features/ladder/model/useStatementUpload';
 import type { StatementMonthVM, StatementReadVM } from '@/features/ladder/model/types';
 import { useLifeLine } from '@/features/lifeline/model/useLifeLine';
+import { NO_MOVES, planOf, usePlanInputs } from '@/features/plan/model/planEngine';
+import { usePlanReady, usePlanStore } from '@/features/plan/model/planStore';
+import { GOOD_SUCCESS_RATE, useChanceOfSuccess } from '@/features/plan/model/useChanceOfSuccess';
 import { writeRecord } from '@/features/onboarding/model/onboardingStore';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, formatRate } from '@/lib/format';
 import { useAccountsStore } from '@/lib/model/accounts';
 import { useAppReady, useAppStore } from '@/state';
 import { liabilityEstimates } from '@/lib/model/addAccount';
@@ -33,7 +36,7 @@ import {
 } from './answers';
 import { merchantOf } from './merchants';
 import type { MerchantVM } from './types';
-import type { AboutVM, AnalysisIcon, AnalysisRowVM, AnalysisVM, BalancesVM, BankVM, FieldVM, HouseArt, OnboardingStep, OnboardingVM, RevealVM } from './types';
+import type { AboutVM, AnalysisIcon, AnalysisRowVM, AnalysisVM, BalancesVM, BankVM, FieldVM, FutureVM, HouseArt, OnboardingStep, OnboardingVM, RevealVM } from './types';
 
 /**
  * Banks on the picker, with their marks (public/banks, from Simple Icons, CC0). The connection is a
@@ -150,6 +153,29 @@ export function analysisRows(month: StatementMonthVM, lines: readonly StatementL
     });
   }
   return rows;
+}
+
+/** The future step from one plan() result and its Chance of success (a rate, or why there is none yet). Pure (exported for tests). */
+export function futureOf(r: PlanResult, chance: number | 'measuring' | 'error'): FutureVM {
+  const compact = (v: number) => formatMoney(v, { compact: true });
+  const points = r.years.map((y) => ({ age: y.age, netWorth: y.netWorth }));
+  const values = points.map((p) => p.netWorth);
+  const { retireAge, netWorthAtRetirement, shortfallAge } = r.kpis;
+  const atRetire = points.find((p) => p.age === retireAge) ?? points.at(-1)!;
+  const measured = typeof chance === 'number';
+  return {
+    points,
+    ageDomain: [points[0]!.age, points.at(-1)!.age],
+    valueDomain: [Math.min(0, ...values), Math.max(0, ...values)],
+    callout: { age: atRetire.age, netWorth: atRetire.netWorth, label: lifelineCopy.chart.atRetirement(compact(atRetire.netWorth), atRetire.age) },
+    atRetirement: { id: 'atRetirement', label: lifelineCopy.kpi.atRetirement(retireAge), value: compact(netWorthAtRetirement), was: null, delta: null, tone: 'neutral' },
+    chance: {
+      id: 'chance', label: lifelineCopy.kpi.chance, value: measured ? formatRate(chance, 0) : null, was: null, delta: null,
+      tone: measured ? (chance >= GOOD_SUCCESS_RATE ? 'good' : 'bad') : 'neutral',
+      note: chance === 'error' ? lifelineCopy.kpi.unavailable : null,
+    },
+    onTrack: measured ? chance >= GOOD_SUCCESS_RATE : shortfallAge === null,
+  };
 }
 
 export function useOnboarding(): OnboardingVM {
@@ -387,7 +413,26 @@ export function useOnboarding(): OnboardingVM {
     setStep((s) => prev[s] ?? s);
   }, []);
 
-  const lifelineHouse = lifeline.status === 'ready' ? lifeline.house.art : 'house-build';
+  // The future step is the plan as it stands: the active scenario through planOf() and the plan store's
+  // Chance of success run, the same two the dashboard's plan card and /plan read, so the numbers match.
+  const planReady = usePlanReady();
+  const planInputs = usePlanInputs();
+  const scenario = usePlanStore((s) => s.scenarios.find((x) => x.id === s.activeId));
+  const moves = usePlanStore((s) => s.movesApplied[s.activeId] ?? NO_MOVES);
+  const chanceResult = usePlanStore((s) => s.chanceResult);
+  const { status: chanceStatus, run: runChance } = useChanceOfSuccess();
+  const onPlan = step === 'reveal' || step === 'future' || step === 'decision';
+  useEffect(() => {
+    if (onPlan && planReady && scenario && chanceStatus === 'idle') runChance();
+  }, [onPlan, planReady, scenario, chanceStatus, runChance]);
+  const future = useMemo((): FutureVM | null => {
+    if (!onPlan || !planReady || !scenario || !planInputs.profile.asOf) return null;
+    const r = planOf(planInputs, scenario, moves);
+    if (r.years.length === 0) return null;
+    return futureOf(r, chanceStatus === 'done' && chanceResult ? chanceResult.successRate : chanceStatus === 'error' ? 'error' : 'measuring');
+  }, [onPlan, planReady, scenario, planInputs, moves, chanceStatus, chanceResult]);
+
+  const lifelineHouse = step === 'future' ? (future?.onTrack === false ? 'house-build' : 'home-large') : lifeline.status === 'ready' ? lifeline.house.art : 'house-build';
   const house: HouseArt =
     step === 'play' || step === 'about' || step === 'guess' ? 'empty-plot'
       : step === 'connect' ? 'house-blueprint'
@@ -423,6 +468,7 @@ export function useOnboarding(): OnboardingVM {
     analysis,
     reveal,
     lifeline,
+    future,
     next,
     back,
   };

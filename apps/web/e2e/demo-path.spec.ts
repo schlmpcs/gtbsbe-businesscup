@@ -95,7 +95,7 @@ test('demo path: landing → /start (warm-up duel, guess, demo bank, reveal, pla
   await page.goto('/');
   await expect(h1(page)).toHaveText(o.landing.title);
   await expectNoSideScroll(page);
-  await page.getByRole('link', { name: o.landing.start, exact: true }).click();
+  await page.getByRole('link', { name: o.landing.start, exact: true }).first().click();
   await expect(page).toHaveURL(/\/start$/);
 
   // ----- 1. The warm-up: one round of today's duel (it counts as today's round 1 on /play) -----

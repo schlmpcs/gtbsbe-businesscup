@@ -1,6 +1,10 @@
 // "/" for this browser: a first visit gets the landing (one Start); a story in progress gets "Continue";
 // a finished story, or a profile built before the story existed (the old /me ladder), goes to
 // /dashboard. "See a sample plan" loads the sample household and opens /plan with the sample notice.
+import type { Profile } from '@lifeguessr/types';
+import { onboarding } from '@/copy';
+import { profileDemo } from '@/fixtures';
+import { formatMoney, formatRate } from '@/lib/format';
 import type { ProfileOrigin } from '@/state';
 import { useCallback } from 'react';
 import { track } from '@/lib/events';
@@ -9,6 +13,24 @@ import { chapterHref, DASHBOARD_ROUTE, START_ROUTE, useOnboardingRecord } from '
 import type { LandingVM, OnboardingRecord } from './types';
 
 export const SAMPLE_PLAN_ROUTE = '/plan';
+export const PLAY_ROUTE = '/play';
+
+/** The demo profile's facts for the landing's "sample life" card: the fixture's own values, formatted. */
+export function sampleFactsOf(p: Profile): LandingVM['sampleFacts'] {
+  const t = onboarding.landing.life;
+  const debt = (kind: string) => p.debts.find((d) => d.kind === kind);
+  const card = debt('card');
+  const auto = debt('auto');
+  return [
+    { id: 'age' as const, value: String(p.age.value) },
+    { id: 'takeHome' as const, value: t.perMonth(formatMoney(p.takeHomePay.value)) },
+    { id: 'rent' as const, value: t.perMonth(formatMoney(p.spending.rentUtilities.value)) },
+    ...(card ? [{ id: 'card' as const, value: t.debt(formatMoney(card.balance), formatRate(card.apr)) }] : []),
+    ...(auto ? [{ id: 'auto' as const, value: t.debt(formatMoney(auto.balance), formatRate(auto.apr)) }] : []),
+    { id: 'cash' as const, value: formatMoney(p.cash.value) },
+  ];
+}
+const SAMPLE_FACTS = sampleFactsOf(profileDemo);
 
 /** What the landing does, from the story's record and whether the profile is the person's own. */
 export function landingMode(
@@ -41,6 +63,8 @@ export function useLanding(): LandingVM {
     restartHref: START_ROUTE,
     resumeChapter,
     sampleHref: SAMPLE_PLAN_ROUTE,
+    playHref: PLAY_ROUTE,
+    sampleFacts: SAMPLE_FACTS,
     seeSample,
   };
 }

@@ -72,7 +72,7 @@ export const welcome = {
     sticker: 'Now your money',
     title: 'Where’s your money, and where does it go?',
     body: 'Pick your bank: we read your balance and a few months of spending, sort it into categories and keep only the totals. Then you add anything it can’t see. Demo: every bank loads a sample statement for now.',
-    privacy: ['No password stored', 'Lines never leave your browser', 'Only category totals are kept'],
+    privacy: ['No password stored', 'Merchant labels are sorted on our server, not stored', 'Only category totals are kept'],
     upload: 'Rather upload a statement (CSV)',
     searchHint: 'More banks soon',
     /** The name an uploaded statement goes by (the checking account it fills is named after it). */
@@ -147,7 +147,7 @@ export const welcome = {
     title: 'Here’s where you’re heading.',
     atRetirement: (age: number) => `Net worth at ${age}`,
     chance: 'Chance of success',
-    measuring: 'Simulating 500 lives…',
+    measuring: 'Simulating possible futures…',
     value: 'Budget apps charge up to $299 a year and a week of syncing for this view. You got it in a minute, with no sign-up.',
     cta: 'Try one decision',
   },
@@ -156,6 +156,8 @@ export const welcome = {
     title: 'Drag it. Watch everything move.',
     hint: 'drag me',
     cta: 'Open my plan',
+    /** Under the CTA: the decision is a what-if. */
+    note: 'This is a what-if. Your plan stays as it was until you change it on the Plan screen.',
   },
   disclaimer: 'Educational simulation, not financial advice.',
 };

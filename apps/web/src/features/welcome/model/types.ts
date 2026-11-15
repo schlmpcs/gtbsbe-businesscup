@@ -1,7 +1,7 @@
 // View-model of the /start onboarding (useOnboarding). The contract with onboarding/ui/*, which may import
 // only this file, @/ui-kit/** and @/copy. Numbers arrive formatted; raw values only where an animation
 // counts up to them or a chart scales them.
-import type { LifeLineVM } from '@/features/lifeline/model/types';
+import type { LifeLineKpiVM, LifeLinePoint, LifeLineVM } from '@/features/lifeline/model/types';
 
 export type { LifeLineVM, LifeLineKpiVM, LifeLinePoint } from '@/features/lifeline/model/types';
 
@@ -97,6 +97,18 @@ export type BalancesVM = {
   submit: () => void;
 };
 
+/** The plan to the end age as the dashboard shows it: planOf() of the active scenario and its Chance of success run. */
+export type FutureVM = {
+  points: LifeLinePoint[];
+  ageDomain: [number, number];
+  valueDomain: [number, number];
+  callout: { age: number; netWorth: number; label: string };
+  atRetirement: LifeLineKpiVM;
+  chance: LifeLineKpiVM;
+  /** The plan works in most simulated futures (the house is built). */
+  onTrack: boolean;
+};
+
 export type OnboardingVM = {
   status: 'loading' | 'ready';
   step: OnboardingStep;
@@ -129,6 +141,8 @@ export type OnboardingVM = {
   reveal: RevealVM | null;
   /** Future and decision steps: the home Life line on the data just loaded. */
   lifeline: LifeLineVM;
+  /** The future step: the plan as it stands (the active scenario, as on the dashboard and /plan); null until it is ready. */
+  future: FutureVM | null;
   next: () => void;
   back: () => void;
 };
