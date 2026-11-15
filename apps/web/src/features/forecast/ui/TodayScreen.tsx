@@ -46,6 +46,8 @@ export type TodayLinks = {
   checkin: string;
   /** Start of "build your profile" (S5 Guess yourself). */
   profile: string;
+  /** The onboarding (/start); when given, the first visit's main button goes there. */
+  onboarding?: string;
   upload: string;
   /** The daily spending log (/spend). */
   spend?: string;
@@ -560,7 +562,7 @@ function FirstVisit({ links, Link }: Omit<TodayScreenProps, 'vm' | 'quickAdd'>) 
             </h1>
             <p className="max-w-(--container-lg) text-xl">{f.body}</p>
             <div className="flex w-full flex-wrap items-center gap-md">
-              <Link href={links.profile} className={cx(buttonClassName({ variant: 'primary', size: 'lg' }), 'w-full sm:w-auto')}>
+              <Link href={links.onboarding ?? links.profile} className={cx(buttonClassName({ variant: 'primary', size: 'lg' }), 'w-full sm:w-auto')}>
                 {f.start}
                 <span aria-hidden="true">→</span>
               </Link>

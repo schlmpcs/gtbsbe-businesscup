@@ -398,6 +398,11 @@ export type StatementUploadVM = {
   lastRead: StatementReadVM | null;
   /** Months waiting for the user to confirm, with the answers to the follow-ups applied. */
   pending: StatementMonthVM[];
+  /**
+   * The categorized lines behind `pending` (masked labels, never sent anywhere from here), during
+   * review only: the onboarding's analysis animates them. Empty when the server's sort is unknown.
+   */
+  lines: { month: string; day: number; label: string; amount: number; cls: string }[];
   /** A few questions about what the statement can't settle, during review. Each can be skipped. */
   questions: StatementQuestionVM[];
   /** merchant/cash: that money is mostly this category (its lines are re-sorted, the months summed again). */

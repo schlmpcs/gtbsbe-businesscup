@@ -18,6 +18,7 @@ export {
   type ForecastChartSeries,
 } from './ForecastChart';
 export { formatMoney, formatMonth, formatMonthYear, formatRate, type FormatMoneyOptions } from './format';
+export { Icon, type IconName, type IconProps } from './Icon';
 export { Gauge, gaugeZone, type GaugeProps, type GaugeThresholds, type GaugeZone } from './Gauge';
 export {
   HouseScene,

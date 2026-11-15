@@ -39,6 +39,7 @@ function uploadVM(over: Partial<StatementUploadVM> = {}): StatementUploadVM {
     error: null,
     lastRead: null,
     pending: [],
+    lines: [],
     questions: [],
     answerCategory: vi.fn(),
     answerAmount: vi.fn(),

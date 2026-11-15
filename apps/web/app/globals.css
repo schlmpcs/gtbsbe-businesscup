@@ -32,3 +32,29 @@
     outline-offset: 2px;
   }
 }
+
+/* Onboarding (/start) and the home Life line: entrance, line drawing and pop. Off for reduced motion. */
+@keyframes ob-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ob-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ob-pop {
+  0% { opacity: 0; transform: scale(0.92); }
+  60% { opacity: 1; transform: scale(1.03); }
+  100% { transform: none; }
+}
+@keyframes ob-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 45%, transparent); }
+  50% { box-shadow: 0 0 0 14px transparent; }
+}
+.ob-fade-up { animation: ob-fade-up 520ms cubic-bezier(.2,.7,.2,1) both; }
+.ob-pop { animation: ob-pop 600ms cubic-bezier(.2,.7,.2,1) both; }
+.ob-draw { stroke-dasharray: 1; animation: ob-draw 1800ms cubic-bezier(.4,0,.2,1) both; }
+.ob-pulse { animation: ob-pulse 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ob-fade-up, .ob-pop, .ob-draw, .ob-pulse { animation: none; }
+}

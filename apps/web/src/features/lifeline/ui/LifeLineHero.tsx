@@ -4,7 +4,7 @@
 
 import type { ReactNode } from 'react';
 import { lifeline as t } from '@/copy';
-import { Art, Button, cx, EstimateTag, Sticker } from '@/ui-kit';
+import { Art, Button, cx, EstimateTag, Icon, type IconName, Sticker } from '@/ui-kit';
 import type { LifeLineChartVM, LifeLineKpiVM, LifeLineTone, LifeLineVM } from '../model/types';
 
 type Ready = Extract<LifeLineVM, { status: 'ready' }>;
@@ -57,7 +57,8 @@ export function LifeLineHero({ vm, planLink }: LifeLineHeroProps) {
               vm.house.tone === 'good' ? 'bg-positive' : 'bg-ink',
             )}
           >
-            {vm.house.tone === 'good' ? '✓ ' : ''}{vm.house.label}
+            {vm.house.tone === 'good' && <Icon name="check" size={14} strokeWidth={3} className="mr-xs inline-block align-[-2px]" />}
+            {vm.house.label}
           </span>
         </div>
       </div>
@@ -82,7 +83,8 @@ export function LifeLineHero({ vm, planLink }: LifeLineHeroProps) {
               onClick={vm.applyToPlan}
               data-testid="lifeline-apply"
             >
-              {vm.apply.done ? `✓ ${vm.apply.label}` : vm.apply.label}
+              {vm.apply.done && <Icon name="check" size={18} strokeWidth={3} />}
+              {vm.apply.label}
             </Button>
             {planLink}
           </div>
@@ -143,7 +145,7 @@ const W = 1000;
 const H = 360;
 const PAD = { l: 64, r: 16, t: 56, b: 34 };
 const MARKER_COLOR = { primary: 'var(--color-primary)', violet: 'var(--color-chart-5)', positive: 'var(--color-positive)' } as const;
-const MARKER_ICON = { home: '🏠', kid: '👶', beach: '🌴', other: '•' } as const;
+const MARKER_ICON: Record<'home' | 'kid' | 'beach' | 'other', IconName> = { home: 'home', kid: 'kid', beach: 'beach', other: 'spark' };
 
 function Chart({ chart }: { chart: LifeLineChartVM }) {
   const [a0, a1] = chart.ageDomain;
@@ -202,7 +204,8 @@ function Chart({ chart }: { chart: LifeLineChartVM }) {
             <line x1={mx} x2={mx} y1={my} y2={top + 14} stroke={MARKER_COLOR[m.tone]} strokeDasharray="2 4" strokeWidth="1.5" />
             <g transform={`translate(${mx},${top})`}>
               <rect x={-54} y={-15} width={108} height={30} rx={15} fill="var(--color-surface)" stroke={MARKER_COLOR[m.tone]} strokeWidth="2" />
-              <text x={0} y={5} textAnchor="middle" className="fill-text text-[13px] font-bold">{MARKER_ICON[m.icon]} {m.label}</text>
+              <Icon name={MARKER_ICON[m.icon]} x={-44} y={-8} size={16} stroke={MARKER_COLOR[m.tone]} strokeWidth={2.2} />
+              <text x={8} y={5} textAnchor="middle" className="fill-text text-[13px] font-bold">{m.label}</text>
             </g>
             <circle cx={mx} cy={my} r={5.5} fill="var(--color-surface)" stroke={MARKER_COLOR[m.tone]} strokeWidth="3" />
           </g>
@@ -289,7 +292,7 @@ function DecisionCard({ vm }: { vm: Ready }) {
       </div>
       <div className="flex flex-wrap gap-sm">
         {s.facts.map((f) => (
-          <span key={f.label} className="rounded-full bg-white/10 px-md py-xs text-sm font-semibold">{f.label}</span>
+          <span key={f.label} className="rounded-full bg-on-primary/10 px-md py-xs text-sm font-semibold">{f.label}</span>
         ))}
       </div>
       {s.isEstimate && (

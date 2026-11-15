@@ -33,7 +33,7 @@ export function DuelRevealHeader({ reveal, totalRounds }: { reveal: DuelRevealVM
  * S3 ink band: what decided it (category, both amounts), the lesson, the crowd, and the next-round
  * button, so the way forward shows without scrolling.
  */
-export function DuelRevealBand({ reveal, onNext }: { reveal: DuelRevealVM; onNext: () => void }) {
+export function DuelRevealBand({ reveal, onNext, nextLabel }: { reveal: DuelRevealVM; onNext: () => void; /** Overrides "Next round" (the onboarding's warm-up). */ nextLabel?: string }) {
   const decidedId = useId();
   const { decidedBy } = reveal;
   return (
@@ -58,7 +58,7 @@ export function DuelRevealBand({ reveal, onNext }: { reveal: DuelRevealVM; onNex
         </p>
       </div>
       <Button size="lg" onClick={onNext} className="w-full shrink-0 shadow-lg md:w-auto">
-        {reveal.isLastRound ? t.reveal.finish : t.reveal.next}
+        {nextLabel ?? (reveal.isLastRound ? t.reveal.finish : t.reveal.next)}
       </Button>
     </section>
   );

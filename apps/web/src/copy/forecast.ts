@@ -96,7 +96,7 @@ export const forecast = {
       eyebrow: 'Budget planner that looks ahead',
       title: 'See where your money is heading.',
       body: 'Count your real month. See you in 10 years. Get your next best money move, ranked in dollars.',
-      start: 'Start with your month',
+      start: 'Find out what you’re worth',
       play: 'Play',
       sample: 'or try with sample data',
       note: 'No sign-up. About a minute. Have a bank statement?',

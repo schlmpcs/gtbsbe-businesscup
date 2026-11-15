@@ -40,7 +40,7 @@ test('first visit: Today explains the app; Try with sample data opens the foreca
   await expect(page.getByText(f.body)).toBeVisible();
   await expect(page.getByText(f.note)).toBeVisible();
   const hero = page.getByTestId('today-first-visit');
-  await expect(hero.getByRole('link', { name: f.start })).toHaveAttribute('href', '/me/guess');
+  await expect(hero.getByRole('link', { name: f.start })).toHaveAttribute('href', '/start');
   await expect(hero.getByTestId('play').getByRole('link', { name: f.play, exact: true })).toHaveAttribute('href', '/play');
   await expect(page.getByTestId('at-horizon')).toHaveCount(0); // no numbers on a first visit
   await expect(page.getByTestId('sample-banner')).toHaveCount(0);
@@ -58,7 +58,9 @@ test('first visit: Today explains the app; Try with sample data opens the foreca
   await page.reload();
   await expect(banner).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.home.title);
+  // The Life line hero leads Home (its own h1); the house card follows, compact, under its heading.
+  await expect(page.getByTestId('lifeline').getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: t.today.home.title })).toBeAttached();
   await expect(banner).toBeVisible();
   await expect(page.getByTestId('nudge')).toHaveCount(0); // the banner already says it is the sample
   await banner.getByRole('link', { name: common.sampleBanner.cta }).click();
@@ -71,7 +73,9 @@ test('Home shows the house (10-year number with its range) and links to /play, /
   await page.goto('/future?sample=1');
   await expect(page.getByTestId('sample-banner')).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t.today.home.title);
+  // The Life line hero leads Home (its own h1); the house card follows, compact, under its heading.
+  await expect(page.getByTestId('lifeline').getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: t.today.home.title })).toBeAttached();
 
   const atHorizon = page.getByTestId('at-horizon');
   await expect(atHorizon.getByRole('heading', { name: t.today.future.title(10) })).toBeVisible();

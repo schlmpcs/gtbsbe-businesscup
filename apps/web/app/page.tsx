@@ -24,6 +24,7 @@ const links: TodayLinks = {
   decide: SCREEN_ROUTES.S13,
   checkin: SCREEN_ROUTES.S14,
   profile: SCREEN_ROUTES.S5,
+  onboarding: '/start',
   upload: SCREEN_ROUTES.S9,
   spend: '/spend',
   bills: '/tools/bills',

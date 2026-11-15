@@ -233,6 +233,11 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
     return months.map((m) => monthVM(m, averaged.has(m.month)));
   }, [reviewed]);
 
+  const linesVM = useMemo(
+    () => (reviewed && sorted ? sorted.classified.map(({ month, day, label, amount, cls }) => ({ month, day, label, amount, cls })) : []),
+    [reviewed, sorted],
+  );
+
   const status: StatementUploadVM['status'] = !ready
     ? 'loading'
     : reading
@@ -250,6 +255,7 @@ export function useStatementUpload(opts: StatementUploadOptions = {}): Statement
     error,
     lastRead: reviewed ? lastRead : null,
     pending: pendingVM,
+    lines: linesVM,
     questions: reviewed ? (sorted?.followUps ?? []).map((f) => questionVM(f, answers[f.id] ?? null)) : [],
     answerCategory,
     answerAmount,
