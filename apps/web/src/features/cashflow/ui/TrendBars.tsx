@@ -27,7 +27,8 @@ function ticks(min: number, max: number): number[] {
   const pow = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => span / s <= 4.5) ?? 10 * pow;
   const out: number[] = [];
-  for (let v = Math.floor(min / step) * step; v <= max + step * 0.001; v += step) out.push(Math.round(v));
+  const top = Math.ceil(max / step) * step;
+  for (let v = Math.floor(min / step) * step; v <= top + step * 0.001; v += step) out.push(Math.round(v));
   return out;
 }
 
