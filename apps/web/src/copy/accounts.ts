@@ -19,10 +19,17 @@ export const accounts = {
   fields: {
     name: 'Name',
     balance: 'Balance',
+    /** The money field of a thing you own (vehicle, real estate, other): what it is worth now. */
+    value: 'Value today',
     apr: 'Interest rate (APR)',
     minPayment: 'Minimum payment (per month)',
     debtKind: 'Loan type',
-    growth: 'Expected change per year',
+    growth: 'How its value changes per year (optional)',
+  },
+  /** Title of the add-account form, e.g. "Add asset: Vehicle". */
+  formTitle: {
+    asset: (group: string) => `Add asset: ${group}`,
+    liability: (group: string) => `Add liability: ${group}`,
   },
   debtKinds: { auto: 'Auto', student: 'Student', personal: 'Personal', bnpl: 'Buy now, pay later' },
   errors: { required: 'Required', invalid: 'Enter a valid number' },
@@ -79,7 +86,19 @@ export const accounts = {
     notSure: "I'm not sure (mark as estimate)",
     /** Hint under a minimum payment we fill in when it is left blank. */
     defaultedHint: 'Leave it blank and we fill in a typical minimum from the balance and APR.',
-    percentHint: 'Per year, in percent (22.8 means 22.8%).',
+    /** Hint under an interest rate (cards and loans). */
+    aprHint: 'Per year, in percent (22.8 means 22.8%).',
+    /**
+     * Hint under an asset's yearly change, per group. `rate` is the plan's default for that group,
+     * formatted from the engine constant (e.g. "−15%"); real estate and other assets have no fixed number.
+     */
+    growthHint: {
+      vehicle: (rate: string) => `Leave blank to use a typical ${rate} a year (cars lose value). Use a minus for a loss.`,
+      investments: (rate: string) => `Leave blank to use a typical ${rate} a year (before inflation). Use a minus for a loss.`,
+      retirement: (rate: string) => `Leave blank to use a typical ${rate} a year (before inflation). Use a minus for a loss.`,
+      realEstate: "Leave blank to use your area's typical home price growth. Use a minus for a loss.",
+      otherAsset: 'Leave blank to have it keep pace with prices (inflation). Use a minus for a loss.',
+    },
     moneyPlaceholder: '0',
   },
 

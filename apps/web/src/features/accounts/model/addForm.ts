@@ -1,14 +1,46 @@
 // Pure parts of the add-account form: which fields a type has, how typed text is read, and how a valid
 // form becomes the store's `AccountForm` (lib/model/addAccount.ts). A blank minimum payment or APR is
 // not filled in here: the engine's default is what the store keeps (`liabilityEstimates`).
+import { returnAnnualNominal, vehicleDepreciationAnnual } from '@lifeguessr/engine';
 import type { AccountGroup, Money, Rate } from '@lifeguessr/types';
+import { accounts as copy } from '@/copy';
+import { formatRate } from '@/lib/format';
 import { DEFAULT_LOAN_KIND, isLiabilityGroup, LOAN_KINDS, type AccountForm, type LoanKind } from '@/lib/model/addAccount';
-import type { AddAccountFieldId, AddAccountFieldVM } from './types';
+import type { AddAccountFieldId, AddAccountFieldVM, AddAccountLabelKey } from './types';
 
 export const DEBT_KINDS: LoanKind[] = [...LOAN_KINDS];
 export const DEFAULT_DEBT_KIND: LoanKind = DEFAULT_LOAN_KIND;
 
 type FieldSpec = Pick<AddAccountFieldVM, 'id' | 'input' | 'required' | 'canBeEstimate'>;
+
+/** Groups that hold a thing rather than money: their money field asks for its value today, not a balance. */
+const VALUED_GROUPS: readonly AccountGroup[] = ['vehicle', 'realEstate', 'otherAsset'];
+
+/** The form's title, e.g. "Add asset: Vehicle". */
+export function formTitle(group: AccountGroup): string {
+  return copy.formTitle[isLiabilityGroup(group) ? 'liability' : 'asset'](copy.groups[group]);
+}
+
+/**
+ * The plan's yearly change of an asset group whose account leaves `growth` blank: the engine constants
+ * plan() and monteCarlo() fall back to (groupGrowth). Real estate (the area's home appreciation) and other
+ * assets (inflation) depend on the plan's area, so their hint names the source without a number.
+ */
+const DEFAULT_GROWTH = {
+  vehicle: vehicleDepreciationAnnual.value,
+  investments: returnAnnualNominal.value,
+  retirement: returnAnnualNominal.value,
+} satisfies Partial<Record<AccountGroup, Rate>>;
+
+/** The yearly change field's placeholder (the default as it would be typed, e.g. "−15") and hint. */
+function growthWords(group: AccountGroup): { placeholder: string | null; hint: string | null } {
+  if (group === 'vehicle' || group === 'investments' || group === 'retirement') {
+    const pct = formatRate(DEFAULT_GROWTH[group], 2); // "−15%"
+    return { placeholder: pct.replace('%', ''), hint: copy.form.growthHint[group](pct) };
+  }
+  if (group === 'realEstate' || group === 'otherAsset') return { placeholder: null, hint: copy.form.growthHint[group] };
+  return { placeholder: null, hint: null }; // cash and liabilities have no yearly change field
+}
 
 /** The fields of each account type, in display order. */
 export function fieldSpecs(group: AccountGroup): FieldSpec[] {
@@ -36,9 +68,12 @@ export function parseMoney(text: string): Money | null {
   return /^-?\d*\.?\d+$|^-?\d+\.$/.test(t) ? Number(t) : Number.NaN;
 }
 
-/** '22.8' or '22.8%' (percent) → 0.228 (per year); blank → null; anything else → NaN. Negative is allowed (a car loses value). */
+/**
+ * '22.8' or '22.8%' (percent) → 0.228 (per year); blank → null; anything else → NaN. Negative is allowed
+ * (a car loses value), with a hyphen or the typographic minus the placeholder shows ("−15").
+ */
 export function parsePercent(text: string): Rate | null {
-  const t = text.replace(/[%\s]/g, '');
+  const t = text.replace(/[%\s]/g, '').replace(/\u2212/g, '-');
   if (t === '') return null;
   return /^-?\d*\.?\d+$|^-?\d+\.$/.test(t) ? Number(t) / 100 : Number.NaN;
 }
@@ -62,13 +97,21 @@ export function toFields(group: AccountGroup, form: FormState, showErrors: boole
       else if (!blank && spec.input === 'money' && !((parseMoney(value) ?? Number.NaN) >= 0)) error = 'invalid';
       else if (!blank && spec.input === 'percent' && Number.isNaN(parsePercent(value))) error = 'invalid';
     }
+    const labelKey: AddAccountLabelKey = spec.id === 'balance' && VALUED_GROUPS.includes(group) ? 'value' : spec.id;
+    let placeholder: string | null = null;
+    let hint: string | null = null;
+    if (defaulted) hint = copy.form.defaultedHint;
+    else if (spec.id === 'apr') hint = copy.form.aprHint;
+    else if (spec.id === 'growth') ({ placeholder, hint } = growthWords(group));
     return {
       ...spec,
-      labelKey: spec.id,
+      labelKey,
       value,
       isEstimate: defaulted || form.estimates[spec.id] === true,
       defaulted,
       error,
+      placeholder,
+      hint,
       ...(spec.id === 'debtKind' ? { options: DEBT_KINDS } : {}),
     };
   });
