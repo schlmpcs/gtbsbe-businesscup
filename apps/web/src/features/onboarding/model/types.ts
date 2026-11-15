@@ -53,6 +53,10 @@ export type LandingVM = {
   restartHref: string;
   resumeChapter: ChapterId | null;
   sampleHref: string;
+  /** Today's Duel (the game on its own). */
+  playHref: string;
+  /** The sample life's facts (the demo profile fixture), formatted, for the "sample life" card. */
+  sampleFacts: { id: 'age' | 'takeHome' | 'rent' | 'card' | 'auto' | 'cash'; value: string }[];
   /** Load the sample household before following `sampleHref` (the store refuses over a profile of one's own). */
   seeSample: () => void;
 };
