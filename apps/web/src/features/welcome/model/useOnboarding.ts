@@ -1,14 +1,19 @@
 // /start onboarding. One round of today's duel (the warm-up, rendered by the route) → "About you" (age,
-// ZIP, household, take-home pay) → "What are you worth?" (a guess) → "Add it up" (what you have and owe)
-// → connect a bank for spending → the answer → the plan to 90 → one decision. Age, ZIP, household, pay,
-// cash, retirement and debts are the person's own answers (./answers). The bank connection is a demo
-// (labelled as such on screen): any bank loads the sample statement for the month's spending, which goes
-// through the real pipeline: parsed and masked in the browser, labels categorized by
-// /api/statement/categorize, months summed by the engine and applied like an uploaded file; the typed pay
-// and balances are kept over what the statement shows. The answer is netWorthSummary() of the accounts
-// (built from the answers); the future and the decision are the home Life line (useLifeLine).
-// Between the connection and the answer, the analysis walks through what the statement holds (paycheck,
+// ZIP, household, take-home pay) → "What are you worth?" (a guess) → connect a bank, or upload a
+// statement (CSV) → the analysis → "Here's what we found. Anything else?" (what you have and owe) → the
+// answer → the plan to 90 → one decision.
+// The bank connection is a demo (labelled as such on screen): any bank loads the sample statement. A
+// bank's statement and an uploaded one take the same real pipeline: parsed and masked in the browser,
+// labels categorized by /api/statement/categorize, months summed by the engine and applied (spending,
+// ledger, budget, goal: bankDemo/fillAll), keeping the take-home pay the person typed. The statement
+// writes no balance: its own last balance (its Balance column, when it has one) prefills "Checking &
+// savings" on the form, tagged with where it came from; the other boxes are for what it can't see.
+// Between the connection and the form, the analysis walks through what the statement holds (paycheck,
 // rent, subscriptions, …): every amount is the engine's month totals of that statement.
+// Age, ZIP, household, pay, cash, retirement and debts are the person's own answers (./answers): the
+// form as confirmed replaces cash, retirement and debts, and nothing from the statement runs after it.
+// The answer is netWorthSummary() of the accounts (which follow those answers); the future and the
+// decision are the home Life line (useLifeLine).
 import { netWorthSummary } from '@lifeguessr/engine';
 import { COST_CATEGORIES } from '@lifeguessr/types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -49,7 +54,7 @@ export const PHASE_MS = 750;
 /** One analysis row every ROW_MS; the answer follows HOLD_MS after the last one. */
 export const ROW_MS = 1150;
 export const HOLD_MS = 1400;
-const STEPS: OnboardingStep[] = ['play', 'about', 'guess', 'balances', 'connect', 'analyzing', 'reveal', 'future', 'decision'];
+const STEPS: OnboardingStep[] = ['play', 'about', 'guess', 'connect', 'analyzing', 'found', 'reveal', 'future', 'decision'];
 const READ_PHASE = 2;
 const SORT_PHASE = 3;
 const PHASES = copy.connecting.phases.length;
@@ -151,15 +156,20 @@ export function useOnboarding(): OnboardingVM {
   const ready = useAppReady();
   const setProfile = useAppStore((s) => s.setProfile);
   const accounts = useAccountsStore((s) => s.accounts);
-  // The connected bank's statement goes through the CSV pipeline once and fills every screen (ledger,
-  // Cash flow, Recurring, accounts, budget, goal: bankDemo/fillAll), named after the bank picked. The
-  // pay and balances the person typed stay as typed.
+  // The connected bank's (or uploaded) statement goes through the CSV pipeline once and fills every
+  // screen (ledger, Cash flow, Recurring, budget, goal: bankDemo/fillAll), the checking account named
+  // after the bank picked. The pay the person typed stays as typed; the statement's last balance is
+  // kept here for the form, which is where balances are confirmed.
   const bankName = useRef('');
   const typedPay = useRef<number | null>(null);
+  const statementBalance = useRef<number | null>(null);
   const readAndFill = useCallback(
     (file: File, deps?: Parameters<typeof fillFromStatement>[2]) =>
       fillFromStatement(file, bankName.current, deps, typedPay.current !== null ? { keepTyped: { takeHomePay: typedPay.current } } : {})
-        .then((r) => r.read),
+        .then((r) => {
+          statementBalance.current = r.balance;
+          return r.read;
+        }),
     [],
   );
   const upload = useStatementUpload({ readStatementFile: readAndFill });
@@ -172,6 +182,10 @@ export function useOnboarding(): OnboardingVM {
   const prefilled = useRef(false);
   const [guess, setGuessState] = useState<number>(GUESS.initial);
   const [bankId, setBankId] = useState<string | null>(null);
+  const [source, setSource] = useState<'bank' | 'file'>('bank');
+  /** What the statement filled into "Checking & savings" (the box's text then), and from where. */
+  const [found, setFound] = useState<{ source: 'bank' | 'file'; name: string; cash: string | null } | null>(null);
+  const foundCash = useRef<string | null>(null);
   const [phase, setPhase] = useState(0);
   const [month, setMonth] = useState<StatementMonthVM | null>(null);
   const [read, setRead] = useState<StatementReadVM | null>(null);
@@ -186,7 +200,7 @@ export function useOnboarding(): OnboardingVM {
   useEffect(() => clearTimers, []);
 
   const setGuess = useCallback((v: number) => setGuessState(Math.min(GUESS.max, Math.max(GUESS.min, Math.round(v / GUESS.step) * GUESS.step))), []);
-  const lockGuess = useCallback(() => setStep('balances'), []);
+  const lockGuess = useCallback(() => setStep('connect'), []);
   const finishWarmup = useCallback(() => {
     // A profile the person made earlier prefills the forms; the starting sample never does.
     if (!prefilled.current && useAppStore.getState().profileOrigin !== 'demo') {
@@ -214,14 +228,18 @@ export function useOnboarding(): OnboardingVM {
     if (!BALANCE_FIELDS.every((f) => parseMoney(balances[f], true) !== null)) return;
     const aprOf = (kind: 'card' | 'auto' | 'student' | 'personal' | 'bnpl' | 'mortgage', balance: number) =>
       (kind === 'card' ? liabilityEstimates('creditCard', balance) : liabilityEstimates('loan', balance, { debtKind: kind === 'mortgage' ? 'personal' : kind })).apr.value;
+    // The confirmed form replaces cash, retirement and debts; the accounts follow (lib/model/accounts).
     setProfile(applyBalances(useAppStore.getState().profile, balances, aprOf), 'user');
-    setStep('connect');
+    setStep('reveal');
   }, [balances, setProfile]);
 
-  const { trySample, apply } = upload;
+  const { trySample, readFile, apply } = upload;
+  /** The read the connection runs (the sample for a bank, the file for an upload); "Try again" reruns it. */
+  const readNow = useRef<() => void>(() => {});
   const start = useCallback(() => {
     clearTimers();
     applied.current = false;
+    statementBalance.current = null;
     setPhase(0);
     setMonth(null);
     setRead(null);
@@ -229,22 +247,38 @@ export function useOnboarding(): OnboardingVM {
     timers.current.push(setTimeout(() => setPhase(1), PHASE_MS));
     timers.current.push(setTimeout(() => {
       setPhase(READ_PHASE);
-      trySample();
+      readNow.current();
     }, PHASE_MS * 2));
-  }, [trySample]);
+  }, []);
 
   const connect = useCallback(
     (id: string) => {
       if (!BANKS.some((b) => b.id === id)) return;
       setBankId(id);
+      setSource('bank');
       bankName.current = BANKS.find((b) => b.id === id)?.name ?? '';
+      readNow.current = trySample;
       setStep('connecting');
       start();
     },
-    [start],
+    [start, trySample],
   );
 
-  // The statement is read: show the sorting phase, keep the latest month for the reveal, apply it.
+  const uploadFile = useCallback(
+    (file: File) => {
+      if (!readFile) return;
+      setBankId(null);
+      setSource('file');
+      bankName.current = copy.connect.fileName;
+      readNow.current = () => readFile(file);
+      setStep('connecting');
+      start();
+    },
+    [start, readFile],
+  );
+
+  // The statement is read: show the sorting phase, keep the latest month for the reveal, apply it,
+  // prefill the form's "Checking & savings" with its last balance, then analyze and open the form.
   useEffect(() => {
     if (step !== 'connecting' || phase < READ_PHASE || applied.current || upload.status !== 'review') return;
     applied.current = true;
@@ -258,13 +292,21 @@ export function useOnboarding(): OnboardingVM {
     setLines(typedPay.current !== null ? upload.lines.filter((l) => l.cls !== 'pay') : upload.lines);
     setPhase(SORT_PHASE);
     apply();
+    // A balance the statement shows replaces the box (an overdrawn account counts as $0); without one,
+    // a box that only held an earlier statement's balance is emptied, and anything typed stays.
+    const balance = statementBalance.current;
+    const cash = balance === null ? null : Math.round(Math.max(0, balance)).toLocaleString('en-US');
+    const earlier = foundCash.current;
+    foundCash.current = cash;
+    setBalances((b) => ({ ...b, cash: cash ?? (earlier !== null && b.cash === earlier ? '' : b.cash) }));
+    setFound({ source, name: bankName.current, cash });
     const rows = picked ? analysisRows(picked).length : 0;
     const t0 = PHASE_MS * 1.5;
     timers.current.push(setTimeout(() => setPhase(PHASES), t0));
     timers.current.push(setTimeout(() => setStep('analyzing'), t0 + PHASE_MS));
     for (let i = 1; i <= rows; i++) timers.current.push(setTimeout(() => setAnalysisDone(i), t0 + PHASE_MS + i * ROW_MS));
-    timers.current.push(setTimeout(() => setStep('reveal'), t0 + PHASE_MS + rows * ROW_MS + HOLD_MS));
-  }, [step, phase, upload.status, upload.pending, upload.lastRead, upload.lines, apply]);
+    timers.current.push(setTimeout(() => setStep('found'), t0 + PHASE_MS + rows * ROW_MS + HOLD_MS));
+  }, [step, phase, upload.status, upload.pending, upload.lastRead, upload.lines, apply, source]);
 
   const analysis = useMemo((): AnalysisVM | null => {
     if (step !== 'analyzing' || !month) return null;
@@ -290,7 +332,7 @@ export function useOnboarding(): OnboardingVM {
   const failed = step === 'connecting' && upload.status === 'error';
 
   const reveal = useMemo(() => {
-    if (step === 'play' || step === 'about' || step === 'guess' || step === 'balances' || step === 'connect' || step === 'connecting' || step === 'analyzing') return null;
+    if (step === 'play' || step === 'about' || step === 'guess' || step === 'connect' || step === 'connecting' || step === 'analyzing' || step === 'found') return null;
     const s = netWorthSummary(accounts);
     return revealOf({ netWorth: s.netWorth, assets: s.assets.total, liabilities: s.liabilities.total }, guess, month);
   }, [step, accounts, guess, month]);
@@ -312,13 +354,19 @@ export function useOnboarding(): OnboardingVM {
     submit: submitAbout,
   };
   const b = copy.balances;
+  // The tag stays while the box still holds what the statement showed.
+  const cashTag = found && found.cash !== null && balances.cash === found.cash
+    ? (found.source === 'file' ? b.from.file : b.from.bank(found.name))
+    : null;
   const balanceField = (id: BalanceField): FieldVM => ({
     id, label: b.fields[id], value: balances[id], invalid: parseMoney(balances[id], true) === null,
     prefix: '$', inputMode: 'decimal', placeholder: '0',
+    ...(id === 'cash' && cashTag && { tag: cashTag }),
   });
   const balancesVM: BalancesVM = {
     own: (['cash', 'retirement'] as const).map(balanceField),
     owe: (['card', 'student', 'auto', 'personal'] as const).map(balanceField),
+    note: found ? (found.source === 'file' ? b.elsewhere.file : b.elsewhere.bank(found.name)) : null,
     setField: (id, value) => setBalances((x) => (id in x ? { ...x, [id]: value } : x)),
     canSubmit: balancesOk,
     submit: submitBalances,
@@ -331,15 +379,20 @@ export function useOnboarding(): OnboardingVM {
   }, []);
   const back = useCallback(() => {
     clearTimers();
-    setStep((s) => (s === 'about' ? 'play' : s === 'guess' ? 'about' : s === 'balances' ? 'guess' : s === 'connect' || s === 'connecting' ? 'balances' : s === 'reveal' || s === 'analyzing' ? 'connect' : s === 'future' ? 'reveal' : s === 'decision' ? 'future' : s));
+    // The analysis plays by itself, so back from the form goes to the bank picker.
+    const prev: Partial<Record<OnboardingStep, OnboardingStep>> = {
+      about: 'play', guess: 'about', connect: 'guess', connecting: 'guess', analyzing: 'connect', found: 'connect',
+      reveal: 'found', future: 'reveal', decision: 'future',
+    };
+    setStep((s) => prev[s] ?? s);
   }, []);
 
   const lifelineHouse = lifeline.status === 'ready' ? lifeline.house.art : 'house-build';
   const house: HouseArt =
     step === 'play' || step === 'about' || step === 'guess' ? 'empty-plot'
-      : step === 'balances' || step === 'connect' ? 'house-blueprint'
+      : step === 'connect' ? 'house-blueprint'
         : step === 'connecting' ? (phase >= SORT_PHASE ? 'house-build' : phase >= READ_PHASE ? 'house-crane' : 'house-blueprint')
-          : step === 'analyzing' || step === 'reveal' ? 'house-build'
+          : step === 'analyzing' || step === 'found' || step === 'reveal' ? 'house-build'
             : lifelineHouse;
 
   return {
@@ -356,9 +409,11 @@ export function useOnboarding(): OnboardingVM {
     lockGuess,
     banks: BANKS,
     connect,
+    upload: uploadFile,
     connecting: step === 'connecting'
       ? {
-          bankName: BANKS.find((b) => b.id === bankId)?.name ?? '',
+          source,
+          bankName: source === 'file' ? copy.connect.fileName : BANKS.find((b) => b.id === bankId)?.name ?? '',
           phase,
           readLabel: read ? copy.connecting.read(read.transactions.toLocaleString('en-US')) : null,
           failed,

@@ -1,7 +1,8 @@
 // T8: the 2-minute demo path (docs/PRODUCT.md → Two-minute demo script) in one spec, phone and
 // desktop: the landing's Start → the onboarding at /start (one round of today's duel → guess what you
 // are worth → connect a bank (demo: the sample statement through the real parser and categorizer) → the
-// analysis → the net worth reveal → the plan to 90 → one decision) → Open the dashboard → "/" now goes to
+// analysis → "here's what we found" (its balance prefilled; the rest typed) → the net worth reveal → the
+// plan to 90 → one decision) → Open the dashboard → "/" now goes to
 // the dashboard → the rest of today's five duels at /play (the warm-up's pick counts; a hint in round 2)
 // → fine-tune by hand → Loan Lab compare. Selectors come from the copy files and roles, so a Figma
 // restyle does not break it.
@@ -133,15 +134,8 @@ test('demo path: landing → /start (warm-up duel, guess, demo bank, reveal, pla
   }).toPass();
   await page.getByTestId('onboarding-lock').click();
 
-  // ----- Add it up: what you have and owe -----
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(w.balances.title);
-  await page.getByTestId('ob-cash').fill('12000');
-  await page.getByTestId('ob-retirement').fill('30,000');
-  await page.getByTestId('ob-card').fill('4000');
-  await page.getByTestId('ob-student').fill('20000');
-  await page.getByTestId('onboarding-balances-next').click();
-
-  // ----- 3. Connect a bank (a labelled demo): the sample statement goes through the real pipeline -----
+  // ----- 3. Connect a bank first (a labelled demo): the sample statement goes through the real pipeline -----
+  await expect(onboardingMain).toHaveAttribute('data-step', 'connect');
   await expect(h1(page)).toHaveText(w.connect.title);
   await expectNoSideScroll(page);
   const applied = stored(page, 'statement_applied');
@@ -153,9 +147,23 @@ test('demo path: landing → /start (warm-up duel, guess, demo bank, reveal, pla
   await expect(page.getByTestId('onboarding-analyzing')).toBeVisible();
   await applied;
 
+  // ----- Here's what we found: the statement's balance prefilled, anything else typed -----
+  await expect(onboardingMain).toHaveAttribute('data-step', 'found', { timeout: 30_000 });
+  await expect(h1(page)).toHaveText(w.balances.title);
+  await expect(page.getByTestId('ob-cash')).toHaveValue('7,340'); // the sample statement's last balance, $7,339.80
+  await expect(page.getByText(w.balances.from.bank('Chase'))).toBeVisible();
+  await expectNoSideScroll(page);
+  // The person's own number wins over what the statement showed.
+  await page.getByTestId('ob-cash').fill('12000');
+  await expect(page.getByText(w.balances.from.bank('Chase'))).toHaveCount(0);
+  await page.getByTestId('ob-retirement').fill('30,000');
+  await page.getByTestId('ob-card').fill('4000');
+  await page.getByTestId('ob-student').fill('20000');
+  await page.getByTestId('onboarding-balances-next').click();
+
   // ----- 4. The answer: net worth from the accounts, next to the guess -----
   await expect(onboardingMain).toHaveAttribute('data-step', 'reveal', { timeout: 30_000 });
-  // 12,000 + 30,000 − 4,000 − 20,000: the answers, not the sample household.
+  // 12,000 + 30,000 − 4,000 − 20,000: the confirmed form, not the sample household.
   await expect(page.getByTestId('onboarding-networth')).toHaveText('$18,000');
   await expect(page.getByText('$7,250/mo')).toBeVisible();
   await expect(page.getByText(w.reveal.guessed('$40,000'))).toBeVisible();

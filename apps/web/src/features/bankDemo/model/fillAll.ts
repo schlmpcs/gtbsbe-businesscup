@@ -29,13 +29,15 @@ export const DEMO_GOAL_YEARS = 2;
 export type DemoFillDeps = {
   readStatementFile?: typeof defaultReadStatementFile;
   /**
-   * The /start onboarding asked the person for their take-home pay and balances first: keep those
-   * (the statement then supplies spending only, not the paycheck it detects or its last balance).
+   * The /start onboarding: keep the take-home pay the person typed, and write no balance. The
+   * statement then supplies spending only; its last balance comes back in the result, to prefill
+   * the form where the person confirms their balances.
    */
   keepTyped?: { takeHomePay: Money };
 };
 
-export type DemoFillResult = { read: StatementFileResult; imported: ImportResult };
+/** `balance`: the statement's own last balance (null when the file has no Balance column). */
+export type DemoFillResult = { read: StatementFileResult; imported: ImportResult; balance: number | null };
 
 type Persisted = { persist: { hasHydrated: () => boolean; rehydrate: () => Promise<void> | void } };
 /** Load a browser store's saved state before writing to it, so the load never overwrites the write. */
@@ -96,9 +98,10 @@ export async function fillFromStatement(
   const imported = await ledger().importRead(read);
   useAppStore.getState().applyStatementTotals(read.months);
   if (deps.keepTyped) useAppStore.getState().setField('takeHomePay', deps.keepTyped.takeHomePay);
-  fillChecking(bankName, deps.keepTyped ? null : latestBalance(await file.text()));
+  const balance = latestBalance(await file.text());
+  fillChecking(bankName, deps.keepTyped ? null : balance);
   await Promise.all([fillBudget(), fillGoal()]);
-  return { read, imported };
+  return { read, imported, balance };
 }
 
 /** A statement reader (the CSV pipeline's signature) that also fills every screen: for /start's review. */

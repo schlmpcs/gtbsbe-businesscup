@@ -1,5 +1,6 @@
-// /start onboarding: about you → "you don't know what you're worth" → add it up → connect a bank for
-// spending (demo) → the truth → your life to 90 → one decision. Every number arrives formatted from features/onboarding/model.
+// /start onboarding: about you → "you don't know what you're worth" → connect a bank (demo) or upload a
+// statement for balance and spending → the analysis → "here's what we found, anything else?" → the
+// truth → your life to 90 → one decision. Every number arrives formatted from features/welcome/model.
 export const welcome = {
   progressLabel: (step: number, total: number) => `Step ${step} of ${total}`,
   progressShort: (step: number, total: number) => `${step}/${total}`,
@@ -39,10 +40,21 @@ export const welcome = {
     label: 'My guess',
     cta: 'Lock my guess',
   },
+  /** After the connection: the statement's balance is filled in; the rest is what it can't see. */
   balances: {
-    sticker: 'Let’s add it up',
-    title: 'What do you have, and what do you owe?',
+    sticker: 'Here’s what we found',
+    title: 'Anything else?',
     body: 'Rough numbers are fine. Leave a box empty if it’s $0.',
+    /** Above the form: what the connection could not see. */
+    elsewhere: {
+      bank: (bank: string) => `Not at ${bank}? Add it here.`,
+      file: 'Not on your statement? Add it here.',
+    },
+    /** Tag on a box the statement filled in. */
+    from: {
+      bank: (bank: string) => `from ${bank}`,
+      file: 'from your statement',
+    },
     own: 'You have',
     owe: 'You owe',
     fields: {
@@ -57,12 +69,14 @@ export const welcome = {
     cta: 'Add it up',
   },
   connect: {
-    sticker: 'Now your spending',
-    title: 'Where does your month go?',
-    body: 'Pick your bank and we sort a few months of spending into categories, keeping only the totals. Demo: every bank loads a sample statement for now.',
+    sticker: 'Now your money',
+    title: 'Where’s your money, and where does it go?',
+    body: 'Pick your bank: we read your balance and a few months of spending, sort it into categories and keep only the totals. Then you add anything it can’t see. Demo: every bank loads a sample statement for now.',
     privacy: ['No password stored', 'Lines never leave your browser', 'Only category totals are kept'],
     upload: 'Rather upload a statement (CSV)',
     searchHint: 'More banks soon',
+    /** The name an uploaded statement goes by (the checking account it fills is named after it). */
+    fileName: 'Your statement',
   },
   connecting: {
     sticker: 'Secure link',
@@ -73,6 +87,18 @@ export const welcome = {
       'Reading your transactions',
       'Sorting them into categories',
     ],
+    /** An uploaded statement: read in this browser, no connection. Same number of phases. */
+    file: {
+      sticker: 'In your browser',
+      title: 'Reading your statement',
+      phases: [
+        'Opening your file',
+        'Reading balances',
+        'Reading your transactions',
+        'Sorting them into categories',
+      ],
+      error: 'That file didn’t read as a bank statement. Try another CSV, or pick a bank.',
+    },
     read: (n: string) => `${n} transactions read`,
     error: 'The sample account did not load. Try again, or upload a statement.',
     retry: 'Try again',

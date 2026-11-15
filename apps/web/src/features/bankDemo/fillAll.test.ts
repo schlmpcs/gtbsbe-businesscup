@@ -14,7 +14,7 @@ import { useGoalsStore } from '@/features/goals/model/goalsStore';
 import { ledger } from '@/features/transactions/model/transactionsStore';
 import { useAccountsStore } from '@/lib/model/accounts';
 import { useAppStore } from '@/state/store';
-import { DEMO_GOAL_MONTHS, DEMO_GOAL_YEARS, fillFromDemoBank } from './model/fillAll';
+import { DEMO_GOAL_MONTHS, DEMO_GOAL_YEARS, fillFromDemoBank, fillFromStatement } from './model/fillAll';
 import { statementFile } from './model/useBankDemo';
 import { latestBalance } from './model/preview';
 
@@ -85,6 +85,17 @@ describe('fillFromDemoBank', () => {
     expect(again.imported.added).toBe(0);
     expect(useBudgetStore.getState()).toMatchObject({ incomePlanned: 1000, planned: expect.objectContaining({ groceries: 1 }) });
     expect(useGoalsStore.getState().goals.map((g) => g.name)).toEqual(['Trip']);
+  });
+
+  it('returns the statement’s last balance; with keepTyped (the /start form confirms balances) it writes none', async () => {
+    const before = useAccountsStore.getState().accounts.find((a) => a.id === 'checking-1')!.balance;
+    const typed = await fillFromStatement(statementFile('maple', hh13), 'Chase', readDeps, { keepTyped: { takeHomePay: 6100 } });
+    expect(typed.balance).toBe(4192.09);
+    const checking = useAccountsStore.getState().accounts.find((a) => a.id === 'checking-1')!;
+    expect(checking.name).toBe(t.fill.checkingName('Chase'));
+    expect(checking.balance).toEqual(before);
+    expect(useAppStore.getState().profile.takeHomePay.value).toBe(6100);
+    expect((await fillFromDemoBank(statementFile('pebble', hh02), 'pebble', readDeps)).balance).toBeNull();
   });
 
   it('keeps the checking balance when the statement has no Balance column', async () => {
