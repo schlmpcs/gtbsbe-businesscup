@@ -1,11 +1,22 @@
 // @vitest-environment jsdom
-// useEventEditor, useAssumptions, useCompare, useChanceOfSuccess, usePlanMoves, useAiLine on the MP2
-// fixtures: no network, no engine, no worker (those are MP7b).
-import { act, cleanup, renderHook } from '@testing-library/react';
+// useEventEditor, useAssumptions, useCompare, useChanceOfSuccess, usePlanMoves, useAiLine on the demo
+// fixtures (resetPlanStore pins the demo profile at asOf 2026-11, accounts.demo.json, ZIP 75206): the
+// real engine, no network (the forecast route is mocked), Monte Carlo through the worker's own handler.
+//
+// A today's-dollar amount at a plan event keeps its value but for one month of inflation: a $10,000
+// windfall in 2027 adds 10,000 ÷ 1.03^(1/12) = 9,975.40 at retirement (the engine's output).
+import { monteCarlo } from '@lifeguessr/engine';
+import type { Forecast, ForecastBundle } from '@lifeguessr/types';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { monteCarloDemo, scenarioDemo } from '@/fixtures';
+import { useAppStore } from '@/state/store';
+import { mockForecastRoute } from '@/test/forecastApi';
+import { handleMonteCarloMessage } from './monteCarlo.worker';
+import { fixturePlanInputs } from './planInputs';
 import { resetPlanStore, usePlanStore } from './planStore';
 import type { EventEditorVM, PlanVM } from './types';
-import { useAiLine } from './useAiLine';
+import { aiBandSettings, useAiLine } from './useAiLine';
 import { useAssumptions } from './useAssumptions';
 import { useChanceOfSuccess } from './useChanceOfSuccess';
 import { useCompare } from './useCompare';
@@ -28,6 +39,11 @@ function ready(vm: EventEditorVM) {
   return vm;
 }
 const field = (vm: EventEditorVM, key: string) => ready(vm).fields.find((f) => f.key === key)!;
+/** Lets queued work finish: a Monte Carlo job runs in a microtask where there is no Worker (jsdom). */
+const settle = () =>
+  act(async () => {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+  });
 
 describe('useEventEditor', () => {
   it('buyHome: fields carry values, sources and estimate tags', () => {
@@ -86,16 +102,17 @@ describe('useEventEditor', () => {
     let id = '';
     act(() => void (id = catalog.result.current.add('windfall')!));
     const { result } = renderHook(() => useEventEditor(id));
-    // A $10,000 windfall in 2027 adds $10,000 to net worth at retirement (no growth in the placeholder plan).
+    // A $10,000 windfall in 2027: 782,333.56 + 10,000 ÷ 1.03^(1/12) = 782,333.56 + 9,975.40 = 792,308.96.
     const row = (r: EventEditorVM) => ready(r).preview.rows.find((x) => x.id === 'netWorthAtRetirement')!;
-    expect(row(result.current)).toMatchObject({ withLabel: '$119,000', withoutLabel: '$109,000', deltaLabel: '+$10,000', tone: 'good' });
+    expect(row(result.current)).toMatchObject({ withLabel: '$792,309', withoutLabel: '$782,334', deltaLabel: '+$9,975', tone: 'good' });
+    // 25,000 ÷ 1.03^(1/12) = 24,938.49.
     act(() => ready(result.current).update('amount', 25000));
-    expect(row(result.current).deltaLabel).toBe('+$25,000');
+    expect(row(result.current).deltaLabel).toBe('+$24,938');
     expect(ready(result.current).preview.series).toHaveLength(59);
     // Turning the eye off keeps the preview of what the event would do.
     act(() => ready(result.current).toggleEnabled());
     expect(ready(result.current).enabled).toBe(false);
-    expect(row(result.current).deltaLabel).toBe('+$25,000');
+    expect(row(result.current).deltaLabel).toBe('+$24,938');
   });
 
   it('remove deletes the event and closes the editor; an unknown id is notFound', () => {
@@ -167,17 +184,20 @@ describe('useCompare', () => {
     const { result } = renderHook(() => useCompare('baseline', 'with-kid'));
     if (result.current.status !== 'ready') throw new Error('compare not ready');
     const vm = result.current;
-    // The kid costs 840.67 × 12 × 5 years of childcare + 850 × 12 × 18 years of other costs = 50,440.20 + 183,600 = 234,040.20
-    // by retirement. Baseline at retirement: 109,000; with the kid: 109,000 − 234,040.20 = −125,040.20.
-    expect(vm.diffTable[0]).toMatchObject({ id: 'netWorthAtRetirement', aLabel: '$109,000', bLabel: '−$125,040', diffLabel: '+$234,040', tone: 'good' });
-    expect(vm.sentenceData).toEqual({ aName: 'Baseline', bName: 'Baseline + a kid', age: 67, direction: 'higher', diffLabel: '$234,040' });
-    expect(vm.sentence).toBe('Baseline leaves you $234,040 better off than Baseline + a kid at age 67.');
+    // The kid costs 840.67 × 12 × 5 years of childcare + 850 × 12 × 18 years of other costs = 50,440.20 +
+    // 183,600 = 234,040.20 in today's dollars, less one month of inflation: ÷ 1.03^(1/12) = 233,464.43 by
+    // retirement. Baseline at retirement: 782,333.56; with the kid: 782,333.56 − 233,464.43 = 548,869.13.
+    expect(vm.diffTable[0]).toMatchObject({ id: 'netWorthAtRetirement', aLabel: '$782,334', bLabel: '$548,869', diffLabel: '+$233,464', tone: 'good' });
+    expect(vm.sentenceData).toEqual({ aName: 'Baseline', bName: 'Baseline + a kid', age: 67, direction: 'higher', diffLabel: '$233,464' });
+    expect(vm.sentence).toBe('Baseline leaves you $233,464 better off than Baseline + a kid at age 67.');
     expect(vm.series).toHaveLength(59);
-    expect(vm.series[0]).toMatchObject({ year: 2026, a: -3213.62, b: -3213.62 }); // the kid arrives in 2030
+    expect(vm.series[0]).toMatchObject({ year: 2026, age: 32 });
+    expect(vm.series[3]!.a).toBe(vm.series[3]!.b); // 2029: the kid arrives in 2030
+    expect(vm.series[4]!.a).toBeGreaterThan(vm.series[4]!.b);
     act(() => vm.swap());
     if (result.current.status !== 'ready') throw new Error('compare not ready');
     expect(result.current.a.id).toBe('with-kid');
-    expect(result.current.diffTable[0]!.diffLabel).toBe('−$234,040');
+    expect(result.current.diffTable[0]!.diffLabel).toBe('−$233,464');
     expect(result.current.sentenceData.direction).toBe('lower');
   });
 
@@ -191,27 +211,61 @@ describe('useCompare', () => {
 });
 
 describe('useChanceOfSuccess', () => {
-  it('idle until run(); run() is done with the fixture result', () => {
+  it('idle until run(); run() is running, then done with monteCarlo.demo.json', async () => {
     const { result } = renderHook(() => useChanceOfSuccess());
     expect(result.current.status).toBe('idle');
     expect(result.current.result).toBeNull();
     expect(result.current.idleMessage).not.toBe('');
     act(() => result.current.run());
+    expect(result.current.status).toBe('running');
+    await settle();
     expect(result.current.status).toBe('done');
     const r = result.current.result!;
-    // monteCarlo.demo.json: successRate 0 of 1,000 paths, seed 42, 59 band years, 40 sample paths.
+    // monteCarlo.demo.json has the same inputs and settings: no path works (the plan runs short from 2029
+    // in every one); seed 42, 59 band years, every ⌈1,000 / 200⌉ = 5th path drawn: 200 sample paths.
+    expect(monteCarloDemo.successRate).toBe(0);
     expect(r).toMatchObject({ gaugePct: 0, gaugeLabel: '0%', pathsLabel: '0 of 1,000 paths work', paths: 1000, seed: 42, tone: 'bad' });
     expect(r.bands).toHaveLength(59);
-    expect(r.samplePaths).toHaveLength(40);
+    expect(r.bands[0]!.p50).toBeCloseTo(monteCarloDemo.bands[0]!.p50, 2);
+    expect(r.samplePaths).toHaveLength(200);
     expect(r.samplePaths[0]!.points).toHaveLength(59);
     expect(r.histograms.map((h) => h.id)).toEqual(['atRetirement', 'atEnd', 'shortfallAge']);
   });
 
-  it('settings: defaults, hints, clamping; a change drops the result; fixed seed toggles', () => {
+  it('worker: the same seed twice gives the same gauge %', async () => {
+    // Without the home the plan never runs short; with "success needs at least $200,000" at 90 (about the
+    // median end net worth), the gauge lands between 0% and 100%, so the draws decide it.
+    const editor = renderHook(() => useEventEditor('ev-buy-home'));
+    act(() => ready(editor.result.current).toggleEnabled());
+    const { result } = renderHook(() => useChanceOfSuccess());
+    act(() => result.current.updateSettings({ endThreshold: 200_000 }));
+    act(() => result.current.run());
+    await settle();
+    const first = result.current.result!;
+    act(() => result.current.run());
+    expect(result.current.status).toBe('running');
+    await settle();
+    const second = result.current.result!;
+    expect(first.seed).toBe(42);
+    expect(second.gaugePct).toBe(first.gaugePct);
+    expect(first.gaugePct).toBeGreaterThan(0);
+    expect(first.gaugePct).toBeLessThan(100);
+    // The worker's own message handler gives the same for that seed.
+    const { scenarios, activeId, chanceSettings } = usePlanStore.getState();
+    const req = { kind: 'monteCarlo' as const, inputs: fixturePlanInputs(), scenario: scenarios.find((s) => s.id === activeId)!, settings: chanceSettings };
+    const a = handleMonteCarloMessage(req);
+    const b = handleMonteCarloMessage(req);
+    if (a.kind !== 'monteCarlo' || b.kind !== 'monteCarlo') throw new Error('no Monte Carlo result');
+    expect(b.result.successRate).toBe(a.result.successRate);
+    expect(Math.round(a.result.successRate * 100)).toBe(first.gaugePct);
+  });
+
+  it('settings: defaults, hints, clamping; a change drops the result; fixed seed toggles', async () => {
     const { result } = renderHook(() => useChanceOfSuccess());
     expect(result.current.settings).toMatchObject({ paths: 1000, fixedSeed: true, seed: 42, inflation: { mean: 0.03, sd: 0.02 }, endThreshold: 0 });
     expect(result.current.settings.fields.find((f) => f.key === 'paths')!.hint).toMatch(/1,000/);
     act(() => result.current.run());
+    await settle();
     act(() => result.current.updateSettings({ paths: 99999 }));
     expect(result.current.settings.paths).toBe(5000);
     expect(result.current.status).toBe('idle');
@@ -222,43 +276,107 @@ describe('useChanceOfSuccess', () => {
     expect(result.current.settings).toMatchObject({ fixedSeed: true, seed: 42 });
   });
 
-  it('editing the plan drops the result too', () => {
+  it('editing the plan drops the result too', async () => {
     const chance = renderHook(() => useChanceOfSuccess());
     const plan = renderHook(() => usePlan('baseline'));
     act(() => chance.result.current.run());
+    await settle();
+    expect(chance.result.current.status).toBe('done');
     act(() => (plan.result.current as Extract<PlanVM, { status: 'ready' }>).moveEvent('ev-buy-home', 2030));
     expect(chance.result.current.status).toBe('idle');
   });
 });
 
 describe('usePlanMoves', () => {
-  it('top three moves ranked by the effect at retirement', () => {
+  beforeEach(() => useAppStore.getState().uncommitMove());
+
+  it('top moves ranked by the effect at retirement, then the success-rate delta from the worker', async () => {
     const { result } = renderHook(() => usePlanMoves());
-    // $400 a month for 2027–2060 (34 years) = 163,200; $250 a month = 102,000; a $10,000 windfall = 10,000.
-    expect(result.current.moves.map((m) => [m.id, m.effectAtRetirementRaw])).toEqual([
-      ['move-extra-income', 163200], ['move-side-income', 102000], ['move-windfall', 10000],
-    ]);
-    expect(result.current.moves[0]).toMatchObject({ effectAtRetirement: '+$163,200 at retirement', successRateDelta: '+6 pts chance of success', added: false, tone: 'good' });
+    // The demo profile has two candidates (moveCandidates): spend less on "other" and pay the card first;
+    // both help. Effects are planMoveEffects on the demo plan (engine output, today's dollars).
+    expect(result.current.moves.map((m) => m.id)).toEqual(['cutCategory:other', 'payCardFirst:card-1']);
+    expect(result.current.moves[0]!.effectAtRetirementRaw).toBeCloseTo(37886.56, 2);
+    expect(result.current.moves[1]!.effectAtRetirementRaw).toBeCloseTo(7949.73, 2);
+    expect(result.current.moves[0]).toMatchObject({
+      title: 'Spend less on everything else', effectAtRetirement: '+$37,887 at retirement',
+      successRateStatus: 'measuring', successRateDeltaRaw: 0, added: false, tone: 'good',
+    });
     expect(result.current.moves.every((m) => m.explanation.length > 0)).toBe(true);
+    // Same seed with and without each move: the plan runs short in every path either way (0% → 0%).
+    await settle();
+    expect(result.current.moves[0]).toMatchObject({ successRateStatus: 'done', successRateDelta: '0 pts chance of success', successRateDeltaRaw: 0 });
   });
 
-  it('addToPlan adds the move to the active scenario; the effect stays the same', () => {
+  it('addToPlan commits the move (as on the forecast screen); the effect stays the same', () => {
     const moves = renderHook(() => usePlanMoves());
-    const plan = renderHook(() => usePlan('baseline'));
-    act(() => moves.result.current.addToPlan('move-windfall'));
-    expect(moves.result.current.moves.find((m) => m.id === 'move-windfall')).toMatchObject({ added: true, effectAtRetirementRaw: 10000 });
-    expect((plan.result.current as Extract<PlanVM, { status: 'ready' }>).tables.events.some((e) => e.id === 'ev-move-windfall')).toBe(true);
-    // Adding twice does not duplicate it.
-    act(() => moves.result.current.addToPlan('move-windfall'));
-    expect(usePlanStore.getState().scenarios[0]!.events.filter((e) => e.id === 'ev-move-windfall')).toHaveLength(1);
+    const effect = moves.result.current.moves[1]!.effectAtRetirementRaw;
+    act(() => moves.result.current.addToPlan('payCardFirst:card-1'));
+    expect(moves.result.current.moves.find((m) => m.id === 'payCardFirst:card-1')).toMatchObject({ added: true, effectAtRetirementRaw: effect });
+    expect(useAppStore.getState().committedMove?.id).toBe('payCardFirst:card-1');
+    // Adding twice keeps one committed move.
+    act(() => moves.result.current.addToPlan('payCardFirst:card-1'));
+    expect(moves.result.current.moves.filter((m) => m.added)).toHaveLength(1);
   });
 });
 
 describe('useAiLine', () => {
-  it('shows a labeled line from the fixture', () => {
+  /**
+   * An AI forecast (nominal dollars, months 0–120 from asOf November 2026): month 0 = `today`, and at each
+   * plan year's last month m = 12 × (i + 1) − 10 (2026 → 2, …, 2035 → 110) the value `at(i)` in today's
+   * dollars grown by 1.03^(m/12); straight lines in between, flat after month 110.
+   */
+  function aiBundle(today: number, at: (i: number) => number): ForecastBundle {
+    const knots = [{ m: 0, v: today }, ...Array.from({ length: 10 }, (_, i) => {
+      const m = 12 * (i + 1) - 10;
+      return { m, v: at(i) * 1.03 ** (m / 12) };
+    })];
+    const points = Array.from({ length: 121 }, (_, month) => {
+      const k = knots.findIndex((x) => x.m >= month);
+      let mid: number;
+      if (k === -1) mid = knots[knots.length - 1]!.v;
+      else if (k === 0) mid = knots[0]!.v;
+      else {
+        const lo = knots[k - 1]!;
+        const hi = knots[k]!;
+        mid = lo.v + ((hi.v - lo.v) * (month - lo.m)) / (hi.m - lo.m);
+      }
+      return { month, low: mid, mid, high: mid };
+    });
+    const base: Forecast = { points, in10y: points[120]!, todaysDollars: false };
+    return { source: 'ai', model: 'test-model', base, scenarios: {} };
+  }
+  // Today's net worth of the demo accounts: 1,300 + 2,500 + 14,500 − 6,400 − 17,800 = −5,900 (the car is excluded).
+  const TODAY = -5900;
+  // The band the hook checks against: the demo scenario, seed 42, 300 paths (what the worker runs).
+  const band = () => {
+    const { profile, accounts, area } = fixturePlanInputs();
+    return monteCarlo(profile, accounts, scenarioDemo, aiBandSettings(scenarioDemo), area).bands;
+  };
+
+  it("an in-band forecast is shown, labeled 'AI estimate', in the plan's years and today's dollars", async () => {
+    vi.useRealTimers();
+    const b = band();
+    const route = mockForecastRoute(() => aiBundle(TODAY, (i) => b[i]!.p50));
     const { result } = renderHook(() => useAiLine());
-    expect(result.current).toMatchObject({ status: 'shown', label: 'AI estimate' });
-    expect(result.current.points).toHaveLength(59);
+    expect(result.current.status).toBe('loading');
+    await waitFor(() => expect(result.current.status).toBe('shown'));
+    expect(result.current.label).toBe('AI estimate');
+    // 2026 … 2035: the plan years whose last month is within the 120 forecast months.
+    expect(result.current.points!.map((p) => p.year)).toEqual(Array.from({ length: 10 }, (_, i) => 2026 + i));
+    result.current.points!.forEach((p, i) => expect(p.netWorth).toBeCloseTo(b[i]!.p50, 6));
+    expect(route.calls).toHaveLength(1);
+  });
+
+  it('a forecast outside the p5–p95 band is rejected and hidden', async () => {
+    vi.useRealTimers();
+    const b = band();
+    // 2031 at twice the band's |p95| plus $100,000: above the band whatever its sign.
+    mockForecastRoute(() => aiBundle(TODAY, (i) => (i === 5 ? 2 * Math.abs(b[i]!.p95!) + 100_000 : b[i]!.p50)));
+    const { result } = renderHook(() => useAiLine());
+    await waitFor(() => expect(result.current.status).toBe('rejected'));
+    expect(result.current).toMatchObject({ label: 'AI estimate', reason: 'outsideBand' });
+    expect(result.current.reasonMessage).toMatch(/range/);
+    expect(result.current.points).toBeUndefined();
   });
 
   it('preview states: off, loading and rejected (with a reason)', () => {

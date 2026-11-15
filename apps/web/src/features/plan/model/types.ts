@@ -95,7 +95,12 @@ export type PlanEventRowVM = {
 };
 
 export type PlanVM =
-  | { status: 'notFound'; disclaimer: string }
+  | {
+      status: 'notFound';
+      disclaimer: string;
+      /** MP7b: true while the saved scenarios are still loading (not a missing scenario yet). */
+      loading?: boolean;
+    }
   | {
       status: 'ready';
       scenarioId: string;
@@ -128,6 +133,10 @@ export type ScenariosVM = {
   /** The last scenario cannot be removed. */
   remove: (id: string) => void;
   canRemove: boolean;
+  /** MP7b: fewer than the most scenarios a person keeps (4); `add` does nothing otherwise. */
+  canAdd?: boolean;
+  /** MP7b: replaces the scenarios with the sample (scenario.demo.json and its Compare pair). */
+  loadSample?: () => void;
 };
 
 export type EventCatalogEntryVM = {
@@ -179,6 +188,14 @@ export type EventPreviewVM = {
   /** With the event on vs the same plan without it. */
   rows: { id: 'netWorthAtRetirement' | 'netWorthAtEnd' | 'shortfall'; label: string; withLabel: string; withoutLabel: string; deltaLabel: string; tone: PlanTone }[];
   series: { year: number; age: number; withEvent: Money; withoutEvent: Money }[];
+  /** MP7b: monthly money left once the event starts (previewEvent), in the display unit; may be negative. */
+  leftOverMonthly?: Money;
+  /** MP7b: "$1,240 left each month" or "−$310 left each month". */
+  leftOverMonthlyLabel?: string;
+};
+/** MP7b: the loan behind a financed one-time expense (expenseFinancingBreakdown). */
+export type EventFinancingVM = {
+  lines: { key: 'downPayment' | 'financed' | 'monthlyPayment' | 'totalInterest'; label: string; amountLabel: string; amount: Money }[];
 };
 export type EventEditorVM =
   | { status: 'notFound'; message: string }
@@ -194,6 +211,8 @@ export type EventEditorVM =
       fields: EventFieldVM[];
       /** buyHome only. */
       breakdown: EventBreakdownVM | null;
+      /** MP7b: a financed one-time expense only; null otherwise. */
+      financing?: EventFinancingVM | null;
       /** buyHome only: down payment as a decimal share of the price (0.2 = 20%), always = downPayment / homeValue. */
       downPaymentPct: Rate | null;
       downPaymentPctLabel: string | null;
@@ -307,7 +326,7 @@ export type ChanceOfSuccessVM = {
   result: ChanceResultVM | null;
   settings: ChanceSettingsVM;
   idleMessage: string;
-  /** Starts a run (the worker, in MP7b). */
+  /** Starts a run in the Web Worker. */
   run: () => void;
   updateSettings: (patch: ChanceSettingsPatch) => void;
   /** On: a fixed seed (same result every run). Off: a new seed each run. */
@@ -325,6 +344,11 @@ export type PlanMoveVM = {
   /** Change in the chance of success, in percentage points, signed: "+4 pts". */
   successRateDelta: string;
   successRateDeltaRaw: Rate;
+  /**
+   * MP7b: the delta takes four Monte Carlo runs in the worker, so it arrives after the move: 'measuring'
+   * until then (`successRateDelta` says so, raw 0), 'unavailable' when the run failed.
+   */
+  successRateStatus?: 'measuring' | 'done' | 'unavailable';
   explanation: string;
   added: boolean;
   tone: PlanTone;

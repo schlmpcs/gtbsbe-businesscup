@@ -201,4 +201,32 @@ export const plan = {
       todayMismatch: 'The estimate did not start from today’s balance, so we hid it.',
     },
   },
+  // MP7b: labels for what the engine's plan() returns.
+  /** plan() cash-flow line keys. */
+  cashFlowLines: {
+    takeHomePay: 'Take-home pay',
+    windfalls: 'One-time income',
+    spending: 'Spending',
+    debtPayments: 'Debt payments',
+    oneOffCosts: 'One-time costs and down payments',
+  } as Record<string, string>,
+  /** Account rows an event adds to the plan (a home, its mortgage, a purchase loan). */
+  accountRows: {
+    home: 'Home',
+    mortgage: (eventName: string | null) => (eventName ? `${eventName} mortgage` : 'Mortgage'),
+    loan: (eventTitle: string) => `${eventTitle} loan`,
+  },
+  financingBreakdown: {
+    downPayment: 'Paid up front',
+    financed: 'Borrowed',
+    monthlyPayment: 'Loan payment per month',
+    totalInterest: 'Total interest',
+  },
+  leftOverMonthly: (amount: string) => `${amount} left each month`,
+  planMoves: {
+    successRate: {
+      measuring: 'Measuring the chance of success…',
+      unavailable: 'Chance of success not available',
+    },
+  },
 } as const;
